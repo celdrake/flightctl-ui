@@ -14,6 +14,7 @@ env:
 
 jobs:
   publish-flightctl-ui:
+    if: github.repository == 'skip-this-job'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -59,7 +60,6 @@ jobs:
           password: ${{ secrets.QUAY_CAMADOR_INFRA_ROBOT_PASSWORD }}
 
   publish-flightctl-ocp-ui:
-    if: github.repository == 'skip-this-job'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -68,7 +68,7 @@ jobs:
         id: generate-tags
         run: |
           if ${{ github.ref_type == 'tag' }}; then
-            tags=( ${{ github.ref_name }} latest )
+            tags=( ${{ github.ref_name }} )
             echo "tags=${tags[@]}" >> $GITHUB_OUTPUT
             echo "tags=${tags[@]}"
           else
