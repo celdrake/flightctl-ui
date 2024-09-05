@@ -3,17 +3,17 @@ name: Push to main
 on:
   push:
     branches:
-      - main
+      - test-release-tags
     tags:
       - '**'
 env:
-  QUAY_ORG: quay.io/flightctl
-  QUAY_CHARTS: quay.io/flightctl/charts
+  QUAY_ORG: quay.io/rh_ee_camadorg
+  QUAY_CHARTS: quay.io/rh_ee_camadorg
   QUAY_STANDALONE_REPO: flightctl-ui
   QUAY_OCP_REPO: flightctl-ocp-ui
 
 jobs:
-  publish-flightctl-ui:
+  extract-tags:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -21,9 +21,21 @@ jobs:
       - name: Generate tags
         id: generate-tags
         run: |
-          tags=( latest-${GITHUB_SHA} latest )
-          echo "tags=${tags[@]}" >> $GITHUB_OUTPUT
-          echo "tags=${tags[@]}"
+          if ${{ github.ref_type == 'tag' }}; then
+            tags=( ${{ github.ref_name }} latest )
+            echo "tags=${tags[@]}" >> $GITHUB_OUTPUT
+            echo "tags=${tags[@]}"
+          else
+            tags=( latest-${GITHUB_SHA} latest )
+            echo "tags=${tags[@]}" >> $GITHUB_OUTPUT
+            echo "tags=${tags[@]}"
+          fi
+
+  publish-flightctl-ui:
+    runs-on: ubuntu-latest
+    needs: extract-tags
+    steps:
+      - uses: actions/checkout@v3
 
       - name: Build
         id: build
@@ -49,20 +61,14 @@ jobs:
           image: ${{ steps.build.outputs.image }}
           tags: ${{ steps.build.outputs.tags }}
           registry: ${{ env.QUAY_ORG }}
-          username: ${{ secrets.QUAY_FLIGHTCTL_INFRA_ROBOT_USERNAME }}
-          password: ${{ secrets.QUAY_FLIGHTCTL_INFRA_ROBOT_PASSWORD }}
+          username: ${{ secrets.QUAY_CAMADOR_INFRA_ROBOT_USERNAME }}
+          password: ${{ secrets.QUAY_CAMADOR_INFRA_ROBOT_PASSWORD }}
 
   publish-flightctl-ocp-ui:
     runs-on: ubuntu-latest
+    needs: extract-tags
     steps:
       - uses: actions/checkout@v3
-
-      - name: Generate tags
-        id: generate-tags
-        run: |
-          tags=( latest-${GITHUB_SHA} latest )
-          echo "tags=${tags[@]}" >> $GITHUB_OUTPUT
-          echo "tags=${tags[@]}"
 
       - name: Build
         id: build
@@ -88,8 +94,8 @@ jobs:
           image: ${{ steps.build.outputs.image }}
           tags: ${{ steps.build.outputs.tags }}
           registry: ${{ env.QUAY_ORG }}
-          username: ${{ secrets.QUAY_FLIGHTCTL_INFRA_ROBOT_USERNAME }}
-          password: ${{ secrets.QUAY_FLIGHTCTL_INFRA_ROBOT_PASSWORD }}
+          username: ${{ secrets.QUAY_CAMADOR_INFRA_ROBOT_USERNAME }}
+          password: ${{ secrets.QUAY_CAMADOR_INFRA_ROBOT_PASSWORD }}
 
   publish-helm-charts:
     runs-on: ubuntu-latest
@@ -100,7 +106,12 @@ jobs:
 
       - name: Get version
         run: |
-          VERSION=$(git describe --long --tags)
+          if ${{ github.ref_type == 'tag' }}; then
+            VERSION=$(git describe --tags)
+          else
+            VERSION=$(git describe --long --tags)
+          fi
+          
           VERSION=${VERSION#v} # remove the leading v prefix for version
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
           echo "VERSION=${VERSION}"
@@ -113,11 +124,11 @@ jobs:
 
       - name: Login helm
         env:
-          PASSWORD: ${{ secrets.QUAY_FLIGHTCTL_INFRA_ROBOT_PASSWORD }}
-          USER: ${{ secrets.QUAY_FLIGHTCTL_INFRA_ROBOT_USERNAME }}
+          PASSWORD: ${{ secrets.QUAY_CAMADOR_INFRA_ROBOT_PASSWORD }}
+          USER: ${{ secrets.QUAY_CAMADOR_INFRA_ROBOT_USERNAME }}
         run: helm registry login quay.io -u ${USER} -p ${PASSWORD}
 
       - name: Push helm charts
         run: |
-          helm push flightctl-ui-*.tgz oci://${{ env.QUAY_CHARTS }}/
-          helm push flightctl-ocp-ui-*.tgz oci://${{ env.QUAY_CHARTS }}/
+          helm push flightctl-chart-ui-*.tgz oci://${{ env.QUAY_CHARTS }}/
+          helm push flightctl-chart-ocp-ui-*.tgz oci://${{ env.QUAY_CHARTS }}/
