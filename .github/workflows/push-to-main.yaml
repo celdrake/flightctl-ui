@@ -60,6 +60,7 @@ jobs:
           password: ${{ secrets.QUAY_CAMADOR_INFRA_ROBOT_PASSWORD }}
 
   publish-flightctl-ocp-ui:
+    if: github.repository == 'skip-this-job'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -105,7 +106,6 @@ jobs:
           password: ${{ secrets.QUAY_CAMADOR_INFRA_ROBOT_PASSWORD }}
 
   publish-helm-charts:
-    if: github.repository == 'skip-this-job'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -113,8 +113,10 @@ jobs:
           fetch-depth: 0
 
       - name: Get version
-        run: |
+        run: |          
+          echo "VERSION=?"
           VERSION=$(git describe --long --tags)
+          echo "VERSION1=${VERSION}"
           VERSION=${VERSION#v} # remove the leading v prefix for version
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
           echo "VERSION=${VERSION}"
