@@ -13,7 +13,7 @@ env:
   QUAY_OCP_REPO: flightctl-ocp-ui
 
 jobs:
-  extract-tags:
+  publish-flightctl-ui:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -30,12 +30,6 @@ jobs:
             echo "tags=${tags[@]}" >> $GITHUB_OUTPUT
             echo "tags=${tags[@]}"
           fi
-
-  publish-flightctl-ui:
-    runs-on: ubuntu-latest
-    needs: extract-tags
-    steps:
-      - uses: actions/checkout@v3
 
       - name: Build
         id: build
@@ -65,10 +59,23 @@ jobs:
           password: ${{ secrets.QUAY_CAMADOR_INFRA_ROBOT_PASSWORD }}
 
   publish-flightctl-ocp-ui:
+    if: github.repository == 'skip-this-job'
     runs-on: ubuntu-latest
-    needs: extract-tags
     steps:
       - uses: actions/checkout@v3
+
+      - name: Generate tags
+        id: generate-tags
+        run: |
+          if ${{ github.ref_type == 'tag' }}; then
+            tags=( ${{ github.ref_name }} latest )
+            echo "tags=${tags[@]}" >> $GITHUB_OUTPUT
+            echo "tags=${tags[@]}"
+          else
+            tags=( latest-${GITHUB_SHA} latest )
+            echo "tags=${tags[@]}" >> $GITHUB_OUTPUT
+            echo "tags=${tags[@]}"
+          fi
 
       - name: Build
         id: build
@@ -98,6 +105,7 @@ jobs:
           password: ${{ secrets.QUAY_CAMADOR_INFRA_ROBOT_PASSWORD }}
 
   publish-helm-charts:
+    if: github.repository == 'skip-this-job'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -106,12 +114,7 @@ jobs:
 
       - name: Get version
         run: |
-          if ${{ github.ref_type == 'tag' }}; then
-            VERSION=$(git describe --tags)
-          else
-            VERSION=$(git describe --long --tags)
-          fi
-          
+          VERSION=$(git describe --long --tags)
           VERSION=${VERSION#v} # remove the leading v prefix for version
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
           echo "VERSION=${VERSION}"
