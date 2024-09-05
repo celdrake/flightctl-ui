@@ -22,7 +22,7 @@ jobs:
         id: generate-tags
         run: |
           if ${{ github.ref_type == 'tag' }}; then
-            tags=( ${{ github.ref_name }} latest )
+            tags=( ${{ github.ref_name }} )
             echo "tags=${tags[@]}" >> $GITHUB_OUTPUT
             echo "tags=${tags[@]}"
           else
