@@ -133,5 +133,5 @@ jobs:
 
       - name: Push helm charts
         run: |
-          helm push flightctl-chart-ui-*.tgz oci://${{ env.QUAY_CHARTS }}/
-          helm push flightctl-chart-ocp-ui-*.tgz oci://${{ env.QUAY_CHARTS }}/
+          helm push flightctl-charts-ui-*.tgz oci://${{ env.QUAY_CHARTS }}/
+          helm push flightctl-charts-ocp-ui-*.tgz oci://${{ env.QUAY_CHARTS }}/
