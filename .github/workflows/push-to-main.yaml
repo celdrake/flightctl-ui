@@ -114,13 +114,19 @@ jobs:
           fetch-tags: true
 
       - name: Get version
-        run: |          
-          echo "VERSION=?"
-          VERSION=$(git describe --long --tags)
-          echo "VERSION1=${VERSION}"
-          VERSION=${VERSION#v} # remove the leading v prefix for version
-          echo "VERSION=${VERSION}" >> $GITHUB_ENV
-          echo "VERSION=${VERSION}"
+        run: |        
+          if ${{ github.ref_type == 'tag' }}; then
+            VERSION=$(git describe --tags)
+            VERSION=${VERSION#v} # remove the leading v prefix for version
+            echo "VERSION=${VERSION}" >> $GITHUB_ENV
+            echo "VERSION=${VERSION}"
+          else
+            VERSION=$(git describe --long --tags)
+            VERSION=${VERSION#v} # remove the leading v prefix for version
+            echo "VERSION=${VERSION}" >> $GITHUB_ENV
+            echo "VERSION=${VERSION}"
+          fi          
+
 
       - name: Build helm charts
         run: |
