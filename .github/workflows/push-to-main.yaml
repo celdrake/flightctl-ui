@@ -146,7 +146,7 @@ jobs:
     needs: [extract-versions]
     steps:
 
-      - run: echo '${{ toJSON(needs.extract-versions.outputs) }}'
+      - run: echo '${{ needs.extract-versions.outputs.tags }}'
 
       - uses: actions/checkout@v3
         with:
@@ -154,16 +154,6 @@ jobs:
           fetch-tags: true
 
       - name: Get version
-        run: |        
-          if ${{ github.ref_type == 'tag' }}; then
-            VERSION=$(git describe --tags)
-            VERSION=${VERSION#v} # remove the leading v prefix for version
-            echo "VERSION=${VERSION}" >> $GITHUB_ENV
-            echo "VERSION=${VERSION}"
-          else
-            VERSION=$(git describe --long --tags)
-            VERSION=${VERSION#v} # remove the leading v prefix for version
-            echo "VERSION=${VERSION}" >> $GITHUB_ENV
-            echo "VERSION=${VERSION}"
-          fi      
-          echo "PREV JOB=${jobs.generate-tags.outputs.tags}"    
+        run: |    
+          echo "VERSION=${{ needs.extract-versions.outputs.tags }}" >> $GITHUB_ENV
+          echo "VERSION=${{ needs.extract-versions.outputs.tags }}"            
