@@ -3,7 +3,7 @@ name: Push to main
 on:
   push:
     branches:
-      - main
+      - EDM-411-create-release-quay-tags
     tags:
       - '**'
 env:
@@ -30,14 +30,14 @@ jobs:
           if ${{ github.ref_type == 'tag' }}; then
             # The images tags will match the Release tag
             image_tags=( ${{ github.ref_name }} )
-            image_tags=${image_tags#v} # remove the leading v prefix for version
+            image_tags=test-${image_tags#v} # remove the leading v prefix for version
 
             echo "image_tags=${image_tags[@]}" >> $GITHUB_OUTPUT
             echo "image_tags=${image_tags[@]}"
             echo "helm_tags=${helm_tags}"
           else
             # The images tags are taken from git
-            image_tags=( latest-${GITHUB_SHA} latest )
+            image_tags=( test-latest-${GITHUB_SHA} test-latest )
             echo "image_tags=${image_tags[@]}" >> $GITHUB_OUTPUT
             echo "image_tags=${image_tags[@]}"
 
