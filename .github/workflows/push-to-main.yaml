@@ -109,12 +109,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
 
       - name: Get version
         run: |          
+          echo "VERSION=?"
           VERSION=$(git describe --long --tags)
+          echo "VERSION1=${VERSION}"
+          VERSION=${VERSION#v} # remove the leading v prefix for version
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "VERSION=${VERSION}"
 
       - name: Build helm charts
         run: |
