@@ -13,6 +13,42 @@ env:
   QUAY_OCP_REPO: flightctl-ocp-ui
 
 jobs:
+
+  extract-versions:
+    runs-on: ubuntu-latest
+    outputs:
+      tags: ${{ steps.extract-versions.outputs.tags }}
+      helmversion: ${{ steps.extract-versions.outputs.helmversion }}    
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Extract versions
+        id: extract-versions
+        run: |
+          if ${{ github.ref_type == 'tag' }}; then
+            tags=( ${{ github.ref_name }} )
+            echo "tags=${tags[@]}" >> $GITHUB_OUTPUT
+            echo "tags=${tags[@]}"
+
+            # Obtain the version for the helm charts
+            helmversion=$(git describe --tags)
+            echo "helmversion=${helmversion}" >> $GITHUB_OUTPUT
+            echo "helmversion=${helmversion}"            
+          else
+            # Obtain the tag for the base repositories
+            tags=( latest-${GITHUB_SHA} latest )
+            echo "tags=${tags[@]}" >> $GITHUB_OUTPUT
+            echo "tags=${tags[@]}"
+
+            # Obtain the version for the helm charts
+            helmversion=$(git describe --long --tags)
+            echo "helmversion=${helmversion}" >> $GITHUB_OUTPUT
+            echo "helmversion=${helmversion}"
+          fi
+
   publish-flightctl-ui:
     if: github.repository == 'skip-this-job'
     runs-on: ubuntu-latest
@@ -107,7 +143,11 @@ jobs:
 
   publish-helm-charts:
     runs-on: ubuntu-latest
+    needs: [extract-versions]
     steps:
+
+      - run: echo '${{ toJSON(needs.extract-versions.outputs) }}'
+
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
@@ -125,22 +165,5 @@ jobs:
             VERSION=${VERSION#v} # remove the leading v prefix for version
             echo "VERSION=${VERSION}" >> $GITHUB_ENV
             echo "VERSION=${VERSION}"
-          fi          
-
-
-      - name: Build helm charts
-        run: |
-          echo packaging "${VERSION}"
-          helm package ./apps/standalone/deploy/helm/flightctl-ui --version "${VERSION}" --app-version "${VERSION}"
-          helm package ./apps/ocp-plugin/deploy/helm/flightctl-ocp-ui --version "${VERSION}" --app-version "${VERSION}"
-
-      - name: Login helm
-        env:
-          PASSWORD: ${{ secrets.QUAY_CAMADOR_INFRA_ROBOT_PASSWORD }}
-          USER: ${{ secrets.QUAY_CAMADOR_INFRA_ROBOT_USERNAME }}
-        run: helm registry login quay.io -u ${USER} -p ${PASSWORD}
-
-      - name: Push helm charts
-        run: |
-          helm push flightctl-charts-ui-*.tgz oci://${{ env.QUAY_CHARTS }}/
-          helm push flightctl-charts-ocp-ui-*.tgz oci://${{ env.QUAY_CHARTS }}/
+          fi      
+          echo "PREV JOB=${jobs.generate-tags.outputs.tags}"    
