@@ -17,8 +17,8 @@ jobs:
   extract-versions:
     runs-on: ubuntu-latest
     outputs:
-      tags: ${{ steps.extract-versions.outputs.tags }}
-      helmversion: ${{ steps.extract-versions.outputs.helmversion }}    
+      image_tags: ${{ steps.extract-versions.outputs.image_tags }}
+      helm_tags: ${{ steps.extract-versions.outputs.helm_tags }}    
     steps:
       - uses: actions/checkout@v3
         with:
@@ -29,24 +29,24 @@ jobs:
         id: extract-versions
         run: |
           if ${{ github.ref_type == 'tag' }}; then
-            tags=( ${{ github.ref_name }} )
-            echo "tags=${tags[@]}" >> $GITHUB_OUTPUT
-            echo "tags=${tags[@]}"
+            image_tags=( ${{ github.ref_name }} )
+            echo "image_tags=${image_tags[@]}" >> $GITHUB_OUTPUT
+            echo "image_tags=${image_tags[@]}"
 
             # Obtain the version for the helm charts
-            helmversion=$(git describe --tags)
-            echo "helmversion=${helmversion}" >> $GITHUB_OUTPUT
-            echo "helmversion=${helmversion}"            
+            helm_tags=$(git describe --tags)
+            echo "helm_tags=${helm_tags}" >> $GITHUB_OUTPUT
+            echo "helm_tags=${helm_tags}"            
           else
-            # Obtain the tag for the base repositories
-            tags=( latest-${GITHUB_SHA} latest )
-            echo "tags=${tags[@]}" >> $GITHUB_OUTPUT
-            echo "tags=${tags[@]}"
+            # Obtain the tag for the repositories images
+            image_tags=( latest-${GITHUB_SHA} latest )
+            echo "image_tags=${image_tags[@]}" >> $GITHUB_OUTPUT
+            echo "image_tags=${image_tags[@]}"
 
             # Obtain the version for the helm charts
-            helmversion=$(git describe --long --tags)
-            echo "helmversion=${helmversion}" >> $GITHUB_OUTPUT
-            echo "helmversion=${helmversion}"
+            helm_tags=$(git describe --long --tags)
+            echo "helm_tags=${helm_tags}" >> $GITHUB_OUTPUT
+            echo "helm_tags=${helm_tags}"
           fi
 
   publish-flightctl-ui:
@@ -146,7 +146,7 @@ jobs:
     needs: [extract-versions]
     steps:
 
-      - run: echo '${{ needs.extract-versions.outputs.tags }}'
+      - run: echo '${{ needs.extract-versions.outputs.image_tags }}'
 
       - uses: actions/checkout@v3
         with:
@@ -155,5 +155,5 @@ jobs:
 
       - name: Get version
         run: |    
-          echo "VERSION=${{ needs.extract-versions.outputs.tags }}" >> $GITHUB_ENV
-          echo "VERSION=${{ needs.extract-versions.outputs.tags }}"            
+          echo "VERSION=${{ needs.extract-versions.outputs.image_tags }}" >> $GITHUB_ENV
+          echo "VERSION=${{ needs.extract-versions.outputs.image_tags }}"            
