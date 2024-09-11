@@ -2,8 +2,6 @@ name: Push to main
 
 on:
   push:
-    branches:
-      - test-ci
     tags:
       - '**'
 env:
@@ -127,9 +125,10 @@ jobs:
       - name: Build helm charts
         run: |
           echo "HELM_VERSION=${{ needs.generate-tags.outputs.image_tags }}" >> $GITHUB_ENV
-          echo "version=${{ needs.generate-tags.outputs.image_tags }}" >> "$GITHUB_ENV"
+          echo "version=${{ needs.generate-tags.outputs.helm_tags }}" >> "$GITHUB_ENV"
 
-          echo packaging "$HELM_VERSION"
+          echo "packaging $HELM_VERSION"
+          echo "packaging $version"
 
           helm package ./apps/standalone/deploy/helm/flightctl-ui --version "$HELM_VERSION" --app-version "$HELM_VERSION"
           helm package ./apps/ocp-plugin/deploy/helm/flightctl-ocp-ui --version "$version" --app-version "$version"
