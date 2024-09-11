@@ -31,8 +31,9 @@ jobs:
             image_tags=${image_tags#v} # remove the leading v prefix for version
 
             echo "image_tags=${image_tags[@]}" >> $GITHUB_OUTPUT
-            echo "image_tags=${image_tags[@]}"
-            echo "helm_tags=${image_tags[@]}"
+            echo "helm_tags=${image_tags[@]}" >> $GITHUB_OUTPUT
+            echo "image_tags,helm_tags=${image_tags[@]}"
+
           else
             # The images tags are taken from git
             image_tags=( latest-${GITHUB_SHA} latest )
@@ -130,5 +131,5 @@ jobs:
           echo "packaging $HELM_VERSION"
           echo "packaging $version"
 
-          helm package ./apps/standalone/deploy/helm/flightctl-ui --version "$HELM_VERSION" --app-version "$HELM_VERSION"
-          helm package ./apps/ocp-plugin/deploy/helm/flightctl-ocp-ui --version "$version" --app-version "$version"
+          helm package ./apps/standalone/deploy/helm/flightctl-ui --version "${{ needs.generate-tags.outputs.helm_tags }}" --app-version "${{ needs.generate-tags.outputs.helm_tags }}"
+          helm package ./apps/ocp-plugin/deploy/helm/flightctl-ocp-ui --version "${{ needs.generate-tags.outputs.helm_tags }}" --app-version "${{ needs.generate-tags.outputs.helm_tags }}"
