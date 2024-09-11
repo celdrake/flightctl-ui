@@ -3,7 +3,7 @@ name: Push to main
 on:
   push:
     branches:
-      - main
+      - test-ci
     tags:
       - '**'
 env:
@@ -50,6 +50,8 @@ jobs:
   publish-flightctl-ui:
     runs-on: ubuntu-latest
     needs: [generate-tags]
+    if: needs.generate-tags.outputs.image_tags == 'no-skip'
+
     steps:
       - uses: actions/checkout@v3
 
@@ -83,6 +85,8 @@ jobs:
   publish-flightctl-ocp-ui:
     runs-on: ubuntu-latest
     needs: [generate-tags]
+    if: needs.generate-tags.outputs.image_tags == 'no-skip'
+
     steps:
       - uses: actions/checkout@v3
 
@@ -122,17 +126,10 @@ jobs:
 
       - name: Build helm charts
         run: |
-          echo packaging "${{ needs.generate-tags.outputs.helm_tags }}"
-          helm package ./apps/standalone/deploy/helm/flightctl-ui --version "${{ needs.generate-tags.outputs.helm_tags }}" --app-version "${{ needs.generate-tags.outputs.helm_tags }}"
-          helm package ./apps/ocp-plugin/deploy/helm/flightctl-ocp-ui --version "${{ needs.generate-tags.outputs.helm_tags }}" --app-version "${{ needs.generate-tags.outputs.helm_tags }}"
+          echo "HELM_VERSION=${{ needs.generate-tags.outputs.image_tags }}" >> $GITHUB_ENV
+          echo "version=${{ needs.generate-tags.outputs.image_tags }}" >> "$GITHUB_ENV"
 
-      - name: Login helm
-        env:
-          PASSWORD: ${{ secrets.QUAY_FLIGHTCTL_INFRA_ROBOT_PASSWORD }}
-          USER: ${{ secrets.QUAY_FLIGHTCTL_INFRA_ROBOT_USERNAME }}
-        run: helm registry login quay.io -u ${USER} -p ${PASSWORD}
+          echo packaging "$HELM_VERSION"
 
-      - name: Push helm charts
-        run: |
-          helm push flightctl-ui-*.tgz oci://${{ env.QUAY_CHARTS }}/
-          helm push flightctl-ocp-ui-*.tgz oci://${{ env.QUAY_CHARTS }}/
+          helm package ./apps/standalone/deploy/helm/flightctl-ui --version "$HELM_VERSION" --app-version "$HELM_VERSION"
+          helm package ./apps/ocp-plugin/deploy/helm/flightctl-ocp-ui --version "$version" --app-version "$version"
