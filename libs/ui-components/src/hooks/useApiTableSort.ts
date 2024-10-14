@@ -8,7 +8,7 @@ const getDefaultSortField = (columns: ApiSortTableColumn[]) => {
   if (!defaultSortCol) {
     defaultSortCol = columns.find((c) => !!c.sortableField);
   }
-  return defaultSortCol?.sortableField ||  '';
+  return defaultSortCol?.sortableField || '';
 };
 
 export const useApiTableSort = (columns: ApiSortTableColumn[]) => {
@@ -26,7 +26,7 @@ export const useApiTableSort = (columns: ApiSortTableColumn[]) => {
       return {
         sortBy: {
           index: activeColumnIndex === -1 ? 0 : activeColumnIndex,
-          direction: activeSortDirection === 'Asc' ? 'asc' :'desc',
+          direction: activeSortDirection === 'Asc' ? 'asc' : 'desc',
           defaultDirection: 'asc',
         },
         onSort: (_, index, direction) => {
@@ -40,5 +40,8 @@ export const useApiTableSort = (columns: ApiSortTableColumn[]) => {
     [columns, activeSortField, activeSortDirection],
   );
 
-  return { getSortParams, activeSortQuery: activeSortField ? `sortBy=${activeSortField}&sortOrder=${activeSortDirection}` : '' };
+  return {
+    getSortParams,
+    activeSortQuery: activeSortField ? `sortBy=${activeSortField}&sortOrder=${activeSortDirection}` : '',
+  };
 };

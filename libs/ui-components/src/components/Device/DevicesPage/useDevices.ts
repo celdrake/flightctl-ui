@@ -45,10 +45,10 @@ export const useDevicesEndpoint = (args: DevicesEndpointArgs): [string, boolean]
 };
 
 export const useDevices = ({
-                             ownerFleets,
-                             activeStatuses,
-                             labels,
-                           }: {
+  ownerFleets,
+  activeStatuses,
+  labels,
+}: {
   ownerFleets?: string[];
   activeStatuses: FilterStatusMap;
   labels?: FlightCtlLabel[];
