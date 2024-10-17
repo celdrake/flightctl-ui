@@ -16,15 +16,16 @@ import {
 import { EnrollmentRequestList } from '@flightctl/types';
 import { useTranslation } from '../../../../hooks/useTranslation';
 import { useFetchPeriodically } from '../../../../hooks/useFetchPeriodically';
-import { EnrollmentRequestStatus, getApprovalStatus } from '../../../../utils/status/enrollmentRequest';
 import { Link, ROUTE } from '../../../../hooks/useNavigate';
 import ErrorAlert from '../../../ErrorAlert/ErrorAlert';
+import { getApiListCount } from '../../../../utils/api';
 
 const ToDoCard = () => {
   const { t } = useTranslation();
   const [erList, loading, error] = useFetchPeriodically<EnrollmentRequestList>({
-    endpoint: 'enrollmentrequests',
+    endpoint: 'enrollmentrequests?fieldSelector=!status.approval.approved&limit=1',
   });
+  const pendingErCount = getApiListCount(erList) || 0;
 
   let content: React.ReactNode;
   if (loading) {
@@ -36,15 +37,14 @@ const ToDoCard = () => {
   } else if (error) {
     content = <ErrorAlert error={error} />;
   } else {
-    const pendingErs = erList?.items.filter((er) => getApprovalStatus(er) === EnrollmentRequestStatus.Pending);
-    if (pendingErs?.length) {
+    if (pendingErCount) {
       content = (
         <List>
           <ListItem>
             <Split hasGutter>
-              <SplitItem isFilled>{t('{{ count }} devices pending approval', { count: pendingErs.length })}</SplitItem>
+              <SplitItem isFilled>{t('{{ count }} devices pending approval', { count: pendingErCount })}</SplitItem>
               <SplitItem>
-                <Link to={ROUTE.DEVICES}>{t('Review pending devices', { count: pendingErs.length })}</Link>
+                <Link to={ROUTE.DEVICES}>{t('Review pending devices', { count: pendingErCount })}</Link>
               </SplitItem>
             </Split>
           </ListItem>
