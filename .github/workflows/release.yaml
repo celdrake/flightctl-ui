@@ -18,7 +18,6 @@ jobs:
         with:
           repository: celdrake/flightctl
           ref: main
-          path: ../flightctl
 
       - name: Update the helm dependency in flightctl
         working-directory: ../flightctl
@@ -27,6 +26,8 @@ jobs:
           cd deploy/helm/flightctl
           HELM_VERSION=$(helm version)
           PWD=$(pwd)
+          CHART_NAME=$(cat Chart.yaml | grep name)
+          echo "Chart name=${CHART_NAME} in ${PWD}"
           echo "Helm version=${HELM_VERSION} in ${PWD}" >> "$GITHUB_OUTPUT"
           echo "Helm version=${HELM_VERSION} in ${PWD}"
           helm dependency list --debug
