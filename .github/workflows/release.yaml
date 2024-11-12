@@ -37,7 +37,7 @@ jobs:
       - name: Create the PR in flightctl repository
         uses: peter-evans/create-pull-request@v7
         with:
-          base: master
+          base: main
           commit-message: (IGNORE_THIS) Update UI to ${{ github.ref_name }}
           committer: GitHub action executed on UI release <noreply@github.com>
           author: GitHub action executed on UI release <noreply@github.com>
