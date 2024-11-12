@@ -9,6 +9,11 @@ jobs:
   update-flightctl-dependency:
     runs-on: ubuntu-latest
     steps:
+
+      - name: Create folder for flightctl repo
+        run: |
+          mkdir ../flightctl
+
       - uses: actions/checkout@v3
         with:
           repository: celdrake/flightctl
