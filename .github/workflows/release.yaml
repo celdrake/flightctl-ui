@@ -14,21 +14,14 @@ jobs:
           repository: celdrake/flightctl
           ref: main
 
-      - name: Run some checks
+      - name: Update the helm dependency in flightctl
         run: |
           git checkout -b update-ui-to-last-release
           cd deploy/helm/flightctl
-          CHART_NAME=$(cat Chart.yaml | grep name)
-          CHART_VERSIONS=$(cat Chart.yaml | grep version)
-          PWD=$(pwd)
-          echo "Chart name=${CHART_NAME} with versions=${CHART_VERSIONS} in ${PWD}"
-
-      - name: Update the helm dependency in flightctl
-        if: ${{ github.event.release.target_commitish == 'skip-this' }}
-        run: |
-          echo "Helm version=${HELM_VERSION} in ${PWD}" >> "$GITHUB_OUTPUT"
-          echo "Helm version=${HELM_VERSION} in ${PWD}"
-          helm dependency list --debug
+          sed -i -r -e  '/name: flightctl-ui/ { n;n; s/version: (.*)/version: "${{ github.ref_name }}"/ }' Chart.yaml
+          helm dependency update
+          git add Chart.yaml Chart.lock
+          git commit -m "Update UI dependency to v${{ github.ref_name }}"
 
       - name: Create the PR in flightctl repository
         if: ${{ github.event.release.target_commitish == 'skip-this' }}
@@ -40,4 +33,4 @@ jobs:
           author: GitHub action executed on release <noreply@github.com>
           title: Test Update UI to Version ${{ github.ref_name }}
           body:
-            Triggered by new UI tag - https://github.com/flightctl/flightctl-ui/releases/tag/v$${{ github.ref_name }}
+            Triggered by new UI tag - https://github.com/flightctl/flightctl-ui/releases/tag/v${{ github.ref_name }}
