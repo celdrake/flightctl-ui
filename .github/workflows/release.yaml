@@ -19,8 +19,9 @@ jobs:
           git checkout -b update-ui-to-last-release
           cd deploy/helm/flightctl
           HELM_VERSION=$(helm version)
-          echo "Helm version=${HELM_VERSION}" >> "$GITHUB_OUTPUT"
-          echo "Helm version=${HELM_VERSION}"
+          PWD=$(pwd)
+          echo "Helm version=${HELM_VERSION} in ${PWD}" >> "$GITHUB_OUTPUT"
+          echo "Helm version=${HELM_VERSION} in ${PWD}"
           helm dependency list --debug
 
       - name: Create the PR in flightctl repository
