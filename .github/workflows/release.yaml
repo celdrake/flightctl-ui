@@ -14,23 +14,31 @@ jobs:
           repository: celdrake/flightctl
           ref: main
 
+      - name: Get image tag
+        id: get-tags
+        run: |
+          helm_tag=( ${{ github.ref_name }} )
+          helm_tag=${image_tag#v} # remove the leading v prefix for version
+          echo "helm_tag=${helm_tag}" >> $GITHUB_OUTPUT
+          echo "helm_tag=${helm_tag}"
+
       - name: Update the helm dependency in flightctl
         run: |
           git checkout -b update-ui-to-last-release
           cd deploy/helm/flightctl
-          sed -i -r -e  '/name: flightctl-ui/ { n;n; s/version: (.*)/version: "${{ github.ref_name }}"/ }' Chart.yaml
+          sed -i -r -e  '/name: flightctl-ui/ { n;n; s/version: (.*)/version: "${{ helm_tag }}"/ }' Chart.yaml
           helm dependency update
           git add Chart.yaml Chart.lock
-          git commit -m "Update UI dependency to v${{ github.ref_name }}"
+          git commit -m "Update UI dependency to v${{ helm_tag }}"
 
       - name: Create the PR in flightctl repository
         if: ${{ github.event.release.target_commitish == 'skip-this' }}
         uses: peter-evans/create-pull-request@v7
         with:
           base: master
-          commit-message: Test Update UI to Version ${{ github.ref_name }}
+          commit-message: Test Update UI to Version ${{ helm_tag }}
           committer: GitHub action executed on release <noreply@github.com>
           author: GitHub action executed on release <noreply@github.com>
-          title: Test Update UI to Version ${{ github.ref_name }}
+          title: Test Update UI to Version ${{ helm_tag }}
           body:
-            Triggered by new UI tag - https://github.com/flightctl/flightctl-ui/releases/tag/v${{ github.ref_name }}
+            Triggered by new UI tag - https://github.com/flightctl/flightctl-ui/releases/tag/v${{ helm_tag }}
