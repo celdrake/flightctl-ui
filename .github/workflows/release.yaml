@@ -21,8 +21,7 @@ jobs:
           HELM_VERSION=$(helm version)
           echo "Helm version=${HELM_VERSION}" >> "$GITHUB_OUTPUT"
           echo "Helm version=${HELM_VERSION}"
-          helm dependency list
-          helm dependency update --debug
+          helm dependency list --debug
 
       - name: Create the PR in flightctl repository
         if: ${{ github.event.release.target_commitish == 'skip-this' }}
