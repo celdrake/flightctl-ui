@@ -14,17 +14,17 @@ jobs:
           repository: celdrake/flightctl
           ref: main
 
-      - name: Get image tag
-        id: get-tags
+      - name: Get helm tag
+        id: get-tag
         run: |
           helm_tag=( ${{ github.ref_name }} )
-          helm_tag=${image_tag#v} # remove the leading v prefix for version
+          helm_tag=${helm_tag#v} # remove the leading v prefix for version
           echo "HELM_TAG=${helm_tag}" >> $GITHUB_ENV
           echo "HELM_TAG1=${helm_tag}"
 
       - name: Update the helm dependency in flightctl
         run: |
-          echo "HELM_TAG2=${helm_tag}"
+          echo "HELM_TAG2=${{ env.HELM_TAG }}"
           git checkout -b update-ui-to-last-release
           cd deploy/helm/flightctl
           sed -i -r -e  '/name: flightctl-ui/ { n;n; s/version: (.*)/version: "${{ env.HELM_TAG }}"/ }' Chart.yaml
