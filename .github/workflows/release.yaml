@@ -13,7 +13,6 @@ jobs:
         with:
           repository: celdrake/flightctl
           ref: main
-          fetch-depth: 0
 
       - name: Update the helm dependency in flightctl
         run: |
@@ -21,9 +20,6 @@ jobs:
           cd deploy/helm/flightctl
           HELM_VERSION=$(helm version)
           echo "Helm version=${HELM_VERSION}" >> "$GITHUB_OUTPUT"
-          helm dependency update
-          git add .
-          git commit -m "Update UI version to Version ${GITHUB_REF_NAME}"
 
       - name: Create the PR in flightctl repository
         if: ${{ github.event.release.target_commitish == 'skip-this' }}
