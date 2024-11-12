@@ -20,6 +20,7 @@ jobs:
           cd deploy/helm/flightctl
           HELM_VERSION=$(helm version)
           echo "Helm version=${HELM_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Helm version=${HELM_VERSION}"
 
       - name: Create the PR in flightctl repository
         if: ${{ github.event.release.target_commitish == 'skip-this' }}
