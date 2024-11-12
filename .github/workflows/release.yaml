@@ -35,13 +35,12 @@ jobs:
           git commit -m "Update UI dependency to v${{ env.HELM_TAG }}"
 
       - name: Create the PR in flightctl repository
-        if: ${{ github.event.release.target_commitish == 'skip-this' }}
         uses: peter-evans/create-pull-request@v7
         with:
           base: master
-          commit-message: Test Update UI to Version ${{ env.HELM_TAG }}
-          committer: GitHub action executed on release <noreply@github.com>
-          author: GitHub action executed on release <noreply@github.com>
-          title: Test Update UI to Version ${{ env.HELM_TAG }}
+          commit-message: (IGNORE_THIS) Update UI to ${{ github.ref_name }}
+          committer: GitHub action executed on UI release <noreply@github.com>
+          author: GitHub action executed on UI release <noreply@github.com>
+          title: (IGNORE_THIS) Update UI to ${{ github.ref_name }}
           body:
-            Triggered by new UI tag - https://github.com/flightctl/flightctl-ui/releases/tag/v${{ env.HELM_TAG }}
+            Triggered by new UI release - https://github.com/flightctl/flightctl-ui/releases/tag/${{ github.ref_name }}
