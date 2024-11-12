@@ -3,7 +3,7 @@ name: Release a new version
 on:
   release:
     types:
-      - published
+      - created
 
 jobs:
   update-flightctl-dependency:
