@@ -19,6 +19,8 @@ jobs:
         run: |
           git checkout -b update-ui-to-last-release
           cd deploy/helm/flightctl
+          HELM_VERSION=$(helm version)
+          echo "Helm version=${HELM_VERSION}" >> "$GITHUB_OUTPUT"
           helm dependency update
           git add .
           git commit -m "Update UI version to Version ${GITHUB_REF_NAME}"
