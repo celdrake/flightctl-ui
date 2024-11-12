@@ -11,8 +11,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          repository: https://github.com/celdrake/flightctl
-          ref: ${{ github.event.release.target_commitish }}
+          repository: celdrake/flightctl
+          ref: main
           fetch-depth: 0
 
       - name: Update the helm dependency in flightctl
