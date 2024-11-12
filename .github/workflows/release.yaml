@@ -13,8 +13,10 @@ jobs:
         with:
           repository: celdrake/flightctl
           ref: main
+          path: ../flightctl
 
       - name: Update the helm dependency in flightctl
+        working-directory: ../flightctl
         run: |
           git checkout -b update-ui-to-last-release
           cd deploy/helm/flightctl
