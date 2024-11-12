@@ -43,5 +43,7 @@ jobs:
           committer: GitHub action executed on UI release <noreply@github.com>
           author: GitHub action executed on UI release <noreply@github.com>
           title: (IGNORE_THIS) Update UI to ${{ github.ref_name }}
+          token: ${{ secrets.GH_PAT }} # `GH_PAT` is a secret that contains your PAT
+          branch: update-ui-to-last-release
           body:
             Triggered by new UI release - https://github.com/flightctl/flightctl-ui/releases/tag/${{ github.ref_name }}
