@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          repository: celdrake/flightctl
+          repository: flightctl/flightctl
           ref: main
 
       - name: Get helm tag
