@@ -1,4 +1,4 @@
-name: Release a new version
+name: Create UI version update PR in flightctl
 
 on:
   release:
@@ -9,25 +9,22 @@ jobs:
   update-flightctl-dependency:
     runs-on: ubuntu-latest
     steps:
-
-      - name: Create folder for flightctl repo
-        run: |
-          mkdir ../flightctl
-
       - uses: actions/checkout@v3
         with:
           repository: celdrake/flightctl
           ref: main
 
-      - name: Update the helm dependency in flightctl
-        working-directory: ../flightctl
+      - name: Run some checks
         run: |
           git checkout -b update-ui-to-last-release
           cd deploy/helm/flightctl
-          HELM_VERSION=$(helm version)
-          PWD=$(pwd)
           CHART_NAME=$(cat Chart.yaml | grep name)
+          PWD=$(pwd)
           echo "Chart name=${CHART_NAME} in ${PWD}"
+
+      - name: Update the helm dependency in flightctl
+        if: ${{ github.event.release.target_commitish == 'skip-this' }}
+        run: |
           echo "Helm version=${HELM_VERSION} in ${PWD}" >> "$GITHUB_OUTPUT"
           echo "Helm version=${HELM_VERSION} in ${PWD}"
           helm dependency list --debug
