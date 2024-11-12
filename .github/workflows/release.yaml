@@ -33,6 +33,7 @@ jobs:
           git config user.name '${{ github.actor }}'
           git config user.email '${{ github.actor }}@users.noreply.github.com'
           git commit -m "Update UI dependency to v${{ env.HELM_TAG }}"
+          git push origin update-ui-to-last-release
 
       - name: Create the PR in flightctl repository
         uses: peter-evans/create-pull-request@v7
