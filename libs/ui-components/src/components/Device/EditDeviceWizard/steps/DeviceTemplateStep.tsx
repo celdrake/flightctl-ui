@@ -3,8 +3,10 @@ import { Alert, CodeBlock, CodeBlockCode, FormGroup, Grid } from '@patternfly/re
 import { FormikErrors, useFormikContext } from 'formik';
 import { Trans } from 'react-i18next';
 
+import { USING_TEMPLATE_VARIABLES_LINK } from '../../../../links';
 import { useTranslation } from '../../../../hooks/useTranslation';
 import WithHelperText from '../../../common/WithHelperText';
+import LearnMoreLink from '../../../common/LearnMoreLink';
 import TextField from '../../../form/TextField';
 import FlightCtlForm from '../../../form/FlightCtlForm';
 import { DeviceSpecConfigFormValues } from '../types';
@@ -17,9 +19,9 @@ export const deviceTemplateStepId = 'device-template';
 export const isDeviceTemplateStepValid = (errors: FormikErrors<DeviceSpecConfigFormValues>) =>
   !errors.osImage && !errors.configTemplates && !errors.applications && !errors.systemdUnits;
 
-const templateOption1 = '{{ device.metadata.labels[key] }}';
-const templateOption2 = '{{ device.metadata.name }}';
-const exampleCode = `/device-configs/factory-floors/floor-{{ device.metadata.labels[factory-floor] }}`;
+const templateOption1 = '{{ .Metadata.Labels.key }}';
+const templateOption2 = '{{ .Metadata.Name }}';
+const exampleCode = `/device-configs/deployment-sites/site-{{ .Metadata.Labels.site }}`;
 
 const DeviceTemplateStep = ({ isFleet }: { isFleet: boolean }) => {
   const { t } = useTranslation();
@@ -37,6 +39,7 @@ const DeviceTemplateStep = ({ isFleet }: { isFleet: boolean }) => {
             <CodeBlock className="pf-v5-u-mt-md">
               <CodeBlockCode>{exampleCode}</CodeBlockCode>
             </CodeBlock>
+            <LearnMoreLink link={USING_TEMPLATE_VARIABLES_LINK} />
           </Alert>
         )}
         <FormGroup
