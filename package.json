@@ -54,7 +54,6 @@
   },
   "overrides": {
     "cheerio": "1.0.0-rc.2",
-    "webpack": "5.75.0",
-    "typescript": "5.3.3"
+    "webpack": "5.75.0"
   }
 }
