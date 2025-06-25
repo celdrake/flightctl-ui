@@ -26,6 +26,9 @@
     "gen-types": "npm run -w @flightctl/types gen-types",
     "integration-tests:ci": "npm run build:libs && npm run -w @flightctl/ui-tests-cypress integration-tests:ci",
     "integration-tests:open": "npm run -w @flightctl/ui-tests-cypress integration-tests:open",
+    "test": "npm run -w @flightctl/ui-components test",
+    "test:watch": "npm run -w @flightctl/ui-components test:watch",
+    "test:coverage": "npm run -w @flightctl/ui-components test:coverage",
     "lint": "eslint \"{libs,apps}/*/src/**/*.{js,jsx,ts,tsx}\" && prettier --check \"{libs,apps}/*/src/**/*.{js,jsx,ts,tsx}\" && npm run i18n",
     "format": "prettier --check --write \"{libs,apps}/*/src/**/*.{js,jsx,ts,tsx}\"",
     "i18n": "npm run -w @flightctl/i18n i18n"

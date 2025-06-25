@@ -37,6 +37,7 @@ import ButtonWithPermissions from '../common/ButtonWithPermissions';
 import { RESOURCE, VERB } from '../../types/rbac';
 import PageWithPermissions from '../common/PageWithPermissions';
 import { useFleetImportAccessReview } from '../../hooks/useFleetImportAccessReview';
+import CertificateRequestModal from '../CertificateRequest/CertificateRequestModal';
 
 const FleetPageActions = ({ createText }: { createText?: string }) => {
   const { t } = useTranslation();
@@ -215,6 +216,7 @@ const FleetsPageWithPermissions = () => {
   const [allowed, loading] = useAccessReview(RESOURCE.FLEET, VERB.LIST);
   return (
     <PageWithPermissions allowed={allowed} loading={loading}>
+      <CertificateRequestModal isOpen onClose={() => {}} />
       <FleetsPage />
     </PageWithPermissions>
   );
