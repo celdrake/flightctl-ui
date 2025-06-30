@@ -66,6 +66,8 @@ export namespace Event {
     DEVICE_CONTENT_UP_TO_DATE = 'DeviceContentUpToDate',
     DEVICE_CONTENT_OUT_OF_DATE = 'DeviceContentOutOfDate',
     DEVICE_CONTENT_UPDATING = 'DeviceContentUpdating',
+    ENROLLMENT_REQUEST_APPROVED = 'EnrollmentRequestApproved',
+    ENROLLMENT_REQUEST_APPROVAL_FAILED = 'EnrollmentRequestApprovalFailed',
   }
   /**
    * The type of the event. One of Normal, Warning.

@@ -68,6 +68,8 @@ const getEventReasonTitles = (t: TFunction, kindType: string): Record<Event.reas
     [Event.reason.DEVICE_CONTENT_UP_TO_DATE]: t('Device returned to being up-to-date'),
     [Event.reason.DEVICE_CONTENT_UPDATING]: t('Device is updating'),
     [Event.reason.DEVICE_CONTENT_OUT_OF_DATE]: t('Device is out-of-date'),
+    [Event.reason.ENROLLMENT_REQUEST_APPROVAL_FAILED]: t('Pending device could not be approved'),
+    [Event.reason.ENROLLMENT_REQUEST_APPROVED]: t('Pending device was approved'),
   };
 };
 
