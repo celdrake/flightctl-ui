@@ -143,17 +143,8 @@ class RateLimiter {
 
     // Check if there's a next threshold and we've reached it
     if (threshold && this.successCount >= threshold) {
-      // Progress to next recovery stage
-      this.recoveryStage = nextStage;
-      const increment = this.config.recoveryIncrements[nextStage - 1] || 0;
-
-      // Decrease interval (increase rate) gradually back towards normal polling
-      this.pollingInterval = Math.max(DEFAULT_POLLING_INTERVAL, this.pollingInterval * (1 - increment));
-
-      console.log(`Recovery stage ${this.recoveryStage}: interval decreased to ${this.pollingInterval}ms`);
-
-      // Check if we've completed all recovery stages after updating
-      if (this.recoveryStage >= this.config.recoveryThresholds.length) {
+      // Check if this is the last threshold - if so, go directly to normal
+      if (nextStage === this.config.recoveryThresholds.length - 1) {
         this.state = RateLimitState.Normal;
         this.pollingInterval = DEFAULT_POLLING_INTERVAL;
         this.throttledInterval = null;
@@ -163,6 +154,15 @@ class RateLimiter {
         console.log('Returned to normal state');
         // Notify subscribers of return to normal
         this.notifySubscribers();
+      } else {
+        // Progress to next recovery stage
+        this.recoveryStage = nextStage;
+        const increment = this.config.recoveryIncrements[nextStage - 1] || 0;
+
+        // Decrease interval (increase rate) gradually back towards normal polling
+        this.pollingInterval = Math.max(DEFAULT_POLLING_INTERVAL, this.pollingInterval * (1 - increment));
+
+        console.log(`Recovery stage ${this.recoveryStage}: interval decreased to ${this.pollingInterval}ms`);
       }
     } else if (!threshold && this.successCount > this.config.recoveryThresholds[this.recoveryStage]) {
       // No more thresholds and we've passed the last one - transition to normal
