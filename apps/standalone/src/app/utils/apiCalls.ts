@@ -82,21 +82,23 @@ const handleApiJSONResponse = async <R>(response: Response): Promise<R> => {
 
   // Handle 429 rate limit errors
   if (response.status === 429) {
+    let rateLimitInfo = DEFAULT_RATE_LIMIT;
+    let errorMessage = 'Rate limit exceeded. Please try again later.';
+
     try {
       const errorData = (await response.json()) as RateLimitErrorResponse;
-      // Use rate limit from response if available, otherwise use default
-      const rateLimitInfo = errorData.rateLimit || DEFAULT_RATE_LIMIT;
-      rateLimiter.notify429(rateLimitInfo);
-      throw new Error(errorData.message || 'Rate limit exceeded. Please try again later.');
-    } catch (error) {
-      // If we can't parse the response, use default rate limit
-      if (error instanceof Error && error.message.includes('Rate limit')) {
-        throw error;
+      if (errorData.rateLimit) {
+        rateLimitInfo = errorData.rateLimit;
       }
-      // Failed to parse, apply default rate limit
-      rateLimiter.notify429(DEFAULT_RATE_LIMIT);
-      throw new Error('Rate limit exceeded. Please try again later.');
+      if (errorData.message) {
+        errorMessage = errorData.message;
+      }
+    } catch {
+      // Failed to parse response, use defaults
     }
+
+    rateLimiter.notify429(rateLimitInfo);
+    throw new Error(errorMessage);
   }
 
   throw new Error(await getErrorMsgFromApiResponse(response));
@@ -120,21 +122,23 @@ const handleAlertsJSONResponse = async <R>(response: Response): Promise<R> => {
 
   // Handle 429 rate limit errors
   if (response.status === 429) {
+    let rateLimitInfo = DEFAULT_RATE_LIMIT;
+    let errorMessage = 'Rate limit exceeded. Please try again later.';
+
     try {
       const errorData = (await response.json()) as RateLimitErrorResponse;
-      // Use rate limit from response if available, otherwise use default
-      const rateLimitInfo = errorData.rateLimit || DEFAULT_RATE_LIMIT;
-      rateLimiter.notify429(rateLimitInfo);
-      throw new Error(errorData.message || 'Rate limit exceeded. Please try again later.');
-    } catch (error) {
-      // If we can't parse the response, use default rate limit
-      if (error instanceof Error && error.message.includes('Rate limit')) {
-        throw error;
+      if (errorData.rateLimit) {
+        rateLimitInfo = errorData.rateLimit;
       }
-      // Failed to parse, apply default rate limit
-      rateLimiter.notify429(DEFAULT_RATE_LIMIT);
-      throw new Error('Rate limit exceeded. Please try again later.');
+      if (errorData.message) {
+        errorMessage = errorData.message;
+      }
+    } catch {
+      // Failed to parse response, use defaults
     }
+
+    rateLimiter.notify429(rateLimitInfo);
+    throw new Error(errorMessage);
   }
 
   // For 500/501 errors, return the status code for detection
