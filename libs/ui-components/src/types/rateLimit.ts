@@ -35,3 +35,19 @@ export interface RateLimiterConfig {
   recoveryIncrements: number[]; // Rate increase percentages at each stage
   safetyMargin: number; // Multiplier for safety (e.g., 1.5 = 50% slower)
 }
+
+// Notification levels
+export type NotificationLevel = 'warning' | 'critical' | 'normal';
+
+// Rate limit notification
+export interface RateLimitNotification {
+  level: NotificationLevel;
+  queueSize: number;
+  queueCapacity: number;
+  queuePercentage: number;
+  state: RateLimitState;
+  message: string;
+}
+
+// Notification callback type
+export type NotificationCallback = (notification: RateLimitNotification) => void;

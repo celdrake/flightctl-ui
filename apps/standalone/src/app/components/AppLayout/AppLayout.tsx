@@ -18,6 +18,7 @@ import OrganizationGuard, {
   useOrganizationGuardContext,
 } from '@flightctl/ui-components/src/components/common/OrganizationGuard';
 import OrganizationSelector from '@flightctl/ui-components/src/components/common/OrganizationSelector';
+import SystemNotifications from '@flightctl/ui-components/src/components/SystemNotifications/SystemNotifications';
 import PageNavigation from '@flightctl/ui-components/src/components/common/PageNavigation';
 import { useTranslation } from '@flightctl/ui-components/src/hooks/useTranslation';
 
@@ -99,6 +100,7 @@ const AppLayoutContent = () => {
       ) : (
         <>
           <PageNavigation />
+          <SystemNotifications />
           <Outlet />
         </>
       )}

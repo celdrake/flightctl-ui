@@ -1,5 +1,12 @@
 /* eslint-disable no-console */
-import { RateLimitState, RateLimitInfo, QueuedRequest, RateLimiterConfig } from '../types/rateLimit';
+import {
+  RateLimitState,
+  RateLimitInfo,
+  QueuedRequest,
+  RateLimiterConfig,
+  RateLimitNotification,
+  NotificationCallback,
+} from '../types/rateLimit';
 
 const DEFAULT_CONFIG: RateLimiterConfig = {
   maxQueueSize: 100,
@@ -17,6 +24,14 @@ const DEFAULT_RATE_LIMIT: RateLimitInfo = {
   retryAfter: 60,
 };
 
+// Queue thresholds for notifications and progressive throttling
+const QUEUE_THRESHOLDS = {
+  WARNING_PERCENTAGE: 10, // Show warning banner
+  HIGH_PRESSURE: 75, // 1.5x delay multiplier
+  CRITICAL_PRESSURE: 90, // 2.0x delay multiplier
+  FULL: 100, // Critical banner
+};
+
 class RateLimiter {
   private state: RateLimitState = RateLimitState.Normal;
   private config: RateLimiterConfig;
@@ -32,6 +47,9 @@ class RateLimiter {
   private successCount = 0;
   private recoveryStage = 0;
   private last429Timestamp: number | null = null;
+
+  // Notification subscribers
+  private subscribers: NotificationCallback[] = [];
 
   constructor(config: Partial<RateLimiterConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -72,6 +90,9 @@ class RateLimiter {
     this.recoveryStage = 0;
 
     console.log(`Throttled interval set to ${this.throttledInterval}ms`);
+
+    // Notify subscribers of state change
+    this.notifySubscribers();
   }
 
   /**
@@ -126,6 +147,8 @@ class RateLimiter {
         this.successCount = 0;
         this.recoveryStage = 0;
         console.log('Returned to normal state');
+        // Notify subscribers of return to normal
+        this.notifySubscribers();
       }
     }
   }
@@ -152,6 +175,9 @@ class RateLimiter {
         timestamp: Date.now(),
       });
 
+      // Notify subscribers of queue change
+      this.notifySubscribers();
+
       // Start processing if not already running
       if (!this.processing) {
         this.processQueue();
@@ -175,6 +201,9 @@ class RateLimiter {
         break;
       }
 
+      // Notify subscribers of queue change
+      this.notifySubscribers();
+
       try {
         const result = await item.executor();
         item.resolve(result);
@@ -182,13 +211,17 @@ class RateLimiter {
         item.reject(error);
       }
 
-      // Wait before processing next request if we're throttled
+      // Apply progressive throttling: wait before processing next request
       if (this.queue.length > 0 && this.throttledInterval) {
-        await this.sleep(this.throttledInterval);
+        const pressureMultiplier = this.getQueuePressure();
+        const effectiveInterval = this.throttledInterval * pressureMultiplier;
+        await this.sleep(effectiveInterval);
       }
     }
 
     this.processing = false;
+    // Notify that queue is now empty
+    this.notifySubscribers();
   }
 
   /**
@@ -203,6 +236,59 @@ class RateLimiter {
    */
   public isThrottled(): boolean {
     return this.state !== RateLimitState.Normal;
+  }
+
+  /**
+   * Subscribe to rate limiter notifications
+   */
+  public subscribe(callback: NotificationCallback): () => void {
+    this.subscribers.push(callback);
+    // Immediately notify with current state
+    this.notifySubscribers();
+    // Return unsubscribe function
+    return () => {
+      this.subscribers = this.subscribers.filter((cb) => cb !== callback);
+    };
+  }
+
+  /**
+   * Calculate queue pressure multiplier for progressive throttling
+   */
+  private getQueuePressure(): number {
+    const percentage = (this.queue.length / this.config.maxQueueSize) * 100;
+    if (percentage >= QUEUE_THRESHOLDS.CRITICAL_PRESSURE) return 2.0; // 100% slower
+    if (percentage >= QUEUE_THRESHOLDS.HIGH_PRESSURE) return 1.5; // 50% slower
+    return 1.0; // Normal
+  }
+
+  /**
+   * Notify all subscribers about current rate limit state
+   */
+  private notifySubscribers(): void {
+    const queueSize = this.queue.length;
+    const queuePercentage = (queueSize / this.config.maxQueueSize) * 100;
+
+    let level: 'warning' | 'critical' | 'normal' = 'normal';
+    let message = '';
+
+    if (queuePercentage >= QUEUE_THRESHOLDS.FULL) {
+      level = 'critical';
+      message = 'Unable to process requests. Please wait for the system to recover.';
+    } else if (queuePercentage >= QUEUE_THRESHOLDS.WARNING_PERCENTAGE) {
+      level = 'warning';
+      message = 'The system is experiencing high traffic. Some requests may be delayed.';
+    }
+
+    const notification: RateLimitNotification = {
+      level,
+      queueSize,
+      queueCapacity: this.config.maxQueueSize,
+      queuePercentage,
+      state: this.state,
+      message,
+    };
+
+    this.subscribers.forEach((callback) => callback(notification));
   }
 
   /**
