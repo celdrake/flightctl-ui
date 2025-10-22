@@ -56,11 +56,13 @@ export const useFetchPeriodically = <R>(
             if (err instanceof DuplicateRequestError) {
               console.log(`[useFetchPeriodically] ${err.message} - keeping existing data`);
               // Don't set error, don't change loading state - just keep existing data
-              continue; // Skip to next iteration
+              // Don't use 'continue' as it would skip the interval wait below
+            } else {
+              // Only set error for non-duplicate errors
+              setError(err);
+              setIsLoading(false);
+              setIsUpdating(false);
             }
-            setError(err);
-            setIsLoading(false);
-            setIsUpdating(false);
           }
         } else {
           setIsLoading(false);
