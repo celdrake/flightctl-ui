@@ -26,6 +26,13 @@ export interface QueuedRequest<T> {
   resolve: (value: T) => void;
   reject: (error: unknown) => void;
   timestamp: number;
+  metadata?: RequestMetadata;
+}
+
+// Request metadata for deduplication
+export interface RequestMetadata {
+  method: string; // GET, POST, PUT, PATCH, DELETE
+  path: string; // API endpoint path
 }
 
 // Rate limiter configuration

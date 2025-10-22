@@ -90,6 +90,10 @@ class RateLimiter {
     this.recoveryStage = 0;
 
     console.log(`Throttled interval set to ${this.throttledInterval}ms`);
+    // @ts-expect-error - window.debugRateLimiter is a debug flag
+    if (window.debugRateLimiter) {
+      console.log('%c Debug Info', 'color: red; font-size:18px', this.getDebugInfo());
+    }
 
     // Notify subscribers of state change
     this.notifySubscribers();
@@ -100,6 +104,10 @@ class RateLimiter {
    */
   public notifySuccess(): void {
     if (this.state === RateLimitState.Normal) {
+      // @ts-expect-error - window.debugRateLimiter is a debug flag
+      if (window.debugRateLimiter) {
+        console.log('%c Debug Info', 'color: red; font-size:18px', this.getDebugInfo());
+      }
       return; // Nothing to track in normal state
     }
 
@@ -128,6 +136,7 @@ class RateLimiter {
     const nextStage = this.recoveryStage + 1;
     const threshold = this.config.recoveryThresholds[nextStage];
 
+    // Check if there's a next threshold and we've reached it
     if (threshold && this.successCount >= threshold) {
       // Progress to next recovery stage
       this.recoveryStage = nextStage;
@@ -138,7 +147,7 @@ class RateLimiter {
 
       console.log(`Recovery stage ${this.recoveryStage}: interval reduced to ${this.currentInterval}ms`);
 
-      // Check if we've completed all recovery stages
+      // Check if we've completed all recovery stages after updating
       if (this.recoveryStage >= this.config.recoveryThresholds.length) {
         this.state = RateLimitState.Normal;
         this.currentInterval = DEFAULT_POLLING_INTERVAL;
@@ -150,6 +159,17 @@ class RateLimiter {
         // Notify subscribers of return to normal
         this.notifySubscribers();
       }
+    } else if (!threshold && this.successCount > this.config.recoveryThresholds[this.recoveryStage]) {
+      // No more thresholds and we've passed the last one - transition to normal
+      this.state = RateLimitState.Normal;
+      this.currentInterval = DEFAULT_POLLING_INTERVAL;
+      this.throttledInterval = null;
+      this.rateLimitInfo = null;
+      this.successCount = 0;
+      this.recoveryStage = 0;
+      console.log('Returned to normal state');
+      // Notify subscribers of return to normal
+      this.notifySubscribers();
     }
   }
 

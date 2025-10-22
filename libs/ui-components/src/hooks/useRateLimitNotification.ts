@@ -16,10 +16,8 @@ export const useRateLimitNotification = () => {
     };
   }, []);
 
-  // Only show notification if level is not normal
-  const shouldShow = notification && notification.level !== 'normal';
-
+  // DEBUG: Show all notifications including normal
   return {
-    notification: shouldShow ? notification : null,
+    notification,
   };
 };
