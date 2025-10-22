@@ -8,7 +8,7 @@ import {
 } from '@flightctl/ui-components/src/utils/apiCalls';
 import { ORGANIZATION_STORAGE_KEY } from '@flightctl/ui-components/src/utils/organizationStorage';
 import { rateLimiter, DEFAULT_RATE_LIMIT } from '@flightctl/ui-components/src/utils/rateLimiter';
-import { RateLimitErrorResponse } from '@flightctl/ui-components/src/types/rateLimit';
+import { RateLimitErrorResponse, DuplicateRequestError } from '@flightctl/ui-components/src/types/rateLimit';
 
 declare global {
   interface Window {
@@ -138,9 +138,12 @@ const putOrPostData = async <TRequest, TResponse = TRequest>(
   data: TRequest,
   method: 'PUT' | 'POST',
 ): Promise<TResponse> => {
-  // If we're throttled, enqueue the request
+  // If we're throttled, enqueue the request with metadata
   if (rateLimiter.isThrottled()) {
-    return rateLimiter.enqueueRequest(() => executePutOrPost<TRequest, TResponse>(kind, data, method));
+    return rateLimiter.enqueueRequest(() => executePutOrPost<TRequest, TResponse>(kind, data, method), {
+      method,
+      path: kind,
+    });
   }
 
   return executePutOrPost<TRequest, TResponse>(kind, data, method);
@@ -176,9 +179,12 @@ export const putData = async <TRequest>(kind: string, data: TRequest): Promise<T
   putOrPostData<TRequest, TRequest>(kind, data, 'PUT');
 
 export const deleteData = async <R>(kind: string, abortSignal?: AbortSignal): Promise<R> => {
-  // If we're throttled, enqueue the request
+  // If we're throttled, enqueue the request with metadata
   if (rateLimiter.isThrottled()) {
-    return rateLimiter.enqueueRequest(() => executeDelete<R>(kind, abortSignal));
+    return rateLimiter.enqueueRequest(() => executeDelete<R>(kind, abortSignal), {
+      method: 'DELETE',
+      path: kind,
+    });
   }
 
   return executeDelete<R>(kind, abortSignal);
@@ -201,9 +207,12 @@ const executeDelete = async <R>(kind: string, abortSignal?: AbortSignal): Promis
 };
 
 export const patchData = async <R>(kind: string, data: PatchRequest, abortSignal?: AbortSignal): Promise<R> => {
-  // If we're throttled, enqueue the request
+  // If we're throttled, enqueue the request with metadata
   if (rateLimiter.isThrottled()) {
-    return rateLimiter.enqueueRequest(() => executePatch<R>(kind, data, abortSignal));
+    return rateLimiter.enqueueRequest(() => executePatch<R>(kind, data, abortSignal), {
+      method: 'PATCH',
+      path: kind,
+    });
   }
 
   return executePatch<R>(kind, data, abortSignal);
@@ -232,7 +241,20 @@ const executePatch = async <R>(kind: string, data: PatchRequest, abortSignal?: A
 export const fetchData = async <R>(path: string, abortSignal?: AbortSignal): Promise<R> => {
   // If we're throttled, enqueue the request
   if (rateLimiter.isThrottled()) {
-    return rateLimiter.enqueueRequest(() => executeFetchData<R>(path, abortSignal));
+    try {
+      return await rateLimiter.enqueueRequest(() => executeFetchData<R>(path, abortSignal), {
+        method: 'GET',
+        path,
+      });
+    } catch (error) {
+      // If this is a duplicate GET request, silently ignore and keep existing data
+      if (error instanceof DuplicateRequestError) {
+        console.log(`[API] ${error.message} - keeping existing state`);
+        // Re-throw to let the component handle it (it won't update state)
+        throw error;
+      }
+      throw error;
+    }
   }
 
   return executeFetchData<R>(path, abortSignal);

@@ -58,3 +58,11 @@ export interface RateLimitNotification {
 
 // Notification callback type
 export type NotificationCallback = (notification: RateLimitNotification) => void;
+
+// Custom error for duplicate GET requests
+export class DuplicateRequestError extends Error {
+  constructor(path: string) {
+    super(`Duplicate GET request for ${path} already queued`);
+    this.name = 'DuplicateRequestError';
+  }
+}

@@ -6,6 +6,8 @@ import {
   RateLimiterConfig,
   RateLimitNotification,
   NotificationCallback,
+  RequestMetadata,
+  DuplicateRequestError,
 } from '../types/rateLimit';
 
 const DEFAULT_CONFIG: RateLimiterConfig = {
@@ -176,10 +178,22 @@ class RateLimiter {
   /**
    * Enqueue a request to be executed with rate limiting
    */
-  public async enqueueRequest<T>(executor: () => Promise<T>): Promise<T> {
+  public async enqueueRequest<T>(executor: () => Promise<T>, metadata?: RequestMetadata): Promise<T> {
     if (this.state === RateLimitState.Normal) {
       // No throttling needed, execute immediately
       return executor();
+    }
+
+    // Check for duplicate GET requests - keep the oldest one
+    if (metadata && metadata.method === 'GET') {
+      const existingGet = this.queue.find(
+        (item) => item.metadata?.method === 'GET' && item.metadata?.path === metadata.path,
+      );
+      if (existingGet) {
+        console.log(`[Rate Limiter] Skipping duplicate GET request for ${metadata.path} (already queued)`);
+        // Throw custom error that components can catch and ignore
+        throw new DuplicateRequestError(metadata.path);
+      }
     }
 
     // Check queue size limit
@@ -193,6 +207,7 @@ class RateLimiter {
         resolve: resolve as (value: unknown) => void,
         reject,
         timestamp: Date.now(),
+        metadata,
       });
 
       // Notify subscribers of queue change

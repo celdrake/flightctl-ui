@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { ApiQuery } from '../types/extraTypes';
 import { rateLimiter } from '../utils/rateLimiter';
+import { DuplicateRequestError } from '../types/rateLimit';
 
 import { useFetch } from './useFetch';
 
@@ -50,6 +51,12 @@ export const useFetchPeriodically = <R>(
             // aborting fetch trows 'AbortError', we can ignore it
             if (abortController.signal.aborted) {
               return;
+            }
+            // Ignore duplicate request errors - keep existing data
+            if (err instanceof DuplicateRequestError) {
+              console.log(`[useFetchPeriodically] ${err.message} - keeping existing data`);
+              // Don't set error, don't change loading state - just keep existing data
+              continue; // Skip to next iteration
             }
             setError(err);
             setIsLoading(false);

@@ -6,7 +6,7 @@ import {
 } from '@flightctl/ui-components/src/utils/apiCalls';
 import { ORGANIZATION_STORAGE_KEY } from '@flightctl/ui-components/src/utils/organizationStorage';
 import { rateLimiter, DEFAULT_RATE_LIMIT } from '@flightctl/ui-components/src/utils/rateLimiter';
-import { RateLimitErrorResponse } from '@flightctl/ui-components/src/types/rateLimit';
+import { RateLimitErrorResponse, DuplicateRequestError } from '@flightctl/ui-components/src/types/rateLimit';
 
 import { lastRefresh } from '../context/AuthContext';
 
@@ -152,7 +152,21 @@ const handleAlertsJSONResponse = async <R>(response: Response): Promise<R> => {
 const fetchWithRetry = async <R>(path: string, init?: RequestInit): Promise<R> => {
   // If we're throttled, enqueue the request
   if (rateLimiter.isThrottled()) {
-    return rateLimiter.enqueueRequest(() => executeFetch<R>(path, init));
+    const method = init?.method || 'GET';
+    try {
+      return await rateLimiter.enqueueRequest(() => executeFetch<R>(path, init), {
+        method,
+        path,
+      });
+    } catch (error) {
+      // If this is a duplicate GET request, silently ignore and keep existing data
+      if (error instanceof DuplicateRequestError) {
+        console.log(`[API] ${error.message} - keeping existing state`);
+        // Re-throw to let the component handle it (it won't update state)
+        throw error;
+      }
+      throw error;
+    }
   }
 
   return executeFetch<R>(path, init);
@@ -182,14 +196,15 @@ const putOrPostData = async <TRequest, TResponse = TRequest>(
   method: 'PUT' | 'POST',
 ): Promise<TResponse> => {
   try {
-    return await fetchWithRetry<TResponse>(kind, {
+    const init: RequestInit = {
       headers: {
         'Content-Type': 'application/json',
       },
       credentials: 'include',
       method,
       body: JSON.stringify(data),
-    });
+    };
+    return await fetchWithRetry<TResponse>(kind, init);
   } catch (error) {
     console.error(`Error making ${method} request for ${kind}:`, error);
     throw error;
@@ -204,11 +219,12 @@ export const putData = async <TRequest>(kind: string, data: TRequest): Promise<T
 
 export const deleteData = async <R>(kind: string, abortSignal?: AbortSignal): Promise<R> => {
   try {
-    return fetchWithRetry<R>(kind, {
+    const init: RequestInit = {
       method: 'DELETE',
       credentials: 'include',
       signal: abortSignal,
-    });
+    };
+    return fetchWithRetry<R>(kind, init);
   } catch (error) {
     console.error('Error making DELETE request:', error);
     throw error;
@@ -217,7 +233,7 @@ export const deleteData = async <R>(kind: string, abortSignal?: AbortSignal): Pr
 
 export const patchData = async <R>(kind: string, data: PatchRequest, abortSignal?: AbortSignal): Promise<R> => {
   try {
-    return fetchWithRetry<R>(kind, {
+    const init: RequestInit = {
       headers: {
         'Content-Type': 'application/json-patch+json',
       },
@@ -225,7 +241,8 @@ export const patchData = async <R>(kind: string, data: PatchRequest, abortSignal
       credentials: 'include',
       body: JSON.stringify(data),
       signal: abortSignal,
-    });
+    };
+    return fetchWithRetry<R>(kind, init);
   } catch (error) {
     console.error('Error making PATCH request:', error);
     throw error;
@@ -234,11 +251,18 @@ export const patchData = async <R>(kind: string, data: PatchRequest, abortSignal
 
 export const fetchData = async <R>(path: string, abortSignal?: AbortSignal): Promise<R> => {
   try {
-    return fetchWithRetry<R>(path, {
+    const init: RequestInit = {
+      method: 'GET',
       credentials: 'include',
       signal: abortSignal,
-    });
+    };
+    return fetchWithRetry<R>(path, init);
   } catch (error) {
+    // Ignore duplicate request errors - component keeps existing state
+    if (error instanceof DuplicateRequestError) {
+      console.log(`[fetchData] ${error.message} - keeping existing state`);
+      throw error; // Re-throw for component to handle
+    }
     console.error('Error making GET request:', error);
     throw error;
   }

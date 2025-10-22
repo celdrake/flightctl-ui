@@ -334,14 +334,18 @@ Potential improvements for future iterations:
 
 ### New Files
 
-- `libs/ui-components/src/types/rateLimit.ts` - Type definitions
-- `libs/ui-components/src/utils/rateLimiter.ts` - Core rate limiter service
+- `libs/ui-components/src/types/rateLimit.ts` - Type definitions (includes `DuplicateRequestError`)
+- `libs/ui-components/src/utils/rateLimiter.ts` - Core rate limiter service with deduplication
+- `libs/ui-components/src/hooks/useRateLimitNotification.ts` - React hook for UI notifications
+- `libs/ui-components/src/components/SystemNotifications/SystemNotifications.tsx` - Global notification banner
 
 ### Modified Files
 
-- `apps/standalone/src/app/utils/apiCalls.ts` - Standalone API integration
-- `apps/ocp-plugin/src/utils/apiCalls.ts` - OCP plugin API integration
-- `libs/ui-components/src/hooks/useFetchPeriodically.ts` - Periodic polling integration
+- `apps/standalone/src/app/utils/apiCalls.ts` - Standalone API integration with metadata support
+- `apps/ocp-plugin/src/utils/apiCalls.ts` - OCP plugin API integration with metadata support
+- `libs/ui-components/src/hooks/useFetchPeriodically.ts` - Periodic polling with deduplication handling
+- `apps/standalone/src/app/components/AppLayout/AppLayout.tsx` - Added SystemNotifications
+- `apps/ocp-plugin/src/components/common/WithPageLayout.tsx` - Added SystemNotifications
 
 ## Behavior and Guarantees
 
@@ -368,6 +372,54 @@ const item = this.queue.shift();
 ```
 
 **Note:** Currently all requests have equal priority. Future enhancements could add priority queuing (e.g., writes before reads) if needed.
+
+### GET Request Deduplication
+
+The rate limiter **automatically deduplicates GET requests** when the system is throttled:
+
+- When a GET request for a specific path is already in the queue, subsequent GET requests to the same path are discarded
+- The oldest request is kept (maintaining FIFO order)
+- Duplicate requests throw a `DuplicateRequestError` which components handle gracefully
+- Components keep their existing data when a duplicate request is discarded
+
+**Why this matters:**
+
+When the system is throttled, periodic polling can queue multiple identical GET requests (e.g., polling the same endpoint every 10 seconds). Since the data will be fresh when the queued request finally executes, there's no benefit to queuing duplicate requests. Deduplication prevents the queue from filling up with redundant requests.
+
+**Example:**
+
+```typescript
+// Queue state when throttled:
+Queue: [GET / devices, POST / devices, GET / fleets, PATCH / devices / 123];
+
+// Another GET /devices arrives
+// -> Discarded (GET /devices already queued)
+// -> Component keeps existing data
+
+// A GET /repositories arrives
+// -> Added to queue (not a duplicate)
+```
+
+**Implementation:**
+
+```typescript
+// Throws DuplicateRequestError if already queued
+throw new DuplicateRequestError(metadata.path);
+```
+
+Components handle this error:
+
+```typescript
+catch (err) {
+  if (err instanceof DuplicateRequestError) {
+    // Keep existing data, don't update state
+    continue;
+  }
+  setError(err);
+}
+```
+
+**Note:** Only GET requests are deduplicated. POST, PUT, PATCH, DELETE requests are always queued as they represent state-changing operations that should not be skipped.
 
 ### Singleton Scope
 
