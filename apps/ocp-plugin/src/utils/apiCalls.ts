@@ -7,6 +7,8 @@ import {
   getErrorMsgFromApiResponse,
 } from '@flightctl/ui-components/src/utils/apiCalls';
 import { ORGANIZATION_STORAGE_KEY } from '@flightctl/ui-components/src/utils/organizationStorage';
+import { rateLimiter, DEFAULT_RATE_LIMIT } from '@flightctl/ui-components/src/utils/rateLimiter';
+import { RateLimitErrorResponse } from '@flightctl/ui-components/src/types/rateLimit';
 
 declare global {
   interface Window {
@@ -56,11 +58,32 @@ const getFullApiUrl = (path: string) => {
 const handleAlertsJSONResponse = async <R>(response: Response): Promise<R> => {
   if (response.ok) {
     const data = (await response.json()) as R;
+    // Notify rate limiter of successful request
+    rateLimiter.notifySuccess();
     return data;
   }
 
   if (response.status === 404) {
     throw new Error(`Error ${response.status}: ${response.statusText}`);
+  }
+
+  // Handle 429 rate limit errors
+  if (response.status === 429) {
+    try {
+      const errorData = (await response.json()) as RateLimitErrorResponse;
+      // Use rate limit from response if available, otherwise use default
+      const rateLimitInfo = errorData.rateLimit || DEFAULT_RATE_LIMIT;
+      rateLimiter.notify429(rateLimitInfo);
+      throw new Error(errorData.message || 'Rate limit exceeded. Please try again later.');
+    } catch (error) {
+      // If we can't parse the response, use default rate limit
+      if (error instanceof Error && error.message.includes('Rate limit')) {
+        throw error;
+      }
+      // Failed to parse, apply default rate limit
+      rateLimiter.notify429(DEFAULT_RATE_LIMIT);
+      throw new Error('Rate limit exceeded. Please try again later.');
+    }
   }
 
   // For 500/501 errors, return the status code for detection
@@ -74,6 +97,8 @@ const handleAlertsJSONResponse = async <R>(response: Response): Promise<R> => {
 export const handleApiJSONResponse = async <R>(response: Response): Promise<R> => {
   if (response.ok) {
     const data = (await response.json()) as R;
+    // Notify rate limiter of successful request
+    rateLimiter.notifySuccess();
     return data;
   }
 
@@ -82,10 +107,42 @@ export const handleApiJSONResponse = async <R>(response: Response): Promise<R> =
     throw new Error(`Error ${response.status}: ${response.statusText}`);
   }
 
+  // Handle 429 rate limit errors
+  if (response.status === 429) {
+    try {
+      const errorData = (await response.json()) as RateLimitErrorResponse;
+      // Use rate limit from response if available, otherwise use default
+      const rateLimitInfo = errorData.rateLimit || DEFAULT_RATE_LIMIT;
+      rateLimiter.notify429(rateLimitInfo);
+      throw new Error(errorData.message || 'Rate limit exceeded. Please try again later.');
+    } catch (error) {
+      // If we can't parse the response, use default rate limit
+      if (error instanceof Error && error.message.includes('Rate limit')) {
+        throw error;
+      }
+      // Failed to parse, apply default rate limit
+      rateLimiter.notify429(DEFAULT_RATE_LIMIT);
+      throw new Error('Rate limit exceeded. Please try again later.');
+    }
+  }
+
   throw new Error(await getErrorMsgFromApiResponse(response));
 };
 
 const putOrPostData = async <TRequest, TResponse = TRequest>(
+  kind: string,
+  data: TRequest,
+  method: 'PUT' | 'POST',
+): Promise<TResponse> => {
+  // If we're throttled, enqueue the request
+  if (rateLimiter.isThrottled()) {
+    return rateLimiter.enqueueRequest(() => executePutOrPost<TRequest, TResponse>(kind, data, method));
+  }
+
+  return executePutOrPost<TRequest, TResponse>(kind, data, method);
+};
+
+const executePutOrPost = async <TRequest, TResponse = TRequest>(
   kind: string,
   data: TRequest,
   method: 'PUT' | 'POST',
@@ -115,6 +172,15 @@ export const putData = async <TRequest>(kind: string, data: TRequest): Promise<T
   putOrPostData<TRequest, TRequest>(kind, data, 'PUT');
 
 export const deleteData = async <R>(kind: string, abortSignal?: AbortSignal): Promise<R> => {
+  // If we're throttled, enqueue the request
+  if (rateLimiter.isThrottled()) {
+    return rateLimiter.enqueueRequest(() => executeDelete<R>(kind, abortSignal));
+  }
+
+  return executeDelete<R>(kind, abortSignal);
+};
+
+const executeDelete = async <R>(kind: string, abortSignal?: AbortSignal): Promise<R> => {
   const baseOptions: RequestInit = {
     method: 'DELETE',
     signal: abortSignal,
@@ -131,6 +197,15 @@ export const deleteData = async <R>(kind: string, abortSignal?: AbortSignal): Pr
 };
 
 export const patchData = async <R>(kind: string, data: PatchRequest, abortSignal?: AbortSignal): Promise<R> => {
+  // If we're throttled, enqueue the request
+  if (rateLimiter.isThrottled()) {
+    return rateLimiter.enqueueRequest(() => executePatch<R>(kind, data, abortSignal));
+  }
+
+  return executePatch<R>(kind, data, abortSignal);
+};
+
+const executePatch = async <R>(kind: string, data: PatchRequest, abortSignal?: AbortSignal): Promise<R> => {
   const baseOptions: RequestInit = {
     headers: {
       'Content-Type': 'application/json-patch+json',
@@ -151,6 +226,15 @@ export const patchData = async <R>(kind: string, data: PatchRequest, abortSignal
 };
 
 export const fetchData = async <R>(path: string, abortSignal?: AbortSignal): Promise<R> => {
+  // If we're throttled, enqueue the request
+  if (rateLimiter.isThrottled()) {
+    return rateLimiter.enqueueRequest(() => executeFetchData<R>(path, abortSignal));
+  }
+
+  return executeFetchData<R>(path, abortSignal);
+};
+
+const executeFetchData = async <R>(path: string, abortSignal?: AbortSignal): Promise<R> => {
   try {
     const { api, url } = getFullApiUrl(path);
 

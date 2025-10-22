@@ -5,6 +5,8 @@ import {
   getErrorMsgFromApiResponse,
 } from '@flightctl/ui-components/src/utils/apiCalls';
 import { ORGANIZATION_STORAGE_KEY } from '@flightctl/ui-components/src/utils/organizationStorage';
+import { rateLimiter, DEFAULT_RATE_LIMIT } from '@flightctl/ui-components/src/utils/rateLimiter';
+import { RateLimitErrorResponse } from '@flightctl/ui-components/src/types/rateLimit';
 
 import { lastRefresh } from '../context/AuthContext';
 
@@ -64,6 +66,8 @@ export const redirectToLogin = async () => {
 const handleApiJSONResponse = async <R>(response: Response): Promise<R> => {
   if (response.ok) {
     const data = (await response.json()) as R;
+    // Notify rate limiter of successful request
+    rateLimiter.notifySuccess();
     return data;
   }
 
@@ -76,12 +80,33 @@ const handleApiJSONResponse = async <R>(response: Response): Promise<R> => {
     await redirectToLogin();
   }
 
+  // Handle 429 rate limit errors
+  if (response.status === 429) {
+    try {
+      const errorData = (await response.json()) as RateLimitErrorResponse;
+      // Use rate limit from response if available, otherwise use default
+      const rateLimitInfo = errorData.rateLimit || DEFAULT_RATE_LIMIT;
+      rateLimiter.notify429(rateLimitInfo);
+      throw new Error(errorData.message || 'Rate limit exceeded. Please try again later.');
+    } catch (error) {
+      // If we can't parse the response, use default rate limit
+      if (error instanceof Error && error.message.includes('Rate limit')) {
+        throw error;
+      }
+      // Failed to parse, apply default rate limit
+      rateLimiter.notify429(DEFAULT_RATE_LIMIT);
+      throw new Error('Rate limit exceeded. Please try again later.');
+    }
+  }
+
   throw new Error(await getErrorMsgFromApiResponse(response));
 };
 
 const handleAlertsJSONResponse = async <R>(response: Response): Promise<R> => {
   if (response.ok) {
     const data = (await response.json()) as R;
+    // Notify rate limiter of successful request
+    rateLimiter.notifySuccess();
     return data;
   }
 
@@ -93,6 +118,25 @@ const handleAlertsJSONResponse = async <R>(response: Response): Promise<R> => {
     await redirectToLogin();
   }
 
+  // Handle 429 rate limit errors
+  if (response.status === 429) {
+    try {
+      const errorData = (await response.json()) as RateLimitErrorResponse;
+      // Use rate limit from response if available, otherwise use default
+      const rateLimitInfo = errorData.rateLimit || DEFAULT_RATE_LIMIT;
+      rateLimiter.notify429(rateLimitInfo);
+      throw new Error(errorData.message || 'Rate limit exceeded. Please try again later.');
+    } catch (error) {
+      // If we can't parse the response, use default rate limit
+      if (error instanceof Error && error.message.includes('Rate limit')) {
+        throw error;
+      }
+      // Failed to parse, apply default rate limit
+      rateLimiter.notify429(DEFAULT_RATE_LIMIT);
+      throw new Error('Rate limit exceeded. Please try again later.');
+    }
+  }
+
   // For 500/501 errors, return the status code for detection
   if (response.status === 500 || response.status === 501) {
     throw new Error(`${response.status}`);
@@ -102,6 +146,15 @@ const handleAlertsJSONResponse = async <R>(response: Response): Promise<R> => {
 };
 
 const fetchWithRetry = async <R>(path: string, init?: RequestInit): Promise<R> => {
+  // If we're throttled, enqueue the request
+  if (rateLimiter.isThrottled()) {
+    return rateLimiter.enqueueRequest(() => executeFetch<R>(path, init));
+  }
+
+  return executeFetch<R>(path, init);
+};
+
+const executeFetch = async <R>(path: string, init?: RequestInit): Promise<R> => {
   const { api, url } = getFullApiUrl(path);
 
   // Add organization header if available

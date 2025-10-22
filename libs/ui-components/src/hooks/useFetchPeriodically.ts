@@ -1,9 +1,10 @@
 import * as React from 'react';
 import { ApiQuery } from '../types/extraTypes';
+import { rateLimiter } from '../utils/rateLimiter';
 
 import { useFetch } from './useFetch';
 
-const TIMEOUT = 10000;
+const DEFAULT_TIMEOUT = 10000;
 
 export const useFetchPeriodically = <R>(
   query: ApiQuery,
@@ -60,7 +61,10 @@ export const useFetchPeriodically = <R>(
           setData(undefined);
         }
         prevResolvedQueryHash.current = query.endpoint;
-        await new Promise((resolve) => setTimeout(resolve, query.timeout || TIMEOUT));
+
+        // Use rate limiter's recommended interval if available, otherwise use query timeout or default
+        const interval = query.timeout || rateLimiter.getRecommendedInterval() || DEFAULT_TIMEOUT;
+        await new Promise((resolve) => setTimeout(resolve, interval));
       }
     };
 
