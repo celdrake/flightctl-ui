@@ -454,6 +454,8 @@ Time 10s: Component B polls again → succeeds (no duplicate in queue) → Compo
 
 Components can detect and handle the `RateLimitedError` to show custom UI:
 
+CELIA: sometimes the component will show an error after successfully having retrieved data. See for example in Fleets page, after triggering the rate limits.
+
 ```typescript
 import { RateLimitedError } from '@flightctl/ui-components/src/types/rateLimit';
 
