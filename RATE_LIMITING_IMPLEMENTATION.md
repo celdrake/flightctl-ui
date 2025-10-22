@@ -346,10 +346,10 @@ Potential improvements for future iterations:
 
 ### New Files
 
-- `libs/ui-components/src/types/rateLimit.ts` - Type definitions (includes `DuplicateRequestError`)
+- `libs/ui-components/src/types/rateLimit.ts` - Type definitions (includes `DuplicateRequestError`, `RateLimitedError`)
 - `libs/ui-components/src/utils/rateLimiter.ts` - Core rate limiter service with deduplication
 - `libs/ui-components/src/hooks/useRateLimitNotification.ts` - React hook for UI notifications
-- `libs/ui-components/src/components/SystemNotifications/SystemNotifications.tsx` - Global notification banner
+- `libs/ui-components/src/components/SystemNotifications/SystemNotifications.tsx` - Global notification banner with test button
 
 ### Modified Files
 
@@ -433,6 +433,49 @@ catch (err) {
 
 **Note:** Only GET requests are deduplicated. POST, PUT, PATCH, DELETE requests are always queued as they represent state-changing operations that should not be skipped.
 
+**Handling First Load:**
+
+Components using `useFetchPeriodically` handle deduplication intelligently:
+
+- **If a component hasn't received data yet and gets a duplicate error**: Shows a `RateLimitedError` with the message "The system is experiencing high traffic. Retrying automatically..." and retries on the next poll cycle
+- **If a component has already received data and gets a duplicate error**: Silently keeps its existing data without showing an error
+- This ensures components show helpful feedback instead of staying in loading state indefinitely
+
+**Example scenario:**
+
+```text
+Time 0: Component A (Devices List) makes GET /devices → queued
+Time 0: Component B (Device Count) makes GET /devices → deduplicated, shows RateLimitedError
+Time 3s: Component A's request completes → Component A shows data
+Time 10s: Component B polls again → succeeds (no duplicate in queue) → Component B shows data
+```
+
+**Handling RateLimitedError in Components:**
+
+Components can detect and handle the `RateLimitedError` to show custom UI:
+
+```typescript
+import { RateLimitedError } from '@flightctl/ui-components/src/types/rateLimit';
+
+const [data, isLoading, error] = useFetchPeriodically({ endpoint: '/devices' });
+
+if (error instanceof RateLimitedError) {
+  return <Alert variant="info" title="Loading" isInline>
+    {error.message} {/* "The system is experiencing high traffic. Retrying automatically..." */}
+  </Alert>;
+}
+
+if (error) {
+  return <Alert variant="danger" title="Error">{String(error)}</Alert>;
+}
+```
+
+The error automatically clears on the next successful fetch, so no manual error handling is needed.
+
+**Optional Control:**
+
+The `RequestMetadata` interface includes an `allowDeduplication` flag (defaults to `true`) for fine-grained control if needed in the future.
+
 ### Singleton Scope
 
 The rate limiter is **per browser tab**, NOT shared across users or tabs:
@@ -464,10 +507,12 @@ The rate limiting implementation provides:
 
 - ✅ Automatic 429 error detection
 - ✅ Intelligent request queueing with FIFO guarantee
+- ✅ GET request deduplication to prevent queue overflow
 - ✅ Adaptive rate throttling based on backend configuration
 - ✅ Default fallback (20 req/min) when backend doesn't provide rate limit info
 - ✅ Gradual recovery to normal operation
-- ✅ Silent operation (no user disruption)
+- ✅ User-friendly error messages when components load during rate limiting
+- ✅ Silent operation for components with existing data (no user disruption)
 - ✅ Global rate management across all API calls (per browser tab)
 - ✅ Zero configuration required in UI components
 - ✅ Works immediately without backend changes

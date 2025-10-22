@@ -38,6 +38,7 @@ import { RESOURCE, VERB } from '../../types/rbac';
 import PageWithPermissions from '../common/PageWithPermissions';
 import { useFleetImportAccessReview } from '../../hooks/useFleetImportAccessReview';
 import { GlobalSystemRestoreBanners } from '../SystemRestore/SystemRestoreBanners';
+import { RateLimitedError } from '../../types/rateLimit';
 
 const FleetPageActions = ({ createText }: { createText?: string }) => {
   const { t } = useTranslation();
@@ -121,8 +122,10 @@ const FleetTable = () => {
   const [canCreate] = useAccessReview(RESOURCE.FLEET, VERB.CREATE);
   const [canEdit] = useAccessReview(RESOURCE.FLEET, VERB.PATCH);
 
+  const ignoreError = error instanceof RateLimitedError && fleets.length > 0;
+
   return (
-    <ListPageBody error={error} loading={isLoading}>
+    <ListPageBody error={ignoreError ? undefined : error} loading={isLoading}>
       <GlobalSystemRestoreBanners onResumeComplete={refetch} />
       <Toolbar inset={{ default: 'insetNone' }}>
         <ToolbarContent>

@@ -4,6 +4,7 @@ import { Alert, Bullseye, Spinner } from '@patternfly/react-core';
 import { getErrorMessage } from '../../utils/error';
 import { useTranslation } from '../../hooks/useTranslation';
 import ErrorBoundary from '../common/ErrorBoundary';
+import { RateLimitedError } from '../../types/rateLimit';
 
 type ListPageBodyProps = {
   error: unknown;
@@ -13,6 +14,13 @@ type ListPageBodyProps = {
 
 const ListPageBody: React.FC<ListPageBodyProps> = ({ error, loading, children }) => {
   const { t } = useTranslation();
+  if (error instanceof RateLimitedError) {
+    return (
+      <Alert variant="warning" title={t('System is experiencing high traffic.')} isInline>
+        {error.message}
+      </Alert>
+    );
+  }
   if (error) {
     return (
       <Alert variant="danger" title={t('An error occurred')} isInline>

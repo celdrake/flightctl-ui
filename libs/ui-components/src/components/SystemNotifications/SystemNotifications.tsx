@@ -1,12 +1,16 @@
 import * as React from 'react';
-import { Alert, Label } from '@patternfly/react-core';
+import { Alert, Label, Button } from '@patternfly/react-core';
 import { useRateLimitNotification } from '../../hooks/useRateLimitNotification';
 import { RateLimitState } from '../../types/rateLimit';
 import { rateLimiter } from '../../utils/rateLimiter';
+import { useFetch } from '../../hooks/useFetch';
+import { FleetList } from '@flightctl/types';
 
 const SystemNotifications = () => {
   const { notification } = useRateLimitNotification();
   const [debugInfo, setDebugInfo] = React.useState(rateLimiter.getDebugInfo());
+  const { get } = useFetch();
+  const [isTriggeringRequests, setIsTriggeringRequests] = React.useState(false);
 
   // Update debug info periodically
   React.useEffect(() => {
@@ -16,6 +20,31 @@ const SystemNotifications = () => {
 
     return () => clearInterval(interval);
   }, []);
+
+  const triggerRateLimiting = async () => {
+    setIsTriggeringRequests(true);
+    console.log('[TEST] Triggering 6 rapid fleet requests...');
+
+    // Trigger 6 requests in rapid succession
+    const requests: Promise<void>[] = [];
+    for (let i = 0; i < 6; i++) {
+      console.log(`[TEST] Triggering request ${i + 1}/6`);
+      requests.push(
+        get<FleetList>('fleets?limit=1')
+          .then(() => console.log(`[TEST] Request ${i + 1}/6 completed`))
+          .catch(() => console.log(`[TEST] Request ${i + 1}/6 failed:`)),
+      );
+      // Small delay between triggers (100ms) to simulate rapid clicks
+      if (i < 5) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+    }
+
+    // Wait for all to complete
+    await Promise.allSettled(requests);
+    console.log('[TEST] All requests completed');
+    setIsTriggeringRequests(false);
+  };
 
   // Always show for testing
   const variant =
@@ -42,6 +71,14 @@ const SystemNotifications = () => {
       isInline
       title={<>[DEBUG] Rate Limiter Status {getStateLabel()}</>}
     >
+      <div style={{ marginBottom: '12px' }}>
+        <Button variant="danger" onClick={triggerRateLimiting} isDisabled={isTriggeringRequests} size="sm">
+          {isTriggeringRequests ? 'Triggering requests...' : 'Trigger Rate Limiting (6 requests)'}
+        </Button>
+        <span style={{ marginLeft: '12px', fontSize: '12px', color: '#6a6e73' }}>
+          Click to send 6 rapid fleet requests to force rate limiting
+        </span>
+      </div>
       <pre style={{ fontSize: '12px', marginTop: '8px', maxHeight: '300px', overflow: 'auto' }}>
         {JSON.stringify(debugInfo, null, 2)}
       </pre>

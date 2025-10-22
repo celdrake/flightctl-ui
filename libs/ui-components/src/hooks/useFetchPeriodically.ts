@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { ApiQuery } from '../types/extraTypes';
 import { rateLimiter } from '../utils/rateLimiter';
-import { DuplicateRequestError } from '../types/rateLimit';
+import { DuplicateRequestError, RateLimitedError } from '../types/rateLimit';
 
 import { useFetch } from './useFetch';
 
@@ -18,6 +18,7 @@ export const useFetchPeriodically = <R>(
   const [forceUpdate, setForceUpdate] = React.useState(0);
   const ref = React.useRef(0);
   const prevResolvedQueryHash = React.useRef<string>();
+  const hasReceivedData = React.useRef(false);
 
   const { get } = useFetch();
 
@@ -27,6 +28,7 @@ export const useFetchPeriodically = <R>(
     const fetchPeriodically = async (id: number) => {
       while (ref.current === id) {
         const requestQuery = query.endpoint;
+        const isFleetRequest = requestQuery?.includes('fleets?limit=15&addDevicesSummary=true');
         if (requestQuery) {
           try {
             abortController = new AbortController();
@@ -34,7 +36,15 @@ export const useFetchPeriodically = <R>(
               setIsUpdating(true);
             }
 
+            if (isFleetRequest)
+              console.log(
+                `[useFetchPeriodically] FLEET REQUEST - Fetching: ${requestQuery}, hasReceivedData: ${hasReceivedData.current}`,
+              );
+
             const data = (await get<R>(requestQuery, abortController.signal)) as R;
+            if (isFleetRequest) console.log(`[useFetchPeriodically] FLEET REQUEST - Fetch SUCCESS, setting data`);
+
+            hasReceivedData.current = true;
             if (isLoading) {
               setIsLoading(false);
             }
@@ -52,13 +62,28 @@ export const useFetchPeriodically = <R>(
             if (abortController.signal.aborted) {
               return;
             }
-            // Ignore duplicate request errors - keep existing data
+            // Ignore duplicate request errors - but only if we've already received data
             if (err instanceof DuplicateRequestError) {
-              console.log(`[useFetchPeriodically] ${err.message} - keeping existing data`);
-              // Don't set error, don't change loading state - just keep existing data
+              if (isFleetRequest)
+                console.log(
+                  `[useFetchPeriodically] FLEET REQUEST - Got DuplicateRequestError, hasReceivedData: ${hasReceivedData.current}`,
+                );
+              if (hasReceivedData.current) {
+                console.log(`[useFetchPeriodically] ${err.message} - keeping existing data`);
+                // Don't set error, don't change loading state
+              } else {
+                // First fetch got deduplicated - show a helpful error message
+                // Components can detect this and show a user-friendly message
+                console.log(`[useFetchPeriodically] ${err.message} - showing rate limited message`);
+                if (isFleetRequest) console.log(`[useFetchPeriodically] FLEET REQUEST - Setting RateLimitedError`);
+                setError(new RateLimitedError());
+                setIsLoading(false);
+                setIsUpdating(false);
+              }
               // Don't use 'continue' as it would skip the interval wait below
             } else {
               // Only set error for non-duplicate errors
+              if (isFleetRequest) console.log(`[useFetchPeriodically] FLEET REQUEST - Got error:`, err);
               setError(err);
               setIsLoading(false);
               setIsUpdating(false);

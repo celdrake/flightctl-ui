@@ -182,22 +182,36 @@ class RateLimiter {
    * Enqueue a request to be executed with rate limiting
    */
   public async enqueueRequest<T>(executor: () => Promise<T>, metadata?: RequestMetadata): Promise<T> {
+    const isFleetRequest = metadata?.path?.includes('fleets?limit=15&addDevicesSummary=true');
+
     if (this.state === RateLimitState.Normal) {
       // No throttling needed, execute immediately
+      if (isFleetRequest)
+        console.log(`[Rate Limiter] FLEET REQUEST - Executing immediately (Normal state): ${metadata?.path}`);
       return executor();
     }
 
+    if (isFleetRequest)
+      console.log(`[Rate Limiter] FLEET REQUEST - Throttled state, checking for duplicates: ${metadata?.path}`);
+
     // Check for duplicate GET requests - keep the oldest one
-    if (metadata && metadata.method === 'GET') {
+    // Only deduplicate if allowDeduplication is not explicitly set to false
+    const shouldDeduplicate = metadata?.allowDeduplication !== false;
+    if (metadata && metadata.method === 'GET' && shouldDeduplicate) {
       const existingGet = this.queue.find(
         (item) => item.metadata?.method === 'GET' && item.metadata?.path === metadata.path,
       );
       if (existingGet) {
         console.log(`[Rate Limiter] Skipping duplicate GET request for ${metadata.path} (already queued)`);
+        if (isFleetRequest)
+          console.log(`[Rate Limiter] FLEET REQUEST - DEDUPLICATED! Queue length: ${this.queue.length}`);
         // Throw custom error that components can catch and ignore
         throw new DuplicateRequestError(metadata.path);
       }
     }
+
+    if (isFleetRequest)
+      console.log(`[Rate Limiter] FLEET REQUEST - Adding to queue. Queue length before: ${this.queue.length}`);
 
     // Check queue size limit
     if (this.queue.length >= this.config.maxQueueSize) {
@@ -213,11 +227,17 @@ class RateLimiter {
         metadata,
       });
 
+      if (isFleetRequest)
+        console.log(
+          `[Rate Limiter] FLEET REQUEST - Added to queue. Queue length after: ${this.queue.length}, Processing: ${this.processing}`,
+        );
+
       // Notify subscribers of queue change
       this.notifySubscribers();
 
       // Start processing if not already running
       if (!this.processing) {
+        if (isFleetRequest) console.log(`[Rate Limiter] FLEET REQUEST - Starting queue processing`);
         this.processQueue();
       }
     });
@@ -239,13 +259,19 @@ class RateLimiter {
         break;
       }
 
+      const isFleetRequest = item.metadata?.path?.includes('fleets?limit=15&addDevicesSummary=true');
+      if (isFleetRequest)
+        console.log(`[Rate Limiter] FLEET REQUEST - Executing from queue. Queue length: ${this.queue.length}`);
+
       // Notify subscribers of queue change
       this.notifySubscribers();
 
       try {
         const result = await item.executor();
+        if (isFleetRequest) console.log(`[Rate Limiter] FLEET REQUEST - Execution SUCCESS`);
         item.resolve(result);
       } catch (error) {
+        if (isFleetRequest) console.log(`[Rate Limiter] FLEET REQUEST - Execution FAILED:`, error);
         item.reject(error);
       }
 

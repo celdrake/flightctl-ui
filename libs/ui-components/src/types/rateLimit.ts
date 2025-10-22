@@ -33,6 +33,7 @@ export interface QueuedRequest<T> {
 export interface RequestMetadata {
   method: string; // GET, POST, PUT, PATCH, DELETE
   path: string; // API endpoint path
+  allowDeduplication?: boolean; // Whether to allow deduplication (default: true)
 }
 
 // Rate limiter configuration
@@ -64,5 +65,13 @@ export class DuplicateRequestError extends Error {
   constructor(path: string) {
     super(`Duplicate GET request for ${path} already queued`);
     this.name = 'DuplicateRequestError';
+  }
+}
+
+// Custom error for rate limiting (user-friendly message)
+export class RateLimitedError extends Error {
+  constructor(message: string = 'The system is experiencing high traffic. Retrying automatically...') {
+    super(message);
+    this.name = 'RateLimitedError';
   }
 }
