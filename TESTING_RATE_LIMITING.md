@@ -170,6 +170,49 @@ Once this is working, you can:
 3. **Monitor in production** using the debug info
 4. **Adjust defaults** if needed (in `rateLimiter.ts`)
 
+## Frequently Asked Questions
+
+### Will requests from different components execute out of order?
+
+**No.** The rate limiter guarantees FIFO (First-In-First-Out) ordering:
+
+- All requests go into a single queue regardless of source
+- They execute in the exact order they were made
+- Example: PATCH from component A → GET from polling → PATCH from component B executes in that exact order
+
+### If I open multiple tabs, will they share the same rate limiter?
+
+**No.** Each browser tab has its own independent rate limiter:
+
+- Tab 1 hitting rate limit doesn't affect Tab 2
+- Each tab tracks its own state and queue
+- They're completely isolated JavaScript instances
+
+### Will one user's rate limiting affect other users?
+
+**No.** Rate limiting is entirely client-side and per-tab:
+
+- User A's browser is independent from User B's browser
+- Backend enforces rate limits per IP address
+- UI rate limiter just responds to backend 429 errors
+- One user hitting the limit only affects their specific browser tab
+
+### What happens if I close the tab while requests are queued?
+
+The queue is lost when the tab closes:
+
+- All pending requests are abandoned
+- On next page load, the rate limiter starts fresh in normal state
+- This is expected behavior (browser cleanup)
+
+### Can high-priority requests bypass the queue?
+
+**Not currently.** All requests are treated equally (FIFO):
+
+- Future enhancement could add priority levels
+- For now, all requests wait their turn
+- This ensures fairness and predictability
+
 ## Support
 
 If issues persist:

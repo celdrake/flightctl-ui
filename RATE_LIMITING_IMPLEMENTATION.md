@@ -343,18 +343,70 @@ Potential improvements for future iterations:
 - `apps/ocp-plugin/src/utils/apiCalls.ts` - OCP plugin API integration
 - `libs/ui-components/src/hooks/useFetchPeriodically.ts` - Periodic polling integration
 
+## Behavior and Guarantees
+
+### Request Ordering
+
+The rate limiter **guarantees FIFO (First-In-First-Out) ordering** across all API requests:
+
+- All requests (GET, POST, PUT, PATCH, DELETE) go into a single shared queue
+- Requests from different sources (`useFetchPeriodically`, manual calls, etc.) are processed in the exact order they were made
+- When throttled, the queue processes sequentially with delays between requests
+- Example: If you make PATCH → GET → PATCH, they execute in exactly that order
+
+**Implementation detail:**
+
+```typescript
+// Single queue for all requests
+private queue: QueuedRequest<unknown>[] = [];
+
+// Enqueuing: always appends to end
+this.queue.push({ executor, resolve, reject, timestamp });
+
+// Processing: always takes from front
+const item = this.queue.shift();
+```
+
+**Note:** Currently all requests have equal priority. Future enhancements could add priority queuing (e.g., writes before reads) if needed.
+
+### Singleton Scope
+
+The rate limiter is **per browser tab**, NOT shared across users or tabs:
+
+- Each browser tab runs its own JavaScript instance with its own rate limiter
+- User A and User B have completely independent rate limiters
+- Even two tabs from the same user have independent rate limiters
+- One tab hitting the rate limit does NOT affect other tabs or users
+
+**Example scenario:**
+
+```text
+Backend: 60 requests/minute limit
+User A Tab 1: Makes 70 requests → gets 429 → only this tab throttles
+User A Tab 2: Continues working normally (independent instance)
+User B: Completely unaffected (different browser)
+```
+
+**Backend vs Frontend rate limiting:**
+
+- **Backend** (FlightCtl): Enforces rate limits per IP address
+- **Frontend** (flightctl-ui): Client-side protection to prevent hammering the API
+- The UI rate limiter is a _response_ to backend enforcement, not the source of truth
+- Trusted proxy configuration (`trustedProxies`) is a backend feature that doesn't affect UI behavior
+
 ## Summary
 
 The rate limiting implementation provides:
 
 - ✅ Automatic 429 error detection
-- ✅ Intelligent request queueing
+- ✅ Intelligent request queueing with FIFO guarantee
 - ✅ Adaptive rate throttling based on backend configuration
 - ✅ Default fallback (20 req/min) when backend doesn't provide rate limit info
 - ✅ Gradual recovery to normal operation
 - ✅ Silent operation (no user disruption)
-- ✅ Global rate management across all API calls
+- ✅ Global rate management across all API calls (per browser tab)
 - ✅ Zero configuration required in UI components
 - ✅ Works immediately without backend changes
+- ✅ Isolated per browser tab (no cross-user or cross-tab interference)
 
 The system is production-ready and requires no changes to existing components to benefit from rate limiting protection. It works even if the backend doesn't include rate limit information in 429 responses.
