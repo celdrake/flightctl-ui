@@ -103,7 +103,7 @@ Expected output when throttled:
 {
   state: "throttled",
   queueLength: 2,
-  currentInterval: 4500,
+  pollingInterval: 20000,
   throttledInterval: 4500,
   successCount: 0,
   recoveryStage: 0,

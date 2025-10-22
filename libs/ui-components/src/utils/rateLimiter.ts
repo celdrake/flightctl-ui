@@ -43,7 +43,7 @@ class RateLimiter {
   // Rate limit tracking
   private rateLimitInfo: RateLimitInfo | null = null;
   private throttledInterval: number | null = null; // milliseconds between requests
-  private currentInterval: number = DEFAULT_POLLING_INTERVAL;
+  private pollingInterval: number = DEFAULT_POLLING_INTERVAL;
 
   // Recovery tracking
   private successCount = 0;
@@ -61,7 +61,7 @@ class RateLimiter {
    * Get the current recommended polling interval in milliseconds
    */
   public getRecommendedInterval(): number {
-    return this.currentInterval;
+    return this.pollingInterval;
   }
 
   /**
@@ -85,7 +85,10 @@ class RateLimiter {
     // Convert to milliseconds
     const baseInterval = (rateLimitInfo.window / rateLimitInfo.requests) * 1000;
     this.throttledInterval = baseInterval * this.config.safetyMargin;
-    this.currentInterval = this.throttledInterval;
+
+    // When throttled, slow down polling to 2x the normal interval to reduce load
+    // The throttledInterval is used for queue processing, not for polling
+    this.pollingInterval = DEFAULT_POLLING_INTERVAL * 2;
 
     // Reset recovery tracking
     this.successCount = 0;
@@ -144,15 +147,15 @@ class RateLimiter {
       this.recoveryStage = nextStage;
       const increment = this.config.recoveryIncrements[nextStage - 1] || 0;
 
-      // Decrease interval (increase rate) by the increment percentage
-      this.currentInterval = Math.max(DEFAULT_POLLING_INTERVAL, this.currentInterval * (1 - increment));
+      // Decrease interval (increase rate) gradually back towards normal polling
+      this.pollingInterval = Math.max(DEFAULT_POLLING_INTERVAL, this.pollingInterval * (1 - increment));
 
-      console.log(`Recovery stage ${this.recoveryStage}: interval reduced to ${this.currentInterval}ms`);
+      console.log(`Recovery stage ${this.recoveryStage}: interval decreased to ${this.pollingInterval}ms`);
 
       // Check if we've completed all recovery stages after updating
       if (this.recoveryStage >= this.config.recoveryThresholds.length) {
         this.state = RateLimitState.Normal;
-        this.currentInterval = DEFAULT_POLLING_INTERVAL;
+        this.pollingInterval = DEFAULT_POLLING_INTERVAL;
         this.throttledInterval = null;
         this.rateLimitInfo = null;
         this.successCount = 0;
@@ -164,7 +167,7 @@ class RateLimiter {
     } else if (!threshold && this.successCount > this.config.recoveryThresholds[this.recoveryStage]) {
       // No more thresholds and we've passed the last one - transition to normal
       this.state = RateLimitState.Normal;
-      this.currentInterval = DEFAULT_POLLING_INTERVAL;
+      this.pollingInterval = DEFAULT_POLLING_INTERVAL;
       this.throttledInterval = null;
       this.rateLimitInfo = null;
       this.successCount = 0;
@@ -335,7 +338,7 @@ class RateLimiter {
     this.processing = false;
     this.rateLimitInfo = null;
     this.throttledInterval = null;
-    this.currentInterval = DEFAULT_POLLING_INTERVAL;
+    this.pollingInterval = DEFAULT_POLLING_INTERVAL;
     this.successCount = 0;
     this.recoveryStage = 0;
     this.last429Timestamp = null;
@@ -348,7 +351,7 @@ class RateLimiter {
     return {
       state: this.state,
       queueLength: this.queue.length,
-      currentInterval: this.currentInterval,
+      pollingInterval: this.pollingInterval,
       throttledInterval: this.throttledInterval,
       successCount: this.successCount,
       recoveryStage: this.recoveryStage,

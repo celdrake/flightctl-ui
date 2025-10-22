@@ -68,20 +68,31 @@ When throttled, all API requests are queued:
 
 ### 3. Adaptive Recovery
 
-The system tracks successful requests and gradually increases request rate:
+The system tracks successful requests and gradually speeds up request rate back to normal polling:
 
 **Recovery Stages:**
 
-1. After 10 successful requests: Increase rate by 10%
-2. After 20 successful requests: Increase rate by another 10%
+1. After 10 successful requests: Decrease interval by 10% (speed up polling)
+2. After 20 successful requests: Decrease interval by another 10%
 3. After 30 successful requests: Return to normal state
 
 **Example Recovery Timeline:**
 
-- Throttled: 1500ms interval
-- Stage 1 (10 successes): 1350ms interval (10% faster)
-- Stage 2 (20 successes): 1215ms interval (10% faster again)
-- Stage 3 (30 successes): Return to 10000ms normal interval
+When rate limited with normal polling at 10 seconds:
+
+- **Normal:** 10000ms interval (poll every 10 seconds)
+- **Throttled:** 20000ms interval (poll every 20 seconds - **slower** to reduce load)
+- **Stage 1** (10 successes): 18000ms interval (10% faster than throttled)
+- **Stage 2** (20 successes): 16200ms interval (10% faster again)
+- **Stage 3** (30 successes): 14580ms interval (10% faster again)
+- **Complete:** Return to 10000ms normal interval
+
+**Two Separate Intervals:**
+
+- **Polling interval** (`pollingInterval`): How often components poll for new data (10s → 20s when throttled)
+- **Queue processing interval** (`throttledInterval`): How fast the queue processes (e.g., 4.5s based on API rate limit)
+
+When throttled, new polling requests are slowed down (20s), while the accumulated queue is processed at the API rate limit pace (4.5s). This prevents overwhelming the API while clearing the backlog.
 
 If another 429 occurs during recovery:
 
@@ -227,11 +238,11 @@ If your backend returns 429 errors but doesn't include rate limit information in
    {
      state: "throttled",
      queueLength: N,
-     currentInterval: 1500,
-     throttledInterval: 1500,
+     pollingInterval: 20000,
+     throttledInterval: 4500,
      successCount: 0,
      recoveryStage: 0,
-     rateLimitInfo: { requests: 10, window: 10, retryAfter: 10 },
+     rateLimitInfo: { requests: 20, window: 60, retryAfter: 60 },
      last429: "2025-10-22T12:34:56.789Z"
    }
    ```
@@ -243,9 +254,9 @@ If your backend returns 429 errors but doesn't include rate limit information in
 
    ```
    Entering recovery state
-   Recovery stage 1: interval reduced to XYZms
-   Recovery stage 2: interval reduced to XYZms
-   Recovery stage 3: interval reduced to XYZms
+   Recovery stage 1: interval decreased to XYZms
+   Recovery stage 2: interval decreased to XYZms
+   Recovery stage 3: interval decreased to XYZms
    Returned to normal state
    ```
 
@@ -259,13 +270,14 @@ If your backend returns 429 errors but doesn't include rate limit information in
 ✅ **When rate limited:**
 
 - Console shows "Rate limit exceeded" message
+- Polling interval increases (e.g., from 10s to 20s - polls less frequently)
 - Subsequent requests are queued
-- Requests execute with delays between them
+- Queue processes at API rate limit pace (e.g., 4.5s between requests)
 - UI continues to function (with slower updates)
 
 ✅ **During recovery:**
 
-- Intervals gradually decrease
+- Polling intervals gradually decrease back to normal (e.g., 20s → 18s → 16s → 10s)
 - Console shows recovery stage messages
 - Eventually returns to normal polling
 
