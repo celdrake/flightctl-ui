@@ -6,6 +6,7 @@ import {
 } from '@flightctl/ui-components/src/utils/apiCalls';
 import { ORGANIZATION_STORAGE_KEY } from '@flightctl/ui-components/src/utils/organizationStorage';
 
+import { OIDCProviderList } from '@flightctl/ui-components/src/types/extraTypes';
 import { lastRefresh } from '../context/AuthContext';
 
 const apiPort = window.API_PORT || window.location.port;
@@ -55,10 +56,41 @@ export const logout = async () => {
   url ? (window.location.href = url) : window.location.reload();
 };
 
+/**
+ * Redirects to the appropriate login flow based on the number of available providers.
+ * - If multiple providers are available, redirects to the provider selection page.
+ * - If only one provider is available, redirects directly to that provider's login.
+ * @throws {Error} if the appropriate login flow cannot be determined
+ */
 export const redirectToLogin = async () => {
-  const response = await fetch(loginAPI);
-  const { url } = (await response.json()) as { url: string };
-  window.location.href = url;
+  try {
+    const providersResp = await fetchUiProxy('oidcproviders', {
+      method: 'GET',
+    });
+
+    if (providersResp.ok) {
+      const data = (await providersResp.json()) as OIDCProviderList;
+      const enabledProviders = data.items.filter((p) => p.spec.enabled);
+
+      let providerUrl: string | undefined;
+      if (enabledProviders.length === 1) {
+        // Single provider - redirect directly with provider name
+        const providerName = enabledProviders[0].metadata.name;
+        const response = await fetch(`${loginAPI}?provider=${providerName}`);
+        const { url } = (await response.json()) as { url: string };
+        providerUrl = url;
+      } else if (enabledProviders.length > 1) {
+        // Multiple providers - show selection page
+        providerUrl = '/login';
+      }
+      if (providerUrl) {
+        window.location.href = providerUrl;
+        return;
+      }
+    }
+  } catch (err) {
+    throw err;
+  }
 };
 
 const handleApiJSONResponse = async <R>(response: Response): Promise<R> => {
