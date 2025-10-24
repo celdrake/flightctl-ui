@@ -17,7 +17,7 @@ import { ExclamationCircleIcon } from '@patternfly/react-icons/dist/js/icons';
 import global_danger_color_100 from '@patternfly/react-tokens/dist/js/global_danger_color_100';
 
 import { useDocumentTitle } from '@flightctl/ui-components/src/hooks/useDocumentTitle';
-import { APP_TITLE } from '@flightctl/ui-components/src/constants';
+import { APP_TITLE, SELECT_PROVIDERS_PAGE } from '@flightctl/ui-components/src/constants';
 import { useTranslation } from '@flightctl/ui-components/src/hooks/useTranslation';
 import ErrorBoundary from '@flightctl/ui-components/src/components/common/ErrorBoundary';
 
@@ -344,7 +344,7 @@ const AppRouter = () => {
 
   const router = createBrowserRouter([
     {
-      path: '/login',
+      path: SELECT_PROVIDERS_PAGE,
       element: (
         <TitledRoute title={t('Login')}>
           <LoginPage />

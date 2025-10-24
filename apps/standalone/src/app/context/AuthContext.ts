@@ -1,6 +1,7 @@
 import * as React from 'react';
-import { loginAPI, redirectToLogin } from '../utils/apiCalls';
 import { ORGANIZATION_STORAGE_KEY } from '@flightctl/ui-components/src/utils/organizationStorage';
+import { SELECT_PROVIDERS_PAGE } from '@flightctl/ui-components/src/constants';
+import { loginAPI, redirectToLogin } from '../utils/apiCalls';
 
 const AUTH_DISABLED_STATUS_CODE = 418;
 const EXPIRATION = 'expiration';
@@ -34,15 +35,24 @@ export const useAuthContext = () => {
 
   React.useEffect(() => {
     const getUserInfo = async () => {
+      // Skip auth check if we're on the page to select a provider
+      if (window.location.pathname === SELECT_PROVIDERS_PAGE) {
+        setLoading(false);
+        return;
+      }
+
       let callbackErr: string | null = null;
       if (window.location.pathname === '/callback') {
         localStorage.removeItem(EXPIRATION);
         localStorage.removeItem(ORGANIZATION_STORAGE_KEY);
         const searchParams = new URLSearchParams(window.location.search);
         const code = searchParams.get('code');
+        const provider = searchParams.get('provider');
         callbackErr = searchParams.get('error');
         if (code) {
-          const resp = await fetch(loginAPI, {
+          // Include provider in the login request if available
+          const loginUrl = provider ? `${loginAPI}?provider=${provider}` : loginAPI;
+          const resp = await fetch(loginUrl, {
             headers: {
               'Content-Type': 'application/json',
             },

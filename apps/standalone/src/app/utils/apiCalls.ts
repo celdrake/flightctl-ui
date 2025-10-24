@@ -7,6 +7,7 @@ import {
 import { ORGANIZATION_STORAGE_KEY } from '@flightctl/ui-components/src/utils/organizationStorage';
 
 import { OIDCProviderList } from '@flightctl/ui-components/src/types/extraTypes';
+import { SELECT_PROVIDERS_PAGE } from '@flightctl/ui-components/src/constants';
 import { lastRefresh } from '../context/AuthContext';
 
 const apiPort = window.API_PORT || window.location.port;
@@ -81,7 +82,7 @@ export const redirectToLogin = async () => {
         providerUrl = url;
       } else if (enabledProviders.length > 1) {
         // Multiple providers - show selection page
-        providerUrl = '/login';
+        providerUrl = SELECT_PROVIDERS_PAGE;
       }
       if (providerUrl) {
         window.location.href = providerUrl;
