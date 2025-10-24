@@ -44,7 +44,7 @@ type FieldValidation = {
 };
 
 type IssuerDiscoveryValidation = {
-  discoveryURL: FieldValidation;
+  discoveryUrl: FieldValidation;
   authorizationEndpoint: FieldValidation;
   tokenEndpoint: FieldValidation;
   userInfoEndpoint: FieldValidation;
@@ -355,7 +355,7 @@ const TestProviderConnectionModal: React.FC<TestProviderConnectionModalProps> = 
                           {t('OIDC Configuration')}
                         </Title>
                         <DescriptionList isHorizontal>
-                          <FieldValidationDisplay label={t('Issuer URL')} field={validationResult.issuer} />
+                          <FieldValidationDisplay label={t('Issuer url')} field={validationResult.issuer} />
                         </DescriptionList>
                       </StackItem>
                     )}
@@ -367,8 +367,8 @@ const TestProviderConnectionModal: React.FC<TestProviderConnectionModalProps> = 
                         </Title>
                         <DescriptionList isHorizontal>
                           <FieldValidationDisplay
-                            label={t('Discovery URL')}
-                            field={validationResult.issuerDiscovery.discoveryURL}
+                            label={t('Discovery url')}
+                            field={validationResult.issuerDiscovery.discoveryUrl}
                           />
                           <FieldValidationDisplay
                             label={t('Authorization Endpoint')}

@@ -14,16 +14,13 @@ import (
 	"github.com/openshift/osincli"
 )
 
-type OIDCUserInfo struct {
-	Username string `json:"preferred_username,omitempty"`
-}
-
 type OIDCAuthHandler struct {
 	tlsConfig          *tls.Config
 	client             *osincli.Client
 	internalClient     *osincli.Client
 	endSessionEndpoint string
 	userInfoEndpoint   string
+	usernameClaim      string
 	authURL            string
 }
 
@@ -34,7 +31,14 @@ type oidcServerResponse struct {
 	EndSessionEndpoint string `json:"end_session_endpoint"`
 }
 
+var defaultUsername = "Anonymous"
+var defaultUsernameClaim = "preferred_username"
+
 func getOIDCAuthHandler(authURL string, internalAuthURL *string) (*OIDCAuthHandler, error) {
+	return getOIDCAuthHandlerWithClaim(authURL, internalAuthURL, "")
+}
+
+func getOIDCAuthHandlerWithClaim(authURL string, internalAuthURL *string, usernameClaim string) (*OIDCAuthHandler, error) {
 	tlsConfig, err := bridge.GetAuthTlsConfig()
 	if err != nil {
 		return nil, err
@@ -78,12 +82,18 @@ func getOIDCAuthHandler(authURL string, internalAuthURL *string) (*OIDCAuthHandl
 		return nil, err
 	}
 
+	// Default to preferred_username if not specified
+	if usernameClaim == "" {
+		usernameClaim = defaultUsernameClaim
+	}
+
 	handler := &OIDCAuthHandler{
 		tlsConfig:          tlsConfig,
 		internalClient:     internalClient,
 		client:             internalClient,
 		endSessionEndpoint: oidcResponse.EndSessionEndpoint,
 		userInfoEndpoint:   oidcResponse.UserInfoEndpoint,
+		usernameClaim:      usernameClaim,
 		authURL:            authURL,
 	}
 
@@ -166,11 +176,25 @@ func (o *OIDCAuthHandler) GetUserInfo(token string) (string, *http.Response, err
 	}
 
 	if body != nil {
-		userInfo := OIDCUserInfo{}
+		// Parse response as generic map to support dynamic claims
+		var userInfo map[string]interface{}
 		if err := json.Unmarshal(*body, &userInfo); err != nil {
 			return "", resp, fmt.Errorf("failed to unmarshal OIDC user response: %w", err)
 		}
-		return userInfo.Username, resp, nil
+
+		// Extract username using claim path
+		username, err := extractClaimValue(userInfo, o.usernameClaim)
+		if err != nil {
+			log.GetLogger().WithError(err).Errorf("Failed to extract username from claim '%s', user will appear as 'Anonymous'", o.usernameClaim)
+			return defaultUsername, resp, nil
+		}
+
+		if username == "" {
+			log.GetLogger().Errorf("Claim '%s' is empty, user will appear as 'Anonymous'", o.usernameClaim)
+			return defaultUsername, resp, nil
+		}
+
+		return username, resp, nil
 	}
 
 	return "", resp, nil

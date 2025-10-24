@@ -113,8 +113,8 @@ func (a *AuthHandler) getProviderByName(name string) AuthProvider {
 			return nil
 		}
 
-		// Full OIDC provider with discovery
-		provider, initErr = getOIDCAuthHandler(spec.Spec.Issuer, nil)
+		// Full OIDC provider with discovery - pass usernameClaim for flexible extraction
+		provider, initErr = getOIDCAuthHandlerWithClaim(spec.Spec.Issuer, nil, spec.Spec.UsernameClaim)
 	case ProviderTypeOAuth2:
 		// OAuth2 provider with explicit endpoints
 		provider, initErr = getOAuth2AuthHandler(spec.Spec)
