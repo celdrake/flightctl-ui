@@ -112,6 +112,7 @@ func (a *AuthHandler) getProviderByName(name string) AuthProvider {
 			log.GetLogger().Errorf("OIDC provider %s is missing required issuer URL", name)
 			return nil
 		}
+
 		// Full OIDC provider with discovery
 		provider, initErr = getOIDCAuthHandler(spec.Spec.Issuer, nil)
 	case ProviderTypeOAuth2:
@@ -285,6 +286,82 @@ func (a AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 	if _, err := w.Write(response); err != nil {
 		log.GetLogger().WithError(err).Warn("Failed to write response")
+	}
+}
+
+// TestProviderConnection validates a provider configuration by name
+func (a AuthHandler) TestProviderConnection(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Get provider name from URL path parameter
+	// Note: In a standard setup with gorilla/mux, you'd use mux.Vars(r)["provider"]
+	// but we're using a simple string extraction here for compatibility
+	// CELIA-WIP fix
+	providerName := r.URL.Path[len("/api/oidcproviders/"):]
+	if idx := len(providerName) - len("/test"); idx > 0 {
+		providerName = providerName[:idx]
+	}
+
+	if providerName == "" || providerName == "/test" || providerName == "test" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "Provider name is required in URL path: /api/oidcproviders/{provider}/test",
+		})
+		return
+	}
+
+	// Handle embedded provider
+	var result ProviderValidationResult
+	if isEmbeddedProvider(providerName) {
+		if a.embeddedAuthType == "" || a.embeddedAuthURL == "" {
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(map[string]string{
+				"error": "No embedded provider configured",
+			})
+			return
+		}
+
+		// Create a spec for the embedded provider for validation
+		embeddedSpec := OIDCProviderSpec{
+			Type:    a.embeddedAuthType,
+			Enabled: true,
+			// CELIA-WIP: Should is be displayed in the UI?
+			ClientId: config.AuthClientId,
+		}
+
+		// For OIDC providers, set the issuer URL
+		if a.embeddedAuthType == ProviderTypeOIDC {
+			embeddedSpec.Issuer = a.embeddedAuthURL
+		}
+
+		// CELIA-WIP can be done for AAP?
+		// Note: AAPGateway type won't have detailed validation available
+
+		result = ValidateProviderConfiguration(embeddedSpec)
+	} else {
+		// Fetch provider spec for non-embedded providers
+		providerSpec, err := a.getProviderSpec(providerName)
+		if err != nil {
+			log.GetLogger().WithError(err).Warnf("Failed to fetch provider spec for %s", providerName)
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(map[string]string{
+				"error": fmt.Sprintf("Provider '%s' not found: %v", providerName, err),
+			})
+			return
+		}
+
+		// Run validation
+		result = ValidateProviderConfiguration(providerSpec.Spec)
+	}
+
+	// Return validation result
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(result); err != nil {
+		log.GetLogger().WithError(err).Warn("Failed to encode validation result")
+		w.WriteHeader(http.StatusInternalServerError)
 	}
 }
 

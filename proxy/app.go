@@ -86,6 +86,9 @@ func main() {
 		// we need to confirm that the default provider will be included in the list, otherwise we may need to add it ourselves.
 		embeddedAuthURL, embeddedAuthType := authHandler.GetEmbeddedProviderInfo()
 		apiRouter.HandleFunc("/oidcproviders", auth.GetOIDCProvidersHandler(embeddedAuthURL, embeddedAuthType))
+
+		// Test provider connection endpoint - validates provider configuration without saving
+		apiRouter.HandleFunc("/oidcproviders/{provider}/test", authHandler.TestProviderConnection)
 	} else {
 		configHandler := config.OcpConfigHandler{}
 		apiRouter.HandleFunc("/config", configHandler.GetConfig)
