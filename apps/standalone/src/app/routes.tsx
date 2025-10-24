@@ -69,6 +69,8 @@ const CommandLineToolsPage = React.lazy(
   () => import('@flightctl/ui-components/src/components/Masthead/CommandLineToolsPage'),
 );
 
+const LoginPage = React.lazy(() => import('./components/Login/LoginPage'));
+
 export type ExtendedRouteObject = RouteObject & {
   title?: string;
   showInNav?: boolean;
@@ -341,6 +343,14 @@ const AppRouter = () => {
   }
 
   const router = createBrowserRouter([
+    {
+      path: '/login',
+      element: (
+        <TitledRoute title={t('Login')}>
+          <LoginPage />
+        </TitledRoute>
+      ),
+    },
     {
       path: '/',
       element: <AppLayout />,
