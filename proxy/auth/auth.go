@@ -24,12 +24,18 @@ type RedirectResponse struct {
 	Url string `json:"url"`
 }
 
+// CELIA-WIP: Use "embedded" provider vs "default" provider??
 type AuthHandler struct {
-	provider AuthProvider
+	provider         AuthProvider // Default provider configured as part of the deployment
+	embeddedAuthURL  string       // URL of embedded provider
+	embeddedAuthType string       // Type of embedded provider (OIDC, AAPGateway, etc.)
+	apiTlsConfig     *tls.Config  // For fetching provider specs from backend
 }
 
 func NewAuth(apiTlsConfig *tls.Config) (*AuthHandler, error) {
-	auth := AuthHandler{}
+	auth := AuthHandler{
+		apiTlsConfig: apiTlsConfig,
+	}
 	authConfig, internalAuthUrl, err := getAuthInfo(apiTlsConfig)
 	if err != nil {
 		return nil, err
@@ -40,6 +46,11 @@ func NewAuth(apiTlsConfig *tls.Config) (*AuthHandler, error) {
 		return &auth, nil
 	}
 
+	// Store embedded provider info
+	auth.embeddedAuthURL = authConfig.AuthURL
+	auth.embeddedAuthType = authConfig.AuthType
+
+	// Initialize the embedded/default provider
 	switch authConfig.AuthType {
 	case "AAPGateway":
 		auth.provider, err = getAAPAuthHandler(authConfig.AuthURL, internalAuthUrl)
@@ -48,14 +59,95 @@ func NewAuth(apiTlsConfig *tls.Config) (*AuthHandler, error) {
 	default:
 		err = fmt.Errorf("unknown auth type: %s", authConfig.AuthType)
 	}
-	return &auth, err
+	if err != nil {
+		return nil, err
+	}
+
+	return &auth, nil
+}
+
+func isEmbeddedProvider(providerName string) bool {
+	// CELIA-WIP: Determine how to identify the embedded provider in the backend.
+	return providerName == "" || providerName == "embedded"
+}
+
+// getProviderSpec fetches the OIDC provider specification by name
+// CELIA-WIP: Replace with real backend API call when available:
+//
+//	HTTP GET to: /api/v1/oidcproviders/{providerName}
+func (a *AuthHandler) getProviderSpec(providerName string) (*OIDCProvider, error) {
+	mockProviders := getMockOIDCProviders()
+	for _, provider := range mockProviders {
+		if provider.Metadata.Name == providerName {
+			if !provider.Spec.Enabled {
+				return nil, fmt.Errorf("provider %s is disabled", providerName)
+			}
+			return &provider, nil
+		}
+	}
+	return nil, fmt.Errorf("provider %s not found", providerName)
+}
+
+// getProviderByName initializes a dynamic OIDC provider on-demand
+func (a *AuthHandler) getProviderByName(name string) AuthProvider {
+	// Return embedded provider for empty or "embedded" name
+	if isEmbeddedProvider(name) {
+		return a.provider
+	}
+
+	// Fetch provider spec
+	spec, err := a.getProviderSpec(name)
+	if err != nil {
+		log.GetLogger().WithError(err).Warnf("Failed to fetch provider spec for %s", name)
+		return nil
+	}
+
+	// Initialize provider based on type
+	var provider AuthProvider
+	var initErr error
+
+	switch spec.Spec.Type {
+	case ProviderTypeOIDC:
+		if spec.Spec.Issuer == "" {
+			log.GetLogger().Errorf("OIDC provider %s is missing required issuer URL", name)
+			return nil
+		}
+		// Full OIDC provider with discovery
+		provider, initErr = getOIDCAuthHandler(spec.Spec.Issuer, nil)
+	case ProviderTypeOAuth2:
+		// OAuth2 provider with explicit endpoints
+		provider, initErr = getOAuth2AuthHandler(spec.Spec)
+	default:
+		log.GetLogger().Errorf("Unknown provider type %s for provider %s", spec.Spec.Type, name)
+		return nil
+	}
+
+	if initErr != nil {
+		log.GetLogger().WithError(initErr).Warnf("Failed to initialize provider %s", name)
+		return nil
+	}
+
+	log.GetLogger().Infof("OIDC provider %s initialized", name)
+	return provider
+}
+
+// GetEmbeddedProviderInfo returns the embedded provider configuration
+func (a *AuthHandler) GetEmbeddedProviderInfo() (string, string) {
+	return a.embeddedAuthURL, a.embeddedAuthType
 }
 
 func (a AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
-	if a.provider == nil {
-		w.WriteHeader(http.StatusTeapot)
+	// Get provider name from query parameter
+	providerName := r.URL.Query().Get("provider")
+	provider := a.getProviderByName(providerName)
+
+	if provider == nil {
+		// Provider either not found or disabled
+		log.GetLogger().Warnf("Provider not available: %s", providerName)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
+
 	if r.Method == http.MethodPost {
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
@@ -71,14 +163,15 @@ func (a AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		tokenData, expires, err := a.provider.GetToken(loginParams)
+		tokenData, expires, err := provider.GetToken(loginParams)
 		if err != nil {
+			log.GetLogger().WithError(err).Warn("Failed to get token")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 		respondWithToken(w, tokenData, expires)
 	} else {
-		loginUrl := a.provider.GetLoginRedirectURL()
+		loginUrl := provider.GetLoginRedirectURL()
 		response, err := json.Marshal(RedirectResponse{Url: loginUrl})
 		if err != nil {
 			log.GetLogger().WithError(err).Warn("Failed to marshal response")
