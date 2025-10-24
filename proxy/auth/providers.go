@@ -33,8 +33,8 @@ type FieldValidation struct {
 	Notes []ValidationNote `json:"notes,omitempty"`
 }
 
-// IssuerDiscoveryValidation contains OIDC discovery validation results
-type IssuerDiscoveryValidation struct {
+// OidcDiscoveryValidation contains OIDC discovery validation results
+type OidcDiscoveryValidation struct {
 	Reachable             bool            `json:"reachable"`
 	DiscoveryUrl          FieldValidation `json:"discoveryUrl"`
 	AuthorizationEndpoint FieldValidation `json:"authorizationEndpoint"`
@@ -45,8 +45,8 @@ type IssuerDiscoveryValidation struct {
 	SupportedGrantTypes   []string        `json:"supportedGrantTypes,omitempty"`
 }
 
-// CustomSettingsValidation contains OAuth2 custom settings validation results
-type CustomSettingsValidation struct {
+// OAuth2SettingsValidation contains OAuth2-specific field validation results
+type OAuth2SettingsValidation struct {
 	Valid                 bool            `json:"valid"`
 	AuthorizationEndpoint FieldValidation `json:"authorizationEndpoint"`
 	TokenEndpoint         FieldValidation `json:"tokenEndpoint"`
@@ -77,23 +77,14 @@ type ValidationSummary struct {
 
 // ProviderValidationResult contains comprehensive validation results
 type ProviderValidationResult struct {
-	Valid                  bool                       `json:"valid"`
-	ClientId               FieldValidation            `json:"clientId"`
-	Issuer                 *FieldValidation           `json:"issuer,omitempty"`
-	IssuerDiscovery        *IssuerDiscoveryValidation `json:"issuerDiscovery,omitempty"`
-	CustomSettings         *CustomSettingsValidation  `json:"customSettings,omitempty"`
-	UsernameClaim          FieldValidation            `json:"usernameClaim"`
-	OrganizationAssignment *OrgAssignmentValidation   `json:"organizationAssignment,omitempty"`
-	Summary                ValidationSummary          `json:"summary"`
-}
-
-// OAuth2CustomSettings defines custom settings for OAuth2 providers
-type OAuth2CustomSettings struct {
-	AuthorizationEndpoint string `json:"authorizationEndpoint"`
-	TokenEndpoint         string `json:"tokenEndpoint"`
-	UserInfoEndpoint      string `json:"userInfoEndpoint"`
-	EndSessionEndpoint    string `json:"endSessionEndpoint,omitempty"`
-	Scopes                string `json:"scopes,omitempty"` // OAuth2 scopes (space-separated)
+	Valid                  bool                      `json:"valid"`
+	ClientId               FieldValidation           `json:"clientId"`
+	Issuer                 *FieldValidation          `json:"issuer,omitempty"`
+	OidcDiscovery          *OidcDiscoveryValidation  `json:"oidcDiscovery,omitempty"`
+	OAuth2Settings         *OAuth2SettingsValidation `json:"oauth2Settings,omitempty"`
+	UsernameClaim          FieldValidation           `json:"usernameClaim"`
+	OrganizationAssignment *OrgAssignmentValidation  `json:"organizationAssignment,omitempty"`
+	Summary                ValidationSummary         `json:"summary"`
 }
 
 // OIDCProviderSpec defines the configuration for an OIDC/OAuth2 provider
@@ -102,7 +93,11 @@ type OIDCProviderSpec struct {
 	ClientId               string                      `json:"clientId"`
 	Enabled                bool                        `json:"enabled"`
 	Issuer                 string                      `json:"issuer,omitempty"`
-	CustomSettings         *OAuth2CustomSettings       `json:"customSettings,omitempty"`
+	ClientSecret           string                      `json:"clientSecret,omitempty"`     // Required for OAuth2
+	AuthorizationUrl       string                      `json:"authorizationUrl,omitempty"` // Required for OAuth2
+	TokenUrl               string                      `json:"tokenUrl,omitempty"`         // Required for OAuth2
+	UserInfoUrl            string                      `json:"userInfoUrl,omitempty"`      // Required for OAuth2
+	Scopes                 string                      `json:"scopes,omitempty"`           // OAuth2 scopes (space-separated)
 	OrganizationAssignment *OIDCOrganizationAssignment `json:"organizationAssignment,omitempty"`
 	RoleClaim              string                      `json:"roleClaim,omitempty"`
 	UsernameClaim          string                      `json:"usernameClaim,omitempty"`
@@ -161,16 +156,15 @@ func getMockOIDCProviders() []OIDCProvider {
 				},
 			},
 			Spec: OIDCProviderSpec{
-				Type:     ProviderTypeOAuth2,
-				ClientId: "mock-github-client-id",
-				Enabled:  true,
-				CustomSettings: &OAuth2CustomSettings{
-					AuthorizationEndpoint: "https://xgithub.com/login/oauth/authorize",
-					TokenEndpoint:         "https://xgithub.com/login/oauth/access_token",
-					UserInfoEndpoint:      "https://xapi.github.com/user",
-					Scopes:                "read:user user:email",
-				},
-				UsernameClaim: "login",
+				Type:             ProviderTypeOAuth2,
+				ClientId:         "mock-github-client-id",
+				ClientSecret:     "mock-github-client-secret",
+				Enabled:          true,
+				AuthorizationUrl: "https://xgithub.com/login/oauth/authorize",
+				TokenUrl:         "https://xgithub.com/login/oauth/access_token",
+				UserInfoUrl:      "https://xapi.github.com/user",
+				Scopes:           "read:user user:email",
+				UsernameClaim:    "login",
 			},
 		},
 		{

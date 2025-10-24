@@ -80,6 +80,78 @@ export type AlertManagerAlert = {
 };
 
 /**
+ * Base fields common to both OIDC and OAuth2 providers
+ */
+type OIDCProviderBaseSpec = {
+  /**
+   * ClientId for the OIDC/OAuth2 application
+   */
+  clientId: string;
+  /**
+   * Whether this provider is enabled
+   */
+  enabled: boolean;
+  /**
+   * Issuer URL for OIDC discovery (required for OIDC type)
+   */
+  issuer: string;
+  /**
+   * Organization assignment configuration
+   */
+  organizationAssignment?: OIDCOrganizationAssignment;
+
+  /**
+   * Claim path for extracting roles from the token
+   */
+  roleClaim?: string;
+  /**
+   * Claim path for extracting username from the token
+   */
+  usernameClaim?: string;
+};
+
+/**
+ * OIDC-compliant provider spec (uses OIDC discovery)
+ */
+export type OIDCProviderSpec = OIDCProviderBaseSpec & {
+  /**
+   * Type of the provider: "OIDC" for full OIDC compliant providers
+   */
+  type: 'OIDC';
+};
+
+/**
+ * OAuth2-only provider spec (manual endpoint configuration)
+ */
+export type OAuth2ProviderSpec = OIDCProviderBaseSpec & {
+  /**
+   * Type of the provider: "OAuth2" for OAuth2 only providers
+   */
+  type: 'OAuth2';
+  /**
+   * ClientSecret for OAuth2 authentication (required for OAuth2)
+   */
+  clientSecret: string;
+  /**
+   * Authorization endpoint URL (required for OAuth2)
+   */
+  authorizationUrl: string;
+  /**
+   * Token endpoint URL (required for OAuth2)
+   */
+  tokenUrl: string;
+  /**
+   * UserInfo endpoint URL (required for OAuth2)
+   */
+  userInfoUrl: string;
+};
+
+/**
+ * Provider spec - either OIDC or OAuth2
+ */
+export type ProviderSpec = OIDCProviderSpec | OAuth2ProviderSpec;
+
+/**
  * OIDCProvider represents an OIDC/OAuth2 authentication provider configuration
  */
 export type OIDCProvider = {
@@ -92,68 +164,8 @@ export type OIDCProvider = {
    */
   kind: string;
   metadata: ObjectMeta;
-  spec: OIDCProviderSpec;
+  spec: ProviderSpec;
   status?: OIDCProviderStatus;
-};
-
-/**
- * Custom settings for OAuth2 providers (non-OIDC compliant)
- */
-export type OAuth2CustomSettings = {
-  /**
-   * Authorization endpoint URL
-   */
-  authorizationEndpoint: string;
-  /**
-   * Token endpoint URL
-   */
-  tokenEndpoint: string;
-  /**
-   * UserInfo endpoint URL
-   */
-  userInfoEndpoint: string;
-  /**
-   * End session/logout endpoint URL (optional)
-   */
-  endSessionEndpoint?: string;
-};
-
-/**
- * OIDCProviderSpec defines the desired state of an OIDC Provider
- */
-export type OIDCProviderSpec = {
-  /**
-   * Type of the provider: "OIDC" for full OIDC compliant, "OAuth2" for OAuth2 only
-   */
-  type: 'OIDC' | 'OAuth2';
-  /**
-   * ClientId for the OIDC/OAuth2 application
-   */
-  clientId: string;
-  /**
-   * Whether this provider is enabled
-   */
-  enabled: boolean;
-  /**
-   * Issuer URL for OIDC discovery (for OIDC type providers)
-   */
-  issuer?: string;
-  /**
-   * Custom settings for OAuth2 providers (required when type is "OAuth2")
-   */
-  customSettings?: OAuth2CustomSettings;
-  /**
-   * Organization assignment configuration
-   */
-  organizationAssignment?: OIDCOrganizationAssignment;
-  /**
-   * Claim path for extracting roles from the token
-   */
-  roleClaim?: string;
-  /**
-   * Claim path for extracting username from the token
-   */
-  usernameClaim?: string;
 };
 
 /**

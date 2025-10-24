@@ -43,7 +43,8 @@ type FieldValidation = {
   notes?: ValidationNote[];
 };
 
-type IssuerDiscoveryValidation = {
+type OidcDiscoveryValidation = {
+  reachable: boolean;
   discoveryUrl: FieldValidation;
   authorizationEndpoint: FieldValidation;
   tokenEndpoint: FieldValidation;
@@ -51,7 +52,8 @@ type IssuerDiscoveryValidation = {
   endSessionEndpoint: FieldValidation;
 };
 
-type CustomSettingsValidation = {
+type OAuth2SettingsValidation = {
+  valid: boolean;
   authorizationEndpoint: FieldValidation;
   tokenEndpoint: FieldValidation;
   userInfoEndpoint: FieldValidation;
@@ -79,8 +81,8 @@ type ProviderValidationResult = {
   clientId: FieldValidation;
   enabled: FieldValidation;
   issuer?: FieldValidation;
-  issuerDiscovery?: IssuerDiscoveryValidation;
-  customSettings?: CustomSettingsValidation;
+  oidcDiscovery?: OidcDiscoveryValidation;
+  oauth2Settings?: OAuth2SettingsValidation;
   usernameClaim: FieldValidation;
   organizationAssignment?: OrgAssignmentValidation;
   summary: ValidationSummary;
@@ -350,17 +352,26 @@ const TestProviderConnectionModal: React.FC<TestProviderConnectionModalProps> = 
 
                     {/* OIDC Discovery */}
                     {validationResult.issuer && (
-                      <StackItem>
-                        <Title headingLevel="h4" size={TitleSizes.md}>
-                          {t('OIDC Configuration')}
-                        </Title>
-                        <DescriptionList isHorizontal>
-                          <FieldValidationDisplay label={t('Issuer url')} field={validationResult.issuer} />
-                        </DescriptionList>
-                      </StackItem>
+                      <>
+                        <StackItem>
+                          <Alert variant="info" isInline title={t('OIDC Provider')}>
+                            {t(
+                              'OIDC providers use automatic discovery. Endpoints are fetched from the issuer URL and validated.',
+                            )}
+                          </Alert>
+                        </StackItem>
+                        <StackItem>
+                          <Title headingLevel="h4" size={TitleSizes.md}>
+                            {t('OIDC Configuration')}
+                          </Title>
+                          <DescriptionList isHorizontal>
+                            <FieldValidationDisplay label={t('Issuer url')} field={validationResult.issuer} />
+                          </DescriptionList>
+                        </StackItem>
+                      </>
                     )}
 
-                    {validationResult.issuerDiscovery && (
+                    {validationResult.oidcDiscovery && (
                       <StackItem>
                         <Title headingLevel="h4" size={TitleSizes.md}>
                           {t('Discovered Endpoints')}
@@ -368,54 +379,66 @@ const TestProviderConnectionModal: React.FC<TestProviderConnectionModalProps> = 
                         <DescriptionList isHorizontal>
                           <FieldValidationDisplay
                             label={t('Discovery url')}
-                            field={validationResult.issuerDiscovery.discoveryUrl}
+                            field={validationResult.oidcDiscovery.discoveryUrl}
                           />
                           <FieldValidationDisplay
                             label={t('Authorization Endpoint')}
-                            field={validationResult.issuerDiscovery.authorizationEndpoint}
+                            field={validationResult.oidcDiscovery.authorizationEndpoint}
                           />
                           <FieldValidationDisplay
                             label={t('Token Endpoint')}
-                            field={validationResult.issuerDiscovery.tokenEndpoint}
+                            field={validationResult.oidcDiscovery.tokenEndpoint}
                           />
                           <FieldValidationDisplay
                             label={t('UserInfo Endpoint')}
-                            field={validationResult.issuerDiscovery.userInfoEndpoint}
+                            field={validationResult.oidcDiscovery.userInfoEndpoint}
                           />
                           <FieldValidationDisplay
                             label={t('End Session Endpoint')}
-                            field={validationResult.issuerDiscovery.endSessionEndpoint}
+                            field={validationResult.oidcDiscovery.endSessionEndpoint}
                           />
                         </DescriptionList>
                       </StackItem>
                     )}
 
-                    {/* Custom Settings (OAuth2) */}
-                    {validationResult.customSettings && (
-                      <StackItem>
-                        <Title headingLevel="h4" size={TitleSizes.md}>
-                          {t('Custom Settings')}
-                        </Title>
-                        <DescriptionList isHorizontal>
-                          <FieldValidationDisplay
-                            label={t('Authorization Endpoint')}
-                            field={validationResult.customSettings.authorizationEndpoint}
-                          />
-                          <FieldValidationDisplay
-                            label={t('Token Endpoint')}
-                            field={validationResult.customSettings.tokenEndpoint}
-                          />
-                          <FieldValidationDisplay
-                            label={t('UserInfo Endpoint')}
-                            field={validationResult.customSettings.userInfoEndpoint}
-                          />
-                          <FieldValidationDisplay
-                            label={t('End Session Endpoint')}
-                            field={validationResult.customSettings.endSessionEndpoint}
-                          />
-                          <FieldValidationDisplay label={t('Scopes')} field={validationResult.customSettings.scopes} />
-                        </DescriptionList>
-                      </StackItem>
+                    {/* OAuth2 Settings */}
+                    {validationResult.oauth2Settings && (
+                      <>
+                        <StackItem>
+                          <Alert variant="info" isInline title={t('OAuth2 Provider')}>
+                            {t(
+                              'OAuth2 providers require manual endpoint configuration. Each endpoint is validated for reachability and compatibility.',
+                            )}
+                          </Alert>
+                        </StackItem>
+                        <StackItem>
+                          <Title headingLevel="h4" size={TitleSizes.md}>
+                            {t('OAuth2 Settings')}
+                          </Title>
+                          <DescriptionList isHorizontal>
+                            <FieldValidationDisplay
+                              label={t('Authorization Endpoint')}
+                              field={validationResult.oauth2Settings.authorizationEndpoint}
+                            />
+                            <FieldValidationDisplay
+                              label={t('Token Endpoint')}
+                              field={validationResult.oauth2Settings.tokenEndpoint}
+                            />
+                            <FieldValidationDisplay
+                              label={t('UserInfo Endpoint')}
+                              field={validationResult.oauth2Settings.userInfoEndpoint}
+                            />
+                            <FieldValidationDisplay
+                              label={t('End Session Endpoint')}
+                              field={validationResult.oauth2Settings.endSessionEndpoint}
+                            />
+                            <FieldValidationDisplay
+                              label={t('Scopes')}
+                              field={validationResult.oauth2Settings.scopes}
+                            />
+                          </DescriptionList>
+                        </StackItem>
+                      </>
                     )}
 
                     {/* Organization Assignment */}

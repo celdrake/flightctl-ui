@@ -33,28 +33,28 @@ func getOAuth2AuthHandler(spec OIDCProviderSpec) (*OAuth2AuthHandler, error) {
 		return nil, err
 	}
 
-	// CELIA-WIP: Determine the structure for OAuth2 providers in the backend.
-	if spec.CustomSettings == nil {
-		return nil, fmt.Errorf("OAuth2 provider requires customSettings")
+	// Validate required OAuth2 fields
+	if spec.AuthorizationUrl == "" || spec.TokenUrl == "" {
+		return nil, fmt.Errorf("OAuth2 provider requires authorizationUrl and tokenUrl")
 	}
 
-	if spec.CustomSettings.AuthorizationEndpoint == "" || spec.CustomSettings.TokenEndpoint == "" {
-		return nil, fmt.Errorf("OAuth2 provider requires authorizationEndpoint and tokenEndpoint in customSettings")
+	if spec.UserInfoUrl == "" {
+		return nil, fmt.Errorf("OAuth2 provider requires userInfoUrl")
 	}
 
 	// OAuth2 providers require explicit scopes configuration
-	if spec.CustomSettings.Scopes == "" {
-		return nil, fmt.Errorf("OAuth2 provider requires scopes to be configured in customSettings")
+	if spec.Scopes == "" {
+		return nil, fmt.Errorf("OAuth2 provider requires scopes to be configured")
 	}
 
 	clientConfig := &osincli.ClientConfig{
 		ClientId:                 spec.ClientId,
-		AuthorizeUrl:             spec.CustomSettings.AuthorizationEndpoint,
-		TokenUrl:                 spec.CustomSettings.TokenEndpoint,
+		AuthorizeUrl:             spec.AuthorizationUrl,
+		TokenUrl:                 spec.TokenUrl,
 		RedirectUrl:              config.BaseUiUrl + "/callback",
 		ErrorsInStatusCode:       true,
 		SendClientSecretInParams: false,
-		Scope:                    spec.CustomSettings.Scopes,
+		Scope:                    spec.Scopes,
 	}
 
 	client, err := osincli.NewClient(clientConfig)
@@ -74,9 +74,9 @@ func getOAuth2AuthHandler(spec OIDCProviderSpec) (*OAuth2AuthHandler, error) {
 	handler := &OAuth2AuthHandler{
 		tlsConfig:        tlsConfig,
 		client:           client,
-		userInfoEndpoint: spec.CustomSettings.UserInfoEndpoint,
+		userInfoEndpoint: spec.UserInfoUrl,
 		usernameClaim:    usernameClaim,
-		authURL:          spec.CustomSettings.AuthorizationEndpoint,
+		authURL:          spec.AuthorizationUrl,
 	}
 
 	return handler, nil

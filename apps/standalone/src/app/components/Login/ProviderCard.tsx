@@ -12,7 +12,7 @@ const ProviderCard = ({ provider, onClick }: ProviderCardProps) => {
   const { t } = useTranslation();
   const providerName = provider.metadata.name as string;
   const providerType = provider.spec.type;
-  const issuer = provider.spec.issuer || provider.spec.customSettings?.authorizationEndpoint || '';
+  const issuer = provider.spec.type === 'OIDC' ? provider.spec.issuer : provider.spec.authorizationUrl;
 
   return (
     <Card isClickable isSelectable onClick={() => onClick(provider)}>

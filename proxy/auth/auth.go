@@ -316,6 +316,7 @@ func (a AuthHandler) TestProviderConnection(w http.ResponseWriter, r *http.Reque
 	// Handle embedded provider
 	var result ProviderValidationResult
 	if isEmbeddedProvider(providerName) {
+		// CELIA-WIP In real live scenarios the embedded provider would not be testable??
 		if a.embeddedAuthType == "" || a.embeddedAuthURL == "" {
 			w.WriteHeader(http.StatusNotFound)
 			json.NewEncoder(w).Encode(map[string]string{

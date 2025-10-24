@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/flightctl/flightctl-ui/bridge"
@@ -83,7 +84,7 @@ func validateOIDCProvider(spec OIDCProviderSpec, result *ProviderValidationResul
 
 		// Create failed discovery validation
 		discoveryUrl := fmt.Sprintf("%s/.well-known/openid-configuration", spec.Issuer)
-		result.IssuerDiscovery = &IssuerDiscoveryValidation{
+		result.OidcDiscovery = &OidcDiscoveryValidation{
 			Reachable: false,
 			DiscoveryUrl: FieldValidation{
 				Valid: false,
@@ -111,7 +112,7 @@ func validateOIDCProvider(spec OIDCProviderSpec, result *ProviderValidationResul
 	result.Issuer = &issuer
 
 	// Validate discovery document
-	result.IssuerDiscovery = validateDiscoveryDocument(spec.Issuer, discovery, result)
+	result.OidcDiscovery = validateDiscoveryDocument(spec.Issuer, discovery, result)
 }
 
 // fetchOIDCDiscovery fetches the OIDC discovery document
@@ -153,9 +154,9 @@ func fetchOIDCDiscovery(issuer string) (map[string]interface{}, error) {
 }
 
 // validateDiscoveryDocument validates the OIDC discovery document
-func validateDiscoveryDocument(issuer string, discovery map[string]interface{}, result *ProviderValidationResult) *IssuerDiscoveryValidation {
+func validateDiscoveryDocument(issuer string, discovery map[string]interface{}, result *ProviderValidationResult) *OidcDiscoveryValidation {
 	discoveryURL := fmt.Sprintf("%s/.well-known/openid-configuration", issuer)
-	validation := &IssuerDiscoveryValidation{
+	validation := &OidcDiscoveryValidation{
 		Reachable:    true,
 		DiscoveryUrl: FieldValidation{Valid: true, Value: discoveryURL},
 	}
@@ -233,77 +234,80 @@ func validateDiscoveryDocument(issuer string, discovery map[string]interface{}, 
 
 // validateOAuth2Provider validates an OAuth2 provider
 func validateOAuth2Provider(spec OIDCProviderSpec, result *ProviderValidationResult) {
-	customSettings := &CustomSettingsValidation{Valid: true}
-
-	if spec.CustomSettings == nil {
-		result.Valid = false
-		result.CustomSettings = &CustomSettingsValidation{
-			Valid: false,
-			AuthorizationEndpoint: FieldValidation{
-				Valid: false,
-				Notes: []ValidationNote{{Level: ValidationLevelError, Text: "OAuth2 provider requires customSettings"}},
-			},
-			TokenEndpoint:    FieldValidation{Valid: false},
-			UserInfoEndpoint: FieldValidation{Valid: false},
-			Scopes:           FieldValidation{Valid: false},
-		}
-		return
-	}
+	oauth2Settings := &OAuth2SettingsValidation{Valid: true}
 
 	// Validate authorization endpoint
-	if spec.CustomSettings.AuthorizationEndpoint != "" {
-		customSettings.AuthorizationEndpoint = FieldValidation{Valid: true, Value: spec.CustomSettings.AuthorizationEndpoint}
-	} else {
-		customSettings.AuthorizationEndpoint = FieldValidation{
-			Valid: false,
-			Notes: []ValidationNote{{Level: ValidationLevelError, Text: "Authorization endpoint is required"}},
+	if spec.AuthorizationUrl != "" {
+		oauth2Settings.AuthorizationEndpoint = FieldValidation{Valid: true, Value: spec.AuthorizationUrl}
+		// Test reachability of authorization endpoint
+		if err := testEndpointReachability(spec.AuthorizationUrl, "GET"); err != nil {
+			addFieldWarning(&oauth2Settings.AuthorizationEndpoint, fmt.Sprintf("Endpoint may not be reachable: %v", err))
+		} else {
+			addFieldNote(&oauth2Settings.AuthorizationEndpoint, ValidationLevelInfo, "Endpoint is reachable")
 		}
-		customSettings.Valid = false
+	} else {
+		oauth2Settings.AuthorizationEndpoint = FieldValidation{
+			Valid: false,
+			Notes: []ValidationNote{{Level: ValidationLevelError, Text: "Authorization endpoint is required for OAuth2 providers"}},
+		}
+		oauth2Settings.Valid = false
 		result.Valid = false
 	}
 
 	// Validate token endpoint
-	if spec.CustomSettings.TokenEndpoint != "" {
-		customSettings.TokenEndpoint = FieldValidation{Valid: true, Value: spec.CustomSettings.TokenEndpoint}
+	if spec.TokenUrl != "" {
+		oauth2Settings.TokenEndpoint = FieldValidation{Valid: true, Value: spec.TokenUrl}
+		// Test reachability and that it accepts POST
+		if err := testEndpointReachability(spec.TokenUrl, "POST"); err != nil {
+			addFieldWarning(&oauth2Settings.TokenEndpoint, fmt.Sprintf("Endpoint may not be reachable or accept POST: %v", err))
+		} else {
+			addFieldNote(&oauth2Settings.TokenEndpoint, ValidationLevelInfo, "Endpoint is reachable and accepts POST")
+		}
 	} else {
-		customSettings.TokenEndpoint = FieldValidation{
+		oauth2Settings.TokenEndpoint = FieldValidation{
 			Valid: false,
 			Notes: []ValidationNote{{Level: ValidationLevelError, Text: "Token endpoint is required for OAuth2 providers"}},
 		}
-		customSettings.Valid = false
+		oauth2Settings.Valid = false
 		result.Valid = false
 	}
 
 	// Validate userinfo endpoint
-	if spec.CustomSettings.UserInfoEndpoint != "" {
-		customSettings.UserInfoEndpoint = FieldValidation{Valid: true, Value: spec.CustomSettings.UserInfoEndpoint}
+	if spec.UserInfoUrl != "" {
+		oauth2Settings.UserInfoEndpoint = FieldValidation{Valid: true, Value: spec.UserInfoUrl}
+		// Test reachability and check response structure
+		if err := testUserInfoEndpoint(spec.UserInfoUrl); err != nil {
+			addFieldWarning(&oauth2Settings.UserInfoEndpoint, fmt.Sprintf("Endpoint validation warning: %v", err))
+		} else {
+			addFieldNote(&oauth2Settings.UserInfoEndpoint, ValidationLevelInfo, "Endpoint is reachable and returns JSON")
+		}
 	} else {
-		customSettings.UserInfoEndpoint = FieldValidation{
+		oauth2Settings.UserInfoEndpoint = FieldValidation{
 			Valid: false,
 			Notes: []ValidationNote{{Level: ValidationLevelError, Text: "UserInfo endpoint is required for OAuth2 providers"}},
 		}
-		customSettings.Valid = false
+		oauth2Settings.Valid = false
 		result.Valid = false
 	}
 
-	// Validate end session endpoint (optional)
-	if spec.CustomSettings.EndSessionEndpoint != "" {
-		customSettings.EndSessionEndpoint = FieldValidation{Valid: true, Value: spec.CustomSettings.EndSessionEndpoint}
-	}
+	// End session endpoint is optional (not yet supported in spec)
+	// if spec.EndSessionUrl != "" {
+	// 	oauth2Settings.EndSessionEndpoint = FieldValidation{Valid: true, Value: spec.EndSessionUrl}
+	// }
 
 	// Validate scopes
-	if spec.CustomSettings.Scopes != "" {
-		customSettings.Scopes = FieldValidation{Valid: true, Value: spec.CustomSettings.Scopes}
+	if spec.Scopes != "" {
+		oauth2Settings.Scopes = FieldValidation{Valid: true, Value: spec.Scopes}
 	} else {
-		customSettings.Scopes = FieldValidation{
+		oauth2Settings.Scopes = FieldValidation{
 			Valid: false,
 			Notes: []ValidationNote{{Level: ValidationLevelError, Text: "OAuth2 provider requires scopes to be configured"}},
 		}
-		customSettings.Valid = false
+		oauth2Settings.Valid = false
 		result.Valid = false
 	}
 
-	result.CustomSettings = customSettings
+	result.OAuth2Settings = oauth2Settings
 }
 
 // validateOrganizationAssignmentConfig validates organization assignment configuration
@@ -327,9 +331,9 @@ func validateOrganizationAssignmentConfig(spec OIDCProviderSpec, result *Provide
 
 			// Add warnings based on provider type
 			if spec.Type == ProviderTypeOAuth2 {
-				if spec.CustomSettings != nil {
+				if spec.Scopes != "" {
 					addFieldNote(&orgValidation.ClaimPath, ValidationLevelWarning,
-						fmt.Sprintf("Ensure scopes '%s' include permissions to access organization data from the provider", spec.CustomSettings.Scopes))
+						fmt.Sprintf("Ensure scopes '%s' include permissions to access organization data from the provider", spec.Scopes))
 				}
 			} else if spec.Type == ProviderTypeOIDC {
 				addFieldNote(&orgValidation.ClaimPath, ValidationLevelWarning,
@@ -388,21 +392,21 @@ func buildValidationSummary(result *ProviderValidationResult) ValidationSummary 
 		fields = append(fields, *result.Issuer)
 	}
 
-	if result.IssuerDiscovery != nil {
+	if result.OidcDiscovery != nil {
 		fields = append(fields,
-			result.IssuerDiscovery.DiscoveryUrl,
-			result.IssuerDiscovery.AuthorizationEndpoint,
-			result.IssuerDiscovery.TokenEndpoint,
-			result.IssuerDiscovery.UserInfoEndpoint,
+			result.OidcDiscovery.DiscoveryUrl,
+			result.OidcDiscovery.AuthorizationEndpoint,
+			result.OidcDiscovery.TokenEndpoint,
+			result.OidcDiscovery.UserInfoEndpoint,
 		)
 	}
 
-	if result.CustomSettings != nil {
+	if result.OAuth2Settings != nil {
 		fields = append(fields,
-			result.CustomSettings.AuthorizationEndpoint,
-			result.CustomSettings.TokenEndpoint,
-			result.CustomSettings.UserInfoEndpoint,
-			result.CustomSettings.Scopes,
+			result.OAuth2Settings.AuthorizationEndpoint,
+			result.OAuth2Settings.TokenEndpoint,
+			result.OAuth2Settings.UserInfoEndpoint,
+			result.OAuth2Settings.Scopes,
 		)
 	}
 
@@ -458,4 +462,96 @@ func addFieldWarning(field *FieldValidation, message string) {
 
 func addFieldNote(field *FieldValidation, level string, message string) {
 	field.Notes = append(field.Notes, ValidationNote{Level: level, Text: message})
+}
+
+// testEndpointReachability tests if an endpoint is reachable with the specified HTTP method
+func testEndpointReachability(endpoint string, method string) error {
+	tlsConfig, err := bridge.GetAuthTlsConfig()
+	if err != nil {
+		return fmt.Errorf("failed to get TLS config: %w", err)
+	}
+
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: tlsConfig,
+		},
+	}
+
+	var req *http.Request
+	if method == "POST" {
+		// For POST endpoints, send an empty form body
+		req, err = http.NewRequest(method, endpoint, strings.NewReader(""))
+		if err != nil {
+			return fmt.Errorf("failed to create request: %w", err)
+		}
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	} else {
+		req, err = http.NewRequest(method, endpoint, nil)
+		if err != nil {
+			return fmt.Errorf("failed to create request: %w", err)
+		}
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("endpoint not reachable: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// For POST to token endpoint, we expect 400 or 401 (missing/invalid credentials), not 405
+	if method == "POST" && resp.StatusCode == http.StatusMethodNotAllowed {
+		return fmt.Errorf("endpoint does not accept POST method")
+	}
+
+	// Any response indicates the endpoint is reachable
+	return nil
+}
+
+// testUserInfoEndpoint tests if a userInfo endpoint is reachable and returns JSON
+func testUserInfoEndpoint(endpoint string) error {
+	tlsConfig, err := bridge.GetAuthTlsConfig()
+	if err != nil {
+		return fmt.Errorf("failed to get TLS config: %w", err)
+	}
+
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: tlsConfig,
+		},
+	}
+
+	req, err := http.NewRequest("GET", endpoint, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Add a fake bearer token to simulate an authenticated request
+	req.Header.Set("Authorization", "Bearer test-token-for-validation")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("endpoint not reachable: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// We expect 401 (unauthorized) which confirms the endpoint is working
+	// Or 200 if the test token somehow works
+	// Anything other than 404/405 is acceptable
+	if resp.StatusCode == http.StatusNotFound {
+		return fmt.Errorf("endpoint not found (404)")
+	}
+	if resp.StatusCode == http.StatusMethodNotAllowed {
+		return fmt.Errorf("endpoint does not accept GET method")
+	}
+
+	// Check if response is JSON
+	contentType := resp.Header.Get("Content-Type")
+	if !strings.Contains(contentType, "application/json") && resp.StatusCode == http.StatusOK {
+		// Only warn if we got a 200 OK but it's not JSON
+		return fmt.Errorf("endpoint does not return JSON (got %s)", contentType)
+	}
+
+	return nil
 }
