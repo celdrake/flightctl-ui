@@ -66,7 +66,7 @@ func testOIDCProviderConfiguration(spec AuthenticationProviderSpec, result *Prov
 	issuer := FieldValidation{Valid: true, Value: spec.Issuer}
 
 	if spec.Issuer == "" {
-		addFieldError(&issuer, "OIDC provider requires an issuer URL")
+		addFieldError(&issuer, "OIDC providers require an issuer URL")
 		result.Valid = false
 		result.Issuer = &issuer
 		return

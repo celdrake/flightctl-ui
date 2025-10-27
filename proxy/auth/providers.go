@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/flightctl/flightctl-ui/config"
 	"github.com/flightctl/flightctl-ui/log"
 )
 
@@ -157,12 +158,12 @@ func getMockAuthenticationProviders() []AuthenticationProvider {
 			},
 			Spec: AuthenticationProviderSpec{
 				Type:             ProviderTypeOAuth2,
-				ClientId:         "mock-github-client-id",
-				ClientSecret:     "mock-github-client-secret",
+				ClientId:         config.TestProviderClientId,
+				ClientSecret:     config.TestProviderClientSecret,
 				Enabled:          true,
-				AuthorizationUrl: "https://xgithub.com/login/oauth/authorize",
-				TokenUrl:         "https://xgithub.com/login/oauth/access_token",
-				UserInfoUrl:      "https://xapi.github.com/user",
+				AuthorizationUrl: "https://github.com/login/oauth/authorize",
+				TokenUrl:         "https://github.com/login/oauth/access_token",
+				UserInfoUrl:      "https://api.github.com/user",
 				Scopes:           "read:user user:email",
 				UsernameClaim:    "login",
 			},
@@ -178,9 +179,9 @@ func getMockAuthenticationProviders() []AuthenticationProvider {
 			},
 			Spec: AuthenticationProviderSpec{
 				Type:          ProviderTypeOIDC,
-				ClientId:      "mock-google-client-id",
+				ClientId:      config.TestProviderClientId,
 				Enabled:       true,
-				Issuer:        "https://xaccounts.google.com",
+				Issuer:        "https://accounts.google.com",
 				UsernameClaim: "email",
 			},
 		},
