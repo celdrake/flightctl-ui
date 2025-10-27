@@ -1,11 +1,11 @@
 import * as React from 'react';
 import { Card, CardBody, CardTitle, Stack, StackItem, Text, TextContent } from '@patternfly/react-core';
-import { OIDCProvider } from '@flightctl/ui-components/src/types/extraTypes';
+import { AuthenticationProvider } from '@flightctl/ui-components/src/types/extraTypes';
 import { useTranslation } from '@flightctl/ui-components/src/hooks/useTranslation';
 
 type ProviderCardProps = {
-  provider: OIDCProvider;
-  onClick: (provider: OIDCProvider) => void;
+  provider: AuthenticationProvider;
+  onClick: (provider: AuthenticationProvider) => void;
 };
 
 const ProviderCard = ({ provider, onClick }: ProviderCardProps) => {

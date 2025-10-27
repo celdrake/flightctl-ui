@@ -27,7 +27,7 @@ type OAuth2AuthHandler struct {
 }
 
 // getOAuth2AuthHandler creates an OAuth2 auth handler from provider spec
-func getOAuth2AuthHandler(spec OIDCProviderSpec) (*OAuth2AuthHandler, error) {
+func getOAuth2AuthHandler(spec AuthenticationProviderSpec) (*OAuth2AuthHandler, error) {
 	tlsConfig, err := bridge.GetAuthTlsConfig()
 	if err != nil {
 		return nil, err

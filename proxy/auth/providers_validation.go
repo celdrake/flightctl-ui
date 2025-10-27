@@ -11,8 +11,9 @@ import (
 	"github.com/flightctl/flightctl-ui/bridge"
 )
 
-// ValidateProviderConfiguration validates an OIDC/OAuth2 provider configuration
-func ValidateProviderConfiguration(spec OIDCProviderSpec) ProviderValidationResult {
+// CELIA-WIP determine if we want this functionality and make the code better if so
+// TestProviderConfiguration tests the configuration of an OIDC/OAuth2 provider
+func TestProviderConfiguration(spec AuthenticationProviderSpec) ProviderValidationResult {
 	result := ProviderValidationResult{
 		Valid:   true,
 		Summary: ValidationSummary{NextSteps: []string{}},
@@ -24,9 +25,9 @@ func ValidateProviderConfiguration(spec OIDCProviderSpec) ProviderValidationResu
 	// Type-specific validations
 	switch spec.Type {
 	case ProviderTypeOIDC:
-		validateOIDCProvider(spec, &result)
+		testOIDCProviderConfiguration(spec, &result)
 	case ProviderTypeOAuth2:
-		validateOAuth2Provider(spec, &result)
+		testOAuth2ProviderConfiguration(spec, &result)
 	default:
 		result.Valid = false
 	}
@@ -41,7 +42,7 @@ func ValidateProviderConfiguration(spec OIDCProviderSpec) ProviderValidationResu
 }
 
 // validateCommonFields validates fields common to all provider types
-func validateCommonFields(spec OIDCProviderSpec, result *ProviderValidationResult) {
+func validateCommonFields(spec AuthenticationProviderSpec, result *ProviderValidationResult) {
 
 	// Validate clientId
 	result.ClientId = FieldValidation{Valid: true, Value: spec.ClientId}
@@ -51,21 +52,17 @@ func validateCommonFields(spec OIDCProviderSpec, result *ProviderValidationResul
 	}
 
 	// Validate usernameClaim
-	usernameClaim := spec.UsernameClaim
-	if usernameClaim == "" {
-		usernameClaim = "email"
-		result.UsernameClaim = FieldValidation{
-			Valid: true,
-			Value: usernameClaim,
-			Notes: []ValidationNote{{Level: ValidationLevelInfo, Text: "Using default value"}},
-		}
-	} else {
-		result.UsernameClaim = FieldValidation{Valid: true, Value: usernameClaim}
+	if spec.UsernameClaim != "" {
+		result.UsernameClaim = FieldValidation{Valid: true, Value: spec.UsernameClaim}
 	}
 }
 
-// validateOIDCProvider validates an OIDC provider
-func validateOIDCProvider(spec OIDCProviderSpec, result *ProviderValidationResult) {
+// testOIDCProviderConfiguration tests the configuration of an OIDC provider
+func testOIDCProviderConfiguration(spec AuthenticationProviderSpec, result *ProviderValidationResult) {
+	if spec.Type != ProviderTypeOIDC {
+		addFieldError(&FieldValidation{Valid: false, Value: spec.Type, Notes: []ValidationNote{{Level: ValidationLevelError, Text: "Provider type is not OIDC"}}}, "Provider type is not OIDC")
+		return
+	}
 	issuer := FieldValidation{Valid: true, Value: spec.Issuer}
 
 	if spec.Issuer == "" {
@@ -107,8 +104,6 @@ func validateOIDCProvider(spec OIDCProviderSpec, result *ProviderValidationResul
 		return
 	}
 
-	// Discovery successful
-	addFieldNote(&issuer, ValidationLevelInfo, "OIDC discovery successful")
 	result.Issuer = &issuer
 
 	// Validate discovery document
@@ -232,9 +227,13 @@ func validateDiscoveryDocument(issuer string, discovery map[string]interface{}, 
 	return validation
 }
 
-// validateOAuth2Provider validates an OAuth2 provider
-func validateOAuth2Provider(spec OIDCProviderSpec, result *ProviderValidationResult) {
+// testOAuth2ProviderConfiguration tests the configuration of an OAuth2 provider
+func testOAuth2ProviderConfiguration(spec AuthenticationProviderSpec, result *ProviderValidationResult) {
 	oauth2Settings := &OAuth2SettingsValidation{Valid: true}
+	if spec.Type != ProviderTypeOAuth2 {
+		addFieldError(&FieldValidation{Valid: false, Value: spec.Type, Notes: []ValidationNote{{Level: ValidationLevelError, Text: "Provider type is not OAuth2"}}}, "Provider type is not OAuth2")
+		return
+	}
 
 	// Validate authorization endpoint
 	if spec.AuthorizationUrl != "" {
@@ -311,7 +310,7 @@ func validateOAuth2Provider(spec OIDCProviderSpec, result *ProviderValidationRes
 }
 
 // validateOrganizationAssignmentConfig validates organization assignment configuration
-func validateOrganizationAssignmentConfig(spec OIDCProviderSpec, result *ProviderValidationResult) {
+func validateOrganizationAssignmentConfig(spec AuthenticationProviderSpec, result *ProviderValidationResult) {
 	if spec.OrganizationAssignment == nil {
 		return
 	}
@@ -385,7 +384,6 @@ func buildValidationSummary(result *ProviderValidationResult) ValidationSummary 
 	// Count fields
 	fields := []FieldValidation{
 		result.ClientId,
-		result.UsernameClaim,
 	}
 
 	if result.Issuer != nil {

@@ -87,8 +87,8 @@ type ProviderValidationResult struct {
 	Summary                ValidationSummary         `json:"summary"`
 }
 
-// OIDCProviderSpec defines the configuration for an OIDC/OAuth2 provider
-type OIDCProviderSpec struct {
+// AuthenticationProviderSpec defines the configuration for an OIDC/OAuth2 provider
+type AuthenticationProviderSpec struct {
 	Type                   string                      `json:"type"` // "OIDC" or "OAuth2"
 	ClientId               string                      `json:"clientId"`
 	Enabled                bool                        `json:"enabled"`
@@ -120,12 +120,12 @@ type ObjectMeta struct {
 	Annotations       map[string]string `json:"annotations,omitempty"`
 }
 
-// OIDCProvider represents an OIDC/OAuth2 provider resource
-type OIDCProvider struct {
-	APIVersion string           `json:"apiVersion"`
-	Kind       string           `json:"kind"`
-	Metadata   ObjectMeta       `json:"metadata"`
-	Spec       OIDCProviderSpec `json:"spec"`
+// AuthenticationProvider represents an OIDC/OAuth2 provider resource
+type AuthenticationProvider struct {
+	APIVersion string                     `json:"apiVersion"`
+	Kind       string                     `json:"kind"`
+	Metadata   ObjectMeta                 `json:"metadata"`
+	Spec       AuthenticationProviderSpec `json:"spec"`
 }
 
 // ListMeta represents metadata for a list of resources
@@ -135,27 +135,27 @@ type ListMeta struct {
 	ResourceVersion string `json:"resourceVersion,omitempty"`
 }
 
-// OIDCProviderList represents a list of OIDC providers
-type OIDCProviderList struct {
-	APIVersion string         `json:"apiVersion"`
-	Kind       string         `json:"kind"`
-	Metadata   ListMeta       `json:"metadata"`
-	Items      []OIDCProvider `json:"items"`
+// AuthenticationProviderList represents a list of authentication providers
+type AuthenticationProviderList struct {
+	APIVersion string                   `json:"apiVersion"`
+	Kind       string                   `json:"kind"`
+	Metadata   ListMeta                 `json:"metadata"`
+	Items      []AuthenticationProvider `json:"items"`
 }
 
-// getMockOIDCProviders returns hardcoded OIDC provider configurations for testing
-func getMockOIDCProviders() []OIDCProvider {
-	return []OIDCProvider{
+// getMockAuthenticationProviders returns hardcoded OIDC provider configurations for testing
+func getMockAuthenticationProviders() []AuthenticationProvider {
+	return []AuthenticationProvider{
 		{
 			APIVersion: "v1alpha1",
-			Kind:       "OIDCProvider",
+			Kind:       "AuthenticationProvider",
 			Metadata: ObjectMeta{
 				Name: "github",
 				Labels: map[string]string{
 					"provider": "github",
 				},
 			},
-			Spec: OIDCProviderSpec{
+			Spec: AuthenticationProviderSpec{
 				Type:             ProviderTypeOAuth2,
 				ClientId:         "mock-github-client-id",
 				ClientSecret:     "mock-github-client-secret",
@@ -169,14 +169,14 @@ func getMockOIDCProviders() []OIDCProvider {
 		},
 		{
 			APIVersion: "v1alpha1",
-			Kind:       "OIDCProvider",
+			Kind:       "AuthenticationProvider",
 			Metadata: ObjectMeta{
 				Name: "google",
 				Labels: map[string]string{
 					"provider": "google",
 				},
 			},
-			Spec: OIDCProviderSpec{
+			Spec: AuthenticationProviderSpec{
 				Type:          ProviderTypeOIDC,
 				ClientId:      "mock-google-client-id",
 				Enabled:       true,
@@ -187,22 +187,22 @@ func getMockOIDCProviders() []OIDCProvider {
 	}
 }
 
-// GetOIDCProvidersHandler handles GET requests for OIDC providers list
+// GetAuthenticationProvidersHandler handles GET requests for authentication providers list
 // It needs access to the embedded provider configuration
-func GetOIDCProvidersHandler(embeddedAuthURL string, embeddedAuthType string) http.HandlerFunc {
+func GetAuthenticationProvidersHandler(embeddedAuthURL string, embeddedAuthType string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
 
-		providers := getMockOIDCProviders()
+		providers := getMockAuthenticationProviders()
 
 		// Add the embedded provider if it exists and is OIDC
 		if embeddedAuthURL != "" && embeddedAuthType == ProviderTypeOIDC {
-			embeddedProvider := OIDCProvider{
+			embeddedProvider := AuthenticationProvider{
 				APIVersion: "v1alpha1",
-				Kind:       "OIDCProvider",
+				Kind:       "AuthenticationProvider",
 				Metadata: ObjectMeta{
 					Name: "embedded",
 					Labels: map[string]string{
@@ -210,7 +210,7 @@ func GetOIDCProvidersHandler(embeddedAuthURL string, embeddedAuthType string) ht
 						"embedded": "true",
 					},
 				},
-				Spec: OIDCProviderSpec{
+				Spec: AuthenticationProviderSpec{
 					Type:          ProviderTypeOIDC,
 					ClientId:      "flightctl",
 					Enabled:       true,
@@ -219,12 +219,12 @@ func GetOIDCProvidersHandler(embeddedAuthURL string, embeddedAuthType string) ht
 				},
 			}
 			// Prepend embedded provider so it appears first
-			providers = append([]OIDCProvider{embeddedProvider}, providers...)
+			providers = append([]AuthenticationProvider{embeddedProvider}, providers...)
 		}
 
-		providerList := OIDCProviderList{
+		providerList := AuthenticationProviderList{
 			APIVersion: "v1alpha1",
-			Kind:       "OIDCProviderList",
+			Kind:       "AuthenticationProviderList",
 			Metadata:   ListMeta{},
 			Items:      providers,
 		}

@@ -18,8 +18,8 @@ type OIDCAuthHandler struct {
 	tlsConfig          *tls.Config
 	client             *osincli.Client
 	internalClient     *osincli.Client
-	endSessionEndpoint string
 	userInfoEndpoint   string
+	endSessionEndpoint string
 	usernameClaim      string
 	authURL            string
 }
@@ -91,8 +91,8 @@ func getOIDCAuthHandlerWithClaim(authURL string, internalAuthURL *string, userna
 		tlsConfig:          tlsConfig,
 		internalClient:     internalClient,
 		client:             internalClient,
-		endSessionEndpoint: oidcResponse.EndSessionEndpoint,
 		userInfoEndpoint:   oidcResponse.UserInfoEndpoint,
+		endSessionEndpoint: oidcResponse.EndSessionEndpoint,
 		usernameClaim:      usernameClaim,
 		authURL:            authURL,
 	}
@@ -109,6 +109,7 @@ func getOIDCAuthHandlerWithClaim(authURL string, internalAuthURL *string, userna
 			return nil, err
 		}
 		handler.client = client
+		// Update endpoints to use external URLs
 		handler.endSessionEndpoint = extConfig.EndSessionEndpoint
 	}
 
@@ -201,9 +202,16 @@ func (o *OIDCAuthHandler) GetUserInfo(token string) (string, *http.Response, err
 }
 
 func (o *OIDCAuthHandler) Logout(token string) (string, error) {
+	// If no end_session_endpoint is available, just return empty string
+	// The frontend will handle local logout only
+	if o.endSessionEndpoint == "" {
+		log.GetLogger().Debug("No end_session_endpoint available, performing local logout only")
+		return "", nil
+	}
+
 	u, err := url.Parse(o.endSessionEndpoint)
 	if err != nil {
-		log.GetLogger().WithError(err).Warn("Failed to parse OIDC response")
+		log.GetLogger().WithError(err).Warn("Failed to parse end_session_endpoint")
 		return "", err
 	}
 

@@ -9,26 +9,33 @@ import {
   FormGroup,
   FormSelect,
   FormSelectOption,
+  Icon,
   Label,
   List,
   ListItem,
+  Popover,
   Spinner,
   Stack,
   StackItem,
+  Text,
+  TextContent,
   Title,
   TitleSizes,
 } from '@patternfly/react-core';
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@patternfly/react-core/next';
+import { Table, Tbody, Td, Th, Thead, Tr } from '@patternfly/react-table';
 import {
   CheckCircleIcon,
   ExclamationCircleIcon,
   ExclamationTriangleIcon,
   InfoCircleIcon,
+  OutlinedQuestionCircleIcon,
 } from '@patternfly/react-icons';
 
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useAppContext } from '../../../hooks/useAppContext';
 import { getErrorMessage } from '../../../utils/error';
+import { AuthenticationProvider, AuthenticationProviderList } from '../../../types/extraTypes';
 
 type ValidationLevel = 'error' | 'warning' | 'info';
 
@@ -88,35 +95,108 @@ type ProviderValidationResult = {
   summary: ValidationSummary;
 };
 
-type OIDCProvider = {
-  metadata: {
-    name: string;
-  };
-  spec: {
-    enabled: boolean;
-    type: string;
-  };
-};
-
 type TestProviderConnectionModalProps = {
   onClose: VoidFunction;
 };
 
-const ValidationIcon: React.FC<{ level: ValidationLevel }> = ({ level }) => {
-  switch (level) {
-    case 'error':
-      return <ExclamationCircleIcon color="var(--pf-v5-global--danger-color--100)" />;
-    case 'warning':
-      return <ExclamationTriangleIcon color="var(--pf-v5-global--warning-color--100)" />;
-    case 'info':
-      return <InfoCircleIcon color="var(--pf-v5-global--info-color--100)" />;
+const ValidationIcon = ({ level }: { level: ValidationLevel }) => {
+  if (level === 'error') {
+    return (
+      <Icon status="danger">
+        <ExclamationCircleIcon />
+      </Icon>
+    );
   }
+  return <Icon status={level}>{level === 'warning' ? <ExclamationTriangleIcon /> : <InfoCircleIcon />}</Icon>;
 };
 
-const FieldValidationDisplay: React.FC<{ label: string; field: FieldValidation }> = ({ label, field }) => {
+const EndpointStatusCell = ({
+  field,
+  successLabel,
+  failureLabel,
+  optionalLabel,
+  isOptional = false,
+}: {
+  field: FieldValidation | undefined;
+  successLabel: string;
+  failureLabel: string;
+  optionalLabel?: string;
+  isOptional?: boolean;
+}) => {
   if (!field) {
-    console.log('%c empty field', 'color: red; font-size:18px', label);
     return null;
+  }
+
+  const hasNotes = field.notes && field.notes.length > 0;
+  const showOptional = isOptional && !field.value;
+
+  const statusLabel = showOptional ? (
+    <Label color="blue" icon={<InfoCircleIcon />}>
+      {optionalLabel}
+    </Label>
+  ) : field.valid ? (
+    <Label color="green" icon={<CheckCircleIcon />}>
+      {successLabel}
+    </Label>
+  ) : (
+    <Label color="red" icon={<ExclamationCircleIcon />}>
+      {failureLabel}
+    </Label>
+  );
+
+  if (!hasNotes) {
+    return statusLabel;
+  }
+
+  return (
+    <Stack>
+      <StackItem>{statusLabel}</StackItem>
+      <StackItem>
+        <Popover
+          headerContent={<div>Details</div>}
+          bodyContent={
+            <List isPlain>
+              {field.notes!.map((note, idx) => (
+                <ListItem key={idx} icon={<ValidationIcon level={note.level} />}>
+                  {note.text}
+                </ListItem>
+              ))}
+            </List>
+          }
+        >
+          <Button variant="plain" aria-label="More info">
+            <OutlinedQuestionCircleIcon />
+          </Button>
+        </Popover>
+      </StackItem>
+    </Stack>
+  );
+};
+
+const FieldValidationDisplay = ({
+  label,
+  field,
+  showEmpty = false,
+}: {
+  label: string;
+  field: FieldValidation;
+  showEmpty?: boolean;
+}) => {
+  const { t } = useTranslation();
+  if (!field || (!field.value && !showEmpty)) {
+    return null;
+  }
+  if (!field.value) {
+    return (
+      <DescriptionListGroup>
+        <DescriptionListTerm>{label}</DescriptionListTerm>
+        <DescriptionListDescription>
+          <Label color="blue" icon={<InfoCircleIcon />}>
+            {t('No value')}
+          </Label>
+        </DescriptionListDescription>
+      </DescriptionListGroup>
+    );
   }
   return (
     <DescriptionListGroup>
@@ -126,11 +206,11 @@ const FieldValidationDisplay: React.FC<{ label: string; field: FieldValidation }
           <StackItem>
             {field.valid ? (
               <Label color="green" icon={<CheckCircleIcon />}>
-                Valid
+                {t('Valid')}
               </Label>
             ) : (
               <Label color="red" icon={<ExclamationCircleIcon />}>
-                Invalid
+                {t('Invalid')}
               </Label>
             )}
             {field.value && <span style={{ marginLeft: '8px' }}>{field.value}</span>}
@@ -152,12 +232,12 @@ const FieldValidationDisplay: React.FC<{ label: string; field: FieldValidation }
   );
 };
 
-const TestProviderConnectionModal: React.FC<TestProviderConnectionModalProps> = ({ onClose }) => {
+const TestProviderConnectionModal = ({ onClose }: TestProviderConnectionModalProps) => {
   const { t } = useTranslation();
   const { fetch } = useAppContext();
   const proxyFetch = fetch.proxyFetch;
 
-  const [providers, setProviders] = React.useState<OIDCProvider[]>([]);
+  const [providers, setProviders] = React.useState<AuthenticationProvider[]>([]);
   const [selectedProvider, setSelectedProvider] = React.useState<string>('');
   const [isTesting, setIsTesting] = React.useState(false);
   const [validationResult, setValidationResult] = React.useState<ProviderValidationResult | null>(null);
@@ -168,14 +248,16 @@ const TestProviderConnectionModal: React.FC<TestProviderConnectionModalProps> = 
   React.useEffect(() => {
     const fetchProviders = async () => {
       try {
-        const response = await proxyFetch('oidcproviders', { method: 'GET' });
+        const response = await proxyFetch('authproviders', { method: 'GET' });
         if (!response.ok) {
           throw new Error(`Failed to fetch providers: ${response.statusText}`);
         }
-        const data = (await response.json()) as { items: OIDCProvider[] };
+        const data = (await response.json()) as AuthenticationProviderList;
 
-        setProviders(data.items);
-        setSelectedProvider(data.items[0].metadata.name);
+        if (data.items.length > 0) {
+          setProviders(data.items);
+          setSelectedProvider(data.items[0].metadata.name as string);
+        }
       } catch (err) {
         setError(getErrorMessage(err));
       } finally {
@@ -193,7 +275,7 @@ const TestProviderConnectionModal: React.FC<TestProviderConnectionModalProps> = 
     setValidationResult(null);
 
     try {
-      const response = await proxyFetch(`oidcproviders/${selectedProvider}/test`, {
+      const response = await proxyFetch(`authproviders/${selectedProvider}/test`, {
         method: 'POST',
       });
 
@@ -259,146 +341,99 @@ const TestProviderConnectionModal: React.FC<TestProviderConnectionModalProps> = 
               {validationResult && (
                 <StackItem>
                   <Stack hasGutter>
-                    <StackItem>
-                      <Title headingLevel="h3" size="md">
-                        {t('Validation Results')}
-                      </Title>
-                    </StackItem>
-
-                    {/* Summary */}
-                    <StackItem>
-                      {validationResult.summary.errorFields === 0 ? (
-                        <Alert
-                          isInline
-                          variant={validationResult.summary.warningFields > 0 ? 'warning' : 'success'}
-                          title={
-                            validationResult.summary.warningFields > 0
-                              ? t('Valid with warnings')
-                              : t('Configuration is valid')
-                          }
-                        >
-                          <Stack hasGutter>
-                            <StackItem>
-                              {t('{{validFields}} of {{totalFields}} fields validated successfully', {
-                                validFields: validationResult.summary.validFields,
-                                totalFields: validationResult.summary.totalFields,
-                              })}
-                            </StackItem>
-                            {validationResult.summary.warningFields > 0 && (
-                              <StackItem>
-                                {t('{{warningFields}} field(s) have warnings', {
-                                  warningFields: validationResult.summary.warningFields,
-                                })}
-                              </StackItem>
-                            )}
-                            {validationResult.summary.nextSteps && validationResult.summary.nextSteps.length > 0 && (
-                              <StackItem>
-                                <strong>{t('Next steps:')}</strong>
-                                <List isPlain>
-                                  {validationResult.summary.nextSteps.map((step, idx) => (
-                                    <ListItem key={idx}>{step}</ListItem>
-                                  ))}
-                                </List>
-                              </StackItem>
-                            )}
-                          </Stack>
-                        </Alert>
-                      ) : (
-                        <Alert isInline variant="danger" title={t('Configuration is invalid')}>
-                          <Stack hasGutter>
-                            <StackItem>
-                              {t('{{errorFields}} field(s) have errors', {
-                                errorFields: validationResult.summary.errorFields,
-                              })}
-                            </StackItem>
-                            {validationResult.summary.warningFields > 0 && (
-                              <StackItem>
-                                {t('{{warningFields}} field(s) have warnings', {
-                                  warningFields: validationResult.summary.warningFields,
-                                })}
-                              </StackItem>
-                            )}
-                            <StackItem>
-                              {t('{{validFields}} of {{totalFields}} fields are valid', {
-                                validFields: validationResult.summary.validFields,
-                                totalFields: validationResult.summary.totalFields,
-                              })}
-                            </StackItem>
-                            {validationResult.summary.nextSteps && validationResult.summary.nextSteps.length > 0 && (
-                              <StackItem>
-                                <strong>{t('Next steps:')}</strong>
-                                <List isPlain>
-                                  {validationResult.summary.nextSteps.map((step, idx) => (
-                                    <ListItem key={idx}>{step}</ListItem>
-                                  ))}
-                                </List>
-                              </StackItem>
-                            )}
-                          </Stack>
-                        </Alert>
-                      )}
-                    </StackItem>
-
-                    {/* Common Fields */}
-                    <StackItem>
-                      <Title headingLevel="h4" size={TitleSizes.md}>
-                        {t('Common Fields')}
-                      </Title>
-                      <DescriptionList isHorizontal>
-                        <FieldValidationDisplay label={t('Client ID')} field={validationResult.clientId} />
-                        <FieldValidationDisplay label={t('Username Claim')} field={validationResult.usernameClaim} />
-                      </DescriptionList>
-                    </StackItem>
-
-                    {/* OIDC Discovery */}
-                    {validationResult.issuer && (
+                    {validationResult.oidcDiscovery && (
                       <>
                         <StackItem>
-                          <Alert variant="info" isInline title={t('OIDC Provider')}>
-                            {t(
-                              'OIDC providers use automatic discovery. Endpoints are fetched from the issuer URL and validated.',
-                            )}
-                          </Alert>
+                          <Title headingLevel="h4" size={TitleSizes.md}>
+                            {t('Provider discovery results')}:
+                          </Title>
                         </StackItem>
                         <StackItem>
-                          <Title headingLevel="h4" size={TitleSizes.md}>
-                            {t('OIDC Configuration')}
-                          </Title>
-                          <DescriptionList isHorizontal>
-                            <FieldValidationDisplay label={t('Issuer url')} field={validationResult.issuer} />
-                          </DescriptionList>
+                          <TextContent>
+                            <Text>
+                              {t(
+                                'The following information could be retrieved from the automatic discovery feature of the OIDC provider.',
+                              )}
+                            </Text>
+                          </TextContent>
+                        </StackItem>
+                        <StackItem>
+                          <Table variant="compact" borders={true}>
+                            <Thead>
+                              <Tr>
+                                <Th>{t('Endpoint')}</Th>
+                                <Th>{t('URL')}</Th>
+                                <Th>{t('Status')}</Th>
+                              </Tr>
+                            </Thead>
+                            <Tbody>
+                              <Tr>
+                                <Td>{t('Issuer URL')}</Td>
+                                <Td>{validationResult.issuer?.value || '-'}</Td>
+                                <Td>
+                                  <EndpointStatusCell
+                                    field={validationResult.issuer}
+                                    successLabel={t('Success')}
+                                    failureLabel={t('Failure')}
+                                    isOptional={true}
+                                  />
+                                </Td>
+                              </Tr>
+
+                              <Tr>
+                                <Td>{t('Authorization')}</Td>
+                                <Td>{validationResult.oidcDiscovery.authorizationEndpoint.value || '-'}</Td>
+                                <Td>
+                                  <EndpointStatusCell
+                                    field={validationResult.oidcDiscovery.authorizationEndpoint}
+                                    successLabel={t('Success')}
+                                    failureLabel={t('Failure')}
+                                  />
+                                </Td>
+                              </Tr>
+                              <Tr>
+                                <Td>{t('Token')}</Td>
+                                <Td>{validationResult.oidcDiscovery.tokenEndpoint.value || '-'}</Td>
+                                <Td>
+                                  <EndpointStatusCell
+                                    field={validationResult.oidcDiscovery.tokenEndpoint}
+                                    successLabel={t('Success')}
+                                    failureLabel={t('Failure')}
+                                  />
+                                </Td>
+                              </Tr>
+                              <Tr>
+                                <Td>{t('UserInfo')}</Td>
+                                <Td>{validationResult.oidcDiscovery.userInfoEndpoint.value || '-'}</Td>
+                                <Td>
+                                  <EndpointStatusCell
+                                    field={validationResult.oidcDiscovery.userInfoEndpoint}
+                                    successLabel={t('Success')}
+                                    failureLabel={t('Failure')}
+                                  />
+                                </Td>
+                              </Tr>
+                              {validationResult.oidcDiscovery.endSessionEndpoint && (
+                                <Tr>
+                                  <Td>{t('End Session')}</Td>
+                                  <Td>
+                                    {validationResult.oidcDiscovery.endSessionEndpoint.value || t('Not available')}
+                                  </Td>
+                                  <Td>
+                                    <EndpointStatusCell
+                                      field={validationResult.oidcDiscovery.endSessionEndpoint}
+                                      successLabel={t('Success')}
+                                      failureLabel={t('Failure')}
+                                      optionalLabel={t('Optional')}
+                                      isOptional={true}
+                                    />
+                                  </Td>
+                                </Tr>
+                              )}
+                            </Tbody>
+                          </Table>
                         </StackItem>
                       </>
-                    )}
-
-                    {validationResult.oidcDiscovery && (
-                      <StackItem>
-                        <Title headingLevel="h4" size={TitleSizes.md}>
-                          {t('Discovered Endpoints')}
-                        </Title>
-                        <DescriptionList isHorizontal>
-                          <FieldValidationDisplay
-                            label={t('Discovery url')}
-                            field={validationResult.oidcDiscovery.discoveryUrl}
-                          />
-                          <FieldValidationDisplay
-                            label={t('Authorization Endpoint')}
-                            field={validationResult.oidcDiscovery.authorizationEndpoint}
-                          />
-                          <FieldValidationDisplay
-                            label={t('Token Endpoint')}
-                            field={validationResult.oidcDiscovery.tokenEndpoint}
-                          />
-                          <FieldValidationDisplay
-                            label={t('UserInfo Endpoint')}
-                            field={validationResult.oidcDiscovery.userInfoEndpoint}
-                          />
-                          <FieldValidationDisplay
-                            label={t('End Session Endpoint')}
-                            field={validationResult.oidcDiscovery.endSessionEndpoint}
-                          />
-                        </DescriptionList>
-                      </StackItem>
                     )}
 
                     {/* OAuth2 Settings */}

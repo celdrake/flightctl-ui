@@ -74,9 +74,9 @@ func isEmbeddedProvider(providerName string) bool {
 // getProviderSpec fetches the OIDC provider specification by name
 // CELIA-WIP: Replace with real backend API call when available:
 //
-//	HTTP GET to: /api/v1/oidcproviders/{providerName}
-func (a *AuthHandler) getProviderSpec(providerName string) (*OIDCProvider, error) {
-	mockProviders := getMockOIDCProviders()
+//	HTTP GET to: /api/v1/authproviders/{providerName}
+func (a *AuthHandler) getProviderSpec(providerName string) (*AuthenticationProvider, error) {
+	mockProviders := getMockAuthenticationProviders()
 	for _, provider := range mockProviders {
 		if provider.Metadata.Name == providerName {
 			if !provider.Spec.Enabled {
@@ -300,7 +300,7 @@ func (a AuthHandler) TestProviderConnection(w http.ResponseWriter, r *http.Reque
 	// Note: In a standard setup with gorilla/mux, you'd use mux.Vars(r)["provider"]
 	// but we're using a simple string extraction here for compatibility
 	// CELIA-WIP fix
-	providerName := r.URL.Path[len("/api/oidcproviders/"):]
+	providerName := r.URL.Path[len("/api/authproviders/"):]
 	if idx := len(providerName) - len("/test"); idx > 0 {
 		providerName = providerName[:idx]
 	}
@@ -308,7 +308,7 @@ func (a AuthHandler) TestProviderConnection(w http.ResponseWriter, r *http.Reque
 	if providerName == "" || providerName == "/test" || providerName == "test" {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{
-			"error": "Provider name is required in URL path: /api/oidcproviders/{provider}/test",
+			"error": "Provider name is required in URL path: /api/authproviders/{provider}/test",
 		})
 		return
 	}
@@ -326,7 +326,7 @@ func (a AuthHandler) TestProviderConnection(w http.ResponseWriter, r *http.Reque
 		}
 
 		// Create a spec for the embedded provider for validation
-		embeddedSpec := OIDCProviderSpec{
+		embeddedSpec := AuthenticationProviderSpec{
 			Type:    a.embeddedAuthType,
 			Enabled: true,
 			// CELIA-WIP: Should is be displayed in the UI?
@@ -341,7 +341,7 @@ func (a AuthHandler) TestProviderConnection(w http.ResponseWriter, r *http.Reque
 		// CELIA-WIP can be done for AAP?
 		// Note: AAPGateway type won't have detailed validation available
 
-		result = ValidateProviderConfiguration(embeddedSpec)
+		result = TestProviderConfiguration(embeddedSpec)
 	} else {
 		// Fetch provider spec for non-embedded providers
 		providerSpec, err := a.getProviderSpec(providerName)
@@ -355,7 +355,7 @@ func (a AuthHandler) TestProviderConnection(w http.ResponseWriter, r *http.Reque
 		}
 
 		// Run validation
-		result = ValidateProviderConfiguration(providerSpec.Spec)
+		result = TestProviderConfiguration(providerSpec.Spec)
 	}
 
 	// Return validation result

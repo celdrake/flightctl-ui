@@ -6,7 +6,7 @@ import {
 } from '@flightctl/ui-components/src/utils/apiCalls';
 import { ORGANIZATION_STORAGE_KEY } from '@flightctl/ui-components/src/utils/organizationStorage';
 
-import { OIDCProviderList } from '@flightctl/ui-components/src/types/extraTypes';
+import { AuthenticationProviderList } from '@flightctl/ui-components/src/types/extraTypes';
 import { SELECT_PROVIDERS_PAGE } from '@flightctl/ui-components/src/constants';
 import { lastRefresh } from '../context/AuthContext';
 
@@ -65,12 +65,12 @@ export const logout = async () => {
  */
 export const redirectToLogin = async () => {
   try {
-    const providersResp = await fetchUiProxy('oidcproviders', {
+    const providersResp = await fetchUiProxy('authproviders', {
       method: 'GET',
     });
 
     if (providersResp.ok) {
-      const data = (await providersResp.json()) as OIDCProviderList;
+      const data = (await providersResp.json()) as AuthenticationProviderList;
       const enabledProviders = data.items.filter((p) => p.spec.enabled);
 
       let providerUrl: string | undefined;

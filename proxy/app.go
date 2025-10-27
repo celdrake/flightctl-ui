@@ -85,10 +85,10 @@ func main() {
 		// CELIA-WIP: Functionality to provide a list of OIDC providers until the backend is implemented.
 		// we need to confirm that the default provider will be included in the list, otherwise we may need to add it ourselves.
 		embeddedAuthURL, embeddedAuthType := authHandler.GetEmbeddedProviderInfo()
-		apiRouter.HandleFunc("/oidcproviders", auth.GetOIDCProvidersHandler(embeddedAuthURL, embeddedAuthType))
+		apiRouter.HandleFunc("/authproviders", auth.GetAuthenticationProvidersHandler(embeddedAuthURL, embeddedAuthType))
 
 		// Test provider connection endpoint - validates provider configuration without saving
-		apiRouter.HandleFunc("/oidcproviders/{provider}/test", authHandler.TestProviderConnection)
+		apiRouter.HandleFunc("/authproviders/{provider}/test", authHandler.TestProviderConnection)
 	} else {
 		configHandler := config.OcpConfigHandler{}
 		apiRouter.HandleFunc("/config", configHandler.GetConfig)

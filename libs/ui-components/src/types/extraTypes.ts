@@ -82,7 +82,7 @@ export type AlertManagerAlert = {
 /**
  * Base fields common to both OIDC and OAuth2 providers
  */
-type OIDCProviderBaseSpec = {
+type AuthenticationProviderBaseSpec = {
   /**
    * ClientId for the OIDC/OAuth2 application
    */
@@ -92,9 +92,9 @@ type OIDCProviderBaseSpec = {
    */
   enabled: boolean;
   /**
-   * Issuer URL for OIDC discovery (required for OIDC type)
+   * Issuer URL (required for OIDC, optional for OAuth2)
    */
-  issuer: string;
+  issuer?: string;
   /**
    * Organization assignment configuration
    */
@@ -113,17 +113,21 @@ type OIDCProviderBaseSpec = {
 /**
  * OIDC-compliant provider spec (uses OIDC discovery)
  */
-export type OIDCProviderSpec = OIDCProviderBaseSpec & {
+export type OIDCProviderSpec = AuthenticationProviderBaseSpec & {
   /**
    * Type of the provider: "OIDC" for full OIDC compliant providers
    */
   type: 'OIDC';
+  /**
+   * Issuer URL for OIDC discovery (required for OIDC providers)
+   */
+  issuer: string;
 };
 
 /**
  * OAuth2-only provider spec (manual endpoint configuration)
  */
-export type OAuth2ProviderSpec = OIDCProviderBaseSpec & {
+export type OAuth2ProviderSpec = AuthenticationProviderBaseSpec & {
   /**
    * Type of the provider: "OAuth2" for OAuth2 only providers
    */
@@ -152,9 +156,9 @@ export type OAuth2ProviderSpec = OIDCProviderBaseSpec & {
 export type ProviderSpec = OIDCProviderSpec | OAuth2ProviderSpec;
 
 /**
- * OIDCProvider represents an OIDC/OAuth2 authentication provider configuration
+ * AuthenticationProvider represents an OIDC/OAuth2 authentication provider configuration
  */
-export type OIDCProvider = {
+export type AuthenticationProvider = {
   /**
    * APIVersion defines the versioned schema of this representation of an object.
    */
@@ -165,13 +169,13 @@ export type OIDCProvider = {
   kind: string;
   metadata: ObjectMeta;
   spec: ProviderSpec;
-  status?: OIDCProviderStatus;
+  status?: AuthenticationProviderStatus;
 };
 
 /**
  * OIDCProviderStatus defines the observed state of an OIDC Provider
  */
-export type OIDCProviderStatus = {
+export type AuthenticationProviderStatus = {
   conditions?: Array<{
     type: string;
     status: string;
@@ -217,11 +221,11 @@ export type OIDCPerUserOrganizationAssignment = {
 };
 
 /**
- * List of OIDC Providers
+ * List of Authentication Providers
  */
-export type OIDCProviderList = {
+export type AuthenticationProviderList = {
   apiVersion: string;
   kind: string;
   metadata: ListMeta;
-  items: OIDCProvider[];
+  items: AuthenticationProvider[];
 };

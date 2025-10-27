@@ -14,10 +14,10 @@ import {
   Title,
 } from '@patternfly/react-core';
 import { ExclamationCircleIcon } from '@patternfly/react-icons/dist/js/icons/exclamation-circle-icon';
-import { OIDCProvider } from '@flightctl/ui-components/src/types/extraTypes';
+import { AuthenticationProvider } from '@flightctl/ui-components/src/types/extraTypes';
 import { getErrorMessage } from '@flightctl/ui-components/src/utils/error';
 import { useTranslation } from '@flightctl/ui-components/src/hooks/useTranslation';
-import { useOidcProviders } from '@flightctl/ui-components/src/hooks/useOidcProviders';
+import { useAuthProviders } from '@flightctl/ui-components/src/hooks/useAuthProviders';
 
 import { useFetch } from '../../hooks/useFetch';
 import ProviderCard from './ProviderCard';
@@ -25,10 +25,10 @@ import ProviderCard from './ProviderCard';
 const LoginPage = () => {
   const { t } = useTranslation();
   const { proxyFetch } = useFetch();
-  const { enabledProviders, isLoading, error: oidcProvidersError } = useOidcProviders(proxyFetch);
+  const { enabledProviders, isLoading, error: authProvidersError } = useAuthProviders(proxyFetch);
   const [error, setError] = React.useState<string>();
 
-  const handleProviderClick = async (provider: OIDCProvider) => {
+  const handleProviderClick = async (provider: AuthenticationProvider) => {
     try {
       const providerName = provider.metadata.name;
       const response = await proxyFetch(`login?provider=${providerName}`, {
@@ -49,13 +49,13 @@ const LoginPage = () => {
     );
   }
 
-  if (error || oidcProvidersError) {
+  if (error || authProvidersError) {
     return (
       <Bullseye>
         <EmptyState variant="xl">
           <EmptyStateHeader
             titleText={
-              oidcProvidersError
+              authProvidersError
                 ? t('Failed to load authentication providers')
                 : t('Failed to login with the selected provider')
             }
@@ -66,7 +66,7 @@ const LoginPage = () => {
               </Icon>
             }
           />
-          <EmptyStateBody>{error || oidcProvidersError}</EmptyStateBody>
+          <EmptyStateBody>{error || authProvidersError}</EmptyStateBody>
         </EmptyState>
       </Bullseye>
     );

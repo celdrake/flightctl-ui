@@ -1,10 +1,10 @@
 import * as React from 'react';
-import { OIDCProvider, OIDCProviderList } from '../types/extraTypes';
+import { AuthenticationProvider, AuthenticationProviderList } from '../types/extraTypes';
 import { getErrorMessage } from '../utils/error';
 
-type UseOidcProvidersResult = {
-  providers: OIDCProvider[];
-  enabledProviders: OIDCProvider[];
+type UseAuthProvidersResult = {
+  providers: AuthenticationProvider[];
+  enabledProviders: AuthenticationProvider[];
   isLoading: boolean;
   error: string | undefined;
   refetch: () => void;
@@ -13,12 +13,12 @@ type UseOidcProvidersResult = {
 type ProxyFetchFunction = (endpoint: string, requestInit: RequestInit) => Promise<Response>;
 
 /**
- * Hook to fetch and manage OIDC providers
+ * Hook to fetch and manage authentication providers
  * @param proxyFetch - Function to make proxy API calls
  * @returns Object containing providers list, loading state, error, and refetch function
  */
-export const useOidcProviders = (proxyFetch: ProxyFetchFunction): UseOidcProvidersResult => {
-  const [providers, setProviders] = React.useState<OIDCProvider[]>([]);
+export const useAuthProviders = (proxyFetch: ProxyFetchFunction): UseAuthProvidersResult => {
+  const [providers, setProviders] = React.useState<AuthenticationProvider[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string>();
   const [refetchTrigger, setRefetchTrigger] = React.useState(0);
@@ -33,15 +33,15 @@ export const useOidcProviders = (proxyFetch: ProxyFetchFunction): UseOidcProvide
       setError(undefined);
 
       try {
-        const response = await proxyFetch('oidcproviders', {
+        const response = await proxyFetch('authproviders', {
           method: 'GET',
         });
 
         if (!response.ok) {
-          throw new Error(`Failed to fetch OIDC providers: ${response.status} ${response.statusText}`);
+          throw new Error(`Failed to fetch authentication providers: ${response.status} ${response.statusText}`);
         }
 
-        const data = (await response.json()) as OIDCProviderList;
+        const data = (await response.json()) as AuthenticationProviderList;
         setProviders(data.items || []);
       } catch (err) {
         setError(getErrorMessage(err));
