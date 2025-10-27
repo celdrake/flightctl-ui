@@ -237,13 +237,15 @@ func testOAuth2ProviderConfiguration(spec AuthenticationProviderSpec, result *Pr
 
 	// Validate authorization endpoint
 	if spec.AuthorizationUrl != "" {
-		oauth2Settings.AuthorizationEndpoint = FieldValidation{Valid: true, Value: spec.AuthorizationUrl}
+		isValid := false
 		// Test reachability of authorization endpoint
 		if err := testEndpointReachability(spec.AuthorizationUrl, "GET"); err != nil {
-			addFieldWarning(&oauth2Settings.AuthorizationEndpoint, fmt.Sprintf("Endpoint may not be reachable: %v", err))
+			addFieldWarning(&oauth2Settings.AuthorizationEndpoint, fmt.Sprintf("Authorization endpoint not reachable: %v", err))
 		} else {
-			addFieldNote(&oauth2Settings.AuthorizationEndpoint, ValidationLevelInfo, "Endpoint is reachable")
+			addFieldNote(&oauth2Settings.AuthorizationEndpoint, ValidationLevelInfo, "Authorization endpoint is reachable")
+			isValid = true
 		}
+		oauth2Settings.AuthorizationEndpoint = FieldValidation{Valid: isValid, Value: spec.AuthorizationUrl}
 	} else {
 		oauth2Settings.AuthorizationEndpoint = FieldValidation{
 			Valid: false,
@@ -255,13 +257,15 @@ func testOAuth2ProviderConfiguration(spec AuthenticationProviderSpec, result *Pr
 
 	// Validate token endpoint
 	if spec.TokenUrl != "" {
-		oauth2Settings.TokenEndpoint = FieldValidation{Valid: true, Value: spec.TokenUrl}
+		isValid := false
 		// Test reachability and that it accepts POST
 		if err := testEndpointReachability(spec.TokenUrl, "POST"); err != nil {
-			addFieldWarning(&oauth2Settings.TokenEndpoint, fmt.Sprintf("Endpoint may not be reachable or accept POST: %v", err))
+			addFieldWarning(&oauth2Settings.TokenEndpoint, fmt.Sprintf("Token endpoint not reachable or does not accept POST method: %v", err))
 		} else {
-			addFieldNote(&oauth2Settings.TokenEndpoint, ValidationLevelInfo, "Endpoint is reachable and accepts POST")
+			isValid = true
+			addFieldNote(&oauth2Settings.TokenEndpoint, ValidationLevelInfo, "Token endpoint is reachable and accepts POST method")
 		}
+		oauth2Settings.TokenEndpoint = FieldValidation{Valid: isValid, Value: spec.TokenUrl}
 	} else {
 		oauth2Settings.TokenEndpoint = FieldValidation{
 			Valid: false,
@@ -273,13 +277,15 @@ func testOAuth2ProviderConfiguration(spec AuthenticationProviderSpec, result *Pr
 
 	// Validate userinfo endpoint
 	if spec.UserInfoUrl != "" {
-		oauth2Settings.UserInfoEndpoint = FieldValidation{Valid: true, Value: spec.UserInfoUrl}
+		isValid := false
 		// Test reachability and check response structure
 		if err := testUserInfoEndpoint(spec.UserInfoUrl); err != nil {
-			addFieldWarning(&oauth2Settings.UserInfoEndpoint, fmt.Sprintf("Endpoint validation warning: %v", err))
+			addFieldWarning(&oauth2Settings.UserInfoEndpoint, fmt.Sprintf("User info endpoint not reachable or returns invalid JSON: %v", err))
 		} else {
-			addFieldNote(&oauth2Settings.UserInfoEndpoint, ValidationLevelInfo, "Endpoint is reachable and returns JSON")
+			isValid = true
+			addFieldNote(&oauth2Settings.UserInfoEndpoint, ValidationLevelInfo, "User info endpoint is reachable and returns valid JSON")
 		}
+		oauth2Settings.UserInfoEndpoint = FieldValidation{Valid: isValid, Value: spec.UserInfoUrl}
 	} else {
 		oauth2Settings.UserInfoEndpoint = FieldValidation{
 			Valid: false,

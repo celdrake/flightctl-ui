@@ -2,10 +2,6 @@ import * as React from 'react';
 import {
   Alert,
   Button,
-  DescriptionList,
-  DescriptionListDescription,
-  DescriptionListGroup,
-  DescriptionListTerm,
   FormGroup,
   FormSelect,
   FormSelectOption,
@@ -24,13 +20,11 @@ import {
 } from '@patternfly/react-core';
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@patternfly/react-core/next';
 import { Table, Tbody, Td, Th, Thead, Tr } from '@patternfly/react-table';
-import {
-  CheckCircleIcon,
-  ExclamationCircleIcon,
-  ExclamationTriangleIcon,
-  InfoCircleIcon,
-  OutlinedQuestionCircleIcon,
-} from '@patternfly/react-icons';
+import { CheckCircleIcon } from '@patternfly/react-icons/dist/js/icons/check-circle-icon';
+import { ExclamationTriangleIcon } from '@patternfly/react-icons/dist/js/icons/exclamation-triangle-icon';
+import { ExclamationCircleIcon } from '@patternfly/react-icons/dist/js/icons/exclamation-circle-icon';
+import { InfoCircleIcon } from '@patternfly/react-icons/dist/js/icons/info-circle-icon';
+import { OutlinedQuestionCircleIcon } from '@patternfly/react-icons/dist/js/icons/outlined-question-circle-icon';
 
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useAppContext } from '../../../hooks/useAppContext';
@@ -170,65 +164,6 @@ const EndpointStatusCell = ({
         </Popover>
       </StackItem>
     </Stack>
-  );
-};
-
-const FieldValidationDisplay = ({
-  label,
-  field,
-  showEmpty = false,
-}: {
-  label: string;
-  field: FieldValidation;
-  showEmpty?: boolean;
-}) => {
-  const { t } = useTranslation();
-  if (!field || (!field.value && !showEmpty)) {
-    return null;
-  }
-  if (!field.value) {
-    return (
-      <DescriptionListGroup>
-        <DescriptionListTerm>{label}</DescriptionListTerm>
-        <DescriptionListDescription>
-          <Label color="blue" icon={<InfoCircleIcon />}>
-            {t('No value')}
-          </Label>
-        </DescriptionListDescription>
-      </DescriptionListGroup>
-    );
-  }
-  return (
-    <DescriptionListGroup>
-      <DescriptionListTerm>{label}</DescriptionListTerm>
-      <DescriptionListDescription>
-        <Stack hasGutter>
-          <StackItem>
-            {field.valid ? (
-              <Label color="green" icon={<CheckCircleIcon />}>
-                {t('Valid')}
-              </Label>
-            ) : (
-              <Label color="red" icon={<ExclamationCircleIcon />}>
-                {t('Invalid')}
-              </Label>
-            )}
-            {field.value && <span style={{ marginLeft: '8px' }}>{field.value}</span>}
-          </StackItem>
-          {field.notes && field.notes.length > 0 && (
-            <StackItem>
-              <List isPlain>
-                {field.notes.map((note, idx) => (
-                  <ListItem key={idx} icon={<ValidationIcon level={note.level} />}>
-                    {note.text}
-                  </ListItem>
-                ))}
-              </List>
-            </StackItem>
-          )}
-        </Stack>
-      </DescriptionListDescription>
-    </DescriptionListGroup>
   );
 };
 
@@ -424,7 +359,7 @@ const TestProviderConnectionModal = ({ onClose }: TestProviderConnectionModalPro
                                       field={validationResult.oidcDiscovery.endSessionEndpoint}
                                       successLabel={t('Success')}
                                       failureLabel={t('Failure')}
-                                      optionalLabel={t('Optional')}
+                                      optionalLabel={t('(Optional)')}
                                       isOptional={true}
                                     />
                                   </Td>
@@ -440,38 +375,90 @@ const TestProviderConnectionModal = ({ onClose }: TestProviderConnectionModalPro
                     {validationResult.oauth2Settings && (
                       <>
                         <StackItem>
-                          <Alert variant="info" isInline title={t('OAuth2 Provider')}>
-                            {t(
-                              'OAuth2 providers require manual endpoint configuration. Each endpoint is validated for reachability and compatibility.',
-                            )}
-                          </Alert>
+                          <Title headingLevel="h4" size={TitleSizes.md}>
+                            {t('OAuth2 endpoint validation results')}:
+                          </Title>
                         </StackItem>
                         <StackItem>
-                          <Title headingLevel="h4" size={TitleSizes.md}>
-                            {t('OAuth2 Settings')}
-                          </Title>
-                          <DescriptionList isHorizontal>
-                            <FieldValidationDisplay
-                              label={t('Authorization Endpoint')}
-                              field={validationResult.oauth2Settings.authorizationEndpoint}
-                            />
-                            <FieldValidationDisplay
-                              label={t('Token Endpoint')}
-                              field={validationResult.oauth2Settings.tokenEndpoint}
-                            />
-                            <FieldValidationDisplay
-                              label={t('UserInfo Endpoint')}
-                              field={validationResult.oauth2Settings.userInfoEndpoint}
-                            />
-                            <FieldValidationDisplay
-                              label={t('End Session Endpoint')}
-                              field={validationResult.oauth2Settings.endSessionEndpoint}
-                            />
-                            <FieldValidationDisplay
-                              label={t('Scopes')}
-                              field={validationResult.oauth2Settings.scopes}
-                            />
-                          </DescriptionList>
+                          <TextContent>
+                            <Text>
+                              {t(
+                                'OAuth2 providers require manual endpoint configuration. Each endpoint is validated for reachability and compatibility.',
+                              )}
+                            </Text>
+                          </TextContent>
+                        </StackItem>
+                        <StackItem>
+                          <Table variant="compact" borders={true}>
+                            <Thead>
+                              <Tr>
+                                <Th>{t('Setting')}</Th>
+                                <Th>{t('Value')}</Th>
+                                <Th>{t('Status')}</Th>
+                              </Tr>
+                            </Thead>
+                            <Tbody>
+                              <Tr>
+                                <Td>{t('Authorization endpoint')}</Td>
+                                <Td>{validationResult.oauth2Settings.authorizationEndpoint.value || '-'}</Td>
+                                <Td>
+                                  <EndpointStatusCell
+                                    field={validationResult.oauth2Settings.authorizationEndpoint}
+                                    successLabel={t('Success')}
+                                    failureLabel={t('Failure')}
+                                  />
+                                </Td>
+                              </Tr>
+                              <Tr>
+                                <Td>{t('Token endpoint')}</Td>
+                                <Td>{validationResult.oauth2Settings.tokenEndpoint.value || '-'}</Td>
+                                <Td>
+                                  <EndpointStatusCell
+                                    field={validationResult.oauth2Settings.tokenEndpoint}
+                                    successLabel={t('Success')}
+                                    failureLabel={t('Failure')}
+                                  />
+                                </Td>
+                              </Tr>
+                              <Tr>
+                                <Td>{t('User info endpoint')}</Td>
+                                <Td>{validationResult.oauth2Settings.userInfoEndpoint.value || '-'}</Td>
+                                <Td>
+                                  <EndpointStatusCell
+                                    field={validationResult.oauth2Settings.userInfoEndpoint}
+                                    successLabel={t('Success')}
+                                    failureLabel={t('Failure')}
+                                  />
+                                </Td>
+                              </Tr>
+                              {validationResult.oauth2Settings.endSessionEndpoint && (
+                                <Tr>
+                                  <Td>{t('End session endpoint')}</Td>
+                                  <Td>{validationResult.oauth2Settings.endSessionEndpoint.value || '-'}</Td>
+                                  <Td>
+                                    <EndpointStatusCell
+                                      field={validationResult.oauth2Settings.endSessionEndpoint}
+                                      successLabel={t('Success')}
+                                      failureLabel={t('Failure')}
+                                      optionalLabel={t('Optional')}
+                                      isOptional={true}
+                                    />
+                                  </Td>
+                                </Tr>
+                              )}
+                              <Tr>
+                                <Td>{t('Scopes')}</Td>
+                                <Td>{validationResult.oauth2Settings.scopes.value || '-'}</Td>
+                                <Td>
+                                  <EndpointStatusCell
+                                    field={validationResult.oauth2Settings.scopes}
+                                    successLabel={t('Setting defined')}
+                                    failureLabel={t('Setting missing')}
+                                  />
+                                </Td>
+                              </Tr>
+                            </Tbody>
+                          </Table>
                         </StackItem>
                       </>
                     )}
