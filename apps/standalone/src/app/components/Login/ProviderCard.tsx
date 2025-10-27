@@ -12,7 +12,10 @@ const ProviderCard = ({ provider, onClick }: ProviderCardProps) => {
   const { t } = useTranslation();
   const providerName = provider.metadata.name as string;
   const providerType = provider.spec.type;
-  const issuer = provider.spec.type === 'OIDC' ? provider.spec.issuer : provider.spec.authorizationUrl;
+  let authUrl = provider.spec.issuer;
+  if (!authUrl && provider.spec.type === 'OAuth2') {
+    authUrl = provider.spec.authorizationUrl;
+  }
 
   return (
     <Card isClickable isSelectable onClick={() => onClick(provider)}>
@@ -26,11 +29,11 @@ const ProviderCard = ({ provider, onClick }: ProviderCardProps) => {
               </Text>
             </TextContent>
           </StackItem>
-          {issuer && (
+          {authUrl && (
             <StackItem>
               <TextContent>
                 <Text component="small" style={{ wordBreak: 'break-all' }}>
-                  <strong>{t('Issuer')}:</strong> {issuer}
+                  <strong>{t('Authentication URL')}:</strong> {authUrl}
                 </Text>
               </TextContent>
             </StackItem>

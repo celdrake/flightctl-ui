@@ -82,7 +82,6 @@ func getOIDCAuthHandlerWithClaim(authURL string, internalAuthURL *string, userna
 		return nil, err
 	}
 
-	// Default to preferred_username if not specified
 	if usernameClaim == "" {
 		usernameClaim = defaultUsernameClaim
 	}
