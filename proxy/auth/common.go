@@ -43,7 +43,7 @@ func setCookie(w http.ResponseWriter, value TokenData) error {
 		Value:    b64.StdEncoding.EncodeToString(cookieVal),
 		Secure:   config.TlsCertPath != "",
 		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: http.SameSiteLaxMode, // Lax allows cookies on OAuth redirects and top-level navigations
 		Path:     "/",
 	}
 	http.SetCookie(w, &cookie)

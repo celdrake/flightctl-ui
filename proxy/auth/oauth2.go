@@ -57,6 +57,8 @@ func getOAuth2AuthHandlerWithName(spec AuthenticationProviderSpec, providerName 
 		return nil, fmt.Errorf("OAuth2 provider requires scopes to be configured")
 	}
 
+	log.GetLogger().Infof("Getting OAuth2 auth handler with name %s", providerName)
+
 	// Only send client secret if provided (confidential clients vs public clients)
 	sendClientSecret := spec.ClientSecret != ""
 

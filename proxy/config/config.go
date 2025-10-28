@@ -3,6 +3,8 @@ package config
 import (
 	"os"
 	"strings"
+
+	"github.com/flightctl/flightctl-ui/log"
 )
 
 var (
@@ -24,6 +26,13 @@ var (
 	TestProviderClientSecret = getEnvVar("TEST_PROVIDER_CLIENT_SECRET", "test-provider-client-secret")
 	TestProviderClientId     = getEnvVar("TEST_PROVIDER_CLIENT_ID", "test-provider-client-id")
 )
+
+func Init() {
+	TestProviderClientSecret = getEnvVar("TEST_PROVIDER_CLIENT_SECRET", "test-provider-client-secret")
+	TestProviderClientId = getEnvVar("TEST_PROVIDER_CLIENT_ID", "test-provider-client-id")
+	log.GetLogger().Infof("TestProviderClientSecret: %s", TestProviderClientSecret)
+	log.GetLogger().Infof("TestProviderClientId: %s", TestProviderClientId)
+}
 
 func getEnvUrlVar(key string, defaultValue string) string {
 	urlValue := getEnvVar(key, defaultValue)
