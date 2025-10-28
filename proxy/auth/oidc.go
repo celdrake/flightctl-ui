@@ -23,6 +23,7 @@ type OIDCAuthHandler struct {
 	usernameClaim      string
 	authURL            string
 	providerName       string // Store provider name for state parameter
+	clientId           string // Client ID for this provider
 }
 
 type oidcServerResponse struct {
@@ -82,13 +83,20 @@ func getOIDCAuthHandlerWithClaimAndName(authURL string, internalAuthURL *string,
 		return nil, fmt.Errorf("failed to parse oidc config: %w", err)
 	}
 
-	internalClient, err := getOIDCClient(oidcResponse, tlsConfig)
+	internalClient, err := getOIDCClient(oidcResponse, tlsConfig, providerName)
 	if err != nil {
 		return nil, err
 	}
 
 	if usernameClaim == "" {
 		usernameClaim = defaultUsernameClaim
+	}
+
+	// CELIA-WIP: This is testing code for multiple auth providers
+	// When backend supports provider-specific client IDs, remove this and get from provider spec
+	clientId := config.AuthClientId
+	if providerName == "google" || providerName == "github" {
+		clientId = config.TestProviderClientId
 	}
 
 	handler := &OIDCAuthHandler{
@@ -100,6 +108,7 @@ func getOIDCAuthHandlerWithClaimAndName(authURL string, internalAuthURL *string,
 		usernameClaim:      usernameClaim,
 		authURL:            authURL,
 		providerName:       providerName,
+		clientId:           clientId,
 	}
 
 	if internalAuthURL != nil {
@@ -109,7 +118,7 @@ func getOIDCAuthHandlerWithClaimAndName(authURL string, internalAuthURL *string,
 			UserInfoEndpoint:   replaceBaseURL(oidcResponse.UserInfoEndpoint, *internalAuthURL, authURL),
 			EndSessionEndpoint: replaceBaseURL(oidcResponse.EndSessionEndpoint, *internalAuthURL, authURL),
 		}
-		client, err := getOIDCClient(extConfig, tlsConfig)
+		client, err := getOIDCClient(extConfig, tlsConfig, providerName)
 		if err != nil {
 			return nil, err
 		}
@@ -141,19 +150,38 @@ func replaceBaseURL(endpoint, oldBase, newBase string) string {
 	return endpointURL.String()
 }
 
-func getOIDCClient(oidcConfig oidcServerResponse, tlsConfig *tls.Config) (*osincli.Client, error) {
+// CELIA-WIP needs clarification regarding scopes
+func getOIDCClient(oidcConfig oidcServerResponse, tlsConfig *tls.Config, providerName string) (*osincli.Client, error) {
+	// Use standard OIDC scopes that work across all compliant providers
+	// profile: provides preferred_username, name, picture, etc.
+	// email: provides email and email_verified claims
 	scope := "openid"
-	if config.IsOrganizationsEnabled() {
-		scope = "openid organization:*"
+
+	// CELIA-WIP: Ask Asaf, Google not working with organizations scope
+	//if config.IsOrganizationsEnabled() {
+	//	scope = "openid profile email organization:*"
+	//}
+
+	// CELIA-WIP: This is testing code for multiple auth providers
+	// When backend supports provider-specific client IDs, remove this and get from provider spec
+	clientId := config.AuthClientId
+	clientSecret := ""
+	sendSecret := false
+	if providerName == "google" {
+		clientId = config.TestProviderClientId
+		clientSecret = config.TestProviderClientSecret
+		scope = "openid profile email"
+		sendSecret = true // Google requires client_secret in token exchange
 	}
 
 	oidcClientConfig := &osincli.ClientConfig{
-		ClientId:                 config.AuthClientId,
+		ClientId:                 clientId,
+		ClientSecret:             clientSecret,
 		AuthorizeUrl:             oidcConfig.AuthEndpoint,
 		TokenUrl:                 oidcConfig.TokenEndpoint,
 		RedirectUrl:              config.BaseUiUrl + "/callback",
 		ErrorsInStatusCode:       true,
-		SendClientSecretInParams: false,
+		SendClientSecretInParams: sendSecret,
 		Scope:                    scope,
 	}
 
@@ -188,19 +216,28 @@ func (o *OIDCAuthHandler) GetUserInfo(token string) (string, *http.Response, err
 			return "", resp, fmt.Errorf("failed to unmarshal OIDC user response: %w", err)
 		}
 
-		// Extract username using claim path
+		// Try to extract username using configured claim first
 		username, err := extractClaimValue(userInfo, o.usernameClaim)
-		if err != nil {
-			log.GetLogger().WithError(err).Errorf("Failed to extract username from claim '%s', user will appear as 'Anonymous'", o.usernameClaim)
-			return defaultUsername, resp, nil
+		if err == nil && username != "" {
+			return username, resp, nil
 		}
 
-		if username == "" {
-			log.GetLogger().Errorf("Claim '%s' is empty, user will appear as 'Anonymous'", o.usernameClaim)
-			return defaultUsername, resp, nil
+		// Fallback: try standard OIDC claims in order of preference
+		standardClaims := []string{"preferred_username", "email", "name", "sub"}
+		for _, claim := range standardClaims {
+			if claim == o.usernameClaim {
+				continue // Already tried this one
+			}
+			username, err = extractClaimValue(userInfo, claim)
+			if err == nil && username != "" {
+				log.GetLogger().Infof("Using '%s' claim as username fallback (configured claim '%s' not available)", claim, o.usernameClaim)
+				return username, resp, nil
+			}
 		}
 
-		return username, resp, nil
+		// If all else fails, return Anonymous
+		log.GetLogger().Errorf("No standard username claims found in userinfo response, user will appear as 'Anonymous'")
+		return defaultUsername, resp, nil
 	}
 
 	return "", resp, nil
@@ -222,7 +259,7 @@ func (o *OIDCAuthHandler) Logout(token string) (string, error) {
 
 	uq := u.Query()
 	uq.Add("post_logout_redirect_uri", config.BaseUiUrl)
-	uq.Add("client_id", config.AuthClientId)
+	uq.Add("client_id", o.clientId)
 	u.RawQuery = uq.Encode()
 	return u.String(), nil
 }

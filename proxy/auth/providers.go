@@ -98,7 +98,7 @@ type AuthenticationProviderSpec struct {
 	AuthorizationUrl       string                      `json:"authorizationUrl,omitempty"` // Required for OAuth2
 	TokenUrl               string                      `json:"tokenUrl,omitempty"`         // Required for OAuth2
 	UserInfoUrl            string                      `json:"userInfoUrl,omitempty"`      // Required for OAuth2
-	Scopes                 string                      `json:"scopes,omitempty"`           // OAuth2 scopes (space-separated)
+	Scopes                 string                      `json:"scopes,omitempty"`           // OIDC/OAuth2 scopes (space-separated). For OIDC: request only scopes needed for your UsernameClaim. Common: "openid profile" for preferred_username, "openid email" for email claim
 	OrganizationAssignment *OIDCOrganizationAssignment `json:"organizationAssignment,omitempty"`
 	RoleClaim              string                      `json:"roleClaim,omitempty"`
 	UsernameClaim          string                      `json:"usernameClaim,omitempty"`
@@ -182,7 +182,10 @@ func getMockAuthenticationProviders() []AuthenticationProvider {
 				ClientId:      config.TestProviderClientId,
 				Enabled:       true,
 				Issuer:        "https://accounts.google.com",
-				UsernameClaim: "email",
+				UsernameClaim: "preferred_username",
+				Scopes:        "openid profile",
+				// if usernameClaim is email, then we need to add email scope
+				// Scopes: "openid profile email",
 			},
 		},
 	}
@@ -216,7 +219,7 @@ func GetAuthenticationProvidersHandler(embeddedAuthURL string, embeddedAuthType 
 					ClientId:      "flightctl",
 					Enabled:       true,
 					Issuer:        embeddedAuthURL,
-					UsernameClaim: "preferred_username",
+					UsernameClaim: "name",
 				},
 			}
 			// Prepend embedded provider so it appears first
