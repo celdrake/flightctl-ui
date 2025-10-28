@@ -76,6 +76,7 @@ func isEmbeddedProvider(providerName string) bool {
 //
 //	HTTP GET to: /api/v1/authproviders/{providerName}
 func (a *AuthHandler) getProviderSpec(providerName string) (*AuthenticationProvider, error) {
+	// CELIA-WIP: with the real API, verify what happens if we have the same provider name in different organizations
 	mockProviders := getMockAuthenticationProviders()
 	for _, provider := range mockProviders {
 		if provider.Metadata.Name == providerName {
@@ -209,6 +210,8 @@ func (a AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	provider, tokenData, err := a.getProviderFromCookie(r)
 	if err != nil {
 		log.GetLogger().WithError(err).Warn("Refresh: Failed to get provider from cookie")
+		// Clear stale cookie to prevent repeated errors
+		w.Header().Set("Clear-Site-Data", `"cookies"`)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -246,6 +249,8 @@ func (a AuthHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 	provider, tokenData, err := a.getProviderFromCookie(r)
 	if err != nil || tokenData.Token == "" {
 		log.GetLogger().WithError(err).Warn("GetUserInfo: Failed to get provider from cookie")
+		// Clear stale cookie to prevent repeated errors
+		w.Header().Set("Clear-Site-Data", `"cookies"`)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
