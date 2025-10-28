@@ -18,6 +18,7 @@ import (
 type TokenData struct {
 	Token        string `json:"token"`
 	RefreshToken string `json:"refreshToken"`
+	Provider     string `json:"provider,omitempty"` // Store which provider issued this token
 }
 
 type LoginParameters struct {

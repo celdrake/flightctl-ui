@@ -17,6 +17,10 @@ import (
 // Using pipe (|) instead of dot (.) because some claim values may contain dots (e.g., "kubernetes.io")
 const ClaimPathSeparator = "|"
 
+// Note: osincli already handles Accept: application/json header correctly
+// and properly encodes OAuth2 requests, so no custom RoundTripper is needed
+// for standard OAuth2 providers like GitHub, GitLab, etc.
+
 // OAuth2AuthHandler handles OAuth2 authentication (non-fully compliant OIDC)
 type OAuth2AuthHandler struct {
 	tlsConfig        *tls.Config
@@ -24,10 +28,16 @@ type OAuth2AuthHandler struct {
 	userInfoEndpoint string
 	usernameClaim    string
 	authURL          string
+	providerName     string // Store provider name for state parameter
 }
 
 // getOAuth2AuthHandler creates an OAuth2 auth handler from provider spec
 func getOAuth2AuthHandler(spec AuthenticationProviderSpec) (*OAuth2AuthHandler, error) {
+	return getOAuth2AuthHandlerWithName(spec, "")
+}
+
+// getOAuth2AuthHandlerWithName creates an OAuth2 auth handler with a provider name for the redirect URI
+func getOAuth2AuthHandlerWithName(spec AuthenticationProviderSpec, providerName string) (*OAuth2AuthHandler, error) {
 	tlsConfig, err := bridge.GetAuthTlsConfig()
 	if err != nil {
 		return nil, err
@@ -47,21 +57,30 @@ func getOAuth2AuthHandler(spec AuthenticationProviderSpec) (*OAuth2AuthHandler, 
 		return nil, fmt.Errorf("OAuth2 provider requires scopes to be configured")
 	}
 
+	// Only send client secret if provided (confidential clients vs public clients)
+	sendClientSecret := spec.ClientSecret != ""
+
 	clientConfig := &osincli.ClientConfig{
 		ClientId:                 spec.ClientId,
+		ClientSecret:             spec.ClientSecret,
 		AuthorizeUrl:             spec.AuthorizationUrl,
 		TokenUrl:                 spec.TokenUrl,
 		RedirectUrl:              config.BaseUiUrl + "/callback",
 		ErrorsInStatusCode:       true,
-		SendClientSecretInParams: false,
+		SendClientSecretInParams: sendClientSecret,
 		Scope:                    spec.Scopes,
 	}
+
+	log.GetLogger().Infof("OAuth2 client config - ClientId: %s, TokenUrl: %s, RedirectUrl: %s, Scopes: %s",
+		clientConfig.ClientId, clientConfig.TokenUrl, clientConfig.RedirectUrl, clientConfig.Scope)
 
 	client, err := osincli.NewClient(clientConfig)
 	if err != nil {
 		return nil, err
 	}
 
+	// Set the HTTP transport for TLS configuration
+	// osincli already handles JSON responses correctly
 	client.Transport = &http.Transport{
 		TLSClientConfig: tlsConfig,
 	}
@@ -77,6 +96,7 @@ func getOAuth2AuthHandler(spec AuthenticationProviderSpec) (*OAuth2AuthHandler, 
 		userInfoEndpoint: spec.UserInfoUrl,
 		usernameClaim:    usernameClaim,
 		authURL:          spec.AuthorizationUrl,
+		providerName:     providerName,
 	}
 
 	return handler, nil
@@ -196,5 +216,5 @@ func (o *OAuth2AuthHandler) RefreshToken(refreshToken string) (TokenData, *int64
 }
 
 func (a *OAuth2AuthHandler) GetLoginRedirectURL() string {
-	return loginRedirect(a.client)
+	return loginRedirectWithState(a.client, a.providerName)
 }

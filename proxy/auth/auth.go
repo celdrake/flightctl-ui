@@ -113,11 +113,11 @@ func (a *AuthHandler) getProviderByName(name string) AuthProvider {
 			return nil
 		}
 
-		// Full OIDC provider with discovery - pass usernameClaim for flexible extraction
-		provider, initErr = getOIDCAuthHandlerWithClaim(spec.Spec.Issuer, nil, spec.Spec.UsernameClaim)
+		// Full OIDC provider with discovery - pass usernameClaim and provider name for state parameter
+		provider, initErr = getOIDCAuthHandlerWithClaimAndName(spec.Spec.Issuer, nil, spec.Spec.UsernameClaim, name)
 	case ProviderTypeOAuth2:
-		// OAuth2 provider with explicit endpoints
-		provider, initErr = getOAuth2AuthHandler(spec.Spec)
+		// OAuth2 provider with explicit endpoints - pass provider name for redirect URI
+		provider, initErr = getOAuth2AuthHandlerWithName(spec.Spec, name)
 	default:
 		log.GetLogger().Errorf("Unknown provider type %s for provider %s", spec.Spec.Type, name)
 		return nil
@@ -128,7 +128,7 @@ func (a *AuthHandler) getProviderByName(name string) AuthProvider {
 		return nil
 	}
 
-	log.GetLogger().Infof("OIDC provider %s initialized", name)
+	log.GetLogger().Infof("Authentication provider %s (%s) initialized", name, spec.Spec.Type)
 	return provider
 }
 
@@ -137,9 +137,26 @@ func (a *AuthHandler) GetEmbeddedProviderInfo() (string, string) {
 	return a.embeddedAuthURL, a.embeddedAuthType
 }
 
+// getProviderFromCookie extracts the provider from the session cookie
+// Returns the provider and token data, or an error if the cookie is invalid or provider unavailable
+func (a *AuthHandler) getProviderFromCookie(r *http.Request) (AuthProvider, TokenData, error) {
+	tokenData, err := ParseSessionCookie(r)
+	if err != nil {
+		return nil, TokenData{}, fmt.Errorf("failed to parse session cookie: %w", err)
+	}
+
+	provider := a.getProviderByName(tokenData.Provider)
+	if provider == nil {
+		return nil, TokenData{}, fmt.Errorf("provider '%s' not available", tokenData.Provider)
+	}
+
+	return provider, tokenData, nil
+}
+
 func (a AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	// Get provider name from query parameter
 	providerName := r.URL.Query().Get("provider")
+	log.GetLogger().Infof("Login request: method=%s, provider=%s", r.Method, providerName)
 	provider := a.getProviderByName(providerName)
 
 	if provider == nil {
@@ -170,9 +187,12 @@ func (a AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		// Store provider name in token data so we know which provider to use for refresh/userinfo
+		tokenData.Provider = providerName
 		respondWithToken(w, tokenData, expires)
 	} else {
 		loginUrl := provider.GetLoginRedirectURL()
+		log.GetLogger().Infof("Returning login redirect URL for provider '%s': %s", providerName, loginUrl)
 		response, err := json.Marshal(RedirectResponse{Url: loginUrl})
 		if err != nil {
 			log.GetLogger().WithError(err).Warn("Failed to marshal response")
@@ -186,22 +206,22 @@ func (a AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
-	if a.provider == nil {
-		w.WriteHeader(http.StatusTeapot)
-		return
-	}
-	tokenData, err := ParseSessionCookie(r)
+	provider, tokenData, err := a.getProviderFromCookie(r)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		log.GetLogger().WithError(err).Warn("Refresh: Failed to get provider from cookie")
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
-	tokenData, expires, err := a.provider.RefreshToken(tokenData.RefreshToken)
+	newTokenData, expires, err := provider.RefreshToken(tokenData.RefreshToken)
 	if err != nil {
+		log.GetLogger().WithError(err).Warn("Refresh: Failed to refresh token")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	respondWithToken(w, tokenData, expires)
+	// Preserve provider name
+	newTokenData.Provider = tokenData.Provider
+	respondWithToken(w, newTokenData, expires)
 }
 
 func respondWithToken(w http.ResponseWriter, tokenData TokenData, expires *int64) {
@@ -221,27 +241,29 @@ func respondWithToken(w http.ResponseWriter, tokenData TokenData, expires *int64
 }
 
 func (a AuthHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
-	if a.provider == nil {
-		w.WriteHeader(http.StatusTeapot)
-		return
-	}
+	log.GetLogger().Info("GetUserInfo called")
 
-	token, err := getToken(r)
-	if token == "" || err != nil {
+	provider, tokenData, err := a.getProviderFromCookie(r)
+	if err != nil || tokenData.Token == "" {
+		log.GetLogger().WithError(err).Warn("GetUserInfo: Failed to get provider from cookie")
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
-	username, resp, err := a.provider.GetUserInfo(token)
+	log.GetLogger().Infof("GetUserInfo: Retrieved token for provider '%s'", tokenData.Provider)
+
+	username, resp, err := provider.GetUserInfo(tokenData.Token)
 	if err != nil {
-		log.GetLogger().WithError(err).Warn("Failed to get user info")
+		log.GetLogger().WithError(err).Warn("Failed to get user info from provider")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	if resp.StatusCode != http.StatusOK {
+		log.GetLogger().Warnf("GetUserInfo: Provider returned status %d", resp.StatusCode)
 		w.WriteHeader(resp.StatusCode)
 		return
 	}
+	log.GetLogger().Infof("GetUserInfo: Successfully retrieved username: %s", username)
 	userInfo := UserInfoResponse{Username: username}
 	res, err := json.Marshal(userInfo)
 	if err != nil {
@@ -255,18 +277,16 @@ func (a AuthHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
-	if a.provider == nil {
-		w.WriteHeader(http.StatusTeapot)
+	provider, tokenData, err := a.getProviderFromCookie(r)
+	if err != nil || tokenData.Token == "" {
+		log.GetLogger().WithError(err).Warn("Logout: Failed to get provider from cookie")
+		// Still clear the cookie even if there's an error
+		w.Header().Set("Clear-Site-Data", `"cookies"`)
+		w.WriteHeader(http.StatusOK)
 		return
 	}
 
-	token, err := getToken(r)
-	if token == "" || err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-
-	redirectUrl, err := a.provider.Logout(token)
+	redirectUrl, err := provider.Logout(tokenData.Token)
 	if err != nil {
 		log.GetLogger().WithError(err).Warn("Failed to logout")
 		w.WriteHeader(http.StatusInternalServerError)

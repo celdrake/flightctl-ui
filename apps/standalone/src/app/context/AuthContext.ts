@@ -5,6 +5,10 @@ import { loginAPI, redirectToLogin } from '../utils/apiCalls';
 
 const AUTH_DISABLED_STATUS_CODE = 418;
 const EXPIRATION = 'expiration';
+// To obtain the AUth provider which triggered the flow, we must use different paramters depending on the provider type
+const OAUTH2_PROVIDER_PARAMETER = 'state';
+const OIDC_PROVIDER_PARAMETER = 'provider';
+
 export let lastRefresh = 0;
 
 // max value for setTimeout
@@ -47,7 +51,7 @@ export const useAuthContext = () => {
         localStorage.removeItem(ORGANIZATION_STORAGE_KEY);
         const searchParams = new URLSearchParams(window.location.search);
         const code = searchParams.get('code');
-        const provider = searchParams.get('provider');
+        const provider = searchParams.get(OIDC_PROVIDER_PARAMETER) || searchParams.get(OAUTH2_PROVIDER_PARAMETER);
         callbackErr = searchParams.get('error');
         if (code) {
           // Include provider in the login request if available
@@ -68,9 +72,14 @@ export const useAuthContext = () => {
             localStorage.setItem(EXPIRATION, `${now + expiration.expiresIn}`);
             lastRefresh = now;
           }
+          console.log('Callback: authentication successful, redirecting to /');
+          // After successful authentication, redirect away from callback page
+          window.location.href = '/';
+          return;
         } else if (callbackErr) {
           setError(callbackErr);
           setLoading(false);
+          return;
         }
       }
       if (!callbackErr) {
@@ -84,20 +93,25 @@ export const useAuthContext = () => {
             return;
           }
           if (resp.status === 401) {
+            console.log('Auth check: received 401, redirecting to login');
             await redirectToLogin();
             return;
           }
           if (resp.status !== 200) {
+            console.error('Auth check: unexpected status', resp.status);
             setError('Failed to get user info');
+            setLoading(false);
             return;
           }
           const info = (await resp.json()) as { username: string };
+          console.log('Auth check: successfully retrieved user info', info.username);
           setUsername(info.username);
           setLoading(false);
         } catch (err) {
           // eslint-disable-next-line
-          console.log(err);
+          console.error('Auth check: exception occurred', err);
           setError('Failed to get user info');
+          setLoading(false);
         }
       }
     };

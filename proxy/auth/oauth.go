@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strconv"
 
+	"github.com/flightctl/flightctl-ui/log"
 	"github.com/openshift/osincli"
 )
 
@@ -27,13 +28,35 @@ func loginRedirect(client *osincli.Client) string {
 	return authorizeRequest.GetAuthorizeUrl().String()
 }
 
+func loginRedirectWithState(client *osincli.Client, providerName string) string {
+	authorizeRequest := client.NewAuthorizeRequest(osincli.CODE)
+
+	// Use the OAuth2 state parameter to pass the provider name
+	// This is preserved by the OAuth provider and returned in the callback
+	return authorizeRequest.GetAuthorizeUrlWithParams(providerName).String()
+}
+
 func executeOAuthFlow(req *osincli.AccessRequest) (TokenData, *int64, error) {
 	ret := TokenData{}
+
+	// Log the token URL that will be used
+	tokenUrl := req.GetTokenUrl()
+	log.GetLogger().Infof("Token exchange URL (query params will be in POST body): %s", tokenUrl.String())
+
 	// Exchange refresh token for a new access token
 	accessData, err := req.GetToken()
 	if err != nil {
+		log.GetLogger().WithError(err).Errorf("Token exchange failed. Error details: %v", err)
+
+		// Try to extract more error information if it's an osincli Error
+		if oauthErr, ok := err.(*osincli.Error); ok {
+			log.GetLogger().Errorf("OAuth Error Details - Error: %s, Description: %s, URI: %s",
+				oauthErr.Id, oauthErr.Description, oauthErr.URI)
+		}
+
 		return ret, nil, fmt.Errorf("failed to refresh token: %w", err)
 	}
+	log.GetLogger().Infof("Token exchange successful. Response data keys: %v", getResponseDataKeys(accessData.ResponseData))
 
 	expiresIn, err := getExpiresIn(accessData.ResponseData)
 	if err != nil {
@@ -44,6 +67,15 @@ func executeOAuthFlow(req *osincli.AccessRequest) (TokenData, *int64, error) {
 	ret.RefreshToken = accessData.RefreshToken // May be empty if not returned
 
 	return ret, expiresIn, nil
+}
+
+// getResponseDataKeys returns the keys from response data for logging (without exposing sensitive values)
+func getResponseDataKeys(data osincli.ResponseData) []string {
+	keys := make([]string, 0, len(data))
+	for k := range data {
+		keys = append(keys, k)
+	}
+	return keys
 }
 
 // based on GetToken() from osincli which parses the expires_in to int32 that may overflow

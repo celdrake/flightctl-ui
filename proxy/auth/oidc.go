@@ -22,6 +22,7 @@ type OIDCAuthHandler struct {
 	endSessionEndpoint string
 	usernameClaim      string
 	authURL            string
+	providerName       string // Store provider name for state parameter
 }
 
 type oidcServerResponse struct {
@@ -39,6 +40,10 @@ func getOIDCAuthHandler(authURL string, internalAuthURL *string) (*OIDCAuthHandl
 }
 
 func getOIDCAuthHandlerWithClaim(authURL string, internalAuthURL *string, usernameClaim string) (*OIDCAuthHandler, error) {
+	return getOIDCAuthHandlerWithClaimAndName(authURL, internalAuthURL, usernameClaim, "")
+}
+
+func getOIDCAuthHandlerWithClaimAndName(authURL string, internalAuthURL *string, usernameClaim string, providerName string) (*OIDCAuthHandler, error) {
 	tlsConfig, err := bridge.GetAuthTlsConfig()
 	if err != nil {
 		return nil, err
@@ -94,6 +99,7 @@ func getOIDCAuthHandlerWithClaim(authURL string, internalAuthURL *string, userna
 		endSessionEndpoint: oidcResponse.EndSessionEndpoint,
 		usernameClaim:      usernameClaim,
 		authURL:            authURL,
+		providerName:       providerName,
 	}
 
 	if internalAuthURL != nil {
@@ -226,5 +232,5 @@ func (o *OIDCAuthHandler) RefreshToken(refreshToken string) (TokenData, *int64, 
 }
 
 func (a *OIDCAuthHandler) GetLoginRedirectURL() string {
-	return loginRedirect(a.client)
+	return loginRedirectWithState(a.client, a.providerName)
 }
