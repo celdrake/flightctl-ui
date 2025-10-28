@@ -37,19 +37,26 @@ var defaultUsername = "Anonymous"
 var defaultUsernameClaim = "preferred_username"
 
 func getOIDCAuthHandler(authURL string, internalAuthURL *string) (*OIDCAuthHandler, error) {
-	return getOIDCAuthHandlerWithClaim(authURL, internalAuthURL, "")
+	spec := AuthenticationProviderSpec{
+		Issuer:        authURL,
+		UsernameClaim: defaultUsernameClaim,
+		Scopes:        "openid profile",
+		ClientId:      config.AuthClientId,
+		// CELIA-WIP embedded providers might have a client secret
+		ClientSecret: "",
+	}
+	return getOIDCAuthHandlerWithSpec(spec, "embedded", internalAuthURL)
 }
 
-func getOIDCAuthHandlerWithClaim(authURL string, internalAuthURL *string, usernameClaim string) (*OIDCAuthHandler, error) {
-	return getOIDCAuthHandlerWithClaimAndName(authURL, internalAuthURL, usernameClaim, "")
-}
+func getOIDCAuthHandlerWithSpec(spec AuthenticationProviderSpec, providerName string, internalAuthURL *string) (*OIDCAuthHandler, error) {
+	log.GetLogger().Infof("getOIDCAuthHandlerWithSpec: %s", spec.Issuer)
 
-func getOIDCAuthHandlerWithClaimAndName(authURL string, internalAuthURL *string, usernameClaim string, providerName string) (*OIDCAuthHandler, error) {
 	tlsConfig, err := bridge.GetAuthTlsConfig()
 	if err != nil {
 		return nil, err
 	}
 
+	authURL := spec.Issuer
 	url := authURL
 	if internalAuthURL != nil {
 		url = *internalAuthURL
@@ -83,20 +90,20 @@ func getOIDCAuthHandlerWithClaimAndName(authURL string, internalAuthURL *string,
 		return nil, fmt.Errorf("failed to parse oidc config: %w", err)
 	}
 
-	internalClient, err := getOIDCClient(oidcResponse, tlsConfig, providerName)
+	log.GetLogger().Infof("getOIDCAuthHandlerWithSpec: oidcResponse: %+v", oidcResponse)
+	// TokenEndpoint:https://oauth2.googleapis.com/token
+	// AuthEndpoint:https://accounts.google.com/o/oauth2/v2/auth
+	// UserInfoEndpoint:https://openidconnect.googleapis.com/v1/userinfo
+	// EndSessionEndpoint:
+
+	internalClient, err := getOIDCClient(oidcResponse, tlsConfig, spec, providerName)
 	if err != nil {
 		return nil, err
 	}
 
+	usernameClaim := spec.UsernameClaim
 	if usernameClaim == "" {
 		usernameClaim = defaultUsernameClaim
-	}
-
-	// CELIA-WIP: This is testing code for multiple auth providers
-	// When backend supports provider-specific client IDs, remove this and get from provider spec
-	clientId := config.AuthClientId
-	if providerName == "google" {
-		clientId = config.TestOidcProviderClientId
 	}
 
 	handler := &OIDCAuthHandler{
@@ -108,7 +115,7 @@ func getOIDCAuthHandlerWithClaimAndName(authURL string, internalAuthURL *string,
 		usernameClaim:      usernameClaim,
 		authURL:            authURL,
 		providerName:       providerName,
-		clientId:           clientId,
+		clientId:           spec.ClientId,
 	}
 
 	if internalAuthURL != nil {
@@ -118,7 +125,7 @@ func getOIDCAuthHandlerWithClaimAndName(authURL string, internalAuthURL *string,
 			UserInfoEndpoint:   replaceBaseURL(oidcResponse.UserInfoEndpoint, *internalAuthURL, authURL),
 			EndSessionEndpoint: replaceBaseURL(oidcResponse.EndSessionEndpoint, *internalAuthURL, authURL),
 		}
-		client, err := getOIDCClient(extConfig, tlsConfig, providerName)
+		client, err := getOIDCClient(extConfig, tlsConfig, spec, providerName)
 		if err != nil {
 			return nil, err
 		}
@@ -150,29 +157,30 @@ func replaceBaseURL(endpoint, oldBase, newBase string) string {
 	return endpointURL.String()
 }
 
-// CELIA-WIP needs clarification regarding scopes
-func getOIDCClient(oidcConfig oidcServerResponse, tlsConfig *tls.Config, providerName string) (*osincli.Client, error) {
-	// Use standard OIDC scopes that work across all compliant providers
-	// profile: provides preferred_username, name, picture, etc.
-	// email: provides email and email_verified claims
-	scope := "openid"
-
-	// CELIA-WIP: Ask Asaf, Google not working with organizations scope
-	//if config.IsOrganizationsEnabled() {
-	//	scope = "openid profile email organization:*"
-	//}
-
-	// CELIA-WIP: This is testing code for multiple auth providers
-	// When backend supports provider-specific client IDs, remove this and get from provider spec
-	clientId := config.AuthClientId
-	clientSecret := ""
-	sendSecret := false
-	if providerName == "google" {
-		clientId = config.TestOidcProviderClientId
-		clientSecret = config.TestOidcProviderClientSecret
-		scope = "openid profile email"
-		sendSecret = true // Google requires client_secret in token exchange
+func getOIDCClient(oidcConfig oidcServerResponse, tlsConfig *tls.Config, spec AuthenticationProviderSpec, providerName string) (*osincli.Client, error) {
+	// Get scopes from spec, with fallback to defaults
+	scope := spec.Scopes
+	if scope == "" {
+		// Default scopes for embedded provider or if not specified
+		if providerName == "embedded" && config.IsOrganizationsEnabled() {
+			scope = "openid profile email organization:*"
+		} else {
+			scope = "openid profile"
+		}
 	}
+
+	// Validate that we have required configuration
+	clientId := spec.ClientId
+	if clientId == "" {
+		log.GetLogger().Errorf("Missing clientId for provider %s", providerName)
+		return nil, fmt.Errorf("Missing configuration")
+	}
+
+	clientSecret := spec.ClientSecret
+	sendSecret := clientSecret != ""
+
+	log.GetLogger().Infof("Creating OIDC client for %s: clientId=%s, scope=%s, hasSecret=%v",
+		providerName, clientId, scope, sendSecret)
 
 	oidcClientConfig := &osincli.ClientConfig{
 		ClientId:                 clientId,

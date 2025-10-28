@@ -180,12 +180,11 @@ func getMockAuthenticationProviders() []AuthenticationProvider {
 			Spec: AuthenticationProviderSpec{
 				Type:          ProviderTypeOIDC,
 				ClientId:      config.TestOidcProviderClientId,
+				ClientSecret:  config.TestOidcProviderClientSecret, // Google requires client secret!
 				Enabled:       true,
 				Issuer:        "https://accounts.google.com",
-				UsernameClaim: "preferred_username",
-				Scopes:        "openid profile",
-				// if usernameClaim is email, then we need to add email scope
-				// Scopes: "openid profile email",
+				UsernameClaim: "email",                // Google provides 'email', not 'preferred_username'
+				Scopes:        "openid email profile", // Request scopes needed for email claim
 			},
 		},
 	}

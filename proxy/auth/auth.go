@@ -115,10 +115,10 @@ func (a *AuthHandler) getProviderByName(name string) AuthProvider {
 		}
 
 		// Full OIDC provider with discovery - pass usernameClaim and provider name for state parameter
-		provider, initErr = getOIDCAuthHandlerWithClaimAndName(spec.Spec.Issuer, nil, spec.Spec.UsernameClaim, name)
+		provider, initErr = getOIDCAuthHandlerWithSpec(spec.Spec, name, nil)
 	case ProviderTypeOAuth2:
 		// OAuth2 provider with explicit endpoints - pass provider name for redirect URI
-		provider, initErr = getOAuth2AuthHandlerWithName(spec.Spec, name)
+		provider, initErr = getOAuth2AuthHandlerWithSpec(spec.Spec, name)
 	default:
 		log.GetLogger().Errorf("Unknown provider type %s for provider %s", spec.Spec.Type, name)
 		return nil

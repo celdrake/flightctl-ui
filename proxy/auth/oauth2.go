@@ -33,11 +33,11 @@ type OAuth2AuthHandler struct {
 
 // getOAuth2AuthHandler creates an OAuth2 auth handler from provider spec
 func getOAuth2AuthHandler(spec AuthenticationProviderSpec) (*OAuth2AuthHandler, error) {
-	return getOAuth2AuthHandlerWithName(spec, "")
+	return getOAuth2AuthHandlerWithSpec(spec, "")
 }
 
-// getOAuth2AuthHandlerWithName creates an OAuth2 auth handler with a provider name for the redirect URI
-func getOAuth2AuthHandlerWithName(spec AuthenticationProviderSpec, providerName string) (*OAuth2AuthHandler, error) {
+// getOAuth2AuthHandlerWithSpec creates an OAuth2 auth handler with a provider name for the redirect URI
+func getOAuth2AuthHandlerWithSpec(spec AuthenticationProviderSpec, providerName string) (*OAuth2AuthHandler, error) {
 	tlsConfig, err := bridge.GetAuthTlsConfig()
 	if err != nil {
 		return nil, err
