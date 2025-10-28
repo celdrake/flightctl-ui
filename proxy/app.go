@@ -58,8 +58,6 @@ func main() {
 		apiRouter.HandleFunc("/cli-artifacts", bridge.UnimplementedHandler)
 	}
 
-	config.Init()
-
 	terminalBridge := bridge.TerminalBridge{TlsConfig: tlsConfig}
 	apiRouter.HandleFunc("/terminal/{forward:.*}", terminalBridge.HandleTerminal)
 

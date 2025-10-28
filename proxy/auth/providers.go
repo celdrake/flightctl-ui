@@ -158,8 +158,8 @@ func getMockAuthenticationProviders() []AuthenticationProvider {
 			},
 			Spec: AuthenticationProviderSpec{
 				Type:             ProviderTypeOAuth2,
-				ClientId:         config.TestProviderClientId,
-				ClientSecret:     config.TestProviderClientSecret,
+				ClientId:         config.TestOauth2ProviderClientId,
+				ClientSecret:     config.TestOauth2ProviderClientSecret,
 				Enabled:          true,
 				AuthorizationUrl: "https://github.com/login/oauth/authorize",
 				TokenUrl:         "https://github.com/login/oauth/access_token",
@@ -179,7 +179,7 @@ func getMockAuthenticationProviders() []AuthenticationProvider {
 			},
 			Spec: AuthenticationProviderSpec{
 				Type:          ProviderTypeOIDC,
-				ClientId:      config.TestProviderClientId,
+				ClientId:      config.TestOidcProviderClientId,
 				Enabled:       true,
 				Issuer:        "https://accounts.google.com",
 				UsernameClaim: "preferred_username",

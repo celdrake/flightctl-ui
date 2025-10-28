@@ -95,8 +95,8 @@ func getOIDCAuthHandlerWithClaimAndName(authURL string, internalAuthURL *string,
 	// CELIA-WIP: This is testing code for multiple auth providers
 	// When backend supports provider-specific client IDs, remove this and get from provider spec
 	clientId := config.AuthClientId
-	if providerName == "google" || providerName == "github" {
-		clientId = config.TestProviderClientId
+	if providerName == "google" {
+		clientId = config.TestOidcProviderClientId
 	}
 
 	handler := &OIDCAuthHandler{
@@ -168,8 +168,8 @@ func getOIDCClient(oidcConfig oidcServerResponse, tlsConfig *tls.Config, provide
 	clientSecret := ""
 	sendSecret := false
 	if providerName == "google" {
-		clientId = config.TestProviderClientId
-		clientSecret = config.TestProviderClientSecret
+		clientId = config.TestOidcProviderClientId
+		clientSecret = config.TestOidcProviderClientSecret
 		scope = "openid profile email"
 		sendSecret = true // Google requires client_secret in token exchange
 	}

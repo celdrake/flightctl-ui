@@ -3,36 +3,29 @@ package config
 import (
 	"os"
 	"strings"
-
-	"github.com/flightctl/flightctl-ui/log"
 )
 
 var (
-	BridgePort               = ":" + getEnvVar("API_PORT", "3001")
-	FctlApiUrl               = getEnvUrlVar("FLIGHTCTL_SERVER", "https://localhost:3443")
-	FctlApiInsecure          = getEnvVar("FLIGHTCTL_SERVER_INSECURE_SKIP_VERIFY", "false")
-	FctlCliArtifactsUrl      = getEnvUrlVar("FLIGHTCTL_CLI_ARTIFACTS_SERVER", "http://localhost:8090")
-	AlertManagerApiUrl       = getEnvUrlVar("FLIGHTCTL_ALERTMANAGER_PROXY", "https://localhost:8443")
-	TlsKeyPath               = getEnvVar("TLS_KEY", "")
-	TlsCertPath              = getEnvVar("TLS_CERT", "")
-	AuthClientId             = getEnvVar("AUTH_CLIENT_ID", "flightctl")
-	BaseUiUrl                = getEnvUrlVar("BASE_UI_URL", "http://localhost:9000")
-	InternalAuthUrl          = getEnvUrlVar("INTERNAL_AUTH_URL", "")
-	AuthInsecure             = getEnvVar("AUTH_INSECURE_SKIP_VERIFY", "")
-	OcpPlugin                = getEnvVar("IS_OCP_PLUGIN", "false")
-	RBACNs                   = getEnvVar("K8S_RBAC_NS", "")
-	IsRHEM                   = getEnvVar("IS_RHEM", "")
-	OrganizationsEnabled     = getEnvVar("ORGANIZATIONS_ENABLED", "false")
-	TestProviderClientSecret = getEnvVar("TEST_PROVIDER_CLIENT_SECRET", "test-provider-client-secret")
-	TestProviderClientId     = getEnvVar("TEST_PROVIDER_CLIENT_ID", "test-provider-client-id")
+	BridgePort                     = ":" + getEnvVar("API_PORT", "3001")
+	FctlApiUrl                     = getEnvUrlVar("FLIGHTCTL_SERVER", "https://localhost:3443")
+	FctlApiInsecure                = getEnvVar("FLIGHTCTL_SERVER_INSECURE_SKIP_VERIFY", "false")
+	FctlCliArtifactsUrl            = getEnvUrlVar("FLIGHTCTL_CLI_ARTIFACTS_SERVER", "http://localhost:8090")
+	AlertManagerApiUrl             = getEnvUrlVar("FLIGHTCTL_ALERTMANAGER_PROXY", "https://localhost:8443")
+	TlsKeyPath                     = getEnvVar("TLS_KEY", "")
+	TlsCertPath                    = getEnvVar("TLS_CERT", "")
+	AuthClientId                   = getEnvVar("AUTH_CLIENT_ID", "flightctl")
+	BaseUiUrl                      = getEnvUrlVar("BASE_UI_URL", "http://localhost:9000")
+	InternalAuthUrl                = getEnvUrlVar("INTERNAL_AUTH_URL", "")
+	AuthInsecure                   = getEnvVar("AUTH_INSECURE_SKIP_VERIFY", "")
+	OcpPlugin                      = getEnvVar("IS_OCP_PLUGIN", "false")
+	RBACNs                         = getEnvVar("K8S_RBAC_NS", "")
+	IsRHEM                         = getEnvVar("IS_RHEM", "")
+	OrganizationsEnabled           = getEnvVar("ORGANIZATIONS_ENABLED", "false")
+	TestOidcProviderClientSecret   = getEnvVar("TEST_OIDC_PROVIDER_CLIENT_SECRET", "test-oidc-provider-client-secret")
+	TestOidcProviderClientId       = getEnvVar("TEST_OIDC_PROVIDER_CLIENT_ID", "test-oidc-provider-client-id")
+	TestOauth2ProviderClientSecret = getEnvVar("TEST_OAUTH2_PROVIDER_CLIENT_SECRET", "test-oauth2-provider-client-secret")
+	TestOauth2ProviderClientId     = getEnvVar("TEST_OAUTH2_PROVIDER_CLIENT_ID", "test-oauth2-provider-client-id")
 )
-
-func Init() {
-	TestProviderClientSecret = getEnvVar("TEST_PROVIDER_CLIENT_SECRET", "test-provider-client-secret")
-	TestProviderClientId = getEnvVar("TEST_PROVIDER_CLIENT_ID", "test-provider-client-id")
-	log.GetLogger().Infof("TestProviderClientSecret: %s", TestProviderClientSecret)
-	log.GetLogger().Infof("TestProviderClientId: %s", TestProviderClientId)
-}
 
 func getEnvUrlVar(key string, defaultValue string) string {
 	urlValue := getEnvVar(key, defaultValue)
