@@ -157,19 +157,23 @@ func replaceBaseURL(endpoint, oldBase, newBase string) string {
 	return endpointURL.String()
 }
 
-func getOIDCClient(oidcConfig oidcServerResponse, tlsConfig *tls.Config, spec AuthenticationProviderSpec, providerName string) (*osincli.Client, error) {
-	// Get scopes from spec, with fallback to defaults
-	scope := spec.Scopes
-	if scope == "" {
-		// Default scopes for embedded provider or if not specified
-		if providerName == DefaultProviderName && config.IsOrganizationsEnabled() {
-			scope = "openid profile organization:*"
-		} else {
-			scope = "openid profile"
-		}
+func getOIDCScope(spec AuthenticationProviderSpec, providerName string) string {
+	if spec.Scopes != "" {
+		return spec.Scopes
 	}
 
-	log.GetLogger().Infof("getOIDCClient: scope=%s", scope)
+	if providerName == DefaultProviderName {
+		if config.IsOrganizationsEnabled() {
+			return "openid organization:*"
+		}
+		return "openid"
+	} else {
+		return "openid profile"
+	}
+}
+
+func getOIDCClient(oidcConfig oidcServerResponse, tlsConfig *tls.Config, spec AuthenticationProviderSpec, providerName string) (*osincli.Client, error) {
+	scope := getOIDCScope(spec, providerName)
 
 	// Validate that we have required configuration
 	clientId := spec.ClientId
