@@ -191,8 +191,8 @@ func getMockAuthenticationProviders() []AuthenticationProvider {
 }
 
 // GetAuthenticationProvidersHandler handles GET requests for authentication providers list
-// It needs access to the embedded provider configuration
-func GetAuthenticationProvidersHandler(embeddedAuthURL string, embeddedAuthType string) http.HandlerFunc {
+// It needs access to the default provider configuration
+func GetAuthenticationProvidersHandler(defaultAuthURL string, defaultAuthType string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -201,28 +201,27 @@ func GetAuthenticationProvidersHandler(embeddedAuthURL string, embeddedAuthType 
 
 		providers := getMockAuthenticationProviders()
 
-		// Add the embedded provider if it exists and is OIDC
-		if embeddedAuthURL != "" && embeddedAuthType == ProviderTypeOIDC {
-			embeddedProvider := AuthenticationProvider{
+		// Add the default provider if it exists and is OIDC
+		if defaultAuthURL != "" && defaultAuthType == ProviderTypeOIDC {
+			defaultProvider := AuthenticationProvider{
 				APIVersion: "v1alpha1",
 				Kind:       "AuthenticationProvider",
 				Metadata: ObjectMeta{
-					Name: "embedded",
+					Name: DefaultProviderName,
 					Labels: map[string]string{
-						"provider": "embedded",
-						"embedded": "true",
+						"provider": DefaultProviderName,
 					},
 				},
 				Spec: AuthenticationProviderSpec{
 					Type:          ProviderTypeOIDC,
 					ClientId:      "flightctl",
 					Enabled:       true,
-					Issuer:        embeddedAuthURL,
+					Issuer:        defaultAuthURL,
 					UsernameClaim: "name",
 				},
 			}
-			// Prepend embedded provider so it appears first
-			providers = append([]AuthenticationProvider{embeddedProvider}, providers...)
+			// Prepend default provider so it appears first
+			providers = append([]AuthenticationProvider{defaultProvider}, providers...)
 		}
 
 		providerList := AuthenticationProviderList{

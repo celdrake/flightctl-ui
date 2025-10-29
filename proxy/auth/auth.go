@@ -24,12 +24,11 @@ type RedirectResponse struct {
 	Url string `json:"url"`
 }
 
-// CELIA-WIP: Use "embedded" provider vs "default" provider??
 type AuthHandler struct {
-	provider         AuthProvider // Default provider configured as part of the deployment
-	embeddedAuthURL  string       // URL of embedded provider
-	embeddedAuthType string       // Type of embedded provider (OIDC, AAPGateway, etc.)
-	apiTlsConfig     *tls.Config  // For fetching provider specs from backend
+	provider        AuthProvider // Default provider configured as part of the deployment
+	defaultAuthURL  string       // URL of default provider
+	defaultAuthType string       // Type of default provider (OIDC, AAPGateway, etc.)
+	apiTlsConfig    *tls.Config  // For fetching provider specs from backend
 }
 
 func NewAuth(apiTlsConfig *tls.Config) (*AuthHandler, error) {
@@ -46,11 +45,11 @@ func NewAuth(apiTlsConfig *tls.Config) (*AuthHandler, error) {
 		return &auth, nil
 	}
 
-	// Store embedded provider info
-	auth.embeddedAuthURL = authConfig.AuthURL
-	auth.embeddedAuthType = authConfig.AuthType
+	// Store default provider info
+	auth.defaultAuthURL = authConfig.AuthURL
+	auth.defaultAuthType = authConfig.AuthType
 
-	// Initialize the embedded/default provider
+	// Initialize the default provider
 	switch authConfig.AuthType {
 	case "AAPGateway":
 		auth.provider, err = getAAPAuthHandler(authConfig.AuthURL, internalAuthUrl)
@@ -64,11 +63,6 @@ func NewAuth(apiTlsConfig *tls.Config) (*AuthHandler, error) {
 	}
 
 	return &auth, nil
-}
-
-func isEmbeddedProvider(providerName string) bool {
-	// CELIA-WIP: Determine how to identify the embedded provider in the backend.
-	return providerName == "" || providerName == "embedded"
 }
 
 // getProviderSpec fetches the OIDC provider specification by name
@@ -91,8 +85,8 @@ func (a *AuthHandler) getProviderSpec(providerName string) (*AuthenticationProvi
 
 // getProviderByName initializes a dynamic OIDC provider on-demand
 func (a *AuthHandler) getProviderByName(name string) AuthProvider {
-	// Return embedded provider for empty or "embedded" name
-	if isEmbeddedProvider(name) {
+	// Return default provider for empty or default provider name
+	if name == DefaultProviderName {
 		return a.provider
 	}
 
@@ -133,9 +127,9 @@ func (a *AuthHandler) getProviderByName(name string) AuthProvider {
 	return provider
 }
 
-// GetEmbeddedProviderInfo returns the embedded provider configuration
-func (a *AuthHandler) GetEmbeddedProviderInfo() (string, string) {
-	return a.embeddedAuthURL, a.embeddedAuthType
+// GetDefaultProviderConfig returns the default provider configuration
+func (a *AuthHandler) GetDefaultProviderConfig() (string, string) {
+	return a.defaultAuthURL, a.defaultAuthType
 }
 
 // getProviderFromCookie extracts the provider from the session cookie
@@ -338,37 +332,37 @@ func (a AuthHandler) TestProviderConnection(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Handle embedded provider
+	// Handle default provider
 	var result ProviderValidationResult
-	if isEmbeddedProvider(providerName) {
-		// CELIA-WIP In real live scenarios the embedded provider would not be testable??
-		if a.embeddedAuthType == "" || a.embeddedAuthURL == "" {
+	if providerName == DefaultProviderName {
+		// CELIA-WIP In real live scenarios the default provider would not be testable??
+		if a.defaultAuthType == "" || a.defaultAuthURL == "" {
 			w.WriteHeader(http.StatusNotFound)
 			json.NewEncoder(w).Encode(map[string]string{
-				"error": "No embedded provider configured",
+				"error": "No default provider configured",
 			})
 			return
 		}
 
-		// Create a spec for the embedded provider for validation
-		embeddedSpec := AuthenticationProviderSpec{
-			Type:    a.embeddedAuthType,
+		// Create a spec for the default provider for validation
+		defaultProviderSpec := AuthenticationProviderSpec{
+			Type:    a.defaultAuthType,
 			Enabled: true,
 			// CELIA-WIP: Should is be displayed in the UI?
 			ClientId: config.AuthClientId,
 		}
 
 		// For OIDC providers, set the issuer URL
-		if a.embeddedAuthType == ProviderTypeOIDC {
-			embeddedSpec.Issuer = a.embeddedAuthURL
+		if a.defaultAuthType == ProviderTypeOIDC {
+			defaultProviderSpec.Issuer = a.defaultAuthURL
 		}
 
 		// CELIA-WIP can be done for AAP?
 		// Note: AAPGateway type won't have detailed validation available
 
-		result = TestProviderConfiguration(embeddedSpec)
+		result = TestProviderConfiguration(defaultProviderSpec)
 	} else {
-		// Fetch provider spec for non-embedded providers
+		// Fetch provider spec for the dynamic providers
 		providerSpec, err := a.getProviderSpec(providerName)
 		if err != nil {
 			log.GetLogger().WithError(err).Warnf("Failed to fetch provider spec for %s", providerName)

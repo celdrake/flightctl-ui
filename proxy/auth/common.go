@@ -15,6 +15,11 @@ import (
 	"github.com/flightctl/flightctl-ui/log"
 )
 
+const (
+	// DefaultProviderName is the name used to identify the default authentication provider
+	DefaultProviderName = "default"
+)
+
 type TokenData struct {
 	Token        string `json:"token"`
 	RefreshToken string `json:"refreshToken"`

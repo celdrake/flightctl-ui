@@ -41,12 +41,11 @@ func getOIDCAuthHandler(authURL string, internalAuthURL *string) (*OIDCAuthHandl
 	spec := AuthenticationProviderSpec{
 		Issuer:        authURL,
 		UsernameClaim: defaultUsernameClaim,
-		Scopes:        "openid profile",
 		ClientId:      config.AuthClientId,
-		// CELIA-WIP embedded providers might have a client secret
+		// CELIA-WIP default providers might have a client secret
 		ClientSecret: "",
 	}
-	return getOIDCAuthHandlerWithSpec(spec, "embedded", internalAuthURL)
+	return getOIDCAuthHandlerWithSpec(spec, "default", internalAuthURL)
 }
 
 func getOIDCAuthHandlerWithSpec(spec AuthenticationProviderSpec, providerName string, internalAuthURL *string) (*OIDCAuthHandler, error) {
@@ -163,12 +162,14 @@ func getOIDCClient(oidcConfig oidcServerResponse, tlsConfig *tls.Config, spec Au
 	scope := spec.Scopes
 	if scope == "" {
 		// Default scopes for embedded provider or if not specified
-		if providerName == "embedded" && config.IsOrganizationsEnabled() {
-			scope = "openid profile email organization:*"
+		if providerName == DefaultProviderName && config.IsOrganizationsEnabled() {
+			scope = "openid profile organization:*"
 		} else {
 			scope = "openid profile"
 		}
 	}
+
+	log.GetLogger().Infof("getOIDCClient: scope=%s", scope)
 
 	// Validate that we have required configuration
 	clientId := spec.ClientId
