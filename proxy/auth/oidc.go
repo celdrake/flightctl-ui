@@ -9,6 +9,7 @@ import (
 	"net/url"
 
 	"github.com/flightctl/flightctl-ui/bridge"
+	"github.com/flightctl/flightctl-ui/common"
 	"github.com/flightctl/flightctl-ui/config"
 	"github.com/flightctl/flightctl-ui/log"
 	"github.com/openshift/osincli"
@@ -179,8 +180,8 @@ func getOIDCClient(oidcConfig oidcServerResponse, tlsConfig *tls.Config, spec Au
 	clientSecret := spec.ClientSecret
 	sendSecret := clientSecret != ""
 
-	log.GetLogger().Infof("Creating OIDC client for %s: clientId=%s, scope=%s, hasSecret=%v",
-		providerName, clientId, scope, sendSecret)
+	log.GetLogger().Infof("Creating OIDC client for %s: clientId=%s, clientSecret=%s, scope=%s",
+		providerName, common.MaskSecret(clientId), common.MaskSecret(clientSecret), scope)
 
 	oidcClientConfig := &osincli.ClientConfig{
 		ClientId:                 clientId,

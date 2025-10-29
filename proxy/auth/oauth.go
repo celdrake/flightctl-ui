@@ -3,12 +3,23 @@ package auth
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"reflect"
 	"strconv"
 
 	"github.com/flightctl/flightctl-ui/log"
 	"github.com/openshift/osincli"
 )
+
+// sanitizeURL removes query parameters from a URL for safe logging
+func sanitizeURL(u *url.URL) string {
+	if u == nil {
+		return ""
+	}
+	sanitized := *u
+	sanitized.RawQuery = ""
+	return sanitized.String()
+}
 
 func exchangeToken(loginParams LoginParameters, client *osincli.Client) (TokenData, *int64, error) {
 	req := client.NewAccessRequest(osincli.AUTHORIZATION_CODE, &osincli.AuthorizeData{
@@ -39,9 +50,10 @@ func loginRedirectWithState(client *osincli.Client, providerName string) string 
 func executeOAuthFlow(req *osincli.AccessRequest) (TokenData, *int64, error) {
 	ret := TokenData{}
 
-	// Log the token URL that will be used
+	// Log the token URL that will be used (without query params for security)
 	tokenUrl := req.GetTokenUrl()
-	log.GetLogger().Infof("Token exchange URL (query params will be in POST body): %s", tokenUrl.String())
+	sanitizedUrl := sanitizeURL(tokenUrl)
+	log.GetLogger().Infof("Token exchange URL (sensitive params in POST body): %s", sanitizedUrl)
 
 	// Exchange refresh token for a new access token
 	accessData, err := req.GetToken()

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/flightctl/flightctl-ui/bridge"
+	"github.com/flightctl/flightctl-ui/common"
 	"github.com/flightctl/flightctl-ui/config"
 	"github.com/flightctl/flightctl-ui/log"
 	"github.com/openshift/osincli"
@@ -73,8 +74,9 @@ func getOAuth2AuthHandlerWithSpec(spec AuthenticationProviderSpec, providerName 
 		Scope:                    spec.Scopes,
 	}
 
-	log.GetLogger().Infof("OAuth2 client config - ClientId: %s, TokenUrl: %s, RedirectUrl: %s, Scopes: %s",
-		clientConfig.ClientId, clientConfig.TokenUrl, clientConfig.RedirectUrl, clientConfig.Scope)
+	log.GetLogger().Infof("OAuth2 client config - ClientId: %s, ClientSecret: %s, TokenUrl: %s, RedirectUrl: %s, Scopes: %s",
+		common.MaskSecret(clientConfig.ClientId), common.MaskSecret(clientConfig.ClientSecret),
+		clientConfig.TokenUrl, clientConfig.RedirectUrl, clientConfig.Scope)
 
 	client, err := osincli.NewClient(clientConfig)
 	if err != nil {
