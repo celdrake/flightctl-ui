@@ -70,6 +70,7 @@ const CommandLineToolsPage = React.lazy(
 );
 
 const LoginPage = React.lazy(() => import('./components/Login/LoginPage'));
+const AdminPage = React.lazy(() => import('./components/Admin/AdminPage'));
 
 export type ExtendedRouteObject = RouteObject & {
   title?: string;
@@ -303,6 +304,16 @@ const getAppRoutes = (t: TFunction): ExtendedRouteObject[] => [
     element: (
       <TitledRoute title={t('Resource sync')}>
         <ResourceSyncToRepository />
+      </TitledRoute>
+    ),
+  },
+  {
+    path: '/admin',
+    title: t('System administration'),
+    showInNav: true,
+    element: (
+      <TitledRoute title={t('System administration')}>
+        <AdminPage />
       </TitledRoute>
     ),
   },
