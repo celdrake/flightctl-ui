@@ -19,6 +19,9 @@ const uiProxyAPI = `${window.location.protocol}//${apiServer}/api`;
 export const loginAPI = `${window.location.protocol}//${apiServer}/api/login`;
 export const wsEndpoint = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${apiServer}`;
 
+// TEMPORARY HACK: Storage key for CLI token
+const CLI_TOKEN_STORAGE_KEY = '__flightctl_cli_token_hack__';
+
 // Helper function to add organization header to request options
 const addOrganizationHeader = (options: RequestInit): RequestInit => {
   const orgId = localStorage.getItem(ORGANIZATION_STORAGE_KEY);
@@ -33,13 +36,30 @@ const addOrganizationHeader = (options: RequestInit): RequestInit => {
   return options;
 };
 
+// TEMPORARY HACK: Add CLI token to requests if available
+const addCliTokenIfAvailable = (options: RequestInit): RequestInit => {
+  const cliToken = localStorage.getItem(CLI_TOKEN_STORAGE_KEY);
+  if (cliToken) {
+    const headers = new Headers(options.headers || {});
+    headers.set('Authorization', `Bearer ${cliToken}`);
+    return {
+      ...options,
+      headers,
+    };
+  }
+  return options;
+};
+
 export const fetchUiProxy = async (endpoint: string, requestInit: RequestInit): Promise<Response> => {
   const baseOptions = {
     credentials: 'include',
     ...requestInit,
   } as RequestInit;
 
-  const options = addOrganizationHeader(baseOptions);
+  let options = addOrganizationHeader(baseOptions);
+
+  // TEMPORARY HACK: Add CLI token if available
+  options = addCliTokenIfAvailable(options);
 
   return await fetch(`${uiProxyAPI}/${endpoint}`, options);
 };
@@ -138,7 +158,10 @@ const fetchWithRetry = async <R>(path: string, init?: RequestInit): Promise<R> =
   const { api, url } = getFullApiUrl(path);
 
   // Add organization header if available
-  const options = addOrganizationHeader({ ...init });
+  let options = addOrganizationHeader({ ...init });
+
+  // TEMPORARY HACK: Add CLI token if available
+  options = addCliTokenIfAvailable(options);
 
   const prevRefresh = lastRefresh;
   let response = await fetch(url, options);

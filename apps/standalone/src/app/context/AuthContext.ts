@@ -9,6 +9,9 @@ const EXPIRATION = 'expiration';
 const OAUTH2_PROVIDER_PARAMETER = 'state';
 const OIDC_PROVIDER_PARAMETER = 'provider';
 
+// TEMPORARY HACK: Storage key for CLI token
+const CLI_TOKEN_STORAGE_KEY = '__flightctl_cli_token_hack__';
+
 export let lastRefresh = 0;
 
 // max value for setTimeout
@@ -39,6 +42,15 @@ export const useAuthContext = () => {
 
   React.useEffect(() => {
     const getUserInfo = async () => {
+      // TEMPORARY HACK: Skip auth flow if CLI token is present
+      const cliToken = localStorage.getItem(CLI_TOKEN_STORAGE_KEY);
+      if (cliToken) {
+        console.log('CLI token hack active - skipping normal auth flow');
+        setUsername('cli-user-hack');
+        setLoading(false);
+        return;
+      }
+
       // Skip auth check if we're on the page to select a provider
       if (window.location.pathname === SELECT_PROVIDERS_PAGE) {
         setLoading(false);

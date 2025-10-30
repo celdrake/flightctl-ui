@@ -49,12 +49,20 @@ func NewAuth(apiTlsConfig *tls.Config) (*AuthHandler, error) {
 	auth.defaultAuthURL = authConfig.AuthURL
 	auth.defaultAuthType = authConfig.AuthType
 
+	log.GetLogger().Info("Auth config: ", authConfig.AuthType)
+
 	// Initialize the default provider
 	switch authConfig.AuthType {
 	case "AAPGateway":
 		auth.provider, err = getAAPAuthHandler(authConfig.AuthURL, internalAuthUrl)
 	case "OIDC":
 		auth.provider, err = getOIDCAuthHandler(authConfig.AuthURL, internalAuthUrl)
+	case "k8s":
+	case "":
+		// K8s auth is CLI-only, no UI login flow needed
+		// The UI will use tokens passed directly in Authorization headers
+		log.GetLogger().Info("K8s authentication detected - CLI-only mode, no UI login flow")
+		return &auth, nil
 	default:
 		err = fmt.Errorf("unknown auth type: %s", authConfig.AuthType)
 	}
@@ -242,6 +250,28 @@ func (a AuthHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 
 	provider, tokenData, err := a.getProviderFromCookie(r)
 	if err != nil || tokenData.Token == "" {
+		// For k8s auth, check if there's a token in Authorization header (direct token usage)
+		if a.defaultAuthType == "k8s" {
+			log.GetLogger().Info("GetUserInfo: No cookie found, checking for k8s token in Authorization header")
+			token, err := getToken(r)
+			if err == nil && token != "" {
+				// For k8s auth, we'll return a generic user since we can't validate without calling backend
+				// The actual authorization happens at the backend via the token in the request
+				log.GetLogger().Info("GetUserInfo: K8s token found in Authorization header")
+				userInfo := UserInfoResponse{Username: "k8s-user"}
+				res, err := json.Marshal(userInfo)
+				if err != nil {
+					log.GetLogger().WithError(err).Warn("Failed to marshal user info")
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				if _, err := w.Write(res); err != nil {
+					log.GetLogger().WithError(err).Warn("Failed to write response")
+				}
+				return
+			}
+		}
+
 		log.GetLogger().WithError(err).Warn("GetUserInfo: Failed to get provider from cookie")
 		// Clear stale cookie to prevent repeated errors
 		w.Header().Set("Clear-Site-Data", `"cookies"`)
