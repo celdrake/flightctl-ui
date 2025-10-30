@@ -18,4 +18,7 @@ export const appRoutes = {
   [ROUTE.ENROLLMENT_REQUESTS]: '/edge/enrollmentrequests',
   [ROUTE.ENROLLMENT_REQUEST_DETAILS]: '/edge/enrollmentrequests',
   [ROUTE.COMMAND_LINE_TOOLS]: '/', // TODO - TBD where to show the CLI downloads?
+  [ROUTE.AUTH_PROVIDER_DETAILS]: '/edge/authproviders',
+  [ROUTE.AUTH_PROVIDER_CREATE]: '/edge/authproviders/create',
+  [ROUTE.AUTH_PROVIDER_EDIT]: '/edge/authproviders/edit',
 };

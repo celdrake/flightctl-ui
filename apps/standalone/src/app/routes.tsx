@@ -72,6 +72,9 @@ const CommandLineToolsPage = React.lazy(
 // CELIA-WIP: need login page for OCP plugin
 const LoginPage = React.lazy(() => import('./components/Login/LoginPage'));
 const AdminPage = React.lazy(() => import('@flightctl/ui-components/src/components/Admin/AdminPage'));
+const CreateAuthProvider = React.lazy(
+  () => import('@flightctl/ui-components/src/components/Admin/AuthProviders/CreateAuthProvider/CreateAuthProvider'),
+);
 
 export type ExtendedRouteObject = RouteObject & {
   title?: string;
@@ -312,11 +315,35 @@ const getAppRoutes = (t: TFunction): ExtendedRouteObject[] => [
     path: '/admin',
     title: t('System administration'),
     showInNav: true,
-    element: (
-      <TitledRoute title={t('System administration')}>
-        <AdminPage />
-      </TitledRoute>
-    ),
+    children: [
+      {
+        index: true,
+        title: t('System administration'),
+        element: (
+          <TitledRoute title={t('System administration')}>
+            <AdminPage />
+          </TitledRoute>
+        ),
+      },
+      {
+        path: 'authproviders/create',
+        title: t('Create authentication provider'),
+        element: (
+          <TitledRoute title={t('Create authentication provider')}>
+            <CreateAuthProvider />
+          </TitledRoute>
+        ),
+      },
+      {
+        path: 'authproviders/edit/:providerId',
+        title: t('Edit authentication provider'),
+        element: (
+          <TitledRoute title={t('Edit authentication provider')}>
+            <CreateAuthProvider />
+          </TitledRoute>
+        ),
+      },
+    ],
   },
 ];
 
