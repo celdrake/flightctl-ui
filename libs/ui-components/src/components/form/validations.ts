@@ -88,6 +88,14 @@ export const getDnsSubdomainValidations = (t: TFunction) => [
   },
 ];
 
+export const getAuthProviderNameValidations = (t: TFunction) => [
+  { key: 'authProviderNameStartAndEnd', message: t('Starts and ends with a lowercase letter or a number.') },
+  {
+    key: 'authProviderNameAllowedChars',
+    message: t('Contains only lowercase letters, numbers, dashes (-), and dots (.).'),
+  },
+];
+
 export const getKubernetesDnsSubdomainErrors = (value: string) => {
   const errorKeys: Record<string, string> = {};
   if (!K8S_DNS_SUBDOMAIN_START_END.test(value)) {
