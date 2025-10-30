@@ -10,9 +10,15 @@ import {
   ResourceSyncList,
 } from '@flightctl/types';
 
-import { AnnotationType } from '../types/extraTypes';
+import { AnnotationType, AuthenticationProviderList } from '../types/extraTypes';
 
-export type ApiList = EnrollmentRequestList | DeviceList | FleetList | RepositoryList | ResourceSyncList;
+export type ApiList =
+  | EnrollmentRequestList
+  | DeviceList
+  | FleetList
+  | RepositoryList
+  | ResourceSyncList
+  | AuthenticationProviderList;
 
 const getApiListCount = (listResponse: ApiList | undefined): number | undefined => {
   if (listResponse === undefined) {

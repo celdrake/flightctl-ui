@@ -1,14 +1,16 @@
 import * as React from 'react';
-import { PageSection, PageSectionVariants, Title } from '@patternfly/react-core';
 
-import { useTranslation } from '../../../hooks/useTranslation';
 import { useAccessReview } from '../../../hooks/useAccessReview';
 import { RESOURCE, VERB } from '../../../types/rbac';
 import AccessDenied from '../../common/AccessDenied';
+import AuthProvidersTable from './AuthProvidersTable';
+import ListPage from '../../ListPage/ListPage';
+import { useTranslation } from '../../../hooks/useTranslation';
+import PageWithPermissions from '../../common/PageWithPermissions';
 
 const AuthProvidersSection = () => {
   const { t } = useTranslation();
-
+  const [canList, isLoading] = useAccessReview(RESOURCE.AUTH_PROVIDERS, VERB.LIST);
   const [canCreate] = useAccessReview(RESOURCE.AUTH_PROVIDERS, VERB.CREATE);
   const [canUpdate] = useAccessReview(RESOURCE.AUTH_PROVIDERS, VERB.PATCH);
 
@@ -18,11 +20,11 @@ const AuthProvidersSection = () => {
   }
 
   return (
-    <PageSection variant={PageSectionVariants.light} isFilled>
-      <Title headingLevel="h2" size="xl">
-        {t('Authentication providers')}
-      </Title>
-    </PageSection>
+    <PageWithPermissions allowed={canList} loading={isLoading}>
+      <ListPage title={t('Authentication providers')}>
+        <AuthProvidersTable />
+      </ListPage>
+    </PageWithPermissions>
   );
 };
 
