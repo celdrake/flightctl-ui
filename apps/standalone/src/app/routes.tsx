@@ -69,8 +69,9 @@ const CommandLineToolsPage = React.lazy(
   () => import('@flightctl/ui-components/src/components/Masthead/CommandLineToolsPage'),
 );
 
+// CELIA-WIP: need login page for OCP plugin
 const LoginPage = React.lazy(() => import('./components/Login/LoginPage'));
-const AdminPage = React.lazy(() => import('./components/Admin/AdminPage'));
+const AdminPage = React.lazy(() => import('@flightctl/ui-components/src/components/Admin/AdminPage'));
 
 export type ExtendedRouteObject = RouteObject & {
   title?: string;
