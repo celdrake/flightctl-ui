@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+  Button,
   Dropdown,
   DropdownItem,
   DropdownList,
@@ -15,6 +16,7 @@ import {
 import { useTranslation } from '../../hooks/useTranslation';
 import { useOrganizationGuardContext } from './OrganizationGuard';
 import OrganizationSelector from './OrganizationSelector';
+import { ROUTE, useNavigate } from '../../hooks/useNavigate';
 
 type OrganizationDropdownProps = {
   organizationName?: string;
@@ -56,16 +58,23 @@ const OrganizationDropdown = ({ organizationName, onSwitchOrganization }: Organi
 };
 
 const PageNavigation = () => {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
   const { currentOrganization, availableOrganizations } = useOrganizationGuardContext();
   const [showOrganizationModal, setShowOrganizationModal] = React.useState(false);
 
+  // CELIA-WIP ADD THE CHECK FOR THE USER'S ROLES TO DETERMINE IF THE USER HAS ACCESS TO THE ADMIN SETTINGS
   const showOrganizationSelection = availableOrganizations.length > 1;
-  if (!showOrganizationSelection) {
+  const currentOrgDisplayName = currentOrganization?.spec?.displayName || currentOrganization?.metadata?.name || '';
+
+  // Show navigation bar if there's either org selection OR admin button to show
+  const shouldShowNavigation = showOrganizationSelection || true; // Always show for admin button
+
+  if (!shouldShowNavigation) {
     return null;
   }
 
-  const currentOrgDisplayName = currentOrganization?.spec?.displayName || currentOrganization?.metadata?.name || '';
-
+  // CELIA-WIP: show admin section only if user is admin
   return (
     <>
       <PageSection variant="light" padding={{ default: 'noPadding' }}>
@@ -83,6 +92,11 @@ const PageNavigation = () => {
                     />
                   </ToolbarItem>
                 )}
+                <ToolbarItem>
+                  <Button variant="link" onClick={() => navigate(ROUTE.AUTH_PROVIDERS)}>
+                    {t('Admin settings')}
+                  </Button>
+                </ToolbarItem>
               </ToolbarContent>
             </Toolbar>
           </MastheadContent>

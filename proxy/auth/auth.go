@@ -34,6 +34,7 @@ func NewAuth(apiTlsConfig *tls.Config) (*AuthHandler, error) {
 	auth := AuthHandler{
 		apiTlsConfig: apiTlsConfig,
 	}
+	// CELIA-WIP: initialize the provider with default= true??
 	authConfig, err := getAuthInfo(apiTlsConfig)
 	if err != nil {
 		return nil, err

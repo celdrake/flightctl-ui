@@ -148,6 +148,36 @@ export const getInvalidKubernetesLabels = (labels: FlightCtlLabel[]) => {
   });
 };
 
+// Validates JSON path format. Only dot notation is supported.
+const isValidJSONPath = (path: string | undefined): boolean => {
+  if (!path || path.trim() === '') {
+    return true;
+  }
+
+  // Only allow simple property names and dot-separated nested paths
+  // Each segment must start with a letter or underscore, followed by letters, numbers, or underscores
+  const jsonPathPattern = /^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*$/;
+
+  return jsonPathPattern.test(path.trim());
+};
+
+export const validJsonPath = (t: TFunction) =>
+  Yup.string().test('is-valid-json-path', t('Must be a valid JSON path'), function (value) {
+    if (!value || value.trim() === '') {
+      return true;
+    }
+    return isValidJSONPath(value);
+  });
+
+// Validates DNS subdomain part (for prefixes/suffixes that will be combined into org names)
+// Allows empty strings since these fields are optional
+export const validDnsSubdomainPart = (t: TFunction) =>
+  Yup.string().test('valid-dns-part', t('Must contain only lowercase letters, numbers, and hyphens'), function (value) {
+    if (!value || value === '') return true; // Allow empty
+    // Must start and end with alphanumeric, can contain hyphens in the middle
+    return /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/.test(value);
+  });
+
 export const validKubernetesDnsSubdomain = (
   t: TFunction,
   { isRequired, fieldName }: { isRequired: boolean; fieldName?: string },

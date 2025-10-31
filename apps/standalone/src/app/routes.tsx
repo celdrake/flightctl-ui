@@ -69,6 +69,15 @@ const PendingEnrollmentRequestsBadge = React.lazy(
 const CommandLineToolsPage = React.lazy(
   () => import('@flightctl/ui-components/src/components/Masthead/CommandLineToolsPage'),
 );
+const AuthProvidersPage = React.lazy(
+  () => import('@flightctl/ui-components/src/components/AuthProvider/AuthProvidersPage'),
+);
+const CreateAuthProvider = React.lazy(
+  () => import('@flightctl/ui-components/src/components/AuthProvider/CreateAuthProvider/CreateAuthProvider'),
+);
+const AuthProviderDetails = React.lazy(
+  () => import('@flightctl/ui-components/src/components/AuthProvider/AuthProviderDetails/AuthProviderDetails'),
+);
 
 export type ExtendedRouteObject = RouteObject & {
   title?: string;
@@ -302,6 +311,42 @@ const getAppRoutes = (t: TFunction): ExtendedRouteObject[] => [
     element: (
       <TitledRoute title={t('Resource sync')}>
         <ResourceSyncToRepository />
+      </TitledRoute>
+    ),
+  },
+  {
+    path: '/admin/authproviders',
+    title: t('Authentication Providers'),
+    element: (
+      <TitledRoute title={t('Authentication Providers')}>
+        <AuthProvidersPage />
+      </TitledRoute>
+    ),
+  },
+  {
+    path: '/admin/authproviders/create',
+    title: t('Create Authentication Provider'),
+    element: (
+      <TitledRoute title={t('Create Authentication Provider')}>
+        <CreateAuthProvider />
+      </TitledRoute>
+    ),
+  },
+  {
+    path: '/admin/authproviders/edit/:authProviderId',
+    title: t('Edit Authentication Provider'),
+    element: (
+      <TitledRoute title={t('Edit Authentication Provider')}>
+        <CreateAuthProvider />
+      </TitledRoute>
+    ),
+  },
+  {
+    path: '/admin/authproviders/:authProviderId/*',
+    title: t('Authentication Provider Details'),
+    element: (
+      <TitledRoute title={t('Authentication Provider Details')}>
+        <AuthProviderDetails />
       </TitledRoute>
     ),
   },
