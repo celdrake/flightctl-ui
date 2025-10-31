@@ -79,6 +79,7 @@ const handleApiJSONResponse = async <R>(response: Response): Promise<R> => {
     if (window.location.pathname !== '/login') {
       await redirectToLogin();
     }
+    // CELIA-WIP DO WE NEED TO RETURN FROM HERE?
   }
 
   throw new Error(await getErrorMsgFromApiResponse(response));
@@ -94,12 +95,9 @@ const handleAlertsJSONResponse = async <R>(response: Response): Promise<R> => {
     throw new Error(`Error ${response.status}: ${response.statusText}`);
   }
 
-  if (response.status === 401) {
-    await redirectToLogin();
-  }
-
   // For 500/501 errors, return the status code for detection
-  if (response.status === 500 || response.status === 501) {
+  // If we get 401 only for alerts, we consider it disabled but keep the UI working otherwise
+  if (response.status === 500 || response.status === 501 || response.status === 401) {
     throw new Error(`${response.status}`);
   }
 

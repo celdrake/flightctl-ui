@@ -14,6 +14,9 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 )
 
+// Point to local flightctl with EDM-2347 branch checked out
+replace github.com/flightctl/flightctl => ../../flightctl
+
 require (
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect

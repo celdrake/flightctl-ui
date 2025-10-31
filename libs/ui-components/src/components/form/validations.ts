@@ -58,7 +58,6 @@ const absolutePathRegex = /^\/.*$/;
 
 // Accepts only relative paths. Rejects paths that start with "/", have multiple "/", or use dots (./file, ../parent/file), etc
 const relativePathRegex = /^(?!\.\.\/|\.\.\$|\.\/)(\.\/)*[\w.-]+(?:\/[\w.-]+)*\/?$/;
-
 export const MAX_TARGET_REVISION_LENGTH = 244;
 const MAX_FILE_PATH_LENGTH = 253;
 
@@ -147,6 +146,15 @@ export const getInvalidKubernetesLabels = (labels: FlightCtlLabel[]) => {
           !K8S_LABEL_VALUE_ALLOWED_CHARACTERS.test(value);
   });
 };
+
+// Validates DNS subdomain part (for prefixes/suffixes that will be combined into org names)
+// Allows empty strings since these fields are optional
+export const validDnsSubdomainPart = (t: TFunction) =>
+  Yup.string().test('valid-dns-part', t('Must contain only lowercase letters, numbers, and hyphens'), function (value) {
+    if (!value || value === '') return true; // Allow empty
+    // Must start and end with alphanumeric, can contain hyphens in the middle
+    return /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/.test(value);
+  });
 
 export const validKubernetesDnsSubdomain = (
   t: TFunction,

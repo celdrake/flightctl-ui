@@ -11,6 +11,7 @@ import (
 	"github.com/flightctl/flightctl-ui/bridge"
 	"github.com/flightctl/flightctl-ui/config"
 	"github.com/flightctl/flightctl-ui/log"
+	"github.com/flightctl/flightctl/api/v1alpha1"
 	"github.com/openshift/osincli"
 )
 
@@ -20,6 +21,8 @@ type AAPAuthHandler struct {
 	tlsConfig       *tls.Config
 	authURL         string
 	internalAuthURL string
+	clientId        string
+	providerName    string
 }
 
 type AAPUser struct {
@@ -47,13 +50,26 @@ func (c *AAPRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	return resp, nil
 }
 
-func getAAPAuthHandler(authURL string, internalAuthURL *string) (*AAPAuthHandler, error) {
+func getAAPAuthHandler(providerInfo *v1alpha1.AuthProviderInfo) (*AAPAuthHandler, error) {
+	// Validate required fields
+	if providerInfo.AuthUrl == nil {
+		return nil, fmt.Errorf("AAP provider %s missing AuthUrl", providerInfo.Name)
+	}
+
+	if providerInfo.ClientId == nil || *providerInfo.ClientId == "" {
+		return nil, fmt.Errorf("AAP provider %s missing ClientId", providerInfo.Name)
+	}
+
+	authURL := *providerInfo.AuthUrl
+	clientId := *providerInfo.ClientId
+	internalAuthURL := (*string)(nil) // AAP doesn't use internalAuthURL for now
+
 	tlsConfig, err := bridge.GetAuthTlsConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	client, err := getClient(authURL, tlsConfig)
+	client, err := getClient(authURL, tlsConfig, clientId)
 	if err != nil {
 		return nil, err
 	}
@@ -64,10 +80,12 @@ func getAAPAuthHandler(authURL string, internalAuthURL *string) (*AAPAuthHandler
 		tlsConfig:       tlsConfig,
 		authURL:         authURL,
 		internalAuthURL: authURL,
+		clientId:        clientId,
+		providerName:    *providerInfo.Name,
 	}
 
 	if internalAuthURL != nil {
-		internalClient, err := getClient(*internalAuthURL, tlsConfig)
+		internalClient, err := getClient(*internalAuthURL, tlsConfig, clientId)
 		if err != nil {
 			return nil, err
 		}
@@ -78,9 +96,14 @@ func getAAPAuthHandler(authURL string, internalAuthURL *string) (*AAPAuthHandler
 	return handler, nil
 }
 
-func getClient(url string, tlsConfig *tls.Config) (*osincli.Client, error) {
+func getClient(url string, tlsConfig *tls.Config, clientId string) (*osincli.Client, error) {
+	// Use provided clientId, require it to be non-empty
+	if clientId == "" {
+		return nil, fmt.Errorf("clientId is required for AAP provider")
+	}
+
 	oidcClientConfig := &osincli.ClientConfig{
-		ClientId:                 config.AuthClientId,
+		ClientId:                 clientId,
 		AuthorizeUrl:             fmt.Sprintf("%s/o/authorize/", url),
 		TokenUrl:                 fmt.Sprintf("%s/o/token/", url),
 		RedirectUrl:              config.BaseUiUrl + "/callback",
@@ -107,7 +130,13 @@ func (a *AAPAuthHandler) GetToken(loginParams LoginParameters) (TokenData, *int6
 	return exchangeToken(loginParams, a.internalClient)
 }
 
-func (a *AAPAuthHandler) GetUserInfo(token string) (string, *http.Response, error) {
+func (a *AAPAuthHandler) GetUserInfo(tokenData TokenData) (string, *http.Response, error) {
+	// For AAP, use AccessToken for userinfo endpoint
+	token := tokenData.AccessToken
+	if token == "" {
+		return "", nil, fmt.Errorf("access token is required for AAP userinfo")
+	}
+
 	userInfoEndpoint := fmt.Sprintf("%s/api/gateway/v1/me/", a.internalAuthURL)
 	body, resp, err := getUserInfo(token, a.tlsConfig, a.authURL, userInfoEndpoint)
 
@@ -134,7 +163,7 @@ func (a *AAPAuthHandler) GetUserInfo(token string) (string, *http.Response, erro
 
 func (a *AAPAuthHandler) Logout(token string) (string, error) {
 	data := url.Values{}
-	data.Set("client_id", config.AuthClientId)
+	data.Set("client_id", a.clientId)
 	data.Set("token", token)
 
 	httpClient := http.Client{
@@ -163,5 +192,5 @@ func (a *AAPAuthHandler) RefreshToken(refreshToken string) (TokenData, *int64, e
 }
 
 func (a *AAPAuthHandler) GetLoginRedirectURL() string {
-	return loginRedirect(a.client)
+	return loginRedirect(a.client, a.providerName)
 }

@@ -61,6 +61,9 @@ func main() {
 	terminalBridge := bridge.TerminalBridge{TlsConfig: tlsConfig}
 	apiRouter.HandleFunc("/terminal/{forward:.*}", terminalBridge.HandleTerminal)
 
+	testAuthHandler := bridge.NewTestAuthHandler(tlsConfig)
+	apiRouter.HandleFunc("/test-auth-provider-connection", testAuthHandler.TestConnection)
+
 	// Simple endpoint to check if organizations are enabled
 	if config.IsOrganizationsEnabled() {
 		apiRouter.HandleFunc("/organizations-enabled", func(w http.ResponseWriter, r *http.Request) {
@@ -78,6 +81,7 @@ func main() {
 			os.Exit(1)
 		}
 		apiRouter.HandleFunc("/login", authHandler.Login)
+		apiRouter.HandleFunc("/login/token", authHandler.TokenLogin)
 		apiRouter.HandleFunc("/login/info", authHandler.GetUserInfo)
 		apiRouter.HandleFunc("/login/refresh", authHandler.Refresh)
 		apiRouter.HandleFunc("/logout", authHandler.Logout)

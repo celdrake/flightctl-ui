@@ -3,7 +3,7 @@ import { loginAPI, redirectToLogin } from '../utils/apiCalls';
 import { ORGANIZATION_STORAGE_KEY } from '@flightctl/ui-components/src/utils/organizationStorage';
 
 const AUTH_DISABLED_STATUS_CODE = 418;
-const EXPIRATION = 'expiration';
+export const EXPIRATION = 'expiration';
 export let lastRefresh = 0;
 
 // max value for setTimeout
@@ -46,9 +46,14 @@ export const useAuthContext = () => {
         localStorage.removeItem(ORGANIZATION_STORAGE_KEY);
         const searchParams = new URLSearchParams(window.location.search);
         const code = searchParams.get('code');
+        const state = searchParams.get('state');
         callbackErr = searchParams.get('error');
-        if (code) {
-          const resp = await fetch(loginAPI, {
+        if (code && state) {
+          // Extract provider name from the state parameter
+          // The state format is: "provider:<providerName>"
+          const providerName = state.startsWith('provider:') ? state.substring(9) : state;
+
+          const resp = await fetch(`${loginAPI}?provider=${providerName}`, {
             headers: {
               'Content-Type': 'application/json',
             },
@@ -84,10 +89,13 @@ export const useAuthContext = () => {
             if (window.location.pathname !== '/login') {
               await redirectToLogin();
             }
+            // User is not authenticated - let the router handle redirect
+            setLoading(false);
             return;
           }
           if (resp.status !== 200) {
             setError('Failed to get user info');
+            setLoading(false);
             return;
           }
           const info = (await resp.json()) as { username: string };
@@ -97,6 +105,7 @@ export const useAuthContext = () => {
           // eslint-disable-next-line
           console.log(err);
           setError('Failed to get user info');
+          setLoading(false);
         }
       }
     };
