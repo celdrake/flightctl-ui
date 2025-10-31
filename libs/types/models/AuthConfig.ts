@@ -2,19 +2,19 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { AuthOrganizationsConfig } from './AuthOrganizationsConfig';
-/**
- * Auth config.
- */
+import type { AuthProviderInfo } from './AuthProviderInfo';
 export type AuthConfig = {
   /**
-   * Auth type.
+   * List of all available authentication providers.
    */
-  authType: string;
+  providers?: Array<AuthProviderInfo>;
   /**
-   * Auth URL.
+   * Name of the default authentication provider.
    */
-  authURL: string;
-  authOrganizationsConfig: AuthOrganizationsConfig;
+  defaultProvider?: string;
+  /**
+   * Whether organizations are enabled for authentication.
+   */
+  organizationsEnabled?: boolean;
 };
 
