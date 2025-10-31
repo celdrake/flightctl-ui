@@ -18,13 +18,13 @@ import TablePagination from '../../Table/TablePagination';
 import TableTextSearch from '../../Table/TableTextSearch';
 import Table, { ApiSortTableColumn } from '../../Table/Table';
 import { getResourceId } from '../../../utils/resource';
-import AuthProviderRow from './AuthProviderRow';
 import ResourceListEmptyState from '../../common/ResourceListEmptyState';
 import { useTranslation } from '../../../hooks/useTranslation';
-import { useAuthProviderBackendFilters, useAuthProviders } from './useAuthProviders';
 import { useAccessReview } from '../../../hooks/useAccessReview';
 import { RESOURCE, VERB } from '../../../types/rbac';
 import { ROUTE, useNavigate } from '../../../hooks/useNavigate';
+import { useAuthProviderBackendFilters, useAuthProviders } from './useAuthProviders';
+import AuthProviderRow from './AuthProviderRow';
 
 const AuthProviderEmptyState = ({ onCreate }: { onCreate?: VoidFunction }) => {
   const { t } = useTranslation();

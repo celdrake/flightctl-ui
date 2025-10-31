@@ -1,80 +1,120 @@
 import * as Yup from 'yup';
 import { TFunction } from 'i18next';
-import { PatchRequest } from '@flightctl/types';
-import { AuthenticationProvider, OAuth2ProviderSpec, OIDCProviderSpec } from '../../../../types/extraTypes';
+import { AuthProvider, OAuth2ProviderSpec, OIDCProviderSpec, PatchRequest } from '@flightctl/types';
 import { AuthProviderFormValues } from './types';
+import { isOidcAuthProviderSpec, ProviderType } from '../../../../types/extraTypes';
 import { validKubernetesDnsSubdomain } from '../../../form/validations';
 import { appendJSONPatch } from '../../../../utils/patch';
 
-export const getInitValues = (authProvider?: AuthenticationProvider): AuthProviderFormValues => {
+const githubConfig = {
+  clientId: '',
+  clientSecret: '',
+  authorizationUrl: 'https://github.com/login/oauth/authorize',
+  tokenUrl: 'https://github.com/login/oauth/access_token',
+  userInfoUrl: 'https://api.github.com/user',
+  scopes: 'read:user user:email',
+  usernameClaim: 'login',
+  issuer: '',
+};
+
+const googleConfig = {
+  issuer: 'https://accounts.google.com',
+  clientId: '',
+  clientSecret: '',
+  scopes: 'openid email profile',
+  usernameClaim: 'email',
+  authorizationUrl: '',
+  tokenUrl: '',
+  userInfoUrl: '',
+};
+
+const mockType = ProviderType.OAuth2;
+
+export const getInitValues = (authProvider?: AuthProvider): AuthProviderFormValues => {
   if (authProvider) {
-    const isOAuth2 = authProvider.spec.type === 'OAuth2';
-    return {
+    const isOIDC = isOidcAuthProviderSpec(authProvider.spec);
+    const formValues: AuthProviderFormValues = {
+      type: isOIDC ? ProviderType.OIDC : ProviderType.OAuth2,
       name: authProvider.metadata.name || '',
-      type: authProvider.spec.type,
       clientId: authProvider.spec.clientId,
-      clientSecret: isOAuth2 ? (authProvider.spec as OAuth2ProviderSpec).clientSecret : '',
-      enabled: authProvider.spec.enabled,
-      issuer: authProvider.spec.issuer || '',
-      authorizationUrl: isOAuth2 ? (authProvider.spec as OAuth2ProviderSpec).authorizationUrl : '',
-      tokenUrl: isOAuth2 ? (authProvider.spec as OAuth2ProviderSpec).tokenUrl : '',
-      userInfoUrl: isOAuth2 ? (authProvider.spec as OAuth2ProviderSpec).userInfoUrl : '',
+      enabled: authProvider.spec.enabled || false,
       usernameClaim: authProvider.spec.usernameClaim || '',
       roleClaim: authProvider.spec.roleClaim || '',
+      scopes: authProvider.spec.scopes?.join(' ') || '',
+      issuer: authProvider.spec.issuer || '',
+      clientSecret: authProvider.spec.clientSecret || '',
     };
+    if (!isOIDC) {
+      const oauth2Spec = authProvider.spec as OAuth2ProviderSpec;
+      formValues.authorizationUrl = oauth2Spec.authorizationUrl;
+      formValues.tokenUrl = oauth2Spec.tokenUrl;
+      formValues.userInfoUrl = oauth2Spec.userinfoUrl;
+    } else {
+      // TODO REMOVE
+      formValues.authorizationUrl = googleConfig.authorizationUrl;
+      formValues.tokenUrl = googleConfig.tokenUrl;
+      formValues.userInfoUrl = googleConfig.userInfoUrl;
+    }
+
+    return formValues;
   }
 
+  const config = mockType === ProviderType.OAuth2 ? githubConfig : googleConfig;
+
   return {
-    name: '',
-    type: 'OIDC',
-    clientId: '',
-    clientSecret: '',
+    name: 'test-provider',
+    type: mockType,
+    clientId: config.clientId,
+    clientSecret: config.clientSecret,
     enabled: true,
-    issuer: '',
-    authorizationUrl: '',
-    tokenUrl: '',
-    userInfoUrl: '',
-    usernameClaim: '',
+    issuer: config.issuer,
+    authorizationUrl: config.authorizationUrl || '',
+    tokenUrl: config.tokenUrl || '',
+    userInfoUrl: config.userInfoUrl || '',
+    usernameClaim: config.usernameClaim,
     roleClaim: '',
+    scopes: config.scopes,
   };
 };
 
 export const getAuthProviderSchema = (t: TFunction, isEdit: boolean) =>
   Yup.object<AuthProviderFormValues>({
     name: validKubernetesDnsSubdomain(t, { isRequired: !isEdit }),
-    type: Yup.string().oneOf(['OIDC', 'OAuth2']).required(),
+    type: Yup.string().oneOf([ProviderType.OIDC, ProviderType.OAuth2]).required(),
     clientId: Yup.string().required(t('Client ID is required')),
     clientSecret: Yup.string().when('type', {
-      is: 'OAuth2',
+      is: ProviderType.OAuth2,
       then: (schema) => schema.required(t('Client secret is required for OAuth2 providers')),
       otherwise: (schema) => schema,
     }),
     enabled: Yup.boolean().required(),
     issuer: Yup.string().when('type', {
-      is: 'OIDC',
+      is: ProviderType.OIDC,
       then: (schema) => schema.url(t('Must be a valid URL')).required(t('Issuer URL is required for OIDC providers')),
       otherwise: (schema) => schema.url(t('Must be a valid URL')),
     }),
     authorizationUrl: Yup.string().when('type', {
-      is: 'OAuth2',
+      is: ProviderType.OAuth2,
       then: (schema) => schema.url(t('Must be a valid URL')).required(t('Authorization URL is required for OAuth2')),
       otherwise: (schema) => schema,
     }),
     tokenUrl: Yup.string().when('type', {
-      is: 'OAuth2',
+      is: ProviderType.OAuth2,
       then: (schema) => schema.url(t('Must be a valid URL')).required(t('Token URL is required for OAuth2')),
       otherwise: (schema) => schema,
     }),
     userInfoUrl: Yup.string().when('type', {
-      is: 'OAuth2',
+      is: ProviderType.OAuth2,
       then: (schema) => schema.url(t('Must be a valid URL')).required(t('User info URL is required for OAuth2')),
       otherwise: (schema) => schema,
     }),
     usernameClaim: Yup.string(),
     roleClaim: Yup.string(),
+    scopes: Yup.string().required(t('Scopes are required')),
   });
 
-export const getAuthProvider = (values: AuthProviderFormValues): AuthenticationProvider => {
+// CELIA-WIP IMPROVE
+export const getAuthProvider = (values: AuthProviderFormValues): AuthProvider => {
   const baseProvider = {
     apiVersion: 'v1alpha1',
     kind: 'AuthProvider',
@@ -83,12 +123,21 @@ export const getAuthProvider = (values: AuthProviderFormValues): AuthenticationP
     },
   };
 
-  if (values.type === 'OIDC') {
+  // Split scopes string into array
+  const scopesArray = values.scopes ? values.scopes.split(/\s+/).filter(Boolean) : [];
+
+  if (values.type === ProviderType.OIDC) {
     const spec: OIDCProviderSpec = {
-      type: 'OIDC',
+      providerType: ProviderType.OIDC,
       clientId: values.clientId,
+      clientSecret: values.clientSecret,
       enabled: values.enabled,
-      issuer: values.issuer,
+      issuer: values.issuer || '',
+      scopes: scopesArray,
+      organizationAssignment: {
+        type: 'static',
+        organizationName: 'default',
+      },
     };
 
     if (values.usernameClaim) {
@@ -104,18 +153,21 @@ export const getAuthProvider = (values: AuthProviderFormValues): AuthenticationP
     };
   } else {
     const spec: OAuth2ProviderSpec = {
-      type: 'OAuth2',
+      providerType: ProviderType.OAuth2,
       clientId: values.clientId,
       clientSecret: values.clientSecret,
       enabled: values.enabled,
-      authorizationUrl: values.authorizationUrl,
-      tokenUrl: values.tokenUrl,
-      userInfoUrl: values.userInfoUrl,
+      issuer: values.issuer || '',
+      authorizationUrl: values.authorizationUrl || '',
+      tokenUrl: values.tokenUrl || '',
+      userinfoUrl: values.userInfoUrl || '',
+      scopes: scopesArray,
+      organizationAssignment: {
+        type: 'static',
+        organizationName: 'default',
+      },
     };
 
-    if (values.issuer) {
-      spec.issuer = values.issuer;
-    }
     if (values.usernameClaim) {
       spec.usernameClaim = values.usernameClaim;
     }
@@ -130,11 +182,27 @@ export const getAuthProvider = (values: AuthProviderFormValues): AuthenticationP
   }
 };
 
-export const getAuthProviderPatches = (
-  values: AuthProviderFormValues,
-  authProvider: AuthenticationProvider,
-): PatchRequest => {
+export const getAuthProviderPatches = (values: AuthProviderFormValues, authProvider: AuthProvider): PatchRequest => {
   const patches: PatchRequest = [];
+
+  // Convert form type to API providerType
+  const newProviderType = values.type;
+  const currentProviderType = authProvider.spec.providerType;
+
+  // Split scopes string into array
+  const scopesArray = values.scopes ? values.scopes.split(/\s+/).filter(Boolean) : [];
+  const originalScopesArray = authProvider.spec.scopes || [];
+
+  // Check if type changed - if so, replace entire spec
+  if (newProviderType !== currentProviderType) {
+    const newProvider = getAuthProvider(values);
+    patches.push({
+      op: 'replace',
+      path: '/spec',
+      value: newProvider.spec,
+    });
+    return patches;
+  }
 
   // Common fields that apply to both OIDC and OAuth2
   appendJSONPatch({
@@ -165,8 +233,18 @@ export const getAuthProviderPatches = (
     path: '/spec/roleClaim',
   });
 
+  // Update scopes if they changed
+  if (JSON.stringify(scopesArray) !== JSON.stringify(originalScopesArray)) {
+    appendJSONPatch({
+      patches,
+      newValue: scopesArray,
+      originalValue: originalScopesArray,
+      path: '/spec/scopes',
+    });
+  }
+
   // Type-specific fields
-  if (values.type === 'OIDC') {
+  if (values.type === ProviderType.OIDC) {
     appendJSONPatch({
       patches,
       newValue: values.issuer,
@@ -174,23 +252,13 @@ export const getAuthProviderPatches = (
       path: '/spec/issuer',
     });
 
-    // If switching from OAuth2 to OIDC, remove OAuth2-specific fields
-    if (authProvider.spec.type === 'OAuth2') {
-      const oauth2Spec = authProvider.spec as OAuth2ProviderSpec;
-      if (oauth2Spec.clientSecret) {
-        patches.push({ op: 'remove', path: '/spec/clientSecret' });
-      }
-      if (oauth2Spec.authorizationUrl) {
-        patches.push({ op: 'remove', path: '/spec/authorizationUrl' });
-      }
-      if (oauth2Spec.tokenUrl) {
-        patches.push({ op: 'remove', path: '/spec/tokenUrl' });
-      }
-      if (oauth2Spec.userInfoUrl) {
-        patches.push({ op: 'remove', path: '/spec/userInfoUrl' });
-      }
-    }
-  } else if (values.type === 'OAuth2') {
+    appendJSONPatch({
+      patches,
+      newValue: values.clientSecret,
+      originalValue: (authProvider.spec as OIDCProviderSpec).clientSecret,
+      path: '/spec/clientSecret',
+    });
+  } else if (values.type === ProviderType.OAuth2) {
     appendJSONPatch({
       patches,
       newValue: values.clientSecret,
@@ -215,25 +283,15 @@ export const getAuthProviderPatches = (
     appendJSONPatch({
       patches,
       newValue: values.userInfoUrl,
-      originalValue: (authProvider.spec as OAuth2ProviderSpec).userInfoUrl,
-      path: '/spec/userInfoUrl',
+      originalValue: (authProvider.spec as OAuth2ProviderSpec).userinfoUrl,
+      path: '/spec/userinfoUrl',
     });
 
     appendJSONPatch({
       patches,
-      newValue: values.issuer || undefined,
+      newValue: values.issuer,
       originalValue: authProvider.spec.issuer,
       path: '/spec/issuer',
-    });
-  }
-
-  // Type change - this requires a replace of the entire spec
-  if (values.type !== authProvider.spec.type) {
-    const newProvider = getAuthProvider(values);
-    patches.push({
-      op: 'replace',
-      path: '/spec',
-      value: newProvider.spec,
     });
   }
 

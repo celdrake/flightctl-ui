@@ -1,12 +1,11 @@
 /* eslint-disable no-console */
-import { PatchRequest } from '@flightctl/types';
+import { AuthProviderList, PatchRequest } from '@flightctl/types';
 import {
   getErrorMsgFromAlertsApiResponse,
   getErrorMsgFromApiResponse,
 } from '@flightctl/ui-components/src/utils/apiCalls';
 import { ORGANIZATION_STORAGE_KEY } from '@flightctl/ui-components/src/utils/organizationStorage';
 
-import { AuthenticationProviderList } from '@flightctl/ui-components/src/types/extraTypes';
 import { SELECT_PROVIDERS_PAGE } from '@flightctl/ui-components/src/constants';
 import { lastRefresh } from '../context/AuthContext';
 
@@ -90,7 +89,7 @@ export const redirectToLogin = async () => {
     });
 
     if (providersResp.ok) {
-      const data = (await providersResp.json()) as AuthenticationProviderList;
+      const data = (await providersResp.json()) as AuthProviderList;
       const enabledProviders = data.items.filter((p) => p.spec.enabled);
 
       let providerUrl: string | undefined;

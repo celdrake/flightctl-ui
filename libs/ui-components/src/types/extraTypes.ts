@@ -3,17 +3,24 @@ import {
   ApplicationEnvVars,
   ApplicationVolumeProviderSpec,
   ArtifactApplicationProviderSpec,
+  AuthProviderSpec,
   ConditionType,
+  ConfigProviderSpec,
   Device,
   EnrollmentRequest,
   FileContent,
   Fleet,
   ImageApplicationProviderSpec,
-  ListMeta,
-  ObjectMeta,
+  OAuth2ProviderSpec,
+  OIDCProviderSpec,
   RelativePath,
   ResourceSync,
 } from '@flightctl/types';
+
+export enum ProviderType {
+  OIDC = 'oidc',
+  OAuth2 = 'oauth2',
+}
 
 export interface FlightCtlLabel {
   key: string;
@@ -50,6 +57,12 @@ export type ApplicationProviderSpecFixed = ApplicationEnvVars &
     appType?: AppType;
   } & (ImageApplicationProviderSpec | ArtifactApplicationProviderSpec | { inline: InlineApplicationFileFixed[] });
 
+export const isOidcAuthProviderSpec = (providerSpec: AuthProviderSpec): providerSpec is OIDCProviderSpec =>
+  providerSpec.providerType === ProviderType.OIDC;
+
+export const isOAuth2AuthProviderSpec = (providerSpec: AuthProviderSpec): providerSpec is OAuth2ProviderSpec =>
+  providerSpec.providerType === ProviderType.OAuth2;
+
 type CliArtifact = {
   os: string;
   arch: string;
@@ -77,155 +90,4 @@ export type AlertManagerAlert = {
     silencedBy: string[];
   };
   receivers: Array<{ name: string }>;
-};
-
-/**
- * Base fields common to both OIDC and OAuth2 providers
- */
-type AuthenticationProviderBaseSpec = {
-  /**
-   * ClientId for the OIDC/OAuth2 application
-   */
-  clientId: string;
-  /**
-   * Whether this provider is enabled
-   */
-  enabled: boolean;
-  /**
-   * Issuer URL (required for OIDC, optional for OAuth2)
-   */
-  issuer?: string;
-  /**
-   * Organization assignment configuration
-   */
-  organizationAssignment?: OIDCOrganizationAssignment;
-
-  /**
-   * Claim path for extracting roles from the token
-   */
-  roleClaim?: string;
-  /**
-   * Claim path for extracting username from the token
-   */
-  usernameClaim?: string;
-};
-
-/**
- * OIDC-compliant provider spec (uses OIDC discovery)
- */
-export type OIDCProviderSpec = AuthenticationProviderBaseSpec & {
-  /**
-   * Type of the provider: "OIDC" for full OIDC compliant providers
-   */
-  type: 'OIDC';
-  /**
-   * Issuer URL for OIDC discovery (required for OIDC providers)
-   */
-  issuer: string;
-};
-
-/**
- * OAuth2-only provider spec (manual endpoint configuration)
- */
-export type OAuth2ProviderSpec = AuthenticationProviderBaseSpec & {
-  /**
-   * Type of the provider: "OAuth2" for OAuth2 only providers
-   */
-  type: 'OAuth2';
-  /**
-   * ClientSecret for OAuth2 authentication (required for OAuth2)
-   */
-  clientSecret: string;
-  /**
-   * Authorization endpoint URL (required for OAuth2)
-   */
-  authorizationUrl: string;
-  /**
-   * Token endpoint URL (required for OAuth2)
-   */
-  tokenUrl: string;
-  /**
-   * UserInfo endpoint URL (required for OAuth2)
-   */
-  userInfoUrl: string;
-};
-
-/**
- * Provider spec - either OIDC or OAuth2
- */
-export type ProviderSpec = OIDCProviderSpec | OAuth2ProviderSpec;
-
-/**
- * AuthenticationProvider represents an OIDC/OAuth2 authentication provider configuration
- */
-export type AuthenticationProvider = {
-  /**
-   * APIVersion defines the versioned schema of this representation of an object.
-   */
-  apiVersion: string;
-  /**
-   * Kind is a string value representing the REST resource this object represents.
-   */
-  kind: string;
-  metadata: ObjectMeta;
-  spec: ProviderSpec;
-  status?: AuthenticationProviderStatus;
-};
-
-/**
- * OIDCProviderStatus defines the observed state of an OIDC Provider
- */
-export type AuthenticationProviderStatus = {
-  conditions?: Array<{
-    type: string;
-    status: string;
-    lastTransitionTime?: string;
-    reason?: string;
-    message?: string;
-  }>;
-};
-
-/**
- * Organization assignment types
- */
-export type OIDCOrganizationAssignment =
-  | OIDCStaticOrganizationAssignment
-  | OIDCDynamicOrganizationAssignment
-  | OIDCPerUserOrganizationAssignment;
-
-/**
- * Static organization assignment - assigns all users to a specific organization
- */
-export type OIDCStaticOrganizationAssignment = {
-  type: 'Static';
-  organizationName: string;
-};
-
-/**
- * Dynamic organization assignment - extracts organization from a claim
- */
-export type OIDCDynamicOrganizationAssignment = {
-  type: 'Dynamic';
-  claimPath: string;
-  organizationNamePrefix?: string;
-  organizationNameSuffix?: string;
-};
-
-/**
- * Per-user organization assignment - creates organization per user
- */
-export type OIDCPerUserOrganizationAssignment = {
-  type: 'PerUser';
-  organizationNamePrefix?: string;
-  organizationNameSuffix?: string;
-};
-
-/**
- * List of Authentication Providers
- */
-export type AuthenticationProviderList = {
-  apiVersion: string;
-  kind: string;
-  metadata: ListMeta;
-  items: AuthenticationProvider[];
 };

@@ -75,6 +75,9 @@ const AdminPage = React.lazy(() => import('@flightctl/ui-components/src/componen
 const CreateAuthProvider = React.lazy(
   () => import('@flightctl/ui-components/src/components/Admin/AuthProviders/CreateAuthProvider/CreateAuthProvider'),
 );
+const AuthProviderDetails = React.lazy(
+  () => import('@flightctl/ui-components/src/components/Admin/AuthProviders/AuthProviderDetails/AuthProviderDetails'),
+);
 
 export type ExtendedRouteObject = RouteObject & {
   title?: string;
@@ -312,7 +315,7 @@ const getAppRoutes = (t: TFunction): ExtendedRouteObject[] => [
     ),
   },
   {
-    path: '/admin',
+    path: '/admin/authproviders',
     title: t('System administration'),
     showInNav: true,
     children: [
@@ -326,7 +329,7 @@ const getAppRoutes = (t: TFunction): ExtendedRouteObject[] => [
         ),
       },
       {
-        path: 'authproviders/create',
+        path: 'create',
         title: t('Create authentication provider'),
         element: (
           <TitledRoute title={t('Create authentication provider')}>
@@ -335,11 +338,20 @@ const getAppRoutes = (t: TFunction): ExtendedRouteObject[] => [
         ),
       },
       {
-        path: 'authproviders/edit/:providerId',
+        path: 'edit/:providerId',
         title: t('Edit authentication provider'),
         element: (
           <TitledRoute title={t('Edit authentication provider')}>
             <CreateAuthProvider />
+          </TitledRoute>
+        ),
+      },
+      {
+        path: ':providerId/*',
+        title: t('Authentication provider details'),
+        element: (
+          <TitledRoute title={t('Authentication provider details')}>
+            <AuthProviderDetails />
           </TitledRoute>
         ),
       },

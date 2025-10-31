@@ -1,13 +1,13 @@
 import * as React from 'react';
 import { Alert, Button, FormGroup, FormSection, Grid, Split, SplitItem, Switch } from '@patternfly/react-core';
 import { Formik, useFormikContext } from 'formik';
-
+import { AuthProvider } from '@flightctl/types';
 import { useTranslation } from '../../../../hooks/useTranslation';
 import { useFetch } from '../../../../hooks/useFetch';
 import FlightCtlActionGroup from '../../../form/FlightCtlActionGroup';
 import { AuthProviderFormValues, CreateAuthProviderFormProps } from './types';
+import { ProviderType } from '../../../../types/extraTypes';
 import { getAuthProvider, getAuthProviderPatches, getAuthProviderSchema, getInitValues } from './utils';
-import { AuthenticationProvider } from '../../../../types/extraTypes';
 import { getErrorMessage } from '../../../../utils/error';
 import LeaveFormConfirmation from '../../../common/LeaveFormConfirmation';
 import NameField from '../../../form/NameField';
@@ -38,10 +38,10 @@ const ProviderTypeSection = ({ isEdit }: { isEdit?: boolean }) => {
     >
       <Split hasGutter>
         <SplitItem>
-          <RadioField id="oidc-type-radio" name="type" label={t('OIDC')} checkedValue="OIDC" />
+          <RadioField id="oidc-type-radio" name="type" label={t('OIDC')} checkedValue={ProviderType.OIDC} />
         </SplitItem>
         <SplitItem>
-          <RadioField id="oauth2-type-radio" name="type" label={t('OAuth2')} checkedValue="OAuth2" />
+          <RadioField id="oauth2-type-radio" name="type" label={t('OAuth2')} checkedValue={ProviderType.OAuth2} />
         </SplitItem>
       </Split>
     </FormGroupWithHelperText>
@@ -112,13 +112,13 @@ const ProviderClaims = () => {
 type CreateAuthProviderFormContentProps = {
   onClose: VoidFunction;
   onSuccess: CreateAuthProviderFormProps['onSuccess'];
-  authProvider?: AuthenticationProvider;
+  authProvider?: AuthProvider;
 };
 
 const CreateAuthProviderFormContent = ({ onClose, onSuccess, authProvider }: CreateAuthProviderFormContentProps) => {
   const { t } = useTranslation();
   const { post, patch } = useFetch();
-  const { values, isSubmitting, isValid, setFieldValue } = useFormikContext<AuthProviderFormValues>();
+  const { values, isSubmitting, setFieldValue, errors } = useFormikContext<AuthProviderFormValues>();
   const [error, setError] = React.useState<string>();
   const isEdit = !!authProvider;
 
@@ -130,7 +130,7 @@ const CreateAuthProviderFormContent = ({ onClose, onSuccess, authProvider }: Cre
         if (patches.length === 0) {
           return;
         }
-        const result = await patch<AuthenticationProvider>(`authproviders/${values.name}`, patches);
+        const result = await patch<AuthProvider>(`authproviders/${values.name}`, patches);
         onSuccess(result);
       } else {
         const provider = getAuthProvider(values);
@@ -146,6 +146,7 @@ const CreateAuthProviderFormContent = ({ onClose, onSuccess, authProvider }: Cre
     <FlightCtlForm>
       <LeaveFormConfirmation />
       <Grid hasGutter>
+        <div style={{ border: '2px solid lime' }}>{JSON.stringify(errors)}</div>
         <FormSection>
           <Switch
             id="enabled-provider"
@@ -178,8 +179,8 @@ const CreateAuthProviderFormContent = ({ onClose, onSuccess, authProvider }: Cre
 
         <ProviderTypeSection isEdit={isEdit} />
 
-        {values.type === 'OIDC' && <OIDCFields />}
-        {values.type === 'OAuth2' && <OAuth2Fields />}
+        {values.type === ProviderType.OIDC && <OIDCFields />}
+        {values.type === ProviderType.OAuth2 && <OAuth2Fields />}
 
         <ProviderClaims />
 
@@ -190,7 +191,12 @@ const CreateAuthProviderFormContent = ({ onClose, onSuccess, authProvider }: Cre
         )}
 
         <FlightCtlActionGroup>
-          <Button variant="primary" onClick={onSubmit} isDisabled={!isValid || isSubmitting} isLoading={isSubmitting}>
+          <Button
+            variant="primary"
+            onClick={onSubmit}
+            isDisabled={/*CELIA-WIP PUT BACK ISVALID !isValid || */ isSubmitting}
+            isLoading={isSubmitting}
+          >
             {isEdit ? t('Save') : t('Create')}
           </Button>
           <Button variant="link" onClick={onClose} isDisabled={isSubmitting}>

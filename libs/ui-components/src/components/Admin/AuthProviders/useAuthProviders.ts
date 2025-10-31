@@ -1,11 +1,11 @@
 import * as React from 'react';
 import { useDebounce } from 'use-debounce';
+import { AuthProvider, AuthProviderList } from '@flightctl/types';
 
 import { useAppContext } from '../../../hooks/useAppContext';
 import { useFetchPeriodically } from '../../../hooks/useFetchPeriodically';
 import { PaginationDetails, useTablePagination } from '../../../hooks/useTablePagination';
 import { PAGE_SIZE } from '../../../constants';
-import { AuthenticationProvider, AuthenticationProviderList } from '../../../types/extraTypes';
 
 export enum AuthProviderSearchParams {
   Name = 'name',
@@ -64,21 +64,21 @@ const useAuthProvidersEndpoint = (args: AuthProvidersEndpointArgs): [string, boo
 };
 
 export type AuthProviderLoad = {
-  authProviders: AuthenticationProvider[];
+  authProviders: AuthProvider[];
   isLoading: boolean;
   error: unknown;
   isUpdating: boolean;
   refetch: VoidFunction;
-  pagination: PaginationDetails<AuthenticationProviderList>;
+  pagination: PaginationDetails<AuthProviderList>;
 };
 
 export const useAuthProviders = (args: AuthProvidersEndpointArgs): AuthProviderLoad => {
-  const pagination = useTablePagination<AuthenticationProviderList>();
+  const pagination = useTablePagination<AuthProviderList>();
   const [authProvidersEndpoint, authProvidersDebouncing] = useAuthProvidersEndpoint({
     ...args,
     nextContinue: pagination.nextContinue,
   });
-  const [authProvidersList, isLoading, error, refetch, updating] = useFetchPeriodically<AuthenticationProviderList>(
+  const [authProvidersList, isLoading, error, refetch, updating] = useFetchPeriodically<AuthProviderList>(
     {
       endpoint: authProvidersEndpoint,
     },

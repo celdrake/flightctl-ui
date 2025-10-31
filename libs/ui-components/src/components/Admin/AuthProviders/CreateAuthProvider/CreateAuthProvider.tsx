@@ -12,7 +12,7 @@ import {
   Title,
 } from '@patternfly/react-core';
 
-import { AuthenticationProvider } from '../../../../types/extraTypes';
+import { AuthProvider } from '@flightctl/types';
 import { useTranslation } from '../../../../hooks/useTranslation';
 import { useFetch } from '../../../../hooks/useFetch';
 import { Link, ROUTE, useNavigate } from '../../../../hooks/useNavigate';
@@ -33,14 +33,14 @@ const CreateAuthProvider = () => {
   const { get } = useFetch();
   const [error, setError] = React.useState<string>();
   const [isLoading, setIsLoading] = React.useState(!!providerId);
-  const [providerDetails, setProviderDetails] = React.useState<AuthenticationProvider>();
+  const [providerDetails, setProviderDetails] = React.useState<AuthProvider>();
   const navigate = useNavigate();
 
   React.useEffect(() => {
     const fetchProvider = async () => {
       setIsLoading(true);
       try {
-        const provider = await get<AuthenticationProvider>(`authproviders/${providerId}`);
+        const provider = await get<AuthProvider>(`authproviders/${providerId}`);
         setProviderDetails(provider);
       } catch (e) {
         setError(getErrorMessage(e));
@@ -94,7 +94,7 @@ const CreateAuthProvider = () => {
         <StackItem>
           <Breadcrumb>
             <BreadcrumbItem>
-              <Link to={ROUTE.ROOT}>{t('Admin')}</Link>
+              <Link to={ROUTE.AUTH_PROVIDERS}>{t('Authentication providers')}</Link>
             </BreadcrumbItem>
             <BreadcrumbItem isActive>{title}</BreadcrumbItem>
           </Breadcrumb>

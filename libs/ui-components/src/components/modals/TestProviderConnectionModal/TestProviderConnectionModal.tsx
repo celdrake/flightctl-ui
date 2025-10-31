@@ -25,11 +25,11 @@ import { ExclamationTriangleIcon } from '@patternfly/react-icons/dist/js/icons/e
 import { ExclamationCircleIcon } from '@patternfly/react-icons/dist/js/icons/exclamation-circle-icon';
 import { InfoCircleIcon } from '@patternfly/react-icons/dist/js/icons/info-circle-icon';
 import { OutlinedQuestionCircleIcon } from '@patternfly/react-icons/dist/js/icons/outlined-question-circle-icon';
+import { AuthProvider, AuthProviderList } from '@flightctl/types';
 
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useAppContext } from '../../../hooks/useAppContext';
 import { getErrorMessage } from '../../../utils/error';
-import { AuthenticationProvider, AuthenticationProviderList } from '../../../types/extraTypes';
 
 type ValidationLevel = 'error' | 'warning' | 'info';
 
@@ -172,7 +172,7 @@ const TestProviderConnectionModal = ({ onClose }: TestProviderConnectionModalPro
   const { fetch } = useAppContext();
   const proxyFetch = fetch.proxyFetch;
 
-  const [providers, setProviders] = React.useState<AuthenticationProvider[]>([]);
+  const [providers, setProviders] = React.useState<AuthProvider[]>([]);
   const [selectedProvider, setSelectedProvider] = React.useState<string>('');
   const [isTesting, setIsTesting] = React.useState(false);
   const [validationResult, setValidationResult] = React.useState<ProviderValidationResult | null>(null);
@@ -187,7 +187,7 @@ const TestProviderConnectionModal = ({ onClose }: TestProviderConnectionModalPro
         if (!response.ok) {
           throw new Error(`Failed to fetch providers: ${response.statusText}`);
         }
-        const data = (await response.json()) as AuthenticationProviderList;
+        const data = (await response.json()) as AuthProviderList;
 
         if (data.items.length > 0) {
           setProviders(data.items);
@@ -256,7 +256,7 @@ const TestProviderConnectionModal = ({ onClose }: TestProviderConnectionModalPro
                       providers.map((provider) => (
                         <FormSelectOption
                           key={provider.metadata.name}
-                          label={`${provider.metadata.name} (${provider.spec.type})`}
+                          label={`${provider.metadata.name} (${provider.spec.providerType})`}
                           value={provider.metadata.name}
                         />
                       ))

@@ -3,14 +3,14 @@ import { Alert } from '@patternfly/react-core';
 import { CodeEditorProps as PfCodeEditorProps } from '@patternfly/react-code-editor';
 import { dump } from 'js-yaml';
 
-import { Device, Fleet, Repository } from '@flightctl/types';
+import { AuthProvider, Device, Fleet, Repository } from '@flightctl/types';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useAppContext } from '../../../hooks/useAppContext';
 import YamlEditorBase from './YamlEditorBase';
 
 import './YamlEditor.css';
 
-type FlightCtlYamlResource = Fleet | Device | Repository;
+type FlightCtlYamlResource = Fleet | Device | Repository | AuthProvider;
 
 type YamlEditorProps<R extends FlightCtlYamlResource> = Partial<Omit<PfCodeEditorProps, 'ref' | 'code'>> & {
   /** FlightCtl resource to display in the editor. */

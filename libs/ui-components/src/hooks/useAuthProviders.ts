@@ -1,10 +1,10 @@
 import * as React from 'react';
-import { AuthenticationProvider, AuthenticationProviderList } from '../types/extraTypes';
+import { AuthProvider, AuthProviderList } from '@flightctl/types';
 import { getErrorMessage } from '../utils/error';
 
 type UseAuthProvidersResult = {
-  providers: AuthenticationProvider[];
-  enabledProviders: AuthenticationProvider[];
+  providers: AuthProvider[];
+  enabledProviders: AuthProvider[];
   isLoading: boolean;
   error: string | undefined;
   refetch: () => void;
@@ -18,7 +18,7 @@ type ProxyFetchFunction = (endpoint: string, requestInit: RequestInit) => Promis
  * @returns Object containing providers list, loading state, error, and refetch function
  */
 export const useAuthProviders = (proxyFetch: ProxyFetchFunction): UseAuthProvidersResult => {
-  const [providers, setProviders] = React.useState<AuthenticationProvider[]>([]);
+  const [providers, setProviders] = React.useState<AuthProvider[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string>();
   const [refetchTrigger, setRefetchTrigger] = React.useState(0);
@@ -41,7 +41,7 @@ export const useAuthProviders = (proxyFetch: ProxyFetchFunction): UseAuthProvide
           throw new Error(`Failed to fetch authentication providers: ${response.status} ${response.statusText}`);
         }
 
-        const data = (await response.json()) as AuthenticationProviderList;
+        const data = (await response.json()) as AuthProviderList;
         setProviders(data.items || []);
       } catch (err) {
         setError(getErrorMessage(err));

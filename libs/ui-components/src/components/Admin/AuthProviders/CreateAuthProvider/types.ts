@@ -1,23 +1,24 @@
-import { AuthenticationProvider } from '../../../../types/extraTypes';
+import { AuthProvider } from '@flightctl/types';
+import { ProviderType } from '../../../../types/extraTypes';
 
 export type AuthProviderFormValues = {
   name: string;
-  type: 'OIDC' | 'OAuth2';
+  type: ProviderType;
   clientId: string;
   clientSecret: string;
   enabled: boolean;
-  issuer: string;
+  issuer?: string; // mandatory for OIDC, optional for OAuth2
+  usernameClaim?: string;
+  roleClaim?: string;
+  scopes?: string;
   // OAuth2 specific
-  authorizationUrl: string;
-  tokenUrl: string;
-  userInfoUrl: string;
-  // Optional claims
-  usernameClaim: string;
-  roleClaim: string;
+  authorizationUrl?: string;
+  tokenUrl?: string;
+  userInfoUrl?: string;
 };
 
 export type CreateAuthProviderFormProps = {
   onClose: VoidFunction;
-  onSuccess: (provider: AuthenticationProvider) => void;
-  authProvider?: AuthenticationProvider;
+  onSuccess: (provider: AuthProvider) => void;
+  authProvider?: AuthProvider;
 };

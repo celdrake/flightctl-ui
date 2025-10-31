@@ -14,7 +14,7 @@ import {
   Title,
 } from '@patternfly/react-core';
 import { ExclamationCircleIcon } from '@patternfly/react-icons/dist/js/icons/exclamation-circle-icon';
-import { AuthenticationProvider } from '@flightctl/ui-components/src/types/extraTypes';
+import { AuthProvider } from '@flightctl/types';
 import { getErrorMessage } from '@flightctl/ui-components/src/utils/error';
 import { useTranslation } from '@flightctl/ui-components/src/hooks/useTranslation';
 import { useAuthProviders } from '@flightctl/ui-components/src/hooks/useAuthProviders';
@@ -28,7 +28,7 @@ const LoginPage = () => {
   const { enabledProviders, isLoading, error: authProvidersError } = useAuthProviders(proxyFetch);
   const [error, setError] = React.useState<string>();
 
-  const handleProviderClick = async (provider: AuthenticationProvider) => {
+  const handleProviderClick = async (provider: AuthProvider) => {
     try {
       const providerName = provider.metadata.name;
       const response = await proxyFetch(`login?provider=${providerName}`, {
