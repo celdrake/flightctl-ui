@@ -55,10 +55,8 @@ export const logout = async () => {
   url ? (window.location.href = url) : window.location.reload();
 };
 
-export const redirectToLogin = async () => {
-  const response = await fetch(loginAPI);
-  const { url } = (await response.json()) as { url: string };
-  window.location.href = url;
+export const redirectToLogin = () => {
+  window.location.href = '/login';
 };
 
 const handleApiJSONResponse = async <R>(response: Response): Promise<R> => {
@@ -73,7 +71,7 @@ const handleApiJSONResponse = async <R>(response: Response): Promise<R> => {
   }
 
   if (response.status === 401) {
-    await redirectToLogin();
+    redirectToLogin();
   }
 
   throw new Error(await getErrorMsgFromApiResponse(response));
@@ -90,7 +88,7 @@ const handleAlertsJSONResponse = async <R>(response: Response): Promise<R> => {
   }
 
   if (response.status === 401) {
-    await redirectToLogin();
+    redirectToLogin();
   }
 
   // For 500/501 errors, return the status code for detection

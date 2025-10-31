@@ -23,6 +23,7 @@ import ErrorBoundary from '@flightctl/ui-components/src/components/common/ErrorB
 
 import AppLayout from './components/AppLayout/AppLayout';
 import NotFound from './components/AppLayout/NotFound';
+import LoginPage from './components/Login/LoginPage';
 import { AuthContext } from './context/AuthContext';
 
 const EnrollmentRequestDetails = React.lazy(
@@ -309,7 +310,8 @@ const getAppRoutes = (t: TFunction): ExtendedRouteObject[] => [
 const AppRouter = () => {
   const { t } = useTranslation();
 
-  const { loading, error } = React.useContext(AuthContext);
+  const { username, loading, authEnabled, error } = React.useContext(AuthContext);
+
   if (error) {
     return (
       <Bullseye>
@@ -340,7 +342,26 @@ const AppRouter = () => {
     );
   }
 
+  // Check if user needs to authenticate
+  const isAuthenticated = !authEnabled || !!username;
+  const isLoginPage = window.location.pathname === '/login';
+  const isCallbackPage = window.location.pathname === '/callback';
+
+  // Redirect to login if not authenticated and not already on login/callback page
+  if (!isAuthenticated && !isLoginPage && !isCallbackPage) {
+    window.location.href = '/login';
+    return null;
+  }
+
   const router = createBrowserRouter([
+    {
+      path: '/login',
+      element: <LoginPage />,
+    },
+    {
+      path: '/callback',
+      element: <Navigate to="/" replace />,
+    },
     {
       path: '/',
       element: <AppLayout />,

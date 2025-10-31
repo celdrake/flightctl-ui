@@ -34,6 +34,11 @@ type AAPRoundTripper struct {
 	Transport http.RoundTripper
 }
 
+// CELIA-WIP information must come from the auth config for this provider
+// WE don't have the info anymore from the ConfigmAP
+var aapClientId = "WIP"
+var wipInternalAuthURL = "WIP"
+
 func (c *AAPRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	resp, err := c.Transport.RoundTrip(req)
 	if err != nil {
@@ -80,7 +85,7 @@ func getAAPAuthHandler(authURL string, internalAuthURL *string) (*AAPAuthHandler
 
 func getClient(url string, tlsConfig *tls.Config) (*osincli.Client, error) {
 	oidcClientConfig := &osincli.ClientConfig{
-		ClientId:                 config.AuthClientId,
+		ClientId:                 aapClientId,
 		AuthorizeUrl:             fmt.Sprintf("%s/o/authorize/", url),
 		TokenUrl:                 fmt.Sprintf("%s/o/token/", url),
 		RedirectUrl:              config.BaseUiUrl + "/callback",
@@ -134,7 +139,7 @@ func (a *AAPAuthHandler) GetUserInfo(token string) (string, *http.Response, erro
 
 func (a *AAPAuthHandler) Logout(token string) (string, error) {
 	data := url.Values{}
-	data.Set("client_id", config.AuthClientId)
+	data.Set("client_id", aapClientId)
 	data.Set("token", token)
 
 	httpClient := http.Client{

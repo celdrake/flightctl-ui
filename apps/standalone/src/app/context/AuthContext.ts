@@ -1,9 +1,9 @@
 import * as React from 'react';
-import { loginAPI, redirectToLogin } from '../utils/apiCalls';
+import { loginAPI } from '../utils/apiCalls';
 import { ORGANIZATION_STORAGE_KEY } from '@flightctl/ui-components/src/utils/organizationStorage';
 
 const AUTH_DISABLED_STATUS_CODE = 418;
-const EXPIRATION = 'expiration';
+export const EXPIRATION = 'expiration';
 export let lastRefresh = 0;
 
 // max value for setTimeout
@@ -74,11 +74,13 @@ export const useAuthContext = () => {
             return;
           }
           if (resp.status === 401) {
-            await redirectToLogin();
+            // User is not authenticated - let the router handle redirect
+            setLoading(false);
             return;
           }
           if (resp.status !== 200) {
             setError('Failed to get user info');
+            setLoading(false);
             return;
           }
           const info = (await resp.json()) as { username: string };
@@ -88,6 +90,7 @@ export const useAuthContext = () => {
           // eslint-disable-next-line
           console.log(err);
           setError('Failed to get user info');
+          setLoading(false);
         }
       }
     };

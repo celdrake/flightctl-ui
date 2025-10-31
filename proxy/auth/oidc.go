@@ -34,6 +34,11 @@ type oidcServerResponse struct {
 	EndSessionEndpoint string `json:"end_session_endpoint"`
 }
 
+var oidcClientId = "WIP"
+
+// CELIA-WIP information must come from the auth config for this provider
+// WE don't have the info anymore from the ConfigmAP
+
 func getOIDCAuthHandler(authURL string, internalAuthURL *string) (*OIDCAuthHandler, error) {
 	tlsConfig, err := bridge.GetAuthTlsConfig()
 	if err != nil {
@@ -132,7 +137,7 @@ func getOIDCClient(oidcConfig oidcServerResponse, tlsConfig *tls.Config) (*osinc
 	}
 
 	oidcClientConfig := &osincli.ClientConfig{
-		ClientId:                 config.AuthClientId,
+		ClientId:                 oidcClientId,
 		AuthorizeUrl:             oidcConfig.AuthEndpoint,
 		TokenUrl:                 oidcConfig.TokenEndpoint,
 		RedirectUrl:              config.BaseUiUrl + "/callback",
@@ -185,7 +190,7 @@ func (o *OIDCAuthHandler) Logout(token string) (string, error) {
 
 	uq := u.Query()
 	uq.Add("post_logout_redirect_uri", config.BaseUiUrl)
-	uq.Add("client_id", config.AuthClientId)
+	uq.Add("client_id", oidcClientId)
 	u.RawQuery = uq.Encode()
 	return u.String(), nil
 }

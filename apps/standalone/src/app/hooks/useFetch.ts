@@ -32,6 +32,7 @@ export const useFetch = () => {
 
   const getWsEndpoint = React.useCallback((deviceId: string) => `${wsEndpoint}/api/terminal/${deviceId}`, []);
 
+  // CELIA-WIP: needs check
   const checkPermissions = React.useCallback(() => Promise.resolve(true), []);
 
   const proxyFetch = React.useCallback(async (endpoint: string, requestInit: RequestInit): Promise<Response> => {
