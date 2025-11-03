@@ -26,8 +26,22 @@ const LoginPage = () => {
           setLoading(false);
           return;
         }
+
+        if (!config.providers) {
+          // CELIA-WIP: remove when the API returns the list of providers again
+          const mockedK8sProvider: AuthProviderInfo = {
+            name: 'k8s',
+            type: AuthProviderInfo.type.K8S,
+            displayName: 'Kubernetes Token',
+            isDefault: true,
+            isStatic: true,
+          };
+
+          config.providers = [mockedK8sProvider];
+        }
+
         // CELIA-WIP: we don't have a "enabled" flag, are only enabled ones being returned?
-        const enabledProviders = config.providers?.filter((_provider, index) => index === 0);
+        const enabledProviders = config.providers?.filter((provider) => provider.isDefault);
         if (enabledProviders && enabledProviders.length > 0) {
           setProviders(enabledProviders);
           if (enabledProviders.length === 1 && isK8sTokenProvider(enabledProviders[0])) {
@@ -84,7 +98,6 @@ const LoginPage = () => {
   }
 
   // CELIA-WIP: If only one provider and not k8s, redirect to login for that provider
-
   return (
     <PageSection isFilled>
       <Bullseye>

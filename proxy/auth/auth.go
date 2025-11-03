@@ -3,7 +3,6 @@ package auth
 import (
 	"crypto/tls"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 
@@ -53,60 +52,71 @@ func NewAuth(apiTlsConfig *tls.Config) (*AuthHandler, error) {
 
 // getProviderForLogin creates a provider instance by fetching the latest auth config
 func (a *AuthHandler) getProviderForLogin(providerName string) (AuthProvider, error) {
-	// Fetch the latest auth config to support dynamic provider changes
-	authConfig, err := getAuthInfo(a.apiTlsConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get auth config: %w", err)
-	}
+	// TODO: Fetch the latest auth config to support dynamic provider changes
+	// The backend is currently implementing the new auth provider types
+	// For now, we mock a K8s token provider
 
-	if authConfig.Providers == nil {
-		return nil, fmt.Errorf("no providers configured")
-	}
-
-	// Find the provider config
-	var providerInfo *v1alpha1.AuthProviderInfo
-	for i, pc := range *authConfig.Providers {
-		if pc.Name != nil && *pc.Name == providerName {
-			providerInfo = &(*authConfig.Providers)[i]
-			break
-		}
-	}
-
-	if providerInfo == nil {
-		return nil, fmt.Errorf("provider not found: %s", providerName)
-	}
-
-	// Create provider based on type
-	var provider AuthProvider
-	providerType := ""
-	if providerInfo.Type != nil {
-		providerType = string(*providerInfo.Type)
-	}
-
-	switch providerType {
-	case "k8s":
-		// For K8s providers, check if they have OAuth fields (ClientId, TokenUrl)
-		// If not, it's a token-only provider
-		if providerInfo.ClientId == nil && providerInfo.TokenUrl == nil {
-			// Always validate against the flightctl backend API
-			// The backend will validate the token against the appropriate K8s cluster
-			provider = NewTokenAuthProvider(a.apiTlsConfig, config.FctlApiUrl)
-			log.GetLogger().Debugf("Created K8s token provider: %s", providerName)
-		} else {
-			// TODO: Handle K8s with OpenShift OAuth flow
-			return nil, fmt.Errorf("K8s OAuth provider not yet implemented: %s", providerName)
-		}
-	case "oidc":
-		// TODO: Initialize OIDC provider
-		return nil, fmt.Errorf("OIDC provider not yet implemented: %s", providerName)
-	case "aap":
-		// TODO: Initialize AAP provider
-		return nil, fmt.Errorf("AAP provider not yet implemented: %s", providerName)
-	default:
-		return nil, fmt.Errorf("unknown provider type: %s for provider: %s", providerType, providerName)
-	}
+	// Mock: Always return a K8s token provider
+	// This will validate tokens against the flightctl backend API
+	provider := NewTokenAuthProvider(a.apiTlsConfig, config.FctlApiUrl)
+	log.GetLogger().Debugf("Created K8s token provider (mocked): %s", providerName)
 
 	return provider, nil
+
+	// TODO: Uncomment and implement once backend has AuthProviderInfo available
+	//authConfig, err := getAuthInfo(a.apiTlsConfig)
+	//if err != nil {
+	//	return nil, fmt.Errorf("failed to get auth config: %w", err)
+	//}
+	//
+	//if authConfig.Providers == nil {
+	//	return nil, fmt.Errorf("no providers configured")
+	//}
+	//
+	//// Find the provider config
+	//var providerInfo *v1alpha1.AuthProviderInfo
+	//for i, pc := range *authConfig.Providers {
+	//	if pc.Name != nil && *pc.Name == providerName {
+	//		providerInfo = &(*authConfig.Providers)[i]
+	//		break
+	//	}
+	//}
+	//
+	//if providerInfo == nil {
+	//	return nil, fmt.Errorf("provider not found: %s", providerName)
+	//}
+	//
+	//// Create provider based on type
+	//var provider AuthProvider
+	//providerTypeStr := ""
+	//if providerInfo.Type != nil {
+	//	providerTypeStr = string(*providerInfo.Type)
+	//}
+	//
+	//switch providerTypeStr {
+	//case "k8s":
+	//	// For K8s providers, check if they have OAuth fields (ClientId, TokenUrl)
+	//	// If not, it's a token-only provider
+	//	if providerInfo.ClientId == nil && providerInfo.TokenUrl == nil {
+	//		// Always validate against the flightctl backend API
+	//		// The backend will validate the token against the appropriate K8s cluster
+	//		provider = NewTokenAuthProvider(a.apiTlsConfig, config.FctlApiUrl)
+	//		log.GetLogger().Debugf("Created K8s token provider: %s", providerName)
+	//	} else {
+	//		// TODO: Handle K8s with OpenShift OAuth flow
+	//		return nil, fmt.Errorf("K8s OAuth provider not yet implemented: %s", providerName)
+	//	}
+	//case "oidc":
+	//	// TODO: Initialize OIDC provider
+	//	return nil, fmt.Errorf("OIDC provider not yet implemented: %s", providerName)
+	//case "aap":
+	//	// TODO: Initialize AAP provider
+	//	return nil, fmt.Errorf("AAP provider not yet implemented: %s", providerName)
+	//default:
+	//	return nil, fmt.Errorf("unknown provider type: %s for provider: %s", providerTypeStr, providerName)
+	//}
+	//
+	//return provider, nil
 }
 
 func (a AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
@@ -194,6 +204,7 @@ func (a AuthHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 	// Get token and provider from session cookie
 	tokenData, err := ParseSessionCookie(r)
 	if err != nil || tokenData.Token == "" {
+		w.Header().Set("Clear-Site-Data", `"cookies"`)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}

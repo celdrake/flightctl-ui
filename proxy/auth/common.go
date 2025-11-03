@@ -118,3 +118,21 @@ func getToken(r *http.Request) (string, error) {
 	token = strings.TrimSpace(token)
 	return token, nil
 }
+
+type ErrorResponse struct {
+	Error string `json:"error"`
+}
+
+func respondWithError(w http.ResponseWriter, statusCode int, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	errorResp := ErrorResponse{Error: message}
+	response, err := json.Marshal(errorResp)
+	if err != nil {
+		log.GetLogger().WithError(err).Warn("Failed to marshal error response")
+		return
+	}
+	if _, err := w.Write(response); err != nil {
+		log.GetLogger().WithError(err).Warn("Failed to write error response")
+	}
+}

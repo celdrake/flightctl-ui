@@ -56,7 +56,7 @@ const OrganizationAssignmentSection = () => {
             <TextField
               name="claimPath"
               aria-label={t('Claim path')}
-              helperText={t('Path to the claim containing the organization identifier (e.g., "groups.0")')}
+              helperText={t('Dot notation path to the claim (e.g., "groups", "custom_claims.org_id", ...)')}
             />
           </FormGroup>
           <FormGroup label={t('Organization name prefix')}>

@@ -32,19 +32,19 @@ type TokenLoginFormProps = {
 
 const TokenLoginForm = ({ provider, onBack }: TokenLoginFormProps) => {
   const { t } = useTranslation();
+  const { proxyFetch } = useFetch();
   const [token, setToken] = React.useState('');
   const [validationError, setValidationError] = React.useState<string>('');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState<string>();
-  const { proxyFetch } = useFetch();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     setIsSubmitting(true);
     setSubmitError(undefined);
 
-    const postToken = async () => {
+    try {
       const response = await proxyFetch('login/token', {
         method: 'POST',
         headers: {
@@ -52,20 +52,31 @@ const TokenLoginForm = ({ provider, onBack }: TokenLoginFormProps) => {
         },
         body: JSON.stringify({ token, provider: provider.name }),
       });
-      const expiration = response as { expiresIn?: number };
 
-      if (expiration.expiresIn) {
+      if (!response.ok) {
+        let errorMessage: string | undefined;
+        try {
+          const errorData = (await response.json()) as { error?: string };
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch {
+          // If parsing fails, use the generic error message
+        } finally {
+          setSubmitError(errorMessage || t('Access token is not valid, please provide a valid token'));
+          setIsSubmitting(false);
+        }
+        return;
+      }
+
+      const data = (await response.json()) as { expiresIn?: number };
+      if (data.expiresIn) {
         const now = nowInSeconds();
-        localStorage.setItem('expiration', `${now + expiration.expiresIn}`);
+        localStorage.setItem('expiration', `${now + data.expiresIn}`);
       }
       window.location.href = '/';
-    };
-
-    try {
-      void postToken();
     } catch (err) {
       setSubmitError(getErrorMessage(err));
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -93,13 +104,6 @@ const TokenLoginForm = ({ provider, onBack }: TokenLoginFormProps) => {
               {t('Login with {{ providerName }}', { providerName: provider.displayName || provider.name })}
             </Title>
           </StackItem>
-          {submitError && (
-            <StackItem>
-              <Alert variant="danger" title={t('Authentication failed')} isInline>
-                {submitError}
-              </Alert>
-            </StackItem>
-          )}
 
           <StackItem>
             <FlightCtlForm>
@@ -133,6 +137,9 @@ kubectl create token <username> -n <namespace> --duration=24h`}
                     } else {
                       setValidationError('');
                     }
+                    if (submitError) {
+                      setSubmitError(undefined);
+                    }
                     setToken(tokenVal);
                   }}
                   placeholder={t('Enter your Kubernetes token...')}
@@ -151,6 +158,13 @@ kubectl create token <username> -n <namespace> --duration=24h`}
                 </FormHelperText>
               </FormGroupWithHelperText>
 
+              {submitError && (
+                <StackItem>
+                  <Alert variant="danger" title={t('Authentication failed')} isInline>
+                    {submitError}
+                  </Alert>
+                </StackItem>
+              )}
               <FlightCtlActionGroup>
                 <Button
                   variant="primary"

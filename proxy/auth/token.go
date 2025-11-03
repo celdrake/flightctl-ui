@@ -61,13 +61,18 @@ func (t *TokenAuthProvider) ValidateToken(token string) (TokenData, *int64, erro
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
-		return TokenData{}, nil, fmt.Errorf("invalid token")
+		// Check if the token is expired by examining the exp claim
+		expiresIn := extractTokenExpiration(token)
+		if expiresIn != nil && *expiresIn == 0 {
+			return TokenData{}, nil, fmt.Errorf("Token has expired")
+		}
+		return TokenData{}, nil, fmt.Errorf("Token is invalid or unauthorized")
 	}
 
 	// Accept any successful response (2xx) or even some 4xx errors that aren't auth-related
 	// as proof the token is valid
 	if resp.StatusCode < 200 || resp.StatusCode >= 500 {
-		return TokenData{}, nil, fmt.Errorf("token validation failed")
+		return TokenData{}, nil, fmt.Errorf("Token validation failed")
 	}
 
 	tokenData := TokenData{
@@ -219,50 +224,41 @@ func (t *TokenAuthProvider) GetLoginRedirectURL() string {
 // TokenLogin handles token-based login
 func (a AuthHandler) TokenLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusMethodNotAllowed)
+		respondWithError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		log.GetLogger().WithError(err).Warn("Failed to read request body")
-		w.WriteHeader(http.StatusBadRequest)
+		respondWithError(w, http.StatusBadRequest, "Failed to read request body")
 		return
 	}
 
 	var loginParams TokenLoginParameters
 	err = json.Unmarshal(body, &loginParams)
 	if err != nil {
-		log.GetLogger().WithError(err).Warn("Failed to unmarshal request body")
-		w.WriteHeader(http.StatusBadRequest)
+		respondWithError(w, http.StatusBadRequest, "Invalid request format")
 		return
 	}
 
-	if loginParams.Token == "" {
-		log.GetLogger().Warn("Empty token provided")
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	if loginParams.Provider == "" {
-		log.GetLogger().Warn("Empty provider name")
-		w.WriteHeader(http.StatusBadRequest)
+	if loginParams.Token == "" || loginParams.Provider == "" {
+		respondWithError(w, http.StatusBadRequest, "Token and provider name are required")
 		return
 	}
 
 	// Get the provider for login (fetches latest auth config)
 	provider, err := a.getProviderForLogin(loginParams.Provider)
 	if err != nil {
-		log.GetLogger().WithError(err).Warnf("Failed to get provider: %s", loginParams.Provider)
-		w.WriteHeader(http.StatusBadRequest)
+		log.GetLogger().WithError(err).Warnf("Could not find provider: %s", loginParams.Provider)
+		respondWithError(w, http.StatusBadRequest, fmt.Sprintf("Invalid authentication provider: %s", loginParams.Provider))
 		return
 	}
 
 	// Cast to TokenAuthProvider (we know it's token auth from the UI)
 	tokenProvider, ok := provider.(*TokenAuthProvider)
 	if !ok {
-		log.GetLogger().Warnf("Provider %s is not a token auth provider", loginParams.Provider)
-		w.WriteHeader(http.StatusBadRequest)
+		log.GetLogger().Warnf("Provider %s is not a token provider", loginParams.Provider)
+		respondWithError(w, http.StatusBadRequest, fmt.Sprintf("Provider %s is not configured for token authentication", loginParams.Provider))
 		return
 	}
 
@@ -270,7 +266,7 @@ func (a AuthHandler) TokenLogin(w http.ResponseWriter, r *http.Request) {
 	tokenData, expires, err := tokenProvider.ValidateToken(loginParams.Token)
 	if err != nil {
 		log.GetLogger().WithError(err).Warn("Token validation failed")
-		w.WriteHeader(http.StatusUnauthorized)
+		respondWithError(w, http.StatusUnauthorized, err.Error())
 		return
 	}
 

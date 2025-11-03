@@ -44,6 +44,14 @@ func createReverseProxy(apiURL string) (*url.URL, *httputil.ReverseProxy) {
 		for _, h := range filterHeaders {
 			r.Header.Del(h)
 		}
+
+		// If the backend returns 401 Unauthorized, clear the session cookie
+		// This handles the case where the token in the cookie has expired
+		if r.StatusCode == http.StatusUnauthorized {
+			r.Header.Set("Clear-Site-Data", `"cookies"`)
+			log.GetLogger().Debug("Backend returned 401, clearing session cookies")
+		}
+
 		return nil
 	}
 	return target, proxy

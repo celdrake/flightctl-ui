@@ -26,7 +26,7 @@ const AuthProviderGeneralDetailsCard = ({ authProvider }: { authProvider: AuthPr
 
       <DescriptionListGroup>
         <DescriptionListTerm>{t('Type')}</DescriptionListTerm>
-        <DescriptionListDescription>{spec.providerType.toUpperCase()}</DescriptionListDescription>
+        <DescriptionListDescription>{spec.providerType}</DescriptionListDescription>
       </DescriptionListGroup>
 
       <DescriptionListGroup>

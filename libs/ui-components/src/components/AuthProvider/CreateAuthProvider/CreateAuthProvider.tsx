@@ -69,7 +69,9 @@ const CreateAuthProvider = ({ authProviderId }: { authProviderId: string | undef
       <CreateAuthProviderForm
         authProvider={authProviderDetails}
         onClose={() => navigate(ROUTE.AUTH_PROVIDERS)}
-        onSuccess={(authProvider) => navigate({ route: ROUTE.AUTH_PROVIDER_EDIT, postfix: authProvider.metadata.name })}
+        onSuccess={(authProvider) =>
+          navigate({ route: ROUTE.AUTH_PROVIDER_DETAILS, postfix: authProvider.metadata.name })
+        }
       />
     );
   }

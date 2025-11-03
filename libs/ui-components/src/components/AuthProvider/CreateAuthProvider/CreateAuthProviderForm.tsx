@@ -44,7 +44,6 @@ const ProviderTypeSection = () => {
   );
 };
 
-// CELIA-WIP: namefield validations not working
 export const AuthProviderForm = ({ isEdit }: { isEdit?: boolean }) => {
   const { t } = useTranslation();
   const { values } = useFormikContext<AuthProviderFormValues>();
