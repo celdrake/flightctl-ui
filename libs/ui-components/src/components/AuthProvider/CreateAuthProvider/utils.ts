@@ -295,7 +295,13 @@ export const authProviderSchema = (t: TFunction) => (values: AuthProviderFormVal
     clientId: Yup.string().required(t('Client ID is required')),
     clientSecret: Yup.string().required(t('Client secret is required')),
     enabled: Yup.boolean(),
-    scopes: Yup.array().of(Yup.string()).min(1, t('At least one scope is required')),
+    scopes: Yup.array()
+      .of(Yup.string())
+      .min(1, t('At least one scope is required'))
+      .test('unique-scopes', t('Please remove duplicate scopes'), (scopes) => {
+        const uniqueScopes = new Set(scopes);
+        return uniqueScopes.size === scopes?.length;
+      }),
     usernameClaim: validDotNotationPath(t),
     roleClaim: validDotNotationPath(t),
     orgAssignmentType: Yup.string()

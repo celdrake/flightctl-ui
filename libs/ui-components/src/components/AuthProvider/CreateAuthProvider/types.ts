@@ -66,3 +66,14 @@ export type AuthProviderFormValues = {
   orgNamePrefix?: string; // OrgAssignment: Dynamic and perUser
   orgNameSuffix?: string; // OrgAssignment: Dynamic and perUser
 };
+
+// Test connection types
+export type FieldValidation = {
+  valid: boolean;
+  value?: string;
+  notes?: string[];
+};
+
+export type TestConnectionResponse = {
+  results: Record<string, FieldValidation>;
+};

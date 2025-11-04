@@ -17,6 +17,7 @@ import { useTranslation } from '../../hooks/useTranslation';
 import { useOrganizationGuardContext } from './OrganizationGuard';
 import OrganizationSelector from './OrganizationSelector';
 import { ROUTE, useNavigate } from '../../hooks/useNavigate';
+import CogIcon from '@patternfly/react-icons/dist/js/icons/cog-icon';
 
 type OrganizationDropdownProps = {
   organizationName?: string;
@@ -93,9 +94,12 @@ const PageNavigation = () => {
                   </ToolbarItem>
                 )}
                 <ToolbarItem>
-                  <Button variant="link" onClick={() => navigate(ROUTE.AUTH_PROVIDERS)}>
-                    {t('Admin settings')}
-                  </Button>
+                  <Button
+                    variant="plain"
+                    aria-label={t('Admin settings')}
+                    onClick={() => navigate(ROUTE.AUTH_PROVIDERS)}
+                    icon={<CogIcon />}
+                  />
                 </ToolbarItem>
               </ToolbarContent>
             </Toolbar>

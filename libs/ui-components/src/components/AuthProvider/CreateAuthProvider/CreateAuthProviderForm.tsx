@@ -14,7 +14,13 @@ import ListItemField from '../../form/ListItemField';
 import FlightCtlForm from '../../form/FlightCtlForm';
 import FlightCtlActionGroup from '../../form/FlightCtlActionGroup';
 import { getDnsSubdomainValidations } from '../../form/validations';
-import { AuthProviderFormValues, DEFAULT_ROLE_CLAIM, DEFAULT_USERNAME_CLAIM, ProviderType } from './types';
+import {
+  AuthProviderFormValues,
+  DEFAULT_ROLE_CLAIM,
+  DEFAULT_USERNAME_CLAIM,
+  OrgAssignmentType,
+  ProviderType,
+} from './types';
 
 import { authProviderSchema, getAuthProvider, getAuthProviderPatches, getInitValues } from './utils';
 import { getErrorMessage } from '../../../utils/error';
@@ -23,6 +29,8 @@ import { FormGroupWithHelperText } from '../../common/WithHelperText';
 
 import Oauth2ProviderFields from './Oauth2ProviderFields';
 import OrganizationAssignmentSection from './AuthOrganizationAssignment';
+import TestConnectionModal from '../TestConnectionModal/TestConnectionModal';
+import { TestConnectionResponse } from './types';
 
 const ProviderTypeSection = () => {
   const { t } = useTranslation();
@@ -117,8 +125,49 @@ const CreateAuthProviderFormContent = ({
   isEdit: boolean;
 }>) => {
   const { t } = useTranslation();
-  const { isValid, dirty, submitForm, isSubmitting } = useFormikContext<AuthProviderFormValues>();
+  const { isValid, dirty, submitForm, isSubmitting, values } = useFormikContext<AuthProviderFormValues>();
+  const { proxyFetch } = useFetch();
   const isSubmitDisabled = isSubmitting || !dirty || !isValid;
+
+  const [isTesting, setIsTesting] = React.useState(false);
+  const [testResults, setTestResults] = React.useState<TestConnectionResponse | null>(null);
+  const [testError, setTestError] = React.useState<string>();
+
+  const handleTestConnection = async () => {
+    setIsTesting(true);
+    setTestError(undefined);
+
+    try {
+      const requestBody = {
+        providerType: values.providerType,
+        issuer: values.issuer,
+        authorizationUrl: values.authorizationUrl,
+        tokenUrl: values.tokenUrl,
+        userinfoUrl: values.userinfoUrl,
+        clientId: values.clientId,
+      };
+
+      const response = await proxyFetch('test-auth-provider-connection', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `HTTP ${response.status}`);
+      }
+
+      const data = (await response.json()) as TestConnectionResponse;
+      setTestResults(data);
+    } catch (err) {
+      setTestError(getErrorMessage(err));
+    } finally {
+      setIsTesting(false);
+    }
+  };
 
   return (
     <FlightCtlForm>
@@ -126,14 +175,28 @@ const CreateAuthProviderFormContent = ({
         <AuthProviderForm isEdit={isEdit} />
       </Grid>
       {children}
+      {testError && (
+        <Alert isInline variant="danger" title={t('Test connection failed')}>
+          {testError}
+        </Alert>
+      )}
       <FlightCtlActionGroup>
         <Button variant="primary" onClick={submitForm} isLoading={isSubmitting} isDisabled={isSubmitDisabled}>
           {isEdit ? t('Save') : t('Create authentication provider')}
+        </Button>
+        <Button
+          variant="secondary"
+          onClick={handleTestConnection}
+          isLoading={isTesting}
+          isDisabled={!isValid || isSubmitting || isTesting}
+        >
+          {t('Test connection')}
         </Button>
         <Button variant="link" isDisabled={isSubmitting} onClick={onClose}>
           {t('Cancel')}
         </Button>
       </FlightCtlActionGroup>
+      {testResults && <TestConnectionModal onClose={() => setTestResults(null)} results={testResults} />}
     </FlightCtlForm>
   );
 };

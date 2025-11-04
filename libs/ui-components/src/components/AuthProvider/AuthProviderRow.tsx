@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { ActionsColumn, Td, Tr } from '@patternfly/react-table';
-import { Switch } from '@patternfly/react-core';
+import { Label } from '@patternfly/react-core';
 
 import { AuthProvider } from '@flightctl/types';
 import { useTranslation } from '../../hooks/useTranslation';
@@ -17,7 +17,12 @@ const AuthProviderRow = ({ provider, onDeleteClick }: { provider: AuthProvider; 
   const [canUpdate] = useAccessReview(RESOURCE.AUTH_PROVIDER, VERB.UPDATE);
   const [canDelete] = useAccessReview(RESOURCE.AUTH_PROVIDER, VERB.DELETE);
 
-  const actions: Array<{ title: string; onClick: () => void }> = [];
+  const actions = [
+    {
+      title: t('View details'),
+      onClick: () => navigate({ route: ROUTE.AUTH_PROVIDER_DETAILS, postfix: providerName }),
+    },
+  ];
 
   if (canUpdate) {
     actions.push({
@@ -33,7 +38,17 @@ const AuthProviderRow = ({ provider, onDeleteClick }: { provider: AuthProvider; 
     });
   }
 
-  const url = isOAuth2Provider(provider.spec) ? provider.spec.authorizationUrl : provider.spec.issuer;
+  let url: string = 'N/A';
+  let urlTitle: string = '';
+  if (isOAuth2Provider(provider.spec)) {
+    url = provider.spec.authorizationUrl;
+    urlTitle = t('Authorization URL');
+  } else {
+    url = provider.spec.issuer;
+    urlTitle = t('Issuer URL');
+  }
+
+  const isEnabled = provider.spec.enabled ?? true;
 
   return (
     <Tr>
@@ -41,9 +56,11 @@ const AuthProviderRow = ({ provider, onDeleteClick }: { provider: AuthProvider; 
         <Link to={{ route: ROUTE.AUTH_PROVIDER_DETAILS, postfix: providerName }}>{providerName}</Link>
       </Td>
       <Td dataLabel={t('Type')}>{provider.spec.providerType}</Td>
-      <Td dataLabel={t('Issuer/Authorization URL')}>{url || 'N/A'}</Td>
+      <Td dataLabel={urlTitle}>{url || 'N/A'}</Td>
       <Td dataLabel={t('Enabled')}>
-        <Switch isChecked={provider.spec.enabled ?? true} aria-label={t('Is provider enabled')} />
+        <Label color={isEnabled ? 'green' : undefined} isDisabled={!isEnabled}>
+          {isEnabled ? t('Enabled') : t('Disabled')}
+        </Label>
       </Td>
       {actions.length > 0 && (
         <Td isActionCell>

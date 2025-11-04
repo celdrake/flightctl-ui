@@ -49,6 +49,8 @@ const getResourceEndpoint = (obj: FlightCtlYamlResource) => {
       return `devices/${resourceName}`;
     case ResourceKind.REPOSITORY:
       return `repositories/${resourceName}`;
+    case ResourceKind.AUTH_PROVIDER:
+      return `authproviders/${resourceName}`;
     default:
       throw new Error(`Unsupported resource kind: ${kind}`);
   }

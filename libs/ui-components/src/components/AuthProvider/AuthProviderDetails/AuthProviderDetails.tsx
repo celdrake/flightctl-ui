@@ -1,12 +1,12 @@
 import * as React from 'react';
-import { Card, CardBody, DropdownItem, DropdownList, Nav, NavList } from '@patternfly/react-core';
+import { DropdownItem, DropdownList, Nav, NavList } from '@patternfly/react-core';
 
 import { useFetchPeriodically } from '../../../hooks/useFetchPeriodically';
 import { AuthProvider } from '@flightctl/types';
 
 import DetailsPage from '../../DetailsPage/DetailsPage';
 import DetailsPageActions from '../../DetailsPage/DetailsPageActions';
-import AuthProviderGeneralDetailsCard from './AuthProviderGeneralDetailsCard';
+import AuthProviderDetailsTab from './AuthProviderDetailsTab';
 import DeleteAuthProviderModal from './DeleteAuthProviderModal';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { ROUTE, useNavigate } from '../../../hooks/useNavigate';
@@ -78,16 +78,7 @@ const AuthProviderDetails = () => {
           <Routes>
             <Route index element={<Navigate to="details" replace />} />
 
-            <Route
-              path="details"
-              element={
-                <Card>
-                  <CardBody>
-                    <AuthProviderGeneralDetailsCard authProvider={authProviderDetails} />
-                  </CardBody>
-                </Card>
-              }
-            />
+            <Route path="details" element={<AuthProviderDetailsTab authProvider={authProviderDetails} />} />
             <Route path="yaml" element={<YamlEditor apiObj={authProviderDetails} refetch={refetch} />} />
           </Routes>
           {isDeleteModalOpen && (

@@ -2,8 +2,7 @@ import * as React from 'react';
 import {
   Alert,
   Button,
-  CodeBlock,
-  CodeBlockCode,
+  FormGroup,
   FormHelperText,
   Grid,
   GridItem,
@@ -23,7 +22,6 @@ import { useFetch } from '../../hooks/useFetch';
 import { isValidJwtTokenFormat, nowInSeconds } from '../../utils/k8sProvider';
 import FlightCtlForm from '../form/FlightCtlForm';
 import FlightCtlActionGroup from '../form/FlightCtlActionGroup';
-import { FormGroupWithHelperText } from '../common/WithHelperText';
 
 type TokenLoginFormProps = {
   provider: AuthProviderInfo;
@@ -101,30 +99,13 @@ const TokenLoginForm = ({ provider, onBack }: TokenLoginFormProps) => {
         <Stack hasGutter>
           <StackItem>
             <Title headingLevel="h2" size="xl">
-              {t('Login with {{ providerName }}', { providerName: provider.displayName || provider.name })}
+              {t('Log in with {{ providerName }}', { providerName: provider.displayName || provider.name })}
             </Title>
           </StackItem>
 
           <StackItem>
             <FlightCtlForm>
-              <FormGroupWithHelperText
-                label={t('Access Token')}
-                content={
-                  <div>
-                    <p className="pf-v5-u-mb-md">{t('Create a Kubernetes service account token using kubectl:')}</p>
-                    <CodeBlock>
-                      <CodeBlockCode>
-                        {`# Create a service account
-kubectl create serviceaccount <username> -n default
-
-# Create a token for the service account
-kubectl create token <username> -n <namespace> --duration=24h`}
-                      </CodeBlockCode>
-                    </CodeBlock>
-                  </div>
-                }
-                isRequired
-              >
+              <FormGroup label={t('Access token')} isRequired>
                 <TextArea
                   id="accessToken"
                   value={token}
@@ -156,7 +137,7 @@ kubectl create token <username> -n <namespace> --duration=24h`}
                     </HelperTextItem>
                   </HelperText>
                 </FormHelperText>
-              </FormGroupWithHelperText>
+              </FormGroup>
 
               {submitError && (
                 <StackItem>
