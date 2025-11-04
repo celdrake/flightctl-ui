@@ -1,6 +1,12 @@
 import * as Yup from 'yup';
 import { TFunction } from 'i18next';
-import { AuthProvider, AuthProviderSpec, OAuth2ProviderSpec, PatchRequest } from '@flightctl/types';
+import {
+  AuthOrganizationAssignment,
+  AuthProvider,
+  AuthProviderSpec,
+  OAuth2ProviderSpec,
+  PatchRequest,
+} from '@flightctl/types';
 import { appendJSONPatch } from '../../../utils/patch';
 import {
   AuthProviderFormValues,
@@ -11,7 +17,7 @@ import {
   isOrgAssignmentDynamic,
   isOrgAssignmentPerUser,
 } from './types';
-import { validDnsSubdomainPart, validJsonPath, validKubernetesDnsSubdomain } from '../../form/validations';
+import { validDnsSubdomainPart, validDotNotationPath, validKubernetesDnsSubdomain } from '../../form/validations';
 
 export const getInitValues = (authProvider?: AuthProvider): AuthProviderFormValues => {
   if (!authProvider) {
@@ -79,24 +85,39 @@ export const getInitValues = (authProvider?: AuthProvider): AuthProviderFormValu
   };
 };
 
-export const getAuthProvider = (values: AuthProviderFormValues): AuthProvider => {
-  let organizationAssignment: AuthProviderSpec['organizationAssignment'];
-
+const getOrgAssignment = (values: AuthProviderFormValues): AuthOrganizationAssignment => {
   if (values.orgAssignmentType === OrgAssignmentType.Static) {
-    organizationAssignment = {
+    return {
       type: OrgAssignmentType.Static,
       organizationName: values.orgName || '',
     };
+  }
+
+  let orgAssignment: AuthOrganizationAssignment;
+  if (values.orgAssignmentType === OrgAssignmentType.PerUser) {
+    orgAssignment = {
+      type: OrgAssignmentType.PerUser,
+    };
   } else {
-    organizationAssignment = {
-      type: values.orgAssignmentType,
-      claimPath: values.claimPath || '', // OrgAssignment: Dynamic only
-      organizationNamePrefix: values.orgNamePrefix, // OrgAssignment: Dynamic/perUser
-      organizationNameSuffix: values.orgNameSuffix, // OrgAssignment: Dynamic/perUser
+    orgAssignment = {
+      type: OrgAssignmentType.Dynamic,
+      claimPath: values.claimPath || '',
     };
   }
 
+  // Only set the optional fields when they are non-null
+  if (values.orgNamePrefix) {
+    orgAssignment.organizationNamePrefix = values.orgNamePrefix;
+  }
+  if (values.orgNameSuffix) {
+    orgAssignment.organizationNameSuffix = values.orgNameSuffix;
+  }
+  return orgAssignment;
+};
+
+export const getAuthProvider = (values: AuthProviderFormValues): AuthProvider => {
   const baseSpec = {
+    providerType: values.providerType,
     clientId: values.clientId,
     clientSecret: values.clientSecret,
     enabled: values.enabled,
@@ -104,11 +125,10 @@ export const getAuthProvider = (values: AuthProviderFormValues): AuthProvider =>
     scopes: values.scopes,
     usernameClaim: values.usernameClaim,
     roleClaim: values.roleClaim,
-    organizationAssignment,
+    organizationAssignment: getOrgAssignment(values),
   };
 
   let spec: AuthProviderSpec;
-
   if (values.providerType === ProviderType.OAuth2) {
     spec = {
       ...baseSpec,
@@ -181,6 +201,17 @@ const patchAuthProviderFields = (
     });
   }
 
+  // Replace the entire organizationAssignment object if it changed
+  // The new spec only has the fields that related to the chosen org assignment type
+  if (JSON.stringify(spec.organizationAssignment) !== JSON.stringify(newSpec.organizationAssignment)) {
+    appendJSONPatch({
+      patches,
+      originalValue: spec.organizationAssignment,
+      newValue: newSpec.organizationAssignment,
+      path: '/spec/organizationAssignment',
+    });
+  }
+
   appendJSONPatch({
     patches,
     originalValue: spec.usernameClaim,
@@ -194,16 +225,6 @@ const patchAuthProviderFields = (
     newValue: newSpec.roleClaim,
     path: '/spec/roleClaim',
   });
-
-  // Organization assignment
-  if (JSON.stringify(spec.organizationAssignment) !== JSON.stringify(newSpec.organizationAssignment)) {
-    appendJSONPatch({
-      patches,
-      originalValue: spec.organizationAssignment,
-      newValue: newSpec.organizationAssignment,
-      path: '/spec/organizationAssignment',
-    });
-  }
 };
 
 const patchProviderTypeSpecificFields = (patches: PatchRequest, spec: AuthProviderSpec, newSpec: AuthProviderSpec) => {
@@ -231,9 +252,9 @@ const patchProviderTypeSpecificFields = (patches: PatchRequest, spec: AuthProvid
 
 export const getAuthProviderPatches = (values: AuthProviderFormValues, authProvider: AuthProvider): PatchRequest => {
   const patches: PatchRequest = [];
-  const newAuthProvider = getAuthProvider(values);
-
   const prevSpec = authProvider.spec;
+
+  const newAuthProvider = getAuthProvider(values);
   const newSpec = newAuthProvider.spec;
 
   const providerTypeChanged = prevSpec.providerType !== newSpec.providerType;
@@ -275,8 +296,8 @@ export const authProviderSchema = (t: TFunction) => (values: AuthProviderFormVal
     clientSecret: Yup.string().required(t('Client secret is required')),
     enabled: Yup.boolean(),
     scopes: Yup.array().of(Yup.string()).min(1, t('At least one scope is required')),
-    usernameClaim: validJsonPath(t),
-    roleClaim: validJsonPath(t),
+    usernameClaim: validDotNotationPath(t),
+    roleClaim: validDotNotationPath(t),
     orgAssignmentType: Yup.string()
       .oneOf(Object.values(OrgAssignmentType))
       .required(t('Organization assignment type is required')),
@@ -311,7 +332,7 @@ export const authProviderSchema = (t: TFunction) => (values: AuthProviderFormVal
   } else if (values.orgAssignmentType === OrgAssignmentType.Dynamic) {
     schema = {
       ...schema,
-      claimPath: validJsonPath(t).required(t('Claim path is required')),
+      claimPath: validDotNotationPath(t).required(t('Claim path is required')),
       orgNamePrefix: validDnsSubdomainPart(t),
       orgNameSuffix: validDnsSubdomainPart(t),
     };

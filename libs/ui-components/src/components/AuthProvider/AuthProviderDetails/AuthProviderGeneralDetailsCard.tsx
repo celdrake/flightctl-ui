@@ -32,7 +32,7 @@ const AuthProviderGeneralDetailsCard = ({ authProvider }: { authProvider: AuthPr
       <DescriptionListGroup>
         <DescriptionListTerm>{t('Enabled')}</DescriptionListTerm>
         <DescriptionListDescription>
-          <Switch isChecked={spec.enabled ?? true} />
+          <Switch isChecked={spec.enabled ?? true} aria-label={t('Is provider enabled')} />
         </DescriptionListDescription>
       </DescriptionListGroup>
 

@@ -65,6 +65,8 @@ export const AuthProviderForm = ({ isEdit }: { isEdit?: boolean }) => {
 
       <ProviderTypeSection />
 
+      <Oauth2ProviderFields />
+
       <FormGroup label={t('Issuer URL')} isRequired={isOidcProvider}>
         <TextField
           name="issuer"
@@ -72,8 +74,6 @@ export const AuthProviderForm = ({ isEdit }: { isEdit?: boolean }) => {
           helperText={isOidcProvider ? t('The OIDC issuer URL') : t('The OAuth2 issuer URL (optional)')}
         />
       </FormGroup>
-
-      <Oauth2ProviderFields />
 
       <FormGroup label={t('Client ID')} isRequired>
         <TextField name="clientId" aria-label={t('Client ID')} />

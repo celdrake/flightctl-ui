@@ -58,7 +58,7 @@ const absolutePathRegex = /^\/.*$/;
 
 // Accepts only relative paths. Rejects paths that start with "/", have multiple "/", or use dots (./file, ../parent/file), etc
 const relativePathRegex = /^(?!\.\.\/|\.\.\$|\.\/)(\.\/)*[\w.-]+(?:\/[\w.-]+)*\/?$/;
-
+const dotNotationPathRegex = /^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*$/;
 export const MAX_TARGET_REVISION_LENGTH = 244;
 const MAX_FILE_PATH_LENGTH = 253;
 
@@ -148,26 +148,19 @@ export const getInvalidKubernetesLabels = (labels: FlightCtlLabel[]) => {
   });
 };
 
-// Validates JSON path format. Only dot notation is supported.
-const isValidJSONPath = (path: string | undefined): boolean => {
-  if (!path || path.trim() === '') {
-    return true;
-  }
-
-  // Only allow simple property names and dot-separated nested paths
-  // Each segment must start with a letter or underscore, followed by letters, numbers, or underscores
-  const jsonPathPattern = /^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*$/;
-
-  return jsonPathPattern.test(path.trim());
-};
-
-export const validJsonPath = (t: TFunction) =>
-  Yup.string().test('is-valid-json-path', t('Must be a valid JSON path'), function (value) {
-    if (!value || value.trim() === '') {
-      return true;
-    }
-    return isValidJSONPath(value);
-  });
+export const validDotNotationPath = (t: TFunction) =>
+  Yup.string().test(
+    'is-valid-dot-notation-path',
+    t(
+      'Use dot notation. Each segment must start with a letter or underscore and contain only letters, numbers, or underscores',
+    ),
+    function (value) {
+      if (!value || value.trim() === '') {
+        return true;
+      }
+      return dotNotationPathRegex.test(value.trim());
+    },
+  );
 
 // Validates DNS subdomain part (for prefixes/suffixes that will be combined into org names)
 // Allows empty strings since these fields are optional
