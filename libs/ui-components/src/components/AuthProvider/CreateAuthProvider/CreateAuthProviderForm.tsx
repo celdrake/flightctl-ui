@@ -1,9 +1,10 @@
 import * as React from 'react';
-import { Alert, Button, FormGroup, Grid, Split, SplitItem } from '@patternfly/react-core';
+import { Alert, Button, FormGroup, FormSection, Grid, Popover, Split, SplitItem } from '@patternfly/react-core';
+import { OutlinedQuestionCircleIcon } from '@patternfly/react-icons/dist/js/icons/outlined-question-circle-icon';
 import { Formik, useFormikContext } from 'formik';
 import * as Yup from 'yup';
-import { AuthProvider } from '@flightctl/types';
 
+import { AuthProvider } from '@flightctl/types';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useFetch } from '../../../hooks/useFetch';
 import NameField from '../../form/NameField';
@@ -31,6 +32,7 @@ import Oauth2ProviderFields from './Oauth2ProviderFields';
 import OrganizationAssignmentSection from './AuthOrganizationAssignment';
 import TestConnectionModal from '../TestConnectionModal/TestConnectionModal';
 import { TestConnectionResponse } from './types';
+import { RoleClaimHelperText, ScopesHelperText, UsernameClaimHelperText } from './AuthProviderHelperText';
 
 const ProviderTypeSection = () => {
   const { t } = useTranslation();
@@ -52,6 +54,36 @@ const ProviderTypeSection = () => {
   );
 };
 
+const EnabledHelpText = () => {
+  const { t } = useTranslation();
+  return (
+    <Popover
+      bodyContent={
+        <div>
+          <p>{t('Turn this on to let users sign in with this provider.')}</p>
+          <p>{t('You can turn it off anytime without losing your settings.')}</p>
+        </div>
+      }
+      withFocusTrap
+      triggerAction="click"
+    >
+      <Button
+        component="a"
+        className="fctl-helper-text__icon"
+        isInline
+        variant="plain"
+        onClick={(ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+        }}
+        aria-label="Enabled help text"
+      >
+        <OutlinedQuestionCircleIcon />
+      </Button>
+    </Popover>
+  );
+};
+
 export const AuthProviderForm = ({ isEdit }: { isEdit?: boolean }) => {
   const { t } = useTranslation();
   const { values } = useFormikContext<AuthProviderFormValues>();
@@ -60,7 +92,7 @@ export const AuthProviderForm = ({ isEdit }: { isEdit?: boolean }) => {
 
   return (
     <>
-      <SwitchField label={t('Enabled')} labelOff={t('Disabled')} isReversed name="enabled" />
+      <SwitchField name="enabled" label={t('Enabled')} labelIcon={<EnabledHelpText />} />
 
       <NameField
         name="name"
@@ -73,14 +105,10 @@ export const AuthProviderForm = ({ isEdit }: { isEdit?: boolean }) => {
 
       <ProviderTypeSection />
 
-      <Oauth2ProviderFields />
+      {values.providerType === ProviderType.OAuth2 && <Oauth2ProviderFields />}
 
       <FormGroup label={t('Issuer URL')} isRequired={isOidcProvider}>
-        <TextField
-          name="issuer"
-          aria-label={t('Issuer URL')}
-          helperText={isOidcProvider ? t('The OIDC issuer URL') : t('The OAuth2 issuer URL (optional)')}
-        />
+        <TextField name="issuer" aria-label={t('Issuer URL')} />
       </FormGroup>
 
       <FormGroup label={t('Client ID')} isRequired>
@@ -91,25 +119,23 @@ export const AuthProviderForm = ({ isEdit }: { isEdit?: boolean }) => {
         <TextField name="clientSecret" aria-label={t('Client secret')} type="password" />
       </FormGroup>
 
-      <FormGroupWithHelperText
-        label={t('Scopes')}
-        content={t('Common scope examples: openid, profile, email')}
-        isRequired
-      >
-        <ListItemField
-          name="scopes"
-          helperText={t('All scopes necessary to retrieve the claims below')}
-          addButtonText={t('Add scope')}
-        />
-      </FormGroupWithHelperText>
+      <FormSection title={t('User identity & authorization')}>
+        <FormGroupWithHelperText label={t('Scopes')} content={<ScopesHelperText />} isRequired>
+          <ListItemField
+            name="scopes"
+            helperText={t('Add scopes required to access username and role claims from your authentication provider.')}
+            addButtonText={t('Add scope')}
+          />
+        </FormGroupWithHelperText>
 
-      <FormGroupWithHelperText label={t('Username claim')} content={t('JSON path to the username claim in the token')}>
-        <TextField name="usernameClaim" aria-label={t('Username claim')} placeholder={DEFAULT_USERNAME_CLAIM} />
-      </FormGroupWithHelperText>
+        <FormGroupWithHelperText label={t('Username claim')} content={<UsernameClaimHelperText />}>
+          <TextField name="usernameClaim" aria-label={t('Username claim')} placeholder={DEFAULT_USERNAME_CLAIM} />
+        </FormGroupWithHelperText>
 
-      <FormGroupWithHelperText label={t('Role claim')} content={t('JSON path to the role/group claim in the token')}>
-        <TextField name="roleClaim" aria-label={t('Role claim')} placeholder={DEFAULT_ROLE_CLAIM} />
-      </FormGroupWithHelperText>
+        <FormGroupWithHelperText label={t('Role claim')} content={<RoleClaimHelperText />}>
+          <TextField name="roleClaim" aria-label={t('Role claim')} placeholder={DEFAULT_ROLE_CLAIM} />
+        </FormGroupWithHelperText>
+      </FormSection>
 
       <OrganizationAssignmentSection />
     </>
@@ -188,7 +214,7 @@ const CreateAuthProviderFormContent = ({
           variant="secondary"
           onClick={handleTestConnection}
           isLoading={isTesting}
-          isDisabled={!isValid || isSubmitting || isTesting}
+          isDisabled={isSubmitDisabled || isTesting}
         >
           {t('Test connection')}
         </Button>

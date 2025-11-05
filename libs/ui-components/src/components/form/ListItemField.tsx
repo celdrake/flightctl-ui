@@ -75,6 +75,8 @@ const ListItemField = ({
 
   return (
     <>
+      <DefaultHelperText helperText={helperText} />
+
       <LabelGroup
         numLabels={5}
         isEditable={!isLoading}
@@ -113,7 +115,6 @@ const ListItemField = ({
           {resolvedLabel || t('Resolved')}: <strong>{displayedResolvedValue}</strong>
         </Text>
       )}
-      <DefaultHelperText helperText={helperText} />
       <ErrorHelperText meta={meta} touchRequired={false} />
     </>
   );

@@ -28,7 +28,7 @@ const LoginPage = () => {
   const [providers, setProviders] = React.useState<AuthProviderInfo[]>([]);
   const [userSelectedProvider, setUserSelectedProvider] = React.useState<AuthProviderInfo | null>(null);
 
-  const handleProviderSelect = async (provider: AuthProviderInfo) => {
+  const handleProviderSelect = (provider: AuthProviderInfo) => {
     setUserSelectedProvider(provider);
 
     // For k8s token providers, we will show the TokenLoginForm.

@@ -12,6 +12,7 @@ import {
   Toolbar,
   ToolbarContent,
   ToolbarItem,
+  Tooltip,
 } from '@patternfly/react-core';
 import { useTranslation } from '../../hooks/useTranslation';
 import { useOrganizationGuardContext } from './OrganizationGuard';
@@ -94,12 +95,16 @@ const PageNavigation = () => {
                   </ToolbarItem>
                 )}
                 <ToolbarItem>
-                  <Button
-                    variant="plain"
-                    aria-label={t('Admin settings')}
-                    onClick={() => navigate(ROUTE.AUTH_PROVIDERS)}
-                    icon={<CogIcon />}
-                  />
+                  <Tooltip content={t('Manage authentication providers')}>
+                    <Button
+                      variant="link"
+                      aria-label={t('Settings')}
+                      onClick={() => navigate(ROUTE.AUTH_PROVIDERS)}
+                      icon={<CogIcon />}
+                    >
+                      {t('Settings')}
+                    </Button>
+                  </Tooltip>
                 </ToolbarItem>
               </ToolbarContent>
             </Toolbar>

@@ -8,6 +8,7 @@ import { Link, ROUTE, useNavigate } from '../../hooks/useNavigate';
 import { useAccessReview } from '../../hooks/useAccessReview';
 import { RESOURCE, VERB } from '../../types/rbac';
 import { isOAuth2Provider } from './CreateAuthProvider/types';
+import { getProviderTypeLabel } from './CreateAuthProvider/utils';
 
 const AuthProviderRow = ({ provider, onDeleteClick }: { provider: AuthProvider; onDeleteClick: VoidFunction }) => {
   const { t } = useTranslation();
@@ -53,20 +54,22 @@ const AuthProviderRow = ({ provider, onDeleteClick }: { provider: AuthProvider; 
   return (
     <Tr>
       <Td dataLabel={t('Name')}>
-        <Link to={{ route: ROUTE.AUTH_PROVIDER_DETAILS, postfix: providerName }}>{providerName}</Link>
+        <Link to={{ route: ROUTE.AUTH_PROVIDER_DETAILS, postfix: providerName }}>
+          <strong>{providerName}</strong>
+        </Link>
       </Td>
-      <Td dataLabel={t('Type')}>{provider.spec.providerType}</Td>
+      <Td dataLabel={t('Type')}>
+        <Label color="blue">{getProviderTypeLabel(provider.spec.providerType, t)}</Label>
+      </Td>
       <Td dataLabel={urlTitle}>{url || 'N/A'}</Td>
       <Td dataLabel={t('Enabled')}>
-        <Label color={isEnabled ? 'green' : undefined} isDisabled={!isEnabled}>
+        <Label color={isEnabled ? 'green' : 'grey'} isDisabled={!isEnabled}>
           {isEnabled ? t('Enabled') : t('Disabled')}
         </Label>
       </Td>
-      {actions.length > 0 && (
-        <Td isActionCell>
-          <ActionsColumn items={actions} />
-        </Td>
-      )}
+      <Td isActionCell>
+        <ActionsColumn items={actions} />
+      </Td>
     </Tr>
   );
 };

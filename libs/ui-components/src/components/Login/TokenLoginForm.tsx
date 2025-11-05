@@ -2,15 +2,23 @@ import * as React from 'react';
 import {
   Alert,
   Button,
+  Card,
+  CardBody,
+  CardFooter,
+  CardHeader,
   FormGroup,
   FormHelperText,
+  FormSection,
   Grid,
   GridItem,
   HelperText,
   HelperTextItem,
   Stack,
   StackItem,
+  Text,
   TextArea,
+  TextContent,
+  TextVariants,
   Title,
 } from '@patternfly/react-core';
 import ArrowLeftIcon from '@patternfly/react-icons/dist/js/icons/arrow-left-icon';
@@ -21,7 +29,6 @@ import { getErrorMessage } from '../../utils/error';
 import { useFetch } from '../../hooks/useFetch';
 import { isValidJwtTokenFormat, nowInSeconds } from '../../utils/k8sProvider';
 import FlightCtlForm from '../form/FlightCtlForm';
-import FlightCtlActionGroup from '../form/FlightCtlActionGroup';
 
 type TokenLoginFormProps = {
   provider: AuthProviderInfo;
@@ -35,6 +42,8 @@ const TokenLoginForm = ({ provider, onBack }: TokenLoginFormProps) => {
   const [validationError, setValidationError] = React.useState<string>('');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState<string>();
+
+  const displayName = provider.displayName || provider.name;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,32 +89,40 @@ const TokenLoginForm = ({ provider, onBack }: TokenLoginFormProps) => {
   };
 
   return (
-    <Grid>
+    <Card isLarge>
       {onBack && (
-        <GridItem span={12}>
+        <CardHeader>
           <Button
             variant="link"
             className="pf-v5-u-size-sm"
             onClick={onBack}
+            isInline
             isDisabled={isSubmitting}
             icon={<ArrowLeftIcon />}
           >
-            {t('Select a different authentication provider')}
+            {t('Back to login options')}
           </Button>
-        </GridItem>
+        </CardHeader>
       )}
-
-      <GridItem span={12}>
-        <Stack hasGutter>
+      <CardBody>
+        <Stack hasGutter style={{ '--pf-v5-l-stack--m-gutter--Gap': '1.5rem' } as React.CSSProperties}>
           <StackItem>
             <Title headingLevel="h2" size="xl">
-              {t('Log in with {{ providerName }}', { providerName: provider.displayName || provider.name })}
+              {t('Enter your Kubernetes token ({{ providerName }})', { providerName: displayName })}
             </Title>
           </StackItem>
 
           <StackItem>
+            <TextContent>
+              <Text>{t('Enter your Kubernetes service account token to authenticate with the cluster.')}</Text>
+              <Text component={TextVariants.small}>
+                {t('You can find this token in your Kubernetes service account credentials.')}
+              </Text>
+            </TextContent>
+          </StackItem>
+          <StackItem>
             <FlightCtlForm>
-              <FormGroup label={t('Access token')} isRequired>
+              <FormGroup label={t('Service account token')} isRequired>
                 <TextArea
                   id="accessToken"
                   value={token}
@@ -130,38 +147,48 @@ const TokenLoginForm = ({ provider, onBack }: TokenLoginFormProps) => {
                   autoFocus
                   validated={validationError ? 'error' : 'default'}
                 />
-                <FormHelperText>
-                  <HelperText>
-                    <HelperTextItem variant={validationError ? 'error' : 'default'}>
-                      {validationError || t('Paste your Kubernetes access token here')}
-                    </HelperTextItem>
-                  </HelperText>
-                </FormHelperText>
+                {validationError && (
+                  <FormHelperText>
+                    <HelperText>
+                      <HelperTextItem variant="error">{validationError}</HelperTextItem>
+                    </HelperText>
+                  </FormHelperText>
+                )}
               </FormGroup>
 
+              <Alert variant="warning" title={t('Keep your token secure')} isInline>
+                {t(
+                  'Never share your service account token. It provides full access to your Kubernetes cluster resources.',
+                )}
+              </Alert>
+
               {submitError && (
-                <StackItem>
+                <FormSection>
                   <Alert variant="danger" title={t('Authentication failed')} isInline>
                     {submitError}
                   </Alert>
-                </StackItem>
+                </FormSection>
               )}
-              <FlightCtlActionGroup>
-                <Button
-                  variant="primary"
-                  isDisabled={!token || !!validationError || isSubmitting}
-                  isLoading={isSubmitting}
-                  onClick={handleSubmit}
-                  style={{ marginRight: '8px' }}
-                >
-                  {isSubmitting ? t('Authenticating...') : t('Login')}
-                </Button>
-              </FlightCtlActionGroup>
             </FlightCtlForm>
           </StackItem>
         </Stack>
-      </GridItem>
-    </Grid>
+      </CardBody>
+      <CardFooter>
+        <Button
+          variant="primary"
+          isDisabled={!token || !!validationError || isSubmitting}
+          isLoading={isSubmitting}
+          onClick={handleSubmit}
+        >
+          {isSubmitting ? t('Authenticating...') : t('Login')}
+        </Button>
+        {onBack && (
+          <Button variant="link" onClick={onBack} isDisabled={isSubmitting}>
+            {t('Cancel')}
+          </Button>
+        )}
+      </CardFooter>
+    </Card>
   );
 };
 

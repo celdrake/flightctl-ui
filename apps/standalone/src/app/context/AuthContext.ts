@@ -40,9 +40,14 @@ export const useAuthContext = () => {
         localStorage.removeItem(ORGANIZATION_STORAGE_KEY);
         const searchParams = new URLSearchParams(window.location.search);
         const code = searchParams.get('code');
+        const state = searchParams.get('state');
         callbackErr = searchParams.get('error');
-        if (code) {
-          const resp = await fetch(loginAPI, {
+        if (code && state) {
+          // Extract provider name from the state parameter
+          // The state format is: "provider:<providerName>"
+          const providerName = state.startsWith('provider:') ? state.substring(9) : state;
+
+          const resp = await fetch(`${loginAPI}?provider=${providerName}`, {
             headers: {
               'Content-Type': 'application/json',
             },

@@ -7,6 +7,9 @@ import {
   PageSection,
   PageSectionVariants,
   Spinner,
+  Text,
+  TextContent,
+  TextVariants,
   Title,
 } from '@patternfly/react-core';
 
@@ -80,7 +83,7 @@ const CreateAuthProvider = ({ authProviderId }: { authProviderId: string | undef
   if (!!authProviderDetails) {
     title = t('Edit authentication provider');
   } else {
-    title = t('Create authentication provider');
+    title = t('Add authentication provider');
   }
 
   return (
@@ -102,8 +105,13 @@ const CreateAuthProvider = ({ authProviderId }: { authProviderId: string | undef
         <Title headingLevel="h1" size="3xl">
           {title}
         </Title>
+        <TextContent>
+          <Text component={TextVariants.small}>
+            {t("Set up how users will sign in and which organization they'll be assigned to.")}
+          </Text>
+        </TextContent>
       </PageSection>
-      <PageSection variant={PageSectionVariants.light} type="default">
+      <PageSection variant={PageSectionVariants.light} className="pf-v5-u-pt-0">
         {content}
       </PageSection>
     </>

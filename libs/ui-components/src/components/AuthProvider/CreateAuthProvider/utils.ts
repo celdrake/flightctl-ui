@@ -19,6 +19,30 @@ import {
 } from './types';
 import { validDnsSubdomainPart, validDotNotationPath, validKubernetesDnsSubdomain } from '../../form/validations';
 
+export const getOrgAssignmentTypeLabel = (type: AuthOrganizationAssignment['type'] | undefined, t: TFunction) => {
+  switch (type) {
+    case OrgAssignmentType.Static:
+      return t('Static');
+    case OrgAssignmentType.Dynamic:
+      return t('Dynamic');
+    case OrgAssignmentType.PerUser:
+      return t('Per user');
+    default:
+      return 'N/A';
+  }
+};
+
+export const getProviderTypeLabel = (type: AuthProviderSpec['providerType'], t: TFunction) => {
+  switch (type) {
+    case ProviderType.OIDC:
+      return t('OIDC');
+    case ProviderType.OAuth2:
+      return t('OAuth2');
+    default:
+      return 'N/A';
+  }
+};
+
 export const getInitValues = (authProvider?: AuthProvider): AuthProviderFormValues => {
   if (!authProvider) {
     return {

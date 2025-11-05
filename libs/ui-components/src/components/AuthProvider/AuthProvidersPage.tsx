@@ -4,14 +4,21 @@ import {
   EmptyStateActions,
   EmptyStateBody,
   EmptyStateFooter,
+  PageSection,
+  Stack,
+  StackItem,
+  Text,
+  TextContent,
+  TextVariants,
+  Title,
   Toolbar,
   ToolbarContent,
+  ToolbarItem,
 } from '@patternfly/react-core';
 import { Tbody } from '@patternfly/react-table';
 import { TFunction } from 'i18next';
 import { CubeIcon } from '@patternfly/react-icons/dist/js/icons/cube-icon';
 
-import ListPage from '../ListPage/ListPage';
 import ListPageBody from '../ListPage/ListPageBody';
 import Table, { ApiSortTableColumn } from '../Table/Table';
 import { useTranslation } from '../../hooks/useTranslation';
@@ -32,10 +39,10 @@ const getColumns = (t: TFunction): ApiSortTableColumn[] => [
     name: t('Type'),
   },
   {
-    name: t('Issuer URL'),
+    name: t('Issuer/Authorization URL'),
   },
   {
-    name: t('Enabled'),
+    name: t('Status'),
   },
 ];
 
@@ -47,7 +54,7 @@ const CreateAuthProviderButton = () => {
   return (
     canCreate && (
       <Button variant="primary" onClick={() => navigate(ROUTE.AUTH_PROVIDER_CREATE)}>
-        {t('Create an authentication provider')}
+        {t('Add authentication provider')}
       </Button>
     )
   );
@@ -116,17 +123,40 @@ const AuthProvidersPage = () => {
   const { t } = useTranslation();
 
   const [allowed, loading] = useAccessReview(RESOURCE.AUTH_PROVIDER, VERB.LIST);
+  const navigate = useNavigate();
 
   return (
     <PageWithPermissions allowed={allowed} loading={loading}>
-      <ListPage title={t('Authentication Providers')}>
-        <Toolbar>
-          <ToolbarContent>
-            <CreateAuthProviderButton />
-          </ToolbarContent>
-        </Toolbar>
-        <AuthProvidersTable />
-      </ListPage>
+      <PageSection variant="light" type="breadcrumb">
+        <Stack hasGutter>
+          <StackItem>
+            <Title headingLevel="h1" size="3xl">
+              {t('Authentication')}
+            </Title>
+            <TextContent>
+              <Text component={TextVariants.small}>{t('Manage authentication providers')}</Text>
+            </TextContent>
+          </StackItem>
+          <StackItem>
+            <Toolbar>
+              <ToolbarContent>
+                <ToolbarItem>
+                  <Title headingLevel="h2" size="lg">
+                    {t('Authentication providers')}
+                  </Title>
+                </ToolbarItem>
+                <ToolbarItem variant="separator" />
+                <ToolbarItem>
+                  <Button variant="primary" onClick={() => navigate(ROUTE.AUTH_PROVIDER_CREATE)}>
+                    {t('Add authentication provider')}
+                  </Button>
+                </ToolbarItem>
+              </ToolbarContent>
+            </Toolbar>
+          </StackItem>
+          <AuthProvidersTable />
+        </Stack>
+      </PageSection>
     </PageWithPermissions>
   );
 };

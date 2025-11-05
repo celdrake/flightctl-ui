@@ -2,15 +2,17 @@ import * as React from 'react';
 import {
   Card,
   CardBody,
-  CardTitle,
+  ClipboardCopy,
   DescriptionList,
   DescriptionListDescription,
   DescriptionListGroup,
   DescriptionListTerm,
+  Divider,
   Label,
   LabelGroup,
   Stack,
   StackItem,
+  Title,
 } from '@patternfly/react-core';
 import { AuthProvider } from '@flightctl/types';
 
@@ -21,6 +23,8 @@ import {
   OrgAssignmentType,
   isOAuth2Provider,
 } from '../CreateAuthProvider/types';
+import CopyButton from '../../common/CopyButton';
+import { getOrgAssignmentTypeLabel, getProviderTypeLabel } from '../CreateAuthProvider/utils';
 
 const Scopes = ({ scopes }: { scopes: string[] | undefined }) => {
   if (!scopes || scopes.length === 0) {
@@ -32,6 +36,14 @@ const Scopes = ({ scopes }: { scopes: string[] | undefined }) => {
         <Label key={`${scope}-${index}`}>{scope}</Label>
       ))}
     </LabelGroup>
+  );
+};
+
+const CopyUrl = ({ url }: { url: string }) => {
+  return (
+    <ClipboardCopy variant="inline-compact" isCode>
+      {url || 'N/A'}
+    </ClipboardCopy>
   );
 };
 
@@ -47,25 +59,69 @@ const AuthProviderDetailsTab = ({ authProvider }: { authProvider: AuthProvider }
       {/* Provider Overview Card */}
       <StackItem>
         <Card>
-          <CardTitle>{t('Provider overview')}</CardTitle>
           <CardBody>
+            <Title headingLevel="h2" size="lg" className="pf-v5-u-mb-md">
+              {t('Provider overview')}
+            </Title>
             <DescriptionList columnModifier={{ default: '3Col' }}>
               <DescriptionListGroup>
                 <DescriptionListTerm>{t('Name')}</DescriptionListTerm>
-                <DescriptionListDescription>{authProvider.metadata.name}</DescriptionListDescription>
+                <DescriptionListDescription>
+                  <strong>{authProvider.metadata.name}</strong>
+                </DescriptionListDescription>
               </DescriptionListGroup>
 
               <DescriptionListGroup>
                 <DescriptionListTerm>{t('Type')}</DescriptionListTerm>
                 <DescriptionListDescription>
-                  <Label color="blue">{spec.providerType}</Label>
+                  <Label color="blue">{getProviderTypeLabel(spec.providerType, t)}</Label>
                 </DescriptionListDescription>
               </DescriptionListGroup>
 
               <DescriptionListGroup>
                 <DescriptionListTerm>{t('Status')}</DescriptionListTerm>
                 <DescriptionListDescription>
-                  <Label color={isEnabled ? 'green' : undefined}>{isEnabled ? t('Enabled') : t('Disabled')}</Label>
+                  <Label color={isEnabled ? 'green' : 'grey'}>{isEnabled ? t('Enabled') : t('Disabled')}</Label>
+                </DescriptionListDescription>
+              </DescriptionListGroup>
+            </DescriptionList>
+
+            <Divider style={{ margin: '24px 0' }} />
+
+            <DescriptionList>
+              <Title headingLevel="h2" className="pf-v5-u-mb-md">
+                {t('{{ providerType }} configuration', { providerType: spec.providerType })}
+              </Title>
+              {isOAuth2 && (
+                <>
+                  <DescriptionListGroup>
+                    <DescriptionListTerm>{t('Authorization URL')}</DescriptionListTerm>
+                    <DescriptionListDescription>
+                      <CopyUrl url={spec.authorizationUrl} />
+                    </DescriptionListDescription>
+                  </DescriptionListGroup>
+
+                  <DescriptionListGroup>
+                    <DescriptionListTerm>{t('Token URL')}</DescriptionListTerm>
+                    <DescriptionListDescription>
+                      <CopyUrl url={spec.tokenUrl} />
+                    </DescriptionListDescription>
+                  </DescriptionListGroup>
+
+                  <DescriptionListGroup>
+                    <DescriptionListTerm>{t('Userinfo URL')}</DescriptionListTerm>
+                    <DescriptionListDescription>
+                      <CopyUrl url={spec.userinfoUrl} />
+                    </DescriptionListDescription>
+                  </DescriptionListGroup>
+                </>
+              )}
+
+              <DescriptionListGroup>
+                <DescriptionListTerm>{t('Issuer URL')}</DescriptionListTerm>
+                <DescriptionListDescription>
+                  {spec.issuer || 'N/A'}
+                  {spec.issuer && <CopyButton text={spec.issuer} ariaLabel={t('Copy URL')} />}
                 </DescriptionListDescription>
               </DescriptionListGroup>
             </DescriptionList>
@@ -73,47 +129,12 @@ const AuthProviderDetailsTab = ({ authProvider }: { authProvider: AuthProvider }
         </Card>
       </StackItem>
 
-      {/* OIDC/OAuth2 Configuration Card */}
-      {(isOAuth2 || spec.issuer) && (
-        <StackItem>
-          <Card>
-            <CardTitle>{isOAuth2 ? t('OAuth2 configuration') : t('OIDC configuration')}</CardTitle>
-            <CardBody>
-              <DescriptionList isHorizontal>
-                {isOAuth2 && (
-                  <>
-                    <DescriptionListGroup>
-                      <DescriptionListTerm>{t('Authorization URL')}</DescriptionListTerm>
-                      <DescriptionListDescription>{spec.authorizationUrl}</DescriptionListDescription>
-                    </DescriptionListGroup>
-
-                    <DescriptionListGroup>
-                      <DescriptionListTerm>{t('Token URL')}</DescriptionListTerm>
-                      <DescriptionListDescription>{spec.tokenUrl}</DescriptionListDescription>
-                    </DescriptionListGroup>
-
-                    <DescriptionListGroup>
-                      <DescriptionListTerm>{t('Userinfo URL')}</DescriptionListTerm>
-                      <DescriptionListDescription>{spec.userinfoUrl}</DescriptionListDescription>
-                    </DescriptionListGroup>
-                  </>
-                )}
-
-                <DescriptionListGroup>
-                  <DescriptionListTerm>{t('Issuer URL')}</DescriptionListTerm>
-                  <DescriptionListDescription>{spec.issuer || 'N/A'}</DescriptionListDescription>
-                </DescriptionListGroup>
-              </DescriptionList>
-            </CardBody>
-          </Card>
-        </StackItem>
-      )}
-
-      {/* Client Configuration Card */}
       <StackItem>
         <Card>
-          <CardTitle>{t('Client configuration')}</CardTitle>
           <CardBody>
+            <Title headingLevel="h2" size="lg" className="pf-v5-u-mb-md">
+              {t('Client & claims configuration')}
+            </Title>
             <DescriptionList columnModifier={{ default: '2Col' }}>
               <DescriptionListGroup>
                 <DescriptionListTerm>{t('Client ID')}</DescriptionListTerm>
@@ -126,17 +147,6 @@ const AuthProviderDetailsTab = ({ authProvider }: { authProvider: AuthProvider }
                   <Scopes scopes={spec.scopes} />
                 </DescriptionListDescription>
               </DescriptionListGroup>
-            </DescriptionList>
-          </CardBody>
-        </Card>
-      </StackItem>
-
-      {/* Claims Mapping Card */}
-      <StackItem>
-        <Card>
-          <CardTitle>{t('Claims mapping')}</CardTitle>
-          <CardBody>
-            <DescriptionList columnModifier={{ default: '2Col' }}>
               <DescriptionListGroup>
                 <DescriptionListTerm>{t('Username claim')}</DescriptionListTerm>
                 <DescriptionListDescription>
@@ -155,74 +165,49 @@ const AuthProviderDetailsTab = ({ authProvider }: { authProvider: AuthProvider }
         </Card>
       </StackItem>
 
-      {/* Organization Assignment Card */}
       <StackItem>
         <Card>
-          <CardTitle>{t('Organization assignment')}</CardTitle>
           <CardBody>
-            <Stack hasGutter>
-              <StackItem>
-                <strong>{t('Assignment type')}</strong>
-              </StackItem>
-              <StackItem>
-                <Label color="blue">{orgAssignment.type}</Label>
-              </StackItem>
-              {orgAssignment.type === OrgAssignmentType.Static && orgAssignment.organizationName && (
-                <StackItem>
-                  <DescriptionList>
-                    <DescriptionListGroup>
-                      <DescriptionListTerm>{t('Organization')}</DescriptionListTerm>
-                      <DescriptionListDescription>{orgAssignment.organizationName}</DescriptionListDescription>
-                    </DescriptionListGroup>
-                  </DescriptionList>
-                </StackItem>
+            <Title headingLevel="h2" size="lg" className="pf-v5-u-mb-md">
+              {t('Organization assignment')}
+            </Title>
+            <DescriptionList isHorizontal>
+              <DescriptionListGroup>
+                <DescriptionListTerm>{t('Assignment type')}</DescriptionListTerm>
+                <DescriptionListDescription>
+                  <Label color="purple">{getOrgAssignmentTypeLabel(orgAssignment.type, t)}</Label>
+                </DescriptionListDescription>
+              </DescriptionListGroup>
+              {orgAssignment.type === OrgAssignmentType.Static && (
+                <DescriptionListGroup>
+                  <DescriptionListTerm>{t('Organization')}</DescriptionListTerm>
+                  <DescriptionListDescription>{orgAssignment.organizationName || 'N/A'}</DescriptionListDescription>
+                </DescriptionListGroup>
               )}
               {orgAssignment.type === OrgAssignmentType.Dynamic && (
-                <StackItem>
-                  <DescriptionList>
-                    <DescriptionListGroup>
-                      <DescriptionListTerm>{t('Claim path')}</DescriptionListTerm>
-                      <DescriptionListDescription>{orgAssignment.claimPath}</DescriptionListDescription>
-                    </DescriptionListGroup>
-                    {(orgAssignment.organizationNamePrefix || orgAssignment.organizationNameSuffix) && (
-                      <>
-                        <DescriptionListGroup>
-                          <DescriptionListTerm>{t('Prefix')}</DescriptionListTerm>
-                          <DescriptionListDescription>
-                            {orgAssignment.organizationNamePrefix || 'N/A'}
-                          </DescriptionListDescription>
-                        </DescriptionListGroup>
-                        <DescriptionListGroup>
-                          <DescriptionListTerm>{t('Suffix')}</DescriptionListTerm>
-                          <DescriptionListDescription>
-                            {orgAssignment.organizationNameSuffix || 'N/A'}
-                          </DescriptionListDescription>
-                        </DescriptionListGroup>
-                      </>
-                    )}
-                  </DescriptionList>
-                </StackItem>
+                <DescriptionListGroup>
+                  <DescriptionListTerm>{t('Claim path')}</DescriptionListTerm>
+                  <DescriptionListDescription>{orgAssignment.claimPath}</DescriptionListDescription>
+                </DescriptionListGroup>
               )}
-              {orgAssignment.type === OrgAssignmentType.PerUser &&
-                (orgAssignment.organizationNamePrefix || orgAssignment.organizationNameSuffix) && (
-                  <StackItem>
-                    <DescriptionList>
-                      <DescriptionListGroup>
-                        <DescriptionListTerm>{t('Prefix')}</DescriptionListTerm>
-                        <DescriptionListDescription>
-                          {orgAssignment.organizationNamePrefix || 'N/A'}
-                        </DescriptionListDescription>
-                      </DescriptionListGroup>
-                      <DescriptionListGroup>
-                        <DescriptionListTerm>{t('Suffix')}</DescriptionListTerm>
-                        <DescriptionListDescription>
-                          {orgAssignment.organizationNameSuffix || 'N/A'}
-                        </DescriptionListDescription>
-                      </DescriptionListGroup>
-                    </DescriptionList>
-                  </StackItem>
-                )}
-            </Stack>
+              {(orgAssignment.type === OrgAssignmentType.Dynamic ||
+                orgAssignment.type === OrgAssignmentType.PerUser) && (
+                <>
+                  <DescriptionListGroup>
+                    <DescriptionListTerm>{t('Prefix')}</DescriptionListTerm>
+                    <DescriptionListDescription>
+                      {orgAssignment.organizationNamePrefix || 'N/A'}
+                    </DescriptionListDescription>
+                  </DescriptionListGroup>
+                  <DescriptionListGroup>
+                    <DescriptionListTerm>{t('Suffix')}</DescriptionListTerm>
+                    <DescriptionListDescription>
+                      {orgAssignment.organizationNameSuffix || 'N/A'}
+                    </DescriptionListDescription>
+                  </DescriptionListGroup>
+                </>
+              )}
+            </DescriptionList>
           </CardBody>
         </Card>
       </StackItem>

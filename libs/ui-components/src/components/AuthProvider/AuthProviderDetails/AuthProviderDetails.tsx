@@ -77,7 +77,6 @@ const AuthProviderDetails = () => {
         <>
           <Routes>
             <Route index element={<Navigate to="details" replace />} />
-
             <Route path="details" element={<AuthProviderDetailsTab authProvider={authProviderDetails} />} />
             <Route path="yaml" element={<YamlEditor apiObj={authProviderDetails} refetch={refetch} />} />
           </Routes>
