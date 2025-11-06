@@ -11,6 +11,7 @@ import (
 	"github.com/flightctl/flightctl-ui/bridge"
 	"github.com/flightctl/flightctl-ui/config"
 	"github.com/flightctl/flightctl-ui/log"
+	"github.com/flightctl/flightctl/api/v1alpha1"
 	"github.com/openshift/osincli"
 )
 
@@ -25,6 +26,8 @@ type OIDCAuthHandler struct {
 	endSessionEndpoint string
 	userInfoEndpoint   string
 	authURL            string
+	clientId           string
+	providerName       string
 }
 
 type oidcServerResponse struct {
@@ -34,12 +37,20 @@ type oidcServerResponse struct {
 	EndSessionEndpoint string `json:"end_session_endpoint"`
 }
 
-var oidcClientId = "WIP"
+func getOIDCAuthHandler(providerInfo *v1alpha1.AuthProviderInfo, providerName string) (*OIDCAuthHandler, error) {
+	// Validate required fields
+	if providerInfo.Issuer == nil {
+		return nil, fmt.Errorf("OIDC provider %s missing Issuer", providerName)
+	}
 
-// CELIA-WIP information must come from the auth config for this provider
-// WE don't have the info anymore from the ConfigmAP
+	if providerInfo.ClientId == nil || *providerInfo.ClientId == "" {
+		return nil, fmt.Errorf("OIDC provider %s missing ClientId", providerName)
+	}
 
-func getOIDCAuthHandler(authURL string, internalAuthURL *string) (*OIDCAuthHandler, error) {
+	authURL := *providerInfo.Issuer
+	clientId := *providerInfo.ClientId
+	internalAuthURL := (*string)(nil) // OIDC doesn't use internalAuthURL for now
+
 	tlsConfig, err := bridge.GetAuthTlsConfig()
 	if err != nil {
 		return nil, err
@@ -78,7 +89,7 @@ func getOIDCAuthHandler(authURL string, internalAuthURL *string) (*OIDCAuthHandl
 		return nil, fmt.Errorf("failed to parse oidc config: %w", err)
 	}
 
-	internalClient, err := getOIDCClient(oidcResponse, tlsConfig)
+	internalClient, err := getOIDCClient(oidcResponse, tlsConfig, clientId, providerInfo.Scopes)
 	if err != nil {
 		return nil, err
 	}
@@ -90,6 +101,8 @@ func getOIDCAuthHandler(authURL string, internalAuthURL *string) (*OIDCAuthHandl
 		endSessionEndpoint: oidcResponse.EndSessionEndpoint,
 		userInfoEndpoint:   oidcResponse.UserInfoEndpoint,
 		authURL:            authURL,
+		clientId:           clientId,
+		providerName:       providerName,
 	}
 
 	if internalAuthURL != nil {
@@ -99,7 +112,7 @@ func getOIDCAuthHandler(authURL string, internalAuthURL *string) (*OIDCAuthHandl
 			UserInfoEndpoint:   replaceBaseURL(oidcResponse.UserInfoEndpoint, *internalAuthURL, authURL),
 			EndSessionEndpoint: replaceBaseURL(oidcResponse.EndSessionEndpoint, *internalAuthURL, authURL),
 		}
-		client, err := getOIDCClient(extConfig, tlsConfig)
+		client, err := getOIDCClient(extConfig, tlsConfig, clientId, providerInfo.Scopes)
 		if err != nil {
 			return nil, err
 		}
@@ -130,14 +143,16 @@ func replaceBaseURL(endpoint, oldBase, newBase string) string {
 	return endpointURL.String()
 }
 
-func getOIDCClient(oidcConfig oidcServerResponse, tlsConfig *tls.Config) (*osincli.Client, error) {
-	scope := "openid"
+func getOIDCClient(oidcConfig oidcServerResponse, tlsConfig *tls.Config, clientId string, providerScopes *[]string) (*osincli.Client, error) {
+	// Build scope string using provider scopes or default scopes
+	defaultScopes := "openid"
 	if config.IsOrganizationsEnabled() {
-		scope = "openid organization:*"
+		defaultScopes = "openid organization:*"
 	}
+	scope := buildScopeParam(providerScopes, defaultScopes)
 
 	oidcClientConfig := &osincli.ClientConfig{
-		ClientId:                 oidcClientId,
+		ClientId:                 clientId,
 		AuthorizeUrl:             oidcConfig.AuthEndpoint,
 		TokenUrl:                 oidcConfig.TokenEndpoint,
 		RedirectUrl:              config.BaseUiUrl + "/callback",
@@ -190,7 +205,7 @@ func (o *OIDCAuthHandler) Logout(token string) (string, error) {
 
 	uq := u.Query()
 	uq.Add("post_logout_redirect_uri", config.BaseUiUrl)
-	uq.Add("client_id", oidcClientId)
+	uq.Add("client_id", o.clientId)
 	u.RawQuery = uq.Encode()
 	return u.String(), nil
 }
@@ -200,5 +215,5 @@ func (o *OIDCAuthHandler) RefreshToken(refreshToken string) (TokenData, *int64, 
 }
 
 func (a *OIDCAuthHandler) GetLoginRedirectURL() string {
-	return loginRedirect(a.client)
+	return loginRedirect(a.client, a.providerName)
 }

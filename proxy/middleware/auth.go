@@ -16,6 +16,11 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			log.GetLogger().Warn(err.Error())
 		} else if tokenData.Token != "" {
 			r.Header.Add(common.AuthHeaderKey, "Bearer "+tokenData.Token)
+			if tokenData.Provider != "" {
+				log.GetLogger().Debugf("Forwarding token from provider '%s' to backend API", tokenData.Provider)
+			} else {
+				log.GetLogger().Debug("Forwarding token to backend API (no provider specified)")
+			}
 		}
 		next.ServeHTTP(w, r)
 	})

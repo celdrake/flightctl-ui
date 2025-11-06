@@ -9,8 +9,6 @@ import {
   FormGroup,
   FormHelperText,
   FormSection,
-  Grid,
-  GridItem,
   HelperText,
   HelperTextItem,
   Stack,
@@ -42,8 +40,6 @@ const TokenLoginForm = ({ provider, onBack }: TokenLoginFormProps) => {
   const [validationError, setValidationError] = React.useState<string>('');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState<string>();
-
-  const displayName = provider.displayName || provider.name;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,7 +104,7 @@ const TokenLoginForm = ({ provider, onBack }: TokenLoginFormProps) => {
         <Stack hasGutter style={{ '--pf-v5-l-stack--m-gutter--Gap': '1.5rem' } as React.CSSProperties}>
           <StackItem>
             <Title headingLevel="h2" size="xl">
-              {t('Enter your Kubernetes token ({{ providerName }})', { providerName: displayName })}
+              {t('Enter your Kubernetes token')}
             </Title>
           </StackItem>
 

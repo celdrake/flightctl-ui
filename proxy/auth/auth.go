@@ -3,6 +3,7 @@ package auth
 import (
 	"crypto/tls"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -52,79 +53,126 @@ func NewAuth(apiTlsConfig *tls.Config) (*AuthHandler, error) {
 
 // getProviderForLogin creates a provider instance by fetching the latest auth config
 func (a *AuthHandler) getProviderForLogin(providerName string) (AuthProvider, error) {
-	// TODO: Fetch the latest auth config to support dynamic provider changes
-	// The backend is currently implementing the new auth provider types
-	// For now, we mock a K8s token provider
+	// Fetch the latest auth config to support dynamic provider changes
+	authConfig, err := getAuthInfo(a.apiTlsConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get auth config: %w", err)
+	}
 
-	// Mock: Always return a K8s token provider
-	// This will validate tokens against the flightctl backend API
-	provider := NewTokenAuthProvider(a.apiTlsConfig, config.FctlApiUrl)
-	log.GetLogger().Debugf("Created K8s token provider (mocked): %s", providerName)
+	if authConfig == nil || authConfig.Providers == nil {
+		return nil, fmt.Errorf("no providers configured")
+	}
+
+	// Find the provider config
+	var providerInfo *v1alpha1.AuthProviderInfo
+	for i, pc := range *authConfig.Providers {
+		if pc.Name != nil && *pc.Name == providerName {
+			providerInfo = &(*authConfig.Providers)[i]
+			break
+		}
+	}
+
+	if providerInfo == nil {
+		return nil, fmt.Errorf("provider not found: %s", providerName)
+	}
+
+	// Create provider based on type
+	var provider AuthProvider
+	providerTypeStr := ""
+	if providerInfo.Type != nil {
+		providerTypeStr = string(*providerInfo.Type)
+	}
+
+	switch providerTypeStr {
+	case ProviderTypeK8s:
+		// For K8s providers, check if they have OAuth fields (ClientId, TokenUrl)
+		// If not, it's a token-only provider
+		if providerInfo.ClientId == nil && providerInfo.TokenUrl == nil {
+			// Always validate against the flightctl backend API
+			// The backend will validate the token against the appropriate K8s cluster
+			provider = NewTokenAuthProvider(a.apiTlsConfig, config.FctlApiUrl)
+			log.GetLogger().Debugf("Created K8s token provider: %s", providerName)
+		} else {
+			// TODO: Handle K8s with OpenShift OAuth flow
+			return nil, fmt.Errorf("K8s OAuth provider not yet implemented: %s", providerName)
+		}
+	case ProviderTypeOIDC:
+		oidcHandler, err := getOIDCAuthHandler(providerInfo, providerName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create OIDC provider %s: %w", providerName, err)
+		}
+		provider = oidcHandler
+		log.GetLogger().Debugf("Created OIDC provider: %s", providerName)
+	case ProviderTypeAAP:
+		aapHandler, err := getAAPAuthHandler(providerInfo, providerName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create AAP provider %s: %w", providerName, err)
+		}
+		provider = aapHandler
+		log.GetLogger().Debugf("Created AAP provider: %s", providerName)
+	case ProviderTypeOAuth2:
+		oauth2Handler, err := getOAuth2AuthHandler(providerInfo, providerName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create OAuth2 provider %s: %w", providerName, err)
+		}
+		provider = oauth2Handler
+		log.GetLogger().Debugf("Created OAuth2 provider: %s", providerName)
+	default:
+		return nil, fmt.Errorf("unknown provider type: %s for provider: %s", providerTypeStr, providerName)
+	}
 
 	return provider, nil
-
-	// TODO: Uncomment and implement once backend has AuthProviderInfo available
-	//authConfig, err := getAuthInfo(a.apiTlsConfig)
-	//if err != nil {
-	//	return nil, fmt.Errorf("failed to get auth config: %w", err)
-	//}
-	//
-	//if authConfig.Providers == nil {
-	//	return nil, fmt.Errorf("no providers configured")
-	//}
-	//
-	//// Find the provider config
-	//var providerInfo *v1alpha1.AuthProviderInfo
-	//for i, pc := range *authConfig.Providers {
-	//	if pc.Name != nil && *pc.Name == providerName {
-	//		providerInfo = &(*authConfig.Providers)[i]
-	//		break
-	//	}
-	//}
-	//
-	//if providerInfo == nil {
-	//	return nil, fmt.Errorf("provider not found: %s", providerName)
-	//}
-	//
-	//// Create provider based on type
-	//var provider AuthProvider
-	//providerTypeStr := ""
-	//if providerInfo.Type != nil {
-	//	providerTypeStr = string(*providerInfo.Type)
-	//}
-	//
-	//switch providerTypeStr {
-	//case "k8s":
-	//	// For K8s providers, check if they have OAuth fields (ClientId, TokenUrl)
-	//	// If not, it's a token-only provider
-	//	if providerInfo.ClientId == nil && providerInfo.TokenUrl == nil {
-	//		// Always validate against the flightctl backend API
-	//		// The backend will validate the token against the appropriate K8s cluster
-	//		provider = NewTokenAuthProvider(a.apiTlsConfig, config.FctlApiUrl)
-	//		log.GetLogger().Debugf("Created K8s token provider: %s", providerName)
-	//	} else {
-	//		// TODO: Handle K8s with OpenShift OAuth flow
-	//		return nil, fmt.Errorf("K8s OAuth provider not yet implemented: %s", providerName)
-	//	}
-	//case "oidc":
-	//	// TODO: Initialize OIDC provider
-	//	return nil, fmt.Errorf("OIDC provider not yet implemented: %s", providerName)
-	//case "aap":
-	//	// TODO: Initialize AAP provider
-	//	return nil, fmt.Errorf("AAP provider not yet implemented: %s", providerName)
-	//default:
-	//	return nil, fmt.Errorf("unknown provider type: %s for provider: %s", providerTypeStr, providerName)
-	//}
-	//
-	//return provider, nil
 }
 
 func (a AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
-	if a.provider == nil {
+	// Check if auth is completely disabled (no config at all)
+	if a.authConfigData == nil {
 		w.WriteHeader(http.StatusTeapot)
 		return
 	}
-	if r.Method == http.MethodPost {
+
+	// For GET requests, extract provider from query parameter
+	var provider AuthProvider
+	var err error
+	if r.Method == http.MethodGet {
+		providerName := r.URL.Query().Get("provider")
+		if providerName == "" {
+			respondWithError(w, http.StatusBadRequest, "provider query parameter is required")
+			return
+		}
+
+		provider, err = a.getProviderForLogin(providerName)
+		if err != nil {
+			log.GetLogger().WithError(err).Warnf("Could not find provider: %s", providerName)
+			respondWithError(w, http.StatusBadRequest, fmt.Sprintf("Invalid authentication provider: %s", providerName))
+			return
+		}
+
+		loginUrl := provider.GetLoginRedirectURL()
+		response, err := json.Marshal(RedirectResponse{Url: loginUrl})
+		if err != nil {
+			log.GetLogger().WithError(err).Warn("Failed to marshal response")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if _, err := w.Write(response); err != nil {
+			log.GetLogger().WithError(err).Warn("Failed to write response")
+		}
+	} else if r.Method == http.MethodPost {
+		// For POST requests (OAuth callback), extract provider from query parameter
+		providerName := r.URL.Query().Get("provider")
+		if providerName == "" {
+			respondWithError(w, http.StatusBadRequest, "provider query parameter is required")
+			return
+		}
+
+		provider, err := a.getProviderForLogin(providerName)
+		if err != nil {
+			log.GetLogger().WithError(err).Warnf("Could not find provider: %s", providerName)
+			respondWithError(w, http.StatusBadRequest, fmt.Sprintf("Invalid authentication provider: %s", providerName))
+			return
+		}
+
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			log.GetLogger().WithError(err).Warn("Failed to read request body")
@@ -139,23 +187,20 @@ func (a AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		tokenData, expires, err := a.provider.GetToken(loginParams)
+
+		tokenData, expires, err := provider.GetToken(loginParams)
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
+			log.GetLogger().WithError(err).Warn("Failed to exchange token")
+			respondWithError(w, http.StatusInternalServerError, "Failed to exchange authorization code for token")
 			return
 		}
+
+		// Store the provider name in the token data so we can route to it later
+		tokenData.Provider = providerName
+
 		respondWithToken(w, tokenData, expires)
 	} else {
-		loginUrl := a.provider.GetLoginRedirectURL()
-		response, err := json.Marshal(RedirectResponse{Url: loginUrl})
-		if err != nil {
-			log.GetLogger().WithError(err).Warn("Failed to marshal response")
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		if _, err := w.Write(response); err != nil {
-			log.GetLogger().WithError(err).Warn("Failed to write response")
-		}
+		respondWithError(w, http.StatusMethodNotAllowed, "Method not allowed")
 	}
 }
 
@@ -226,6 +271,7 @@ func (a AuthHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Call the provider's GetUserInfo method
+	log.GetLogger().Debugf("Getting user info from provider %s", tokenData.Provider)
 	username, resp, err := provider.GetUserInfo(tokenData.Token)
 	if err != nil {
 		log.GetLogger().WithError(err).Warnf("Failed to get user info from provider %s", tokenData.Provider)
@@ -234,10 +280,18 @@ func (a AuthHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
+		log.GetLogger().Warnf("GetUserInfo returned status %d for provider %s", resp.StatusCode, tokenData.Provider)
 		w.WriteHeader(resp.StatusCode)
 		return
 	}
 
+	if username == "" {
+		log.GetLogger().Warnf("GetUserInfo returned empty username for provider %s", tokenData.Provider)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	log.GetLogger().Debugf("Successfully retrieved username '%s' from provider %s", username, tokenData.Provider)
 	a.respondWithUserInfo(w, username)
 }
 
