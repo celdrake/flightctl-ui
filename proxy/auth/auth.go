@@ -85,38 +85,30 @@ func (a *AuthHandler) getProviderForLogin(providerName string) (AuthProvider, er
 
 	switch providerTypeStr {
 	case ProviderTypeK8s:
-		// For K8s providers, check if they have OAuth fields (ClientId, TokenUrl)
-		// If not, it's a token-only provider
+		// CELIA-WIP: Determine how to distinguish from OpenShift OAuth flow with k8s type
 		if providerInfo.ClientId == nil && providerInfo.TokenUrl == nil {
-			// Always validate against the flightctl backend API
-			// The backend will validate the token against the appropriate K8s cluster
 			provider = NewTokenAuthProvider(a.apiTlsConfig, config.FctlApiUrl)
-			log.GetLogger().Debugf("Created K8s token provider: %s", providerName)
 		} else {
-			// TODO: Handle K8s with OpenShift OAuth flow
-			return nil, fmt.Errorf("K8s OAuth provider not yet implemented: %s", providerName)
+			return nil, fmt.Errorf("OpenShift OAuth provider not yet implemented: %s", providerName)
 		}
 	case ProviderTypeOIDC:
-		oidcHandler, err := getOIDCAuthHandler(providerInfo, providerName)
+		oidcHandler, err := getOIDCAuthHandler(providerInfo)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create OIDC provider %s: %w", providerName, err)
 		}
 		provider = oidcHandler
-		log.GetLogger().Debugf("Created OIDC provider: %s", providerName)
 	case ProviderTypeAAP:
-		aapHandler, err := getAAPAuthHandler(providerInfo, providerName)
+		aapHandler, err := getAAPAuthHandler(providerInfo)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create AAP provider %s: %w", providerName, err)
 		}
 		provider = aapHandler
-		log.GetLogger().Debugf("Created AAP provider: %s", providerName)
 	case ProviderTypeOAuth2:
-		oauth2Handler, err := getOAuth2AuthHandler(providerInfo, providerName)
+		oauth2Handler, err := getOAuth2AuthHandler(providerInfo)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create OAuth2 provider %s: %w", providerName, err)
 		}
 		provider = oauth2Handler
-		log.GetLogger().Debugf("Created OAuth2 provider: %s", providerName)
 	default:
 		return nil, fmt.Errorf("unknown provider type: %s for provider: %s", providerTypeStr, providerName)
 	}
@@ -248,7 +240,7 @@ func (a AuthHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 
 	// Get token and provider from session cookie
 	tokenData, err := ParseSessionCookie(r)
-	if err != nil || tokenData.Token == "" {
+	if err != nil {
 		w.Header().Set("Clear-Site-Data", `"cookies"`)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
@@ -256,13 +248,11 @@ func (a AuthHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 
 	// If no provider specified, clear the cookie and force a new login
 	if tokenData.Provider == "" {
-		log.GetLogger().Debug("No provider in session, clearing cookie to force new login")
 		w.Header().Set("Clear-Site-Data", `"cookies"`)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
-	// Get the provider instance
 	provider, err := a.getProviderForLogin(tokenData.Provider)
 	if err != nil {
 		log.GetLogger().WithError(err).Warnf("Failed to get provider: %s", tokenData.Provider)
@@ -270,9 +260,7 @@ func (a AuthHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Call the provider's GetUserInfo method
-	log.GetLogger().Debugf("Getting user info from provider %s", tokenData.Provider)
-	username, resp, err := provider.GetUserInfo(tokenData.Token)
+	username, resp, err := provider.GetUserInfo(tokenData)
 	if err != nil {
 		log.GetLogger().WithError(err).Warnf("Failed to get user info from provider %s", tokenData.Provider)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -318,7 +306,7 @@ func (a AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 
 	// Get token and provider from session cookie
 	tokenData, err := ParseSessionCookie(r)
-	if err != nil || tokenData.Token == "" {
+	if err != nil {
 		// No valid session, but still clear cookies and return success
 		w.Header().Set("Clear-Site-Data", `"cookies"`)
 		response, _ := json.Marshal(RedirectResponse{})
@@ -330,9 +318,18 @@ func (a AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 
 	// If we have a provider, call its Logout method
 	if tokenData.Provider != "" {
+		authToken := tokenData.GetAuthToken()
+		if authToken == "" {
+			// No valid session, but still clear cookies and return success
+			w.Header().Set("Clear-Site-Data", `"cookies"`)
+			response, _ := json.Marshal(RedirectResponse{})
+			w.Write(response)
+			return
+		}
+
 		provider, err := a.getProviderForLogin(tokenData.Provider)
 		if err == nil {
-			redirectUrl, err = provider.Logout(tokenData.Token)
+			redirectUrl, err = provider.Logout(authToken)
 			if err != nil {
 				log.GetLogger().WithError(err).Warn("Failed to logout from provider")
 			}

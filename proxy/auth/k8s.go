@@ -75,8 +75,11 @@ func (t *TokenAuthProvider) ValidateToken(token string) (TokenData, *int64, erro
 		return TokenData{}, nil, fmt.Errorf("Token validation failed")
 	}
 
+	// K8s tokens are JWTs (similar to OIDC id_tokens), so store in IDToken
+	// AccessToken is empty since K8s doesn't have a userinfo endpoint
 	tokenData := TokenData{
-		Token:        token,
+		IDToken:      token,
+		AccessToken:  "",
 		RefreshToken: "",
 	}
 
@@ -190,8 +193,14 @@ func ExtractUsernameFromToken(token string) (string, error) {
 	return username, nil
 }
 
-// GetUserInfo retrieves user information from the provided JTW token
-func (t *TokenAuthProvider) GetUserInfo(token string) (string, *http.Response, error) {
+// GetUserInfo retrieves user information from the provided JWT token
+func (t *TokenAuthProvider) GetUserInfo(tokenData TokenData) (string, *http.Response, error) {
+	// For K8s, use IDToken (JWT) to extract username from claims
+	token := tokenData.IDToken
+	if token == "" {
+		return "", nil, fmt.Errorf("ID token is required for K8s userinfo")
+	}
+
 	username, err := ExtractUsernameFromToken(token)
 	if err != nil {
 		log.GetLogger().WithError(err).Warn("Failed to extract username from token")

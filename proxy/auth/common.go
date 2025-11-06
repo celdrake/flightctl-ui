@@ -34,9 +34,28 @@ const (
 )
 
 type TokenData struct {
-	Token        string `json:"token"`
+	// IDToken (JWT token)
+	//   - OIDC: Used for API authentication
+	//   - K8s: Used for API authentication and GetUserInfo
+	//   - OAuth2/AAP: Not used
+	IDToken string `json:"idToken"`
+
+	// AccessToken (opaque token)
+	//   - OIDC: Used for GetUserInfo endpoint
+	//   - OAuth2/AAP: Used for API authentication and GetUserInfo
+	//   - K8s: Not used
+	AccessToken string `json:"accessToken"`
+
 	RefreshToken string `json:"refreshToken"`
-	Provider     string `json:"provider,omitempty"` // The auth provider name used for this token
+	Provider     string `json:"provider,omitempty"`
+}
+
+// GetAuthToken returns the token to use for API authentication.
+func (t TokenData) GetAuthToken() string {
+	if t.IDToken != "" {
+		return t.IDToken
+	}
+	return t.AccessToken
 }
 
 type LoginParameters struct {
@@ -45,7 +64,7 @@ type LoginParameters struct {
 
 type AuthProvider interface {
 	GetToken(loginParams LoginParameters) (TokenData, *int64, error)
-	GetUserInfo(token string) (string, *http.Response, error)
+	GetUserInfo(tokenData TokenData) (string, *http.Response, error)
 	RefreshToken(refreshToken string) (TokenData, *int64, error)
 	Logout(token string) (string, error)
 	GetLoginRedirectURL() string
@@ -63,6 +82,10 @@ func setCookie(w http.ResponseWriter, value TokenData) error {
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
 		Path:     "/",
+		// CELIA-WIP: See if the code below is needed
+		// SameSite: http.SameSiteLaxMode,
+		// MaxAge: 3600 * 24, // 24 hours - ensures cookie persists across browser sessions
+
 	}
 	http.SetCookie(w, &cookie)
 	return nil
@@ -72,18 +95,26 @@ func ParseSessionCookie(r *http.Request) (TokenData, error) {
 	tokenData := TokenData{}
 	cookie, err := r.Cookie(common.CookieSessionName)
 	if err != nil && !errors.Is(err, http.ErrNoCookie) {
+		log.GetLogger().Debugf("Error getting session cookie: %v", err)
 		return tokenData, err
 	}
 
 	if cookie != nil {
 		val, err := b64.StdEncoding.DecodeString(cookie.Value)
 		if err != nil {
+			log.GetLogger().Debugf("Error decoding session cookie: %v", err)
 			return tokenData, err
 		}
 
 		err = json.Unmarshal(val, &tokenData)
+		if err != nil {
+			log.GetLogger().Debugf("Error unmarshaling session cookie: %v", err)
+			return tokenData, err
+		}
+		log.GetLogger().Debugf("Parsed session cookie (provider: %s, id token length: %d, access token length: %d)", tokenData.Provider, len(tokenData.IDToken), len(tokenData.AccessToken))
 		return tokenData, err
 	}
+	log.GetLogger().Debug("No session cookie found in request")
 	return tokenData, nil
 }
 
@@ -208,8 +239,20 @@ func executeOAuthFlow(req *osincli.AccessRequest) (TokenData, *int64, error) {
 		return ret, nil, fmt.Errorf("failed to refresh token: %w", err)
 	}
 
-	ret.Token = accessData.AccessToken
-	ret.RefreshToken = accessData.RefreshToken // May be empty if not returned
+	// Always store the access_token
+	ret.AccessToken = accessData.AccessToken
+
+	// For OIDC flows, check if id_token is present in the response
+	// OIDC providers return both access_token and id_token:
+	// - id_token (JWT) is used for API authentication
+	// - access_token (opaque) is used for userinfo endpoint
+	if idTokenRaw, exists := accessData.ResponseData["id_token"]; exists {
+		if idToken, ok := idTokenRaw.(string); ok && idToken != "" {
+			ret.IDToken = idToken
+		}
+	}
+
+	ret.RefreshToken = accessData.RefreshToken
 
 	return ret, expiresIn, nil
 }

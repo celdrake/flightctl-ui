@@ -120,7 +120,7 @@ export const AuthProviderForm = ({ isEdit }: { isEdit?: boolean }) => {
       </FormGroup>
 
       <FormSection title={t('User identity & authorization')}>
-        <FormGroupWithHelperText label={t('Scopes')} content={<ScopesHelperText />} isRequired>
+        <FormGroupWithHelperText label={t('Scopes')} content={<ScopesHelperText />}>
           <ListItemField
             name="scopes"
             helperText={t('Add scopes required to access username and role claims from your authentication provider.')}

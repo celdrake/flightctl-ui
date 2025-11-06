@@ -50,14 +50,14 @@ func (c *AAPRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	return resp, nil
 }
 
-func getAAPAuthHandler(providerInfo *v1alpha1.AuthProviderInfo, providerName string) (*AAPAuthHandler, error) {
+func getAAPAuthHandler(providerInfo *v1alpha1.AuthProviderInfo) (*AAPAuthHandler, error) {
 	// Validate required fields
 	if providerInfo.AuthUrl == nil {
-		return nil, fmt.Errorf("AAP provider %s missing AuthUrl", providerName)
+		return nil, fmt.Errorf("AAP provider %s missing AuthUrl", providerInfo.Name)
 	}
 
 	if providerInfo.ClientId == nil || *providerInfo.ClientId == "" {
-		return nil, fmt.Errorf("AAP provider %s missing ClientId", providerName)
+		return nil, fmt.Errorf("AAP provider %s missing ClientId", providerInfo.Name)
 	}
 
 	authURL := *providerInfo.AuthUrl
@@ -81,7 +81,7 @@ func getAAPAuthHandler(providerInfo *v1alpha1.AuthProviderInfo, providerName str
 		authURL:         authURL,
 		internalAuthURL: authURL,
 		clientId:        clientId,
-		providerName:    providerName,
+		providerName:    *providerInfo.Name,
 	}
 
 	if internalAuthURL != nil {
@@ -130,7 +130,13 @@ func (a *AAPAuthHandler) GetToken(loginParams LoginParameters) (TokenData, *int6
 	return exchangeToken(loginParams, a.internalClient)
 }
 
-func (a *AAPAuthHandler) GetUserInfo(token string) (string, *http.Response, error) {
+func (a *AAPAuthHandler) GetUserInfo(tokenData TokenData) (string, *http.Response, error) {
+	// For AAP, use AccessToken for userinfo endpoint
+	token := tokenData.AccessToken
+	if token == "" {
+		return "", nil, fmt.Errorf("access token is required for AAP userinfo")
+	}
+
 	userInfoEndpoint := fmt.Sprintf("%s/api/gateway/v1/me/", a.internalAuthURL)
 	body, resp, err := getUserInfo(token, a.tlsConfig, a.authURL, userInfoEndpoint)
 

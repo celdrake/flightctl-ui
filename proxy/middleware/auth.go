@@ -14,12 +14,10 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		tokenData, err := auth.ParseSessionCookie(r)
 		if err != nil {
 			log.GetLogger().Warn(err.Error())
-		} else if tokenData.Token != "" {
-			r.Header.Add(common.AuthHeaderKey, "Bearer "+tokenData.Token)
-			if tokenData.Provider != "" {
-				log.GetLogger().Debugf("Forwarding token from provider '%s' to backend API", tokenData.Provider)
-			} else {
-				log.GetLogger().Debug("Forwarding token to backend API (no provider specified)")
+		} else {
+			token := tokenData.GetAuthToken()
+			if token != "" {
+				r.Header.Add(common.AuthHeaderKey, "Bearer "+token)
 			}
 		}
 		next.ServeHTTP(w, r)

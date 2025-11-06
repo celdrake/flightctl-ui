@@ -25,22 +25,11 @@ type OAuth2AuthHandler struct {
 }
 
 // getOAuth2AuthHandler creates an OAuth2 handler using explicit endpoints
-func getOAuth2AuthHandler(providerInfo *v1alpha1.AuthProviderInfo, providerName string) (*OAuth2AuthHandler, error) {
-	// Validate required fields
-	if providerInfo.AuthUrl == nil {
-		return nil, fmt.Errorf("OAuth2 provider %s missing AuthUrl", providerName)
-	}
-	if providerInfo.TokenUrl == nil {
-		return nil, fmt.Errorf("OAuth2 provider %s missing TokenUrl", providerName)
-	}
-	if providerInfo.UserinfoUrl == nil {
-		return nil, fmt.Errorf("OAuth2 provider %s missing UserinfoUrl", providerName)
-	}
-	if providerInfo.ClientId == nil || *providerInfo.ClientId == "" {
-		return nil, fmt.Errorf("OAuth2 provider %s missing ClientId", providerName)
-	}
-	if providerInfo.Scopes == nil || len(*providerInfo.Scopes) == 0 {
-		return nil, fmt.Errorf("OAuth2 provider %s missing required scopes", providerName)
+func getOAuth2AuthHandler(providerInfo *v1alpha1.AuthProviderInfo) (*OAuth2AuthHandler, error) {
+	providerName := *providerInfo.Name
+
+	if providerInfo.AuthUrl == nil || providerInfo.TokenUrl == nil || providerInfo.UserinfoUrl == nil || providerInfo.ClientId == nil || *providerInfo.ClientId == "" || providerInfo.Scopes == nil || len(*providerInfo.Scopes) == 0 {
+		return nil, fmt.Errorf("OAuth2 provider %s missing required fields", providerName)
 	}
 
 	authURL := *providerInfo.AuthUrl
@@ -100,7 +89,13 @@ func (o *OAuth2AuthHandler) GetToken(loginParams LoginParameters) (TokenData, *i
 	return exchangeToken(loginParams, o.internalClient)
 }
 
-func (o *OAuth2AuthHandler) GetUserInfo(token string) (string, *http.Response, error) {
+func (o *OAuth2AuthHandler) GetUserInfo(tokenData TokenData) (string, *http.Response, error) {
+	// For OAuth2, use AccessToken for userinfo endpoint
+	token := tokenData.AccessToken
+	if token == "" {
+		return "", nil, fmt.Errorf("access token is required for OAuth2 userinfo")
+	}
+
 	body, resp, err := getUserInfo(token, o.tlsConfig, o.authURL, o.userInfoEndpoint)
 
 	if err != nil {

@@ -321,7 +321,6 @@ export const authProviderSchema = (t: TFunction) => (values: AuthProviderFormVal
     enabled: Yup.boolean(),
     scopes: Yup.array()
       .of(Yup.string())
-      .min(1, t('At least one scope is required'))
       .test('unique-scopes', t('Please remove duplicate scopes'), (scopes) => {
         const uniqueScopes = new Set(scopes);
         return uniqueScopes.size === scopes?.length;
