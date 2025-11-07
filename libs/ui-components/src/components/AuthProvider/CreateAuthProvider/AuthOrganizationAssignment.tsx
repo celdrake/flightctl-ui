@@ -5,6 +5,7 @@ import { useFormikContext } from 'formik';
 import { useTranslation } from '../../../hooks/useTranslation';
 import RadioField from '../../form/RadioField';
 import TextField from '../../form/TextField';
+import ListItemField from '../../form/ListItemField';
 import { AuthProviderFormValues, OrgAssignmentType } from './types';
 
 const OrganizationAssignmentSection = () => {
@@ -53,10 +54,10 @@ const OrganizationAssignmentSection = () => {
       {values.orgAssignmentType === OrgAssignmentType.Dynamic && (
         <>
           <FormGroup label={t('Claim path')} isRequired>
-            <TextField
+            <ListItemField
               name="claimPath"
-              aria-label={t('Claim path')}
-              helperText={t('Dot notation path to the claim (e.g., "groups", "custom_claims.org_id", ...)')}
+              helperText={t('Enter the path segments to the claim (e.g., ["groups"], ["custom_claims", "org_id"])')}
+              addButtonText={t('Add path segment')}
             />
           </FormGroup>
           <FormGroup label={t('Organization name prefix')}>

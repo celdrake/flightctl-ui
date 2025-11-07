@@ -82,10 +82,6 @@ func setCookie(w http.ResponseWriter, value TokenData) error {
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
 		Path:     "/",
-		// CELIA-WIP: See if the code below is needed
-		// SameSite: http.SameSiteLaxMode,
-		// MaxAge: 3600 * 24, // 24 hours - ensures cookie persists across browser sessions
-
 	}
 	http.SetCookie(w, &cookie)
 	return nil
@@ -291,4 +287,79 @@ func buildScopeParam(providerScopes *[]string, defaultScopes string) string {
 		return strings.Join(*providerScopes, " ")
 	}
 	return defaultScopes
+}
+
+// getValueByPath extracts a value from a map using an array path (e.g., ["user", "name"])
+// Path segments are used directly as map keys, so dots and other special characters
+// are treated as literal characters (e.g., ["kubernetes.io", "some-field"] works correctly)
+// Returns the value and whether it was found
+func getValueByPath(data map[string]interface{}, path []string) (interface{}, bool) {
+	if len(path) == 0 {
+		return nil, false
+	}
+
+	current := data
+
+	for i, part := range path {
+		if i == len(path)-1 {
+			// Last part - extract the value
+			if value, exists := current[part]; exists {
+				return value, true
+			}
+			return nil, false
+		}
+
+		// Navigate deeper into the object
+		if next, exists := current[part]; exists {
+			if nextMap, ok := next.(map[string]interface{}); ok {
+				current = nextMap
+			} else {
+				return nil, false
+			}
+		} else {
+			return nil, false
+		}
+	}
+
+	return nil, false
+}
+
+// extractUsernameFromUserInfo extracts username from userinfo map using the specified claim path
+// Supports both simple field names (e.g., ["preferred_username"]) and nested paths (e.g., ["user", "name"])
+func extractUsernameFromUserInfo(userInfo map[string]interface{}, usernameClaimPath []string) string {
+	// Try the specified claim path first
+	if len(usernameClaimPath) > 0 {
+		if val, exists := getValueByPath(userInfo, usernameClaimPath); exists {
+			if str, ok := val.(string); ok && str != "" {
+				return str
+			}
+		}
+	}
+
+	// Fallback to common OAuth2/OIDC username fields
+	commonClaims := [][]string{
+		{DefaultUsernameClaim},
+		{"email"},
+		{"sub"},
+		{"name"},
+		{"username"},
+	}
+	for _, claimPath := range commonClaims {
+		if val, exists := getValueByPath(userInfo, claimPath); exists {
+			if str, ok := val.(string); ok && str != "" {
+				return str
+			}
+		}
+	}
+
+	return ""
+}
+
+// getMapKeys returns the keys of a map as a slice of strings
+func getMapKeys(m map[string]interface{}) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
 }

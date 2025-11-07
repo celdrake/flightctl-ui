@@ -59,8 +59,6 @@ export const redirectToLogin = () => {
   window.location.href = '/login';
 };
 
-const showSpinnerBriefly = () => new Promise((resolve) => setTimeout(resolve, 40050));
-
 const handleApiJSONResponse = async <R>(response: Response): Promise<R> => {
   if (response.ok) {
     const data = (await response.json()) as R;
@@ -73,10 +71,6 @@ const handleApiJSONResponse = async <R>(response: Response): Promise<R> => {
   }
 
   if (response.status === 401) {
-    console.log('%c handleApiJSONResponse 401', 'color: purple; font-size:18px');
-    // CELIA-WIP: when token expires the UI was being in a loop.
-    // Check if it's now fixed since we clear the cookie when we get 401
-    await showSpinnerBriefly();
     redirectToLogin();
   }
 

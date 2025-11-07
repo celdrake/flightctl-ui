@@ -1,9 +1,12 @@
 import {
   AuthDynamicOrganizationAssignment,
+  AuthDynamicRoleAssignment,
   AuthOrganizationAssignment,
   AuthPerUserOrganizationAssignment,
   AuthProviderSpec,
+  AuthRoleAssignment,
   AuthStaticOrganizationAssignment,
+  AuthStaticRoleAssignment,
   OAuth2ProviderSpec,
   OIDCProviderSpec,
 } from '@flightctl/types';
@@ -43,17 +46,33 @@ export const isOrgAssignmentPerUser = (
   orgAssignment: AuthOrganizationAssignment,
 ): orgAssignment is AuthPerUserOrganizationAssignment => orgAssignment.type === OrgAssignmentType.PerUser;
 
+export enum RoleAssignmentType {
+  Static = 'static',
+  Dynamic = 'dynamic',
+}
+
+export const isRoleAssignmentStatic = (
+  roleAssignment: AuthRoleAssignment,
+): roleAssignment is AuthStaticRoleAssignment => roleAssignment.type === RoleAssignmentType.Static;
+
+export const isRoleAssignmentDynamic = (
+  roleAssignment: AuthRoleAssignment,
+): roleAssignment is AuthDynamicRoleAssignment => roleAssignment.type === RoleAssignmentType.Dynamic;
+
 export type AuthProviderFormValues = {
   exists: boolean;
   name: string;
+  displayName?: string;
   providerType: ProviderType;
   issuer: string;
   clientId: string;
   clientSecret: string;
   enabled: boolean;
   scopes: string[];
-  usernameClaim?: string;
-  roleClaim?: string;
+  usernameClaim?: string[]; // Array of path segments (e.g., ["preferred_username"] or ["custom", "user_id"])
+  roleAssignmentType?: RoleAssignmentType;
+  roleClaimPath?: string[]; // For dynamic role assignment
+  staticRoles?: string[]; // For static role assignment
 
   // OAuth2 specific fields
   authorizationUrl?: string;
@@ -62,7 +81,7 @@ export type AuthProviderFormValues = {
 
   orgAssignmentType: OrgAssignmentType;
   orgName?: string; // OrgAssignment: Static only
-  claimPath?: string; // OrgAssignment: Dynamic only
+  claimPath?: string[]; // OrgAssignment: Dynamic only - array of path segments
   orgNamePrefix?: string; // OrgAssignment: Dynamic and perUser
   orgNameSuffix?: string; // OrgAssignment: Dynamic and perUser
 };

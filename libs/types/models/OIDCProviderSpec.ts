@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { AuthOrganizationAssignment } from './AuthOrganizationAssignment';
+import type { AuthRoleAssignment } from './AuthRoleAssignment';
 /**
  * OIDCProviderSpec describes an OIDC provider configuration.
  */
@@ -11,6 +12,10 @@ export type OIDCProviderSpec = {
    * The type of authentication provider.
    */
   providerType: 'oidc';
+  /**
+   * Human-readable display name for the provider.
+   */
+  displayName?: string;
   /**
    * The OIDC issuer URL (e.g., https://accounts.google.com).
    */
@@ -33,12 +38,9 @@ export type OIDCProviderSpec = {
   scopes?: Array<string>;
   organizationAssignment: AuthOrganizationAssignment;
   /**
-   * JSON path to the username claim in the JWT token (e.g., "preferred_username", "email", "sub").
+   * JSON path to the username claim in the JWT token as an array of path segments (e.g., ["preferred_username"], ["email"], ["sub"]).
    */
-  usernameClaim?: string;
-  /**
-   * JSON path to the role/group claim in the JWT token (e.g., "groups", "roles", "realm_access.roles").
-   */
-  roleClaim?: string;
+  usernameClaim?: Array<string>;
+  roleAssignment: AuthRoleAssignment;
 };
 

@@ -151,28 +151,30 @@ func extractJwtTokenClaims(token string) (map[string]interface{}, error) {
 
 // extractUsernameFromClaims extracts the username from JWT claims
 func extractUsernameFromClaims(claims map[string]interface{}) (string, bool) {
-	// Prefer the short service account name over the full sub claim
-	if k8sInfo, ok := claims["kubernetes.io"].(map[string]interface{}); ok {
-		if sa, ok := k8sInfo["serviceaccount"].(map[string]interface{}); ok {
-			if saName, ok := sa["name"].(string); ok && saName != "" {
-				return saName, true
-			}
+	// Prefer the short service account name from nested structure: kubernetes.io.serviceaccount.name
+	if val, exists := getValueByPath(claims, []string{"kubernetes.io", "serviceaccount", "name"}); exists {
+		if saName, ok := val.(string); ok && saName != "" {
+			return saName, true
 		}
 	}
 
 	// Try to extract the service account name from the old flat claim structure
-	if saName, ok := claims["kubernetes.io/serviceaccount/service-account.name"].(string); ok && saName != "" {
-		return saName, true
+	if val, exists := getValueByPath(claims, []string{"kubernetes.io/serviceaccount/service-account.name"}); exists {
+		if saName, ok := val.(string); ok && saName != "" {
+			return saName, true
+		}
 	}
 
 	// Fallback to sub claim (which contains the full system:serviceaccount:namespace:name format)
-	if username, ok := claims["sub"].(string); ok && username != "" {
-		// Try to extract just the service account name from sub if it's in the right format
-		parts := strings.Split(username, ":")
-		if len(parts) == 4 && parts[0] == "system" && parts[1] == "serviceaccount" {
-			return parts[3], true // Return just the service account name
+	if val, exists := getValueByPath(claims, []string{"sub"}); exists {
+		if username, ok := val.(string); ok && username != "" {
+			// Try to extract just the service account name from sub if it's in the right format
+			parts := strings.Split(username, ":")
+			if len(parts) == 4 && parts[0] == "system" && parts[1] == "serviceaccount" {
+				return parts[3], true // Return just the service account name
+			}
+			return username, true
 		}
-		return username, true
 	}
 
 	return "", false

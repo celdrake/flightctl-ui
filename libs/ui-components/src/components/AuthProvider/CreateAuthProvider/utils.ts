@@ -1,9 +1,12 @@
 import * as Yup from 'yup';
 import { TFunction } from 'i18next';
 import {
+  AuthDynamicRoleAssignment,
   AuthOrganizationAssignment,
   AuthProvider,
   AuthProviderSpec,
+  AuthRoleAssignment,
+  AuthStaticRoleAssignment,
   OAuth2ProviderSpec,
   PatchRequest,
 } from '@flightctl/types';
@@ -13,13 +16,19 @@ import {
   MASKED_SECRET_VALUE,
   OrgAssignmentType,
   ProviderType,
+  RoleAssignmentType,
   isOAuth2Provider,
   isOrgAssignmentDynamic,
   isOrgAssignmentPerUser,
+  isRoleAssignmentDynamic,
+  isRoleAssignmentStatic,
 } from './types';
-import { validDnsSubdomainPart, validDotNotationPath, validKubernetesDnsSubdomain } from '../../form/validations';
+import { validDnsSubdomainPart, validKubernetesDnsSubdomain } from '../../form/validations';
 
-export const getOrgAssignmentTypeLabel = (type: AuthOrganizationAssignment['type'] | undefined, t: TFunction) => {
+export const getAssignmentTypeLabel = (
+  type: AuthOrganizationAssignment['type'] | AuthRoleAssignment['type'] | undefined,
+  t: TFunction,
+) => {
   switch (type) {
     case OrgAssignmentType.Static:
       return t('Static');
@@ -49,16 +58,19 @@ export const getInitValues = (authProvider?: AuthProvider): AuthProviderFormValu
       exists: false,
       enabled: true,
       name: '',
+      displayName: '',
       providerType: ProviderType.OIDC,
       issuer: '',
       clientId: '',
       clientSecret: '',
       scopes: [],
-      usernameClaim: '',
-      roleClaim: '',
+      usernameClaim: [],
+      roleAssignmentType: RoleAssignmentType.Dynamic,
+      roleClaimPath: [],
+      staticRoles: [],
       orgAssignmentType: OrgAssignmentType.Static,
       orgName: '',
-      claimPath: '',
+      claimPath: [],
       orgNamePrefix: '',
       orgNameSuffix: '',
     };
@@ -66,14 +78,14 @@ export const getInitValues = (authProvider?: AuthProvider): AuthProviderFormValu
 
   let orgAssignmentType: OrgAssignmentType;
   let orgName = '';
-  let claimPath = '';
+  let claimPath: string[] = [];
   let orgNamePrefix = '';
   let orgNameSuffix = '';
 
   const orgAssignment = authProvider.spec.organizationAssignment;
   if (isOrgAssignmentDynamic(orgAssignment)) {
     orgAssignmentType = OrgAssignmentType.Dynamic;
-    claimPath = orgAssignment.claimPath;
+    claimPath = orgAssignment.claimPath || [];
     orgNamePrefix = orgAssignment.organizationNamePrefix || '';
     orgNameSuffix = orgAssignment.organizationNameSuffix || '';
   } else if (isOrgAssignmentPerUser(orgAssignment)) {
@@ -85,11 +97,25 @@ export const getInitValues = (authProvider?: AuthProvider): AuthProviderFormValu
     orgName = orgAssignment.organizationName;
   }
 
+  let roleAssignmentType: RoleAssignmentType = RoleAssignmentType.Dynamic;
+  let roleClaimPath: string[] = [];
+  let staticRoles: string[] = [];
+
+  const roleAssignment = authProvider.spec.roleAssignment;
+  if (isRoleAssignmentStatic(roleAssignment)) {
+    roleAssignmentType = RoleAssignmentType.Static;
+    staticRoles = roleAssignment.roles || [];
+  } else if (isRoleAssignmentDynamic(roleAssignment)) {
+    roleAssignmentType = RoleAssignmentType.Dynamic;
+    roleClaimPath = roleAssignment.claimPath || [];
+  }
+
   const spec = authProvider.spec;
   const isOAuth2 = isOAuth2Provider(spec);
   return {
     exists: true,
     name: authProvider.metadata.name as string,
+    displayName: spec.displayName,
     providerType: spec.providerType as ProviderType,
     issuer: spec.issuer,
     clientId: spec.clientId,
@@ -99,8 +125,10 @@ export const getInitValues = (authProvider?: AuthProvider): AuthProviderFormValu
     tokenUrl: isOAuth2 ? spec.tokenUrl : undefined,
     userinfoUrl: isOAuth2 ? spec.userinfoUrl : undefined,
     scopes: spec.scopes || [],
-    usernameClaim: spec.usernameClaim,
-    roleClaim: spec.roleClaim,
+    usernameClaim: spec.usernameClaim || [],
+    roleAssignmentType,
+    roleClaimPath,
+    staticRoles,
     orgAssignmentType,
     orgName,
     claimPath,
@@ -121,34 +149,48 @@ const getOrgAssignment = (values: AuthProviderFormValues): AuthOrganizationAssig
   if (values.orgAssignmentType === OrgAssignmentType.PerUser) {
     orgAssignment = {
       type: OrgAssignmentType.PerUser,
+      organizationNamePrefix: values.orgNamePrefix,
+      organizationNameSuffix: values.orgNameSuffix,
     };
   } else {
     orgAssignment = {
       type: OrgAssignmentType.Dynamic,
-      claimPath: values.claimPath || '',
+      claimPath: values.claimPath || [],
+      organizationNamePrefix: values.orgNamePrefix,
+      organizationNameSuffix: values.orgNameSuffix,
     };
   }
 
-  // Only set the optional fields when they are non-null
-  if (values.orgNamePrefix) {
-    orgAssignment.organizationNamePrefix = values.orgNamePrefix;
-  }
-  if (values.orgNameSuffix) {
-    orgAssignment.organizationNameSuffix = values.orgNameSuffix;
-  }
   return orgAssignment;
+};
+
+const getRoleAssignment = (values: AuthProviderFormValues): AuthRoleAssignment => {
+  if (values.roleAssignmentType === RoleAssignmentType.Static) {
+    const staticAssignment: AuthStaticRoleAssignment = {
+      type: RoleAssignmentType.Static,
+      roles: values.staticRoles || [],
+    };
+    return staticAssignment as AuthRoleAssignment;
+  } else {
+    const dynamicAssignment: AuthDynamicRoleAssignment = {
+      type: RoleAssignmentType.Dynamic,
+      claimPath: values.roleClaimPath || [],
+    };
+    return dynamicAssignment as AuthRoleAssignment;
+  }
 };
 
 export const getAuthProvider = (values: AuthProviderFormValues): AuthProvider => {
   const baseSpec = {
     providerType: values.providerType,
+    displayName: values.displayName,
     clientId: values.clientId,
     clientSecret: values.clientSecret,
     enabled: values.enabled,
     issuer: values.issuer,
     scopes: values.scopes,
-    usernameClaim: values.usernameClaim,
-    roleClaim: values.roleClaim,
+    usernameClaim: values.usernameClaim || [],
+    roleAssignment: getRoleAssignment(values),
     organizationAssignment: getOrgAssignment(values),
   };
 
@@ -238,6 +280,13 @@ const patchAuthProviderFields = (
 
   appendJSONPatch({
     patches,
+    originalValue: spec.displayName,
+    newValue: newSpec.displayName,
+    path: '/spec/displayName',
+  });
+
+  appendJSONPatch({
+    patches,
     originalValue: spec.usernameClaim,
     newValue: newSpec.usernameClaim,
     path: '/spec/usernameClaim',
@@ -245,9 +294,9 @@ const patchAuthProviderFields = (
 
   appendJSONPatch({
     patches,
-    originalValue: spec.roleClaim,
-    newValue: newSpec.roleClaim,
-    path: '/spec/roleClaim',
+    originalValue: spec.roleAssignment,
+    newValue: newSpec.roleAssignment,
+    path: '/spec/roleAssignment',
   });
 };
 
@@ -325,8 +374,20 @@ export const authProviderSchema = (t: TFunction) => (values: AuthProviderFormVal
         const uniqueScopes = new Set(scopes);
         return uniqueScopes.size === scopes?.length;
       }),
-    usernameClaim: validDotNotationPath(t),
-    roleClaim: validDotNotationPath(t),
+    usernameClaim: Yup.array().of(Yup.string()),
+    roleAssignmentType: Yup.string().oneOf(Object.values(RoleAssignmentType)),
+    roleClaimPath: Yup.array()
+      .of(Yup.string())
+      .when('roleAssignmentType', {
+        is: RoleAssignmentType.Dynamic,
+        then: (schema) => schema.min(1, t('At least one claim path segment is required for dynamic role assignment')),
+      }),
+    staticRoles: Yup.array()
+      .of(Yup.string())
+      .when('roleAssignmentType', {
+        is: RoleAssignmentType.Static,
+        then: (schema) => schema.min(1, t('At least one role is required for static role assignment')),
+      }),
     orgAssignmentType: Yup.string()
       .oneOf(Object.values(OrgAssignmentType))
       .required(t('Organization assignment type is required')),
@@ -361,7 +422,10 @@ export const authProviderSchema = (t: TFunction) => (values: AuthProviderFormVal
   } else if (values.orgAssignmentType === OrgAssignmentType.Dynamic) {
     schema = {
       ...schema,
-      claimPath: validDotNotationPath(t).required(t('Claim path is required')),
+      claimPath: Yup.array()
+        .of(Yup.string())
+        .min(1, t('At least one claim path segment is required'))
+        .required(t('Claim path is required')),
       orgNamePrefix: validDnsSubdomainPart(t),
       orgNameSuffix: validDnsSubdomainPart(t),
     };

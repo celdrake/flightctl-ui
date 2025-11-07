@@ -11,9 +11,9 @@ export type AuthDynamicOrganizationAssignment = {
    */
   type: 'dynamic';
   /**
-   * The JSON path to the claim that contains the organization identifier (e.g., "groups.0" or "custom.org").
+   * The JSON path to the claim that contains the organization identifier (e.g., ["groups", "0"] or ["custom", "org"]).
    */
-  claimPath: string;
+  claimPath: Array<string>;
   /**
    * The prefix for the organization name (e.g., "org-").
    */

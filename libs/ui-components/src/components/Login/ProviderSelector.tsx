@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { TFunction } from 'react-i18next';
 import { Button, Card, CardBody, CardTitle, Stack, StackItem, Title } from '@patternfly/react-core';
 
 import { AuthProviderInfo } from '@flightctl/types';
@@ -11,6 +12,19 @@ import { useAppContext } from '../../hooks/useAppContext';
 type ProviderSelectorProps = {
   providers: AuthProviderInfo[];
   onProviderSelect: (provider: AuthProviderInfo) => void;
+};
+
+const getProviderDisplayName = (provider: AuthProviderInfo, t: TFunction) => {
+  if (provider.displayName) {
+    return provider.displayName;
+  }
+  if (provider.type === AuthProviderInfo.type.K8S) {
+    return t('Kubernetes');
+  }
+  if (provider.type === AuthProviderInfo.type.AAP) {
+    return t('Ansible Automation Platform');
+  }
+  return provider.name;
 };
 
 const ProviderSelector = ({ providers, onProviderSelect }: ProviderSelectorProps) => {
@@ -69,7 +83,7 @@ const ProviderSelector = ({ providers, onProviderSelect }: ProviderSelectorProps
                         size="lg"
                         onClick={() => onProviderSelect(provider)}
                       >
-                        {t('Log in with {{ providerName }}', { providerName: displayName })}
+                        {t('Log in with {{ providerName }}', { providerName: getProviderDisplayName(provider, t) })}
                       </Button>
                       {isDuplicateName && (
                         <small>

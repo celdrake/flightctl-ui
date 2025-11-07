@@ -13,8 +13,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 )
 
-// CELIA-WIP REMOVE AND POINT TO THE CORRECT VERSION
-// Use local flightctl for development
+// Point to local flightctl with EDM-2347 branch checked out
 replace github.com/flightctl/flightctl => ../../flightctl
 
 require (

@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { AuthOrganizationAssignment } from './AuthOrganizationAssignment';
+import type { AuthRoleAssignment } from './AuthRoleAssignment';
 /**
  * OAuth2ProviderSpec describes an OAuth2 provider configuration.
  */
@@ -11,6 +12,10 @@ export type OAuth2ProviderSpec = {
    * The type of authentication provider.
    */
   providerType: 'oauth2';
+  /**
+   * Human-readable display name for the provider.
+   */
+  displayName?: string;
   /**
    * The OAuth2 issuer identifier (used for issuer identification in tokens).
    */
@@ -45,12 +50,9 @@ export type OAuth2ProviderSpec = {
   scopes?: Array<string>;
   organizationAssignment: AuthOrganizationAssignment;
   /**
-   * JSON path to the username claim in the userinfo response (e.g., "preferred_username", "email", "sub").
+   * JSON path to the username claim in the userinfo response as an array of path segments (e.g., ["preferred_username"], ["email"], ["sub"]).
    */
-  usernameClaim?: string;
-  /**
-   * JSON path to the role/group claim in the userinfo response (e.g., "groups", "roles", "realm_access.roles").
-   */
-  roleClaim?: string;
+  usernameClaim?: Array<string>;
+  roleAssignment: AuthRoleAssignment;
 };
 

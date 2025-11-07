@@ -21,7 +21,7 @@ type OAuth2AuthHandler struct {
 	authURL          string
 	clientId         string
 	providerName     string
-	usernameClaim    string // JSON path to username claim (e.g., "preferred_username", "email", "sub")
+	usernameClaim    []string // JSON path to username claim as array of path segments (e.g., ["preferred_username"], ["user", "name"])
 }
 
 // getOAuth2AuthHandler creates an OAuth2 handler using explicit endpoints
@@ -38,8 +38,8 @@ func getOAuth2AuthHandler(providerInfo *v1alpha1.AuthProviderInfo) (*OAuth2AuthH
 	clientId := *providerInfo.ClientId
 
 	// Get username claim from provider config, default to DefaultUsernameClaim
-	usernameClaim := DefaultUsernameClaim
-	if providerInfo.UsernameClaim != nil && *providerInfo.UsernameClaim != "" {
+	usernameClaim := []string{DefaultUsernameClaim}
+	if providerInfo.UsernameClaim != nil && len(*providerInfo.UsernameClaim) > 0 {
 		usernameClaim = *providerInfo.UsernameClaim
 	}
 
@@ -122,48 +122,15 @@ func (o *OAuth2AuthHandler) GetUserInfo(tokenData TokenData) (string, *http.Resp
 
 	log.GetLogger().Debugf("Userinfo response for provider %s: %+v", o.providerName, userInfo)
 
-	// Extract username from the specified claim
+	// Extract username from the specified claim path
 	username := extractUsernameFromUserInfo(userInfo, o.usernameClaim)
 	if username == "" {
-		log.GetLogger().Warnf("Could not extract username from claim %s in userinfo response for provider %s. Available fields: %v", o.usernameClaim, o.providerName, getMapKeys(userInfo))
-		return "", resp, fmt.Errorf("username not found in userinfo response using claim: %s", o.usernameClaim)
+		log.GetLogger().Warnf("Could not extract username from claim path %v in userinfo response for provider %s. Available fields: %v", o.usernameClaim, o.providerName, getMapKeys(userInfo))
+		return "", resp, fmt.Errorf("username not found in userinfo response using claim path: %v", o.usernameClaim)
 	}
 
-	log.GetLogger().Debugf("Extracted username '%s' from provider %s using claim %s", username, o.providerName, o.usernameClaim)
+	log.GetLogger().Debugf("Extracted username '%s' from provider %s using claim path %v", username, o.providerName, o.usernameClaim)
 	return username, resp, nil
-}
-
-// getMapKeys returns the keys of a map as a slice of strings
-func getMapKeys(m map[string]interface{}) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	return keys
-}
-
-// extractUsernameFromUserInfo extracts username from userinfo map using the specified claim
-// Supports simple field names (e.g., "preferred_username", "email", "sub")
-// For nested paths, would need JSON path parsing (future enhancement)
-func extractUsernameFromUserInfo(userInfo map[string]interface{}, usernameClaim string) string {
-	// Try the specified claim first
-	if val, ok := userInfo[usernameClaim]; ok {
-		if str, ok := val.(string); ok && str != "" {
-			return str
-		}
-	}
-
-	// Fallback to common OAuth2/OIDC username fields
-	commonClaims := []string{DefaultUsernameClaim, "email", "sub", "name", "username"}
-	for _, claim := range commonClaims {
-		if val, ok := userInfo[claim]; ok {
-			if str, ok := val.(string); ok && str != "" {
-				return str
-			}
-		}
-	}
-
-	return ""
 }
 
 func (o *OAuth2AuthHandler) Logout(token string) (string, error) {

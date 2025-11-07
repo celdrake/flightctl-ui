@@ -29,7 +29,10 @@ export const UsernameClaimHelperText = () => {
         <strong>{t('Purpose')}:</strong> {t('The claim field that contains the username.')}
       </p>
       <p>
-        <strong>{t('Format')}:</strong> {t("Use dot notation to access nested fields (e.g., 'custom_claims.user_id').")}
+        <strong>{t('Format')}:</strong>{' '}
+        {t(
+          'Use an array of path segments to access nested fields (e.g., ["preferred_username"], ["email"], ["custom_claims", "user_id"]).',
+        )}
       </p>
       <p>
         <strong>{t('Requirements')}:</strong>
@@ -48,10 +51,14 @@ export const RoleClaimHelperText = () => {
         {t('The claim field that contains user roles or group memberships for authorization.')}
       </p>
       <p>
-        <strong>{t('Configuration')}:</strong> {t("Refer to your provider's documentation for the correct claim name.")}
+        <strong>{t('Configuration')}:</strong> {t("Refer to your provider's documentation for the correct claim path.")}
       </p>
       <p>
-        <strong>{t('Common examples')}:</strong> {t('groups, roles, authorities')}
+        <strong>{t('Format')}:</strong>{' '}
+        {t('Use an array of path segments (e.g., ["groups"], ["roles"], ["realm_access", "roles"]).')}
+      </p>
+      <p>
+        <strong>{t('Common examples')}:</strong> {t('["groups"], ["roles"], ["authorities"]')}
       </p>
     </div>
   );

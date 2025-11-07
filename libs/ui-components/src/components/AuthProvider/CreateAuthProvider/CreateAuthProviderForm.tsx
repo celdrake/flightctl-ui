@@ -15,13 +15,7 @@ import ListItemField from '../../form/ListItemField';
 import FlightCtlForm from '../../form/FlightCtlForm';
 import FlightCtlActionGroup from '../../form/FlightCtlActionGroup';
 import { getDnsSubdomainValidations } from '../../form/validations';
-import {
-  AuthProviderFormValues,
-  DEFAULT_ROLE_CLAIM,
-  DEFAULT_USERNAME_CLAIM,
-  OrgAssignmentType,
-  ProviderType,
-} from './types';
+import { AuthProviderFormValues, OrgAssignmentType, ProviderType, RoleAssignmentType } from './types';
 
 import { authProviderSchema, getAuthProvider, getAuthProviderPatches, getInitValues } from './utils';
 import { getErrorMessage } from '../../../utils/error';
@@ -30,9 +24,10 @@ import { FormGroupWithHelperText } from '../../common/WithHelperText';
 
 import Oauth2ProviderFields from './Oauth2ProviderFields';
 import OrganizationAssignmentSection from './AuthOrganizationAssignment';
+import RoleAssignmentSection from './RoleAssignmentSection';
 import TestConnectionModal from '../TestConnectionModal/TestConnectionModal';
 import { TestConnectionResponse } from './types';
-import { RoleClaimHelperText, ScopesHelperText, UsernameClaimHelperText } from './AuthProviderHelperText';
+import { ScopesHelperText, UsernameClaimHelperText } from './AuthProviderHelperText';
 
 const ProviderTypeSection = () => {
   const { t } = useTranslation();
@@ -103,6 +98,14 @@ export const AuthProviderForm = ({ isEdit }: { isEdit?: boolean }) => {
         validations={getDnsSubdomainValidations(t)}
       />
 
+      <FormGroup label={t('Display name')}>
+        <TextField
+          name="displayName"
+          aria-label={t('Display name')}
+          helperText={t('Optional human-readable display name for the provider')}
+        />
+      </FormGroup>
+
       <ProviderTypeSection />
 
       {values.providerType === ProviderType.OAuth2 && <Oauth2ProviderFields />}
@@ -128,14 +131,18 @@ export const AuthProviderForm = ({ isEdit }: { isEdit?: boolean }) => {
           />
         </FormGroupWithHelperText>
 
-        <FormGroupWithHelperText label={t('Username claim')} content={<UsernameClaimHelperText />}>
-          <TextField name="usernameClaim" aria-label={t('Username claim')} placeholder={DEFAULT_USERNAME_CLAIM} />
-        </FormGroupWithHelperText>
-
-        <FormGroupWithHelperText label={t('Role claim')} content={<RoleClaimHelperText />}>
-          <TextField name="roleClaim" aria-label={t('Role claim')} placeholder={DEFAULT_ROLE_CLAIM} />
+        <FormGroupWithHelperText label={t('Username claim path')} content={<UsernameClaimHelperText />}>
+          <ListItemField
+            name="usernameClaim"
+            helperText={t('Enter the path segments to the username claim')}
+            addButtonText={t('Add path segment')}
+            resolvedValue={(items) => items.join('.')}
+            resolvedLabel={t('Resulting username claim')}
+          />
         </FormGroupWithHelperText>
       </FormSection>
+
+      <RoleAssignmentSection />
 
       <OrganizationAssignmentSection />
     </>

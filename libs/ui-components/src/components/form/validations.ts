@@ -148,20 +148,6 @@ export const getInvalidKubernetesLabels = (labels: FlightCtlLabel[]) => {
   });
 };
 
-export const validDotNotationPath = (t: TFunction) =>
-  Yup.string().test(
-    'is-valid-dot-notation-path',
-    t(
-      'Use dot notation. Each segment must start with a letter or underscore and contain only letters, numbers, or underscores',
-    ),
-    function (value) {
-      if (!value || value.trim() === '') {
-        return true;
-      }
-      return dotNotationPathRegex.test(value.trim());
-    },
-  );
-
 // Validates DNS subdomain part (for prefixes/suffixes that will be combined into org names)
 // Allows empty strings since these fields are optional
 export const validDnsSubdomainPart = (t: TFunction) =>

@@ -24,7 +24,7 @@ type OIDCAuthHandler struct {
 	authURL            string
 	clientId           string
 	providerName       string
-	usernameClaim      string
+	usernameClaim      []string // JSON path to username claim as array of path segments (e.g., ["preferred_username"], ["user", "name"])
 }
 
 type oidcServerResponse struct {
@@ -91,8 +91,8 @@ func getOIDCAuthHandler(providerInfo *v1alpha1.AuthProviderInfo) (*OIDCAuthHandl
 	}
 
 	// Get username claim from provider config, default to DefaultUsernameClaim
-	usernameClaim := DefaultUsernameClaim
-	if providerInfo.UsernameClaim != nil && *providerInfo.UsernameClaim != "" {
+	usernameClaim := []string{DefaultUsernameClaim}
+	if providerInfo.UsernameClaim != nil && len(*providerInfo.UsernameClaim) > 0 {
 		usernameClaim = *providerInfo.UsernameClaim
 	}
 
@@ -210,11 +210,11 @@ func (o *OIDCAuthHandler) GetUserInfo(tokenData TokenData) (string, *http.Respon
 		return "", resp, fmt.Errorf("failed to unmarshal OIDC user response: %w", err)
 	}
 
-	// Extract username from the specified claim
+	// Extract username from the specified claim path
 	username := extractUsernameFromUserInfo(userInfo, o.usernameClaim)
 	if username == "" {
-		log.GetLogger().Warnf("Could not extract username from claim %s in userinfo response for provider %s. Available fields: %v", o.usernameClaim, o.providerName, getMapKeys(userInfo))
-		return "", resp, fmt.Errorf("username not found in userinfo response using claim: %s", o.usernameClaim)
+		log.GetLogger().Warnf("Could not extract username from claim path %v in userinfo response for provider %s. Available fields: %v", o.usernameClaim, o.providerName, getMapKeys(userInfo))
+		return "", resp, fmt.Errorf("username not found in userinfo response using claim path: %v", o.usernameClaim)
 	}
 
 	return username, resp, nil

@@ -12,19 +12,17 @@ import {
   LabelGroup,
   Stack,
   StackItem,
+  Text,
+  TextContent,
+  TextVariants,
   Title,
 } from '@patternfly/react-core';
 import { AuthProvider } from '@flightctl/types';
 
 import { useTranslation } from '../../../hooks/useTranslation';
-import {
-  DEFAULT_ROLE_CLAIM,
-  DEFAULT_USERNAME_CLAIM,
-  OrgAssignmentType,
-  isOAuth2Provider,
-} from '../CreateAuthProvider/types';
-import CopyButton from '../../common/CopyButton';
-import { getOrgAssignmentTypeLabel, getProviderTypeLabel } from '../CreateAuthProvider/utils';
+import { DEFAULT_USERNAME_CLAIM, OrgAssignmentType, isOAuth2Provider } from '../CreateAuthProvider/types';
+import { getAssignmentTypeLabel, getProviderTypeLabel } from '../CreateAuthProvider/utils';
+import RoleAssigmentDetails from './RoleAssigmentDetails';
 
 const Scopes = ({ scopes }: { scopes: string[] | undefined }) => {
   if (!scopes || scopes.length === 0) {
@@ -63,12 +61,17 @@ const AuthProviderDetailsTab = ({ authProvider }: { authProvider: AuthProvider }
             <Title headingLevel="h2" size="lg" className="pf-v5-u-mb-md">
               {t('Provider overview')}
             </Title>
-            <DescriptionList columnModifier={{ default: '3Col' }}>
+            <DescriptionList columnModifier={{ default: '2Col' }}>
               <DescriptionListGroup>
                 <DescriptionListTerm>{t('Name')}</DescriptionListTerm>
                 <DescriptionListDescription>
                   <strong>{authProvider.metadata.name}</strong>
                 </DescriptionListDescription>
+              </DescriptionListGroup>
+
+              <DescriptionListGroup>
+                <DescriptionListTerm>{t('Display name')}</DescriptionListTerm>
+                <DescriptionListDescription>{spec.displayName || 'N/A'}</DescriptionListDescription>
               </DescriptionListGroup>
 
               <DescriptionListGroup>
@@ -120,8 +123,7 @@ const AuthProviderDetailsTab = ({ authProvider }: { authProvider: AuthProvider }
               <DescriptionListGroup>
                 <DescriptionListTerm>{t('Issuer URL')}</DescriptionListTerm>
                 <DescriptionListDescription>
-                  {spec.issuer || 'N/A'}
-                  {spec.issuer && <CopyButton text={spec.issuer} ariaLabel={t('Copy URL')} />}
+                  {spec.issuer ? <CopyUrl url={spec.issuer} /> : 'N/A'}
                 </DescriptionListDescription>
               </DescriptionListGroup>
             </DescriptionList>
@@ -148,16 +150,27 @@ const AuthProviderDetailsTab = ({ authProvider }: { authProvider: AuthProvider }
                 </DescriptionListDescription>
               </DescriptionListGroup>
               <DescriptionListGroup>
-                <DescriptionListTerm>{t('Username claim')}</DescriptionListTerm>
+                <DescriptionListTerm>{t('Username claim path')}</DescriptionListTerm>
                 <DescriptionListDescription>
-                  {spec.usernameClaim || `${DEFAULT_USERNAME_CLAIM} - (${t('Default')})`}
+                  {spec.usernameClaim?.length ? (
+                    <>
+                      <LabelGroup>{spec.usernameClaim?.map((claim) => <Label key={claim}>{claim}</Label>)}</LabelGroup>
+                      <TextContent>
+                        <Text component={TextVariants.small}>
+                          {t('Resulting username claim')}: <strong>{spec.usernameClaim.join('.')}</strong>
+                        </Text>
+                      </TextContent>
+                    </>
+                  ) : (
+                    <Label color="grey">{`${DEFAULT_USERNAME_CLAIM} - (${t('Default')})`}</Label>
+                  )}
                 </DescriptionListDescription>
               </DescriptionListGroup>
 
               <DescriptionListGroup>
-                <DescriptionListTerm>{t('Role claim')}</DescriptionListTerm>
+                <DescriptionListTerm>{t('Role assignment')}</DescriptionListTerm>
                 <DescriptionListDescription>
-                  {spec.roleClaim || `${DEFAULT_ROLE_CLAIM} - (${t('Default')})`}
+                  <RoleAssigmentDetails roleAssignment={spec.roleAssignment} />
                 </DescriptionListDescription>
               </DescriptionListGroup>
             </DescriptionList>
@@ -175,7 +188,7 @@ const AuthProviderDetailsTab = ({ authProvider }: { authProvider: AuthProvider }
               <DescriptionListGroup>
                 <DescriptionListTerm>{t('Assignment type')}</DescriptionListTerm>
                 <DescriptionListDescription>
-                  <Label color="purple">{getOrgAssignmentTypeLabel(orgAssignment.type, t)}</Label>
+                  <Label color="purple">{getAssignmentTypeLabel(orgAssignment.type, t)}</Label>
                 </DescriptionListDescription>
               </DescriptionListGroup>
               {orgAssignment.type === OrgAssignmentType.Static && (
@@ -187,7 +200,13 @@ const AuthProviderDetailsTab = ({ authProvider }: { authProvider: AuthProvider }
               {orgAssignment.type === OrgAssignmentType.Dynamic && (
                 <DescriptionListGroup>
                   <DescriptionListTerm>{t('Claim path')}</DescriptionListTerm>
-                  <DescriptionListDescription>{orgAssignment.claimPath}</DescriptionListDescription>
+                  <DescriptionListDescription>
+                    <LabelGroup>
+                      {orgAssignment.claimPath.map((pathSegment, index) => (
+                        <Label key={`${pathSegment}-${index}`}>{pathSegment}</Label>
+                      ))}
+                    </LabelGroup>
+                  </DescriptionListDescription>
                 </DescriptionListGroup>
               )}
               {(orgAssignment.type === OrgAssignmentType.Dynamic ||

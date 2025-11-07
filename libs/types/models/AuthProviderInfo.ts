@@ -43,9 +43,9 @@ export type AuthProviderInfo = {
    */
   scopes?: Array<string>;
   /**
-   * JSON path to the username claim (for OIDC/OAuth2 providers).
+   * JSON path to the username claim (for OIDC/OAuth2 providers) as an array of path segments.
    */
-  usernameClaim?: string;
+  usernameClaim?: Array<string>;
   /**
    * Whether this is the default provider.
    */
