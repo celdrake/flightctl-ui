@@ -15,7 +15,13 @@ import ListItemField from '../../form/ListItemField';
 import FlightCtlForm from '../../form/FlightCtlForm';
 import FlightCtlActionGroup from '../../form/FlightCtlActionGroup';
 import { getDnsSubdomainValidations } from '../../form/validations';
-import { AuthProviderFormValues, OrgAssignmentType, ProviderType, RoleAssignmentType } from './types';
+import {
+  AuthProviderFormValues,
+  FieldValidationResult,
+  OrgAssignmentType,
+  ProviderType,
+  RoleAssignmentType,
+} from './types';
 
 import { authProviderSchema, getAuthProvider, getAuthProviderPatches, getInitValues } from './utils';
 import { getErrorMessage } from '../../../utils/error';
@@ -163,7 +169,7 @@ const CreateAuthProviderFormContent = ({
   const { proxyFetch } = useFetch();
 
   const [isTesting, setIsTesting] = React.useState(false);
-  const [testResults, setTestResults] = React.useState<TestConnectionResponse | null>(null);
+  const [testResults, setTestResults] = React.useState<FieldValidationResult[] | null>(null);
   const [testError, setTestError] = React.useState<string>();
   const isSubmitDisabled = isSubmitting || !isValid || !dirty;
   const isTestingDisabled = isSubmitting || !isValid || isTesting || (!isEdit && !dirty);
@@ -195,8 +201,8 @@ const CreateAuthProviderFormContent = ({
         throw new Error(errorText || `HTTP ${response.status}`);
       }
 
-      const data = (await response.json()) as TestConnectionResponse;
-      setTestResults(data);
+      const data = (await response.json()) as { results: FieldValidationResult[] };
+      setTestResults(data.results);
     } catch (err) {
       setTestError(getErrorMessage(err));
     } finally {

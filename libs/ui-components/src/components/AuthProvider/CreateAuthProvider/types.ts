@@ -93,6 +93,9 @@ export type FieldValidation = {
   notes?: string[];
 };
 
-export type TestConnectionResponse = {
-  results: Record<string, FieldValidation>;
+export type FieldValidationResult = {
+  field: string;
+  valid: boolean;
+  value?: string;
+  notes?: string[];
 };

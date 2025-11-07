@@ -1,16 +1,27 @@
 import * as React from 'react';
-import { Alert, Button, Icon, List, ListItem, Stack, StackItem } from '@patternfly/react-core';
+import {
+  Alert,
+  Button,
+  Icon,
+  List,
+  ListItem,
+  Stack,
+  StackItem,
+  Text,
+  TextContent,
+  TextVariants,
+} from '@patternfly/react-core';
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@patternfly/react-core/next';
 import { Table, Tbody, Td, Th, Thead, Tr } from '@patternfly/react-table';
 import { CheckCircleIcon } from '@patternfly/react-icons/dist/js/icons/check-circle-icon';
-import { ExclamationCircleIcon } from '@patternfly/react-icons/dist/js/icons/exclamation-circle-icon';
+import { ExclamationTriangleIcon } from '@patternfly/react-icons/dist/js/icons/exclamation-triangle-icon';
 
 import { useTranslation } from '../../../hooks/useTranslation';
-import { TestConnectionResponse } from '../CreateAuthProvider/types';
+import { FieldValidationResult } from '../CreateAuthProvider/types';
 
 type TestConnectionModalProps = {
   onClose: VoidFunction;
-  results: TestConnectionResponse;
+  results: FieldValidationResult[];
 };
 
 const getStatusIcon = (valid: boolean) => {
@@ -22,8 +33,8 @@ const getStatusIcon = (valid: boolean) => {
     );
   }
   return (
-    <Icon status="danger">
-      <ExclamationCircleIcon />
+    <Icon status="warning">
+      <ExclamationTriangleIcon />
     </Icon>
   );
 };
@@ -55,41 +66,36 @@ const NotesCell = ({ notes }: { notes?: string[] }) => {
 const TestConnectionModal = ({ onClose, results }: TestConnectionModalProps) => {
   const { t } = useTranslation();
 
-  const entries = Object.entries(results.results);
-  const allValid = entries.every(([, validation]) => validation.valid);
-  const hasInvalid = entries.some(([, validation]) => !validation.valid);
-
-  // Check if this is an OIDC provider (has issuer field)
-  const isOidcProvider = 'issuer' in results.results;
-  const issuerValidation = results.results.issuer;
+  const allValid = results.every((validation) => validation.valid);
+  const hasValid = results.some((validation) => validation.valid);
 
   return (
     <Modal isOpen onClose={onClose} variant="medium">
       <ModalHeader title={t('Test connection results')} />
       <ModalBody>
         <Stack hasGutter>
-          {isOidcProvider && issuerValidation ? (
+          {allValid ? (
+            <>
+              <StackItem>
+                <Alert variant="success" title={t('Connection test successful')} />
+              </StackItem>
+              <StackItem>
+                <TextContent>
+                  <Text component={TextVariants.small}>
+                    {t("Great! We successfully connected to your provider. Here's what we found:")}
+                  </Text>
+                </TextContent>
+              </StackItem>
+            </>
+          ) : (
             <StackItem>
               <Alert
                 isInline
-                variant={issuerValidation.valid ? 'success' : 'danger'}
-                title={issuerValidation.valid ? t('OIDC discovery successful') : t('OIDC discovery failed')}
+                variant={hasValid ? 'warning' : 'danger'}
+                title={hasValid ? t('Connection partially successful') : t('Connection test unsuccessful')}
               >
-                {t('The OIDC discovery was successful. Find the details below for the discovered endpoints:')}
+                {t("We found some issues with your configuration. Here's what needs your attention:")}
               </Alert>
-            </StackItem>
-          ) : (
-            <StackItem>
-              {allValid && (
-                <Alert isInline variant="success" title={t('All validations passed')}>
-                  {t('The authentication provider configuration appears to be correct.')}
-                </Alert>
-              )}
-              {hasInvalid && (
-                <Alert isInline variant="warning" title={t('Some validations failed')}>
-                  {t('Some configuration issues were detected. Please review the details below.')}
-                </Alert>
-              )}
             </StackItem>
           )}
           <StackItem>
@@ -103,13 +109,13 @@ const TestConnectionModal = ({ onClose, results }: TestConnectionModalProps) => 
                 </Tr>
               </Thead>
               <Tbody>
-                {entries.map(([fieldName, validation]) => (
-                  <Tr key={fieldName}>
-                    <Td>{getFieldDisplayName(fieldName, t)}</Td>
-                    <Td style={{ wordBreak: 'break-all' }}>{validation.value || '-'}</Td>
-                    <Td>{getStatusIcon(validation.valid)}</Td>
+                {results.map((result) => (
+                  <Tr key={result.field}>
+                    <Td>{getFieldDisplayName(result.field, t)}</Td>
+                    <Td style={{ wordBreak: 'break-all' }}>{result.value || '-'}</Td>
+                    <Td>{getStatusIcon(result.valid)}</Td>
                     <Td>
-                      <NotesCell notes={validation.notes} />
+                      <NotesCell notes={result.notes} />
                     </Td>
                   </Tr>
                 ))}

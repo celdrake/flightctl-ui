@@ -26,8 +26,15 @@ type TestConnectionRequest struct {
 	ClientId         string `json:"clientId,omitempty"`
 }
 
+type FieldValidationResult struct {
+	Field string   `json:"field"`
+	Valid bool     `json:"valid"`
+	Value string   `json:"value,omitempty"`
+	Notes []string `json:"notes,omitempty"`
+}
+
 type TestConnectionResponse struct {
-	Results map[string]FieldValidation `json:"results"`
+	Results []FieldValidationResult `json:"results"`
 }
 
 type oidcDiscoveryDocument struct {
@@ -60,7 +67,7 @@ func (h *TestAuthHandler) TestConnection(w http.ResponseWriter, r *http.Request)
 	}
 
 	response := TestConnectionResponse{
-		Results: make(map[string]FieldValidation),
+		Results: make([]FieldValidationResult, 0),
 	}
 
 	httpClient := &http.Client{
@@ -85,11 +92,12 @@ func (h *TestAuthHandler) TestConnection(w http.ResponseWriter, r *http.Request)
 
 func (h *TestAuthHandler) validateOIDCProvider(req *TestConnectionRequest, response *TestConnectionResponse, httpClient *http.Client) {
 	if req.Issuer == "" {
-		response.Results["issuer"] = FieldValidation{
+		response.Results = append(response.Results, FieldValidationResult{
+			Field: "issuer",
 			Valid: false,
 			Value: "",
 			Notes: []string{"Issuer URL is required for OIDC providers"},
-		}
+		})
 		return
 	}
 
@@ -97,51 +105,56 @@ func (h *TestAuthHandler) validateOIDCProvider(req *TestConnectionRequest, respo
 	discoveryUrl := fmt.Sprintf("%s/.well-known/openid-configuration", req.Issuer)
 	httpReq, err := http.NewRequest(http.MethodGet, discoveryUrl, nil)
 	if err != nil {
-		response.Results["issuer"] = FieldValidation{
+		response.Results = append(response.Results, FieldValidationResult{
+			Field: "issuer",
 			Valid: false,
 			Value: req.Issuer,
 			Notes: []string{fmt.Sprintf("Failed to create request: %v", err)},
-		}
+		})
 		return
 	}
 
 	resp, err := httpClient.Do(httpReq)
 	if err != nil {
-		response.Results["issuer"] = FieldValidation{
+		response.Results = append(response.Results, FieldValidationResult{
+			Field: "issuer",
 			Valid: false,
 			Value: req.Issuer,
 			Notes: []string{fmt.Sprintf("Failed to fetch OIDC discovery document: %v", err)},
-		}
+		})
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		response.Results["issuer"] = FieldValidation{
+		response.Results = append(response.Results, FieldValidationResult{
+			Field: "issuer",
 			Valid: false,
 			Value: req.Issuer,
 			Notes: []string{fmt.Sprintf("OIDC discovery endpoint returned status %d", resp.StatusCode)},
-		}
+		})
 		return
 	}
 
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		response.Results["issuer"] = FieldValidation{
+		response.Results = append(response.Results, FieldValidationResult{
+			Field: "issuer",
 			Valid: false,
 			Value: req.Issuer,
 			Notes: []string{fmt.Sprintf("Failed to read discovery document: %v", err)},
-		}
+		})
 		return
 	}
 
 	var discovery oidcDiscoveryDocument
 	if err := json.Unmarshal(bodyBytes, &discovery); err != nil {
-		response.Results["issuer"] = FieldValidation{
+		response.Results = append(response.Results, FieldValidationResult{
+			Field: "issuer",
 			Valid: false,
 			Value: req.Issuer,
 			Notes: []string{fmt.Sprintf("Failed to parse discovery document: %v", err)},
-		}
+		})
 		return
 	}
 
@@ -168,64 +181,111 @@ func (h *TestAuthHandler) validateOIDCProvider(req *TestConnectionRequest, respo
 	}
 
 	if !hasErrors && len(issuerNotes) == 0 {
-		issuerNotes = append(issuerNotes, "Successfully discovered OIDC configuration")
+		issuerNotes = append(issuerNotes, "Successfully discovered OIDC configuration from .well-known/openid_configuration")
 	}
 
-	response.Results["issuer"] = FieldValidation{
+	// For OIDC: issuer first, then the rest
+	response.Results = append(response.Results, FieldValidationResult{
+		Field: "issuer",
 		Valid: !hasErrors,
 		Value: req.Issuer,
 		Notes: issuerNotes,
-	}
+	})
 
 	// Verify the discovered endpoints are reachable
 	if discovery.AuthorizationEndpoint != "" {
-		response.Results["authorizationUrl"] = h.checkEndpointReachability(discovery.AuthorizationEndpoint, "Authorization endpoint", httpClient, false)
+		validation := h.checkEndpointReachability(discovery.AuthorizationEndpoint, "Authorization endpoint", httpClient, false)
+		response.Results = append(response.Results, FieldValidationResult{
+			Field: "authorizationUrl",
+			Valid: validation.Valid,
+			Value: validation.Value,
+			Notes: validation.Notes,
+		})
 	}
 
 	if discovery.TokenEndpoint != "" {
-		response.Results["tokenUrl"] = h.checkEndpointReachability(discovery.TokenEndpoint, "Token endpoint", httpClient, true)
+		validation := h.checkEndpointReachability(discovery.TokenEndpoint, "Token endpoint", httpClient, true)
+		response.Results = append(response.Results, FieldValidationResult{
+			Field: "tokenUrl",
+			Valid: validation.Valid,
+			Value: validation.Value,
+			Notes: validation.Notes,
+		})
 	}
 
 	if discovery.UserinfoEndpoint != "" {
-		response.Results["userinfoUrl"] = h.checkEndpointReachability(discovery.UserinfoEndpoint, "Userinfo endpoint", httpClient, false)
+		validation := h.checkEndpointReachability(discovery.UserinfoEndpoint, "Userinfo endpoint", httpClient, false)
+		response.Results = append(response.Results, FieldValidationResult{
+			Field: "userinfoUrl",
+			Valid: validation.Valid,
+			Value: validation.Value,
+			Notes: validation.Notes,
+		})
 	}
 }
 
 func (h *TestAuthHandler) validateOAuth2Provider(req *TestConnectionRequest, response *TestConnectionResponse, httpClient *http.Client) {
-	// For OAuth2, verify each endpoint is reachable
+	// For OAuth2: other fields first, then issuer last
 	if req.AuthorizationUrl != "" {
-		response.Results["authorizationUrl"] = h.checkEndpointReachability(req.AuthorizationUrl, "Authorization URL", httpClient, false)
+		validation := h.checkEndpointReachability(req.AuthorizationUrl, "Authorization URL", httpClient, false)
+		response.Results = append(response.Results, FieldValidationResult{
+			Field: "authorizationUrl",
+			Valid: validation.Valid,
+			Value: validation.Value,
+			Notes: validation.Notes,
+		})
 	} else {
-		response.Results["authorizationUrl"] = FieldValidation{
+		response.Results = append(response.Results, FieldValidationResult{
+			Field: "authorizationUrl",
 			Valid: false,
 			Value: "",
 			Notes: []string{"Authorization URL is required"},
-		}
+		})
 	}
 
 	if req.TokenUrl != "" {
-		response.Results["tokenUrl"] = h.checkEndpointReachability(req.TokenUrl, "Token URL", httpClient, true)
+		validation := h.checkEndpointReachability(req.TokenUrl, "Token URL", httpClient, true)
+		response.Results = append(response.Results, FieldValidationResult{
+			Field: "tokenUrl",
+			Valid: validation.Valid,
+			Value: validation.Value,
+			Notes: validation.Notes,
+		})
 	} else {
-		response.Results["tokenUrl"] = FieldValidation{
+		response.Results = append(response.Results, FieldValidationResult{
+			Field: "tokenUrl",
 			Valid: false,
 			Value: "",
 			Notes: []string{"Token URL is required"},
-		}
+		})
 	}
 
 	if req.UserinfoUrl != "" {
-		response.Results["userinfoUrl"] = h.checkEndpointReachability(req.UserinfoUrl, "Userinfo URL", httpClient, false)
+		validation := h.checkEndpointReachability(req.UserinfoUrl, "Userinfo URL", httpClient, false)
+		response.Results = append(response.Results, FieldValidationResult{
+			Field: "userinfoUrl",
+			Valid: validation.Valid,
+			Value: validation.Value,
+			Notes: validation.Notes,
+		})
 	} else {
-		response.Results["userinfoUrl"] = FieldValidation{
+		response.Results = append(response.Results, FieldValidationResult{
+			Field: "userinfoUrl",
 			Valid: false,
 			Value: "",
 			Notes: []string{"Userinfo URL is required"},
-		}
+		})
 	}
 
-	// Validate issuer if provided (optional for OAuth2)
+	// Validate issuer if provided (optional for OAuth2) - add last
 	if req.Issuer != "" {
-		response.Results["issuer"] = h.checkEndpointReachability(req.Issuer, "Issuer URL", httpClient, false)
+		validation := h.checkEndpointReachability(req.Issuer, "Issuer URL", httpClient, false)
+		response.Results = append(response.Results, FieldValidationResult{
+			Field: "issuer",
+			Valid: validation.Valid,
+			Value: validation.Value,
+			Notes: validation.Notes,
+		})
 	}
 }
 
