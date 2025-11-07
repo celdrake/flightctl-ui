@@ -96,13 +96,14 @@ export const AuthProviderForm = ({ isEdit }: { isEdit?: boolean }) => {
         isDisabled={isEdit}
         resourceType="authproviders"
         validations={getDnsSubdomainValidations(t)}
+        helperText={t("You can't change the provider name after it's created")}
       />
 
       <FormGroup label={t('Display name')}>
         <TextField
           name="displayName"
           aria-label={t('Display name')}
-          helperText={t('Optional human-readable display name for the provider')}
+          helperText={t('CELIA-WIP Human-readable display name for the provider')}
         />
       </FormGroup>
 
@@ -160,11 +161,12 @@ const CreateAuthProviderFormContent = ({
   const { t } = useTranslation();
   const { isValid, dirty, submitForm, isSubmitting, values } = useFormikContext<AuthProviderFormValues>();
   const { proxyFetch } = useFetch();
-  const isSubmitDisabled = isSubmitting || !dirty || !isValid;
 
   const [isTesting, setIsTesting] = React.useState(false);
   const [testResults, setTestResults] = React.useState<TestConnectionResponse | null>(null);
   const [testError, setTestError] = React.useState<string>();
+  const isSubmitDisabled = isSubmitting || !isValid || !dirty;
+  const isTestingDisabled = isSubmitting || !isValid || isTesting || (!isEdit && !dirty);
 
   const handleTestConnection = async () => {
     setIsTesting(true);
@@ -217,12 +219,7 @@ const CreateAuthProviderFormContent = ({
         <Button variant="primary" onClick={submitForm} isLoading={isSubmitting} isDisabled={isSubmitDisabled}>
           {isEdit ? t('Save') : t('Create authentication provider')}
         </Button>
-        <Button
-          variant="secondary"
-          onClick={handleTestConnection}
-          isLoading={isTesting}
-          isDisabled={isSubmitDisabled || isTesting}
-        >
+        <Button variant="secondary" onClick={handleTestConnection} isLoading={isTesting} isDisabled={isTestingDisabled}>
           {t('Test connection')}
         </Button>
         <Button variant="link" isDisabled={isSubmitting} onClick={onClose}>
