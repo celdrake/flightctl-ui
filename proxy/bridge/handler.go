@@ -57,6 +57,37 @@ func createReverseProxy(apiURL string) (*url.URL, *httputil.ReverseProxy) {
 	return target, proxy
 }
 
+func createAlertsReverseProxy(apiURL string) (*url.URL, *httputil.ReverseProxy) {
+	target, err := url.Parse(apiURL)
+	if err != nil {
+		log.GetLogger().WithError(err).Errorf("Failed to parse URL '%s'", apiURL)
+		os.Exit(1)
+	}
+	proxy := httputil.NewSingleHostReverseProxy(target)
+	proxy.ModifyResponse = func(r *http.Response) error {
+		filterHeaders := []string{
+			"Access-Control-Allow-Headers",
+			"Access-Control-Allow-Methods",
+			"Access-Control-Allow-Origin",
+			"Access-Control-Expose-Headers",
+		}
+		for _, h := range filterHeaders {
+			r.Header.Del(h)
+		}
+
+		// For alerts API, 401 means the service is unavailable/disabled,
+		// We should not log out the user, just disable alerts for them
+		if r.StatusCode == http.StatusUnauthorized {
+			r.StatusCode = http.StatusNotImplemented
+			r.Status = "501 Not Implemented"
+			log.GetLogger().Debug("Alerts API returned 401, converting to 501 (disabled)")
+		}
+
+		return nil
+	}
+	return target, proxy
+}
+
 func NewFlightCtlHandler(tlsConfig *tls.Config) handler {
 	target, proxy := createReverseProxy(config.FctlApiUrl)
 
@@ -78,7 +109,7 @@ func NewFlightCtlCliArtifactsHandler(tlsConfig *tls.Config) handler {
 }
 
 func NewAlertManagerHandler(tlsConfig *tls.Config) handler {
-	target, proxy := createReverseProxy(config.AlertManagerApiUrl)
+	target, proxy := createAlertsReverseProxy(config.AlertManagerApiUrl)
 
 	proxy.Transport = &http.Transport{
 		TLSClientConfig: tlsConfig,

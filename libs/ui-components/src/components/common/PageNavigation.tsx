@@ -19,6 +19,8 @@ import { useOrganizationGuardContext } from './OrganizationGuard';
 import OrganizationSelector from './OrganizationSelector';
 import { ROUTE, useNavigate } from '../../hooks/useNavigate';
 import CogIcon from '@patternfly/react-icons/dist/js/icons/cog-icon';
+import { useAccessReview } from '../../hooks/useAccessReview';
+import { RESOURCE, VERB } from '../../types/rbac';
 
 type OrganizationDropdownProps = {
   organizationName?: string;
@@ -63,20 +65,18 @@ const PageNavigation = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { currentOrganization, availableOrganizations } = useOrganizationGuardContext();
+  const [isAdmin] = useAccessReview(RESOURCE.AUTH_PROVIDER, VERB.UPDATE);
   const [showOrganizationModal, setShowOrganizationModal] = React.useState(false);
-
-  // CELIA-WIP ADD THE CHECK FOR THE USER'S ROLES TO DETERMINE IF THE USER HAS ACCESS TO THE ADMIN SETTINGS
   const showOrganizationSelection = availableOrganizations.length > 1;
   const currentOrgDisplayName = currentOrganization?.spec?.displayName || currentOrganization?.metadata?.name || '';
 
   // Show navigation bar if there's either org selection OR admin button to show
-  const shouldShowNavigation = showOrganizationSelection || true; // Always show for admin button
+  const shouldShowNavigation = showOrganizationSelection || isAdmin;
 
   if (!shouldShowNavigation) {
     return null;
   }
 
-  // CELIA-WIP: show admin section only if user is admin
   return (
     <>
       <PageSection variant="light" padding={{ default: 'noPadding' }}>
