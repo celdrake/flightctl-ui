@@ -49,7 +49,7 @@ const RoleAssignmentSection = () => {
           <ListItemField
             name="roleClaimPath"
             helperText={t(
-              'JSON path segments to the role/group claim (e.g., ["groups"], ["roles"], ["realm_access", "roles"])',
+              'Path segments to the role/group claim (e.g., ["groups"], ["roles"], ["realm_access", "roles"])',
             )}
             addButtonText={t('Add path segment')}
           />

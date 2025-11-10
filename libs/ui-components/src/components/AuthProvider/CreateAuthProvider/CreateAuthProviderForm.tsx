@@ -106,11 +106,7 @@ export const AuthProviderForm = ({ isEdit }: { isEdit?: boolean }) => {
       />
 
       <FormGroup label={t('Display name')}>
-        <TextField
-          name="displayName"
-          aria-label={t('Display name')}
-          helperText={t('CELIA-WIP Human-readable display name for the provider')}
-        />
+        <TextField name="displayName" aria-label={t('Display name')} helperText={t('Display name for this provider')} />
       </FormGroup>
 
       <ProviderTypeSection />

@@ -17,7 +17,7 @@ import {
 } from '@patternfly/react-core';
 import { Tbody } from '@patternfly/react-table';
 import { TFunction } from 'i18next';
-import { CubeIcon } from '@patternfly/react-icons/dist/js/icons/cube-icon';
+import { CubesIcon } from '@patternfly/react-icons/dist/js/icons/cubes-icon';
 
 import ListPageBody from '../ListPage/ListPageBody';
 import Table, { ApiSortTableColumn } from '../Table/Table';
@@ -63,8 +63,10 @@ const CreateAuthProviderButton = () => {
 const AuthProviderEmptyState = () => {
   const { t } = useTranslation();
   return (
-    <ResourceListEmptyState icon={CubeIcon} titleText={t('No authentication providers')}>
-      <EmptyStateBody>{t('No dynamic authentication providers configured.')}</EmptyStateBody>
+    <ResourceListEmptyState icon={CubesIcon} titleText={t('Add your first authentication providers')}>
+      <EmptyStateBody>
+        {t('Connect OIDC and Oauth2 providers to enable additional secure authentication options for your users.')}
+      </EmptyStateBody>
       <EmptyStateFooter>
         <EmptyStateActions>
           <CreateAuthProviderButton />

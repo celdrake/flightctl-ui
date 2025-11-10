@@ -65,7 +65,7 @@ export const getInitValues = (authProvider?: AuthProvider): AuthProviderFormValu
       clientSecret: '',
       scopes: [],
       usernameClaim: [],
-      roleAssignmentType: RoleAssignmentType.Dynamic,
+      roleAssignmentType: RoleAssignmentType.Static,
       roleClaimPath: [],
       staticRoles: [],
       orgAssignmentType: OrgAssignmentType.Static,
