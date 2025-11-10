@@ -1,8 +1,6 @@
 import * as React from 'react';
 import { useTranslation } from '../../../hooks/useTranslation';
 
-// CELIA-WIP TRANSLATE AND FIX display according to design
-
 export const ScopesHelperText = () => {
   const { t } = useTranslation();
   return (
@@ -31,12 +29,14 @@ export const UsernameClaimHelperText = () => {
       <p>
         <strong>{t('Format')}:</strong>{' '}
         {t(
-          'Use an array of path segments to access nested fields (e.g., ["preferred_username"], ["email"], ["custom_claims", "user_id"]).',
+          'Enter each segment of the claim path as a separate item. Simple claims like "email" require only one segment. For nested claims like "user.name", add multiple segments in order: first "user", then "name".',
         )}
       </p>
       <p>
-        <strong>{t('Requirements')}:</strong>
-        {t('Each segment must start with a letter or underscore and contain only letters, numbers, or underscores.')}
+        <strong>{t('Requirements')}:</strong>{' '}
+        {t(
+          'Each segment must start with a letter or underscore and contain only letters, numbers, dots or underscores.',
+        )}
       </p>
     </div>
   );
@@ -47,7 +47,7 @@ export const RoleClaimHelperText = () => {
   return (
     <div>
       <p>
-        <strong>{t('Purpose')}:</strong>
+        <strong>{t('Purpose')}:</strong>{' '}
         {t('The claim field that contains user roles or group memberships for authorization.')}
       </p>
       <p>

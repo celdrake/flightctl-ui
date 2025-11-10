@@ -14,7 +14,6 @@ import LoginPageLayout from './LoginPageLayout';
 import { loginAPI } from '../../utils/apiCalls';
 
 const redirectToProviderLogin = async (provider: AuthProviderInfo) => {
-  // CELIA-WIP if we have duplicate names then the name is not sufficient
   const response = await fetch(`${loginAPI}?provider=${provider.name}`);
   const { url } = (await response.json()) as { url: string };
   window.location.href = url;

@@ -20,6 +20,7 @@ import {
   isOAuth2Provider,
   isOrgAssignmentDynamic,
   isOrgAssignmentPerUser,
+  isOrgAssignmentStatic,
   isRoleAssignmentDynamic,
   isRoleAssignmentStatic,
 } from './types';
@@ -164,6 +165,87 @@ const getOrgAssignment = (values: AuthProviderFormValues): AuthOrganizationAssig
   return orgAssignment;
 };
 
+/**
+ * Deep equality check for AuthOrganizationAssignment objects.
+ * Compares objects by their type and relevant fields, handling arrays properly.
+ */
+const isOrgAssignmentEqual = (a: AuthOrganizationAssignment, b: AuthOrganizationAssignment): boolean => {
+  if (a.type !== b.type) {
+    return false;
+  }
+
+  switch (a.type) {
+    case OrgAssignmentType.Static:
+      if (!isOrgAssignmentStatic(a) || !isOrgAssignmentStatic(b)) {
+        return false;
+      }
+      return (a.organizationName || '') === (b.organizationName || '');
+    case OrgAssignmentType.Dynamic:
+      if (!isOrgAssignmentDynamic(a) || !isOrgAssignmentDynamic(b)) {
+        return false;
+      }
+      const aClaimPath = a.claimPath || [];
+      const bClaimPath = b.claimPath || [];
+      if (aClaimPath.length !== bClaimPath.length) {
+        return false;
+      }
+      if (!aClaimPath.every((val, idx) => val === bClaimPath[idx])) {
+        return false;
+      }
+      return (
+        (a.organizationNamePrefix || '') === (b.organizationNamePrefix || '') &&
+        (a.organizationNameSuffix || '') === (b.organizationNameSuffix || '')
+      );
+    case OrgAssignmentType.PerUser:
+      if (!isOrgAssignmentPerUser(a) || !isOrgAssignmentPerUser(b)) {
+        return false;
+      }
+      return (
+        (a.organizationNamePrefix || '') === (b.organizationNamePrefix || '') &&
+        (a.organizationNameSuffix || '') === (b.organizationNameSuffix || '')
+      );
+    default:
+      return false;
+  }
+};
+
+/**
+ * Deep equality check for AuthRoleAssignment objects.
+ * Compares objects by their type and relevant fields, handling arrays properly.
+ */
+const isRoleAssignmentEqual = (a: AuthRoleAssignment, b: AuthRoleAssignment): boolean => {
+  if (a.type !== b.type) {
+    return false;
+  }
+
+  switch (a.type) {
+    case RoleAssignmentType.Static:
+      if (!isRoleAssignmentStatic(a) || !isRoleAssignmentStatic(b)) {
+        return false;
+      }
+      const aRoles = a.roles || [];
+      const bRoles = b.roles || [];
+      if (aRoles.length !== bRoles.length) {
+        return false;
+      }
+      // Compare roles arrays (order matters for roles)
+      return aRoles.every((val, idx) => val === bRoles[idx]);
+    case RoleAssignmentType.Dynamic:
+      if (!isRoleAssignmentDynamic(a) || !isRoleAssignmentDynamic(b)) {
+        return false;
+      }
+      const aClaimPath = a.claimPath || [];
+      const bClaimPath = b.claimPath || [];
+      if (aClaimPath.length !== bClaimPath.length) {
+        return false;
+      }
+      // Compare claim path arrays (order matters)
+      return aClaimPath.every((val, idx) => val === bClaimPath[idx]);
+    default:
+      return false;
+  }
+};
+
 const getRoleAssignment = (values: AuthProviderFormValues): AuthRoleAssignment => {
   if (values.roleAssignmentType === RoleAssignmentType.Static) {
     const staticAssignment: AuthStaticRoleAssignment = {
@@ -267,9 +349,8 @@ const patchAuthProviderFields = (
     });
   }
 
-  // Replace the entire organizationAssignment object if it changed
-  // The new spec only has the fields that related to the chosen org assignment type
-  if (JSON.stringify(spec.organizationAssignment) !== JSON.stringify(newSpec.organizationAssignment)) {
+  const orgAssignmentChanged = !isOrgAssignmentEqual(spec.organizationAssignment, newSpec.organizationAssignment);
+  if (orgAssignmentChanged) {
     appendJSONPatch({
       patches,
       originalValue: spec.organizationAssignment,
@@ -292,12 +373,15 @@ const patchAuthProviderFields = (
     path: '/spec/usernameClaim',
   });
 
-  appendJSONPatch({
-    patches,
-    originalValue: spec.roleAssignment,
-    newValue: newSpec.roleAssignment,
-    path: '/spec/roleAssignment',
-  });
+  const roleAssignmentChanged = !isRoleAssignmentEqual(spec.roleAssignment, newSpec.roleAssignment);
+  if (roleAssignmentChanged) {
+    appendJSONPatch({
+      patches,
+      originalValue: spec.roleAssignment,
+      newValue: newSpec.roleAssignment,
+      path: '/spec/roleAssignment',
+    });
+  }
 };
 
 const patchProviderTypeSpecificFields = (patches: PatchRequest, spec: AuthProviderSpec, newSpec: AuthProviderSpec) => {
@@ -395,7 +479,6 @@ export const authProviderSchema = (t: TFunction) => (values: AuthProviderFormVal
 
   let schema: Record<string, Yup.Schema> = { ...baseSchema };
 
-  // CELIA-WIP: Check if issuer is required based on provider type
   // Issuer validation is provider-type specific
   if (values.providerType === ProviderType.OIDC) {
     // OIDC: issuer is required
