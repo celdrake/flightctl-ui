@@ -84,11 +84,18 @@ func (a *AuthHandler) getProviderForLogin(providerName string) (AuthProvider, er
 
 	switch providerTypeStr {
 	case ProviderTypeK8s:
-		// CELIA-WIP: Determine how to distinguish from OpenShift OAuth flow with k8s type
-		if providerInfo.ClientId == nil && providerInfo.TokenUrl == nil {
-			provider = NewTokenAuthProvider(a.apiTlsConfig, config.FctlApiUrl)
+		// Distinguish between regular k8s token auth and OpenShift OAuth flow
+		// OpenShift OAuth has ClientId and TokenUrl, regular k8s token auth does not
+		if providerInfo.ClientId != nil && providerInfo.TokenUrl != nil {
+			// This is OpenShift OAuth flow
+			openshiftHandler, err := getOpenShiftAuthHandler(providerInfo)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create OpenShift provider %s: %w", providerName, err)
+			}
+			provider = openshiftHandler
 		} else {
-			return nil, fmt.Errorf("OpenShift OAuth provider not yet implemented: %s", providerName)
+			// This is regular k8s token auth
+			provider = NewTokenAuthProvider(a.apiTlsConfig, config.FctlApiUrl)
 		}
 	case ProviderTypeOIDC:
 		oidcHandler, err := getOIDCAuthHandler(providerInfo)
