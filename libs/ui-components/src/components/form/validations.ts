@@ -58,7 +58,6 @@ const absolutePathRegex = /^\/.*$/;
 
 // Accepts only relative paths. Rejects paths that start with "/", have multiple "/", or use dots (./file, ../parent/file), etc
 const relativePathRegex = /^(?!\.\.\/|\.\.\$|\.\/)(\.\/)*[\w.-]+(?:\/[\w.-]+)*\/?$/;
-const dotNotationPathRegex = /^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*$/;
 export const MAX_TARGET_REVISION_LENGTH = 244;
 const MAX_FILE_PATH_LENGTH = 253;
 

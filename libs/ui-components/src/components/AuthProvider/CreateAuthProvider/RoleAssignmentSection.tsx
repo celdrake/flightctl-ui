@@ -1,6 +1,18 @@
 import * as React from 'react';
-import { FormGroup, FormSection, Split, SplitItem } from '@patternfly/react-core';
-import { useFormikContext } from 'formik';
+import { TFunction } from 'react-i18next';
+import {
+  FormGroup,
+  FormSection,
+  Split,
+  SplitItem,
+  Label,
+  LabelGroup,
+  MenuToggle,
+  Select,
+  SelectList,
+  SelectOption,
+} from '@patternfly/react-core';
+import { useFormikContext, useField } from 'formik';
 
 import { useTranslation } from '../../../hooks/useTranslation';
 import RadioField from '../../form/RadioField';
@@ -8,6 +20,93 @@ import ListItemField from '../../form/ListItemField';
 import { AuthProviderFormValues, RoleAssignmentType } from './types';
 import { FormGroupWithHelperText } from '../../common/WithHelperText';
 import { RoleClaimHelperText } from './AuthProviderHelperText';
+import ErrorHelperText, { DefaultHelperText } from '../../form/FieldHelperText';
+
+const getAvailableRoles = (t: TFunction): Record<string, string> => ({
+  admin: t('Administrator'),
+  operator: t('Operator'),
+  viewer: t('Viewer'),
+  installer: t('Installer'),
+});
+
+const RoleSelector = () => {
+  const { t } = useTranslation();
+  const [{ value: roles }, meta, { setValue }] = useField<string[]>('staticRoles');
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  const allRoles = React.useMemo(() => {
+    return getAvailableRoles(t);
+  }, [t]);
+
+  const availableRoles = React.useMemo(() => {
+    return Object.entries(allRoles)
+      .filter(([roleCode]) => !roles.includes(roleCode))
+      .map(([roleCode, roleLabel]) => ({
+        value: roleCode,
+        label: roleLabel,
+      }));
+  }, [roles, allRoles]);
+
+  const onAddRole = (role: string) => {
+    if (!roles.includes(role)) {
+      setValue([...roles, role], true);
+    }
+    setIsOpen(false);
+  };
+
+  const onDelete = (role: string) => {
+    setValue(
+      roles.filter((r) => r !== role),
+      true,
+    );
+  };
+
+  const hasAvailableRoles = availableRoles.length > 0;
+
+  return (
+    <>
+      <DefaultHelperText helperText={t('List of roles to assign to all users from this provider')} />
+      <LabelGroup
+        numLabels={5}
+        isEditable
+        addLabelControl={
+          <Select
+            isOpen={isOpen}
+            onOpenChange={setIsOpen}
+            onSelect={(_, value) => onAddRole(value as string)}
+            toggle={(toggleRef) => (
+              <MenuToggle
+                ref={toggleRef}
+                isDisabled={!hasAvailableRoles}
+                onClick={() => setIsOpen(!isOpen)}
+                isExpanded={isOpen}
+                className="pf-v5-u-ml-xs"
+              >
+                {t('Add role')}
+              </MenuToggle>
+            )}
+            shouldFocusToggleOnSelect
+          >
+            <SelectList>
+              {availableRoles.map((role) => (
+                <SelectOption key={role.value} value={role.value}>
+                  {role.label}
+                </SelectOption>
+              ))}
+            </SelectList>
+          </Select>
+        }
+      >
+        {roles.map((roleCode) => (
+          <Label key={roleCode} onClose={() => onDelete(roleCode)} textMaxWidth="18ch" isEditable>
+            {allRoles[roleCode]}
+          </Label>
+        ))}
+      </LabelGroup>
+      <ErrorHelperText meta={meta} touchRequired={false} />
+    </>
+  );
+};
 
 const RoleAssignmentSection = () => {
   const { t } = useTranslation();
@@ -36,11 +135,7 @@ const RoleAssignmentSection = () => {
 
       {values.roleAssignmentType === RoleAssignmentType.Static && (
         <FormGroup label={t('Roles')} isRequired>
-          <ListItemField
-            name="staticRoles"
-            helperText={t('List of roles to assign to all users from this provider')}
-            addButtonText={t('Add role')}
-          />
+          <RoleSelector />
         </FormGroup>
       )}
 
