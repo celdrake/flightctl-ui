@@ -3,16 +3,16 @@ import { TFunction } from 'react-i18next';
 import {
   FormGroup,
   FormSection,
-  Split,
-  SplitItem,
   Label,
   LabelGroup,
   MenuToggle,
   Select,
   SelectList,
   SelectOption,
+  Split,
+  SplitItem,
 } from '@patternfly/react-core';
-import { useFormikContext, useField } from 'formik';
+import { useField, useFormikContext } from 'formik';
 
 import { useTranslation } from '../../../hooks/useTranslation';
 import RadioField from '../../form/RadioField';

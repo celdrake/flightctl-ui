@@ -15,13 +15,7 @@ import ListItemField from '../../form/ListItemField';
 import FlightCtlForm from '../../form/FlightCtlForm';
 import FlightCtlActionGroup from '../../form/FlightCtlActionGroup';
 import { getDnsSubdomainValidations } from '../../form/validations';
-import {
-  AuthProviderFormValues,
-  FieldValidationResult,
-  OrgAssignmentType,
-  ProviderType,
-  RoleAssignmentType,
-} from './types';
+import { AuthProviderFormValues, FieldValidationResult, ProviderType } from './types';
 
 import { authProviderSchema, getAuthProvider, getAuthProviderPatches, getInitValues } from './utils';
 import { getErrorMessage } from '../../../utils/error';
@@ -32,7 +26,6 @@ import Oauth2ProviderFields from './Oauth2ProviderFields';
 import OrganizationAssignmentSection from './AuthOrganizationAssignment';
 import RoleAssignmentSection from './RoleAssignmentSection';
 import TestConnectionModal from '../TestConnectionModal/TestConnectionModal';
-import { TestConnectionResponse } from './types';
 import { ScopesHelperText, UsernameClaimHelperText } from './AuthProviderHelperText';
 
 const ProviderTypeSection = () => {
