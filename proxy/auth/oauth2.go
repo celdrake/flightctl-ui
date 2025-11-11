@@ -26,22 +26,25 @@ type OAuth2AuthHandler struct {
 }
 
 // getOAuth2AuthHandler creates an OAuth2 handler using explicit endpoints
-func getOAuth2AuthHandler(providerInfo *v1alpha1.AuthProviderInfo) (*OAuth2AuthHandler, error) {
-	providerName := *providerInfo.Name
+func getOAuth2AuthHandler(provider *v1alpha1.AuthProvider, oauth2Spec *v1alpha1.OAuth2ProviderSpec) (*OAuth2AuthHandler, error) {
+	providerName := ""
+	if provider.Metadata.Name != nil {
+		providerName = *provider.Metadata.Name
+	}
 
-	if providerInfo.AuthUrl == nil || providerInfo.TokenUrl == nil || providerInfo.UserinfoUrl == nil || providerInfo.ClientId == nil || *providerInfo.ClientId == "" || providerInfo.Scopes == nil || len(*providerInfo.Scopes) == 0 {
+	if oauth2Spec.AuthorizationUrl == "" || oauth2Spec.TokenUrl == "" || oauth2Spec.UserinfoUrl == "" || oauth2Spec.ClientId == "" || oauth2Spec.Scopes == nil || len(*oauth2Spec.Scopes) == 0 {
 		return nil, fmt.Errorf("OAuth2 provider %s missing required fields", providerName)
 	}
 
-	authURL := *providerInfo.AuthUrl
-	tokenURL := *providerInfo.TokenUrl
-	userinfoURL := *providerInfo.UserinfoUrl
-	clientId := *providerInfo.ClientId
+	authURL := oauth2Spec.AuthorizationUrl
+	tokenURL := oauth2Spec.TokenUrl
+	userinfoURL := oauth2Spec.UserinfoUrl
+	clientId := oauth2Spec.ClientId
 
 	// Get username claim from provider config, default to DefaultUsernameClaim
 	usernameClaim := []string{DefaultUsernameClaim}
-	if providerInfo.UsernameClaim != nil && len(*providerInfo.UsernameClaim) > 0 {
-		usernameClaim = *providerInfo.UsernameClaim
+	if oauth2Spec.UsernameClaim != nil && len(*oauth2Spec.UsernameClaim) > 0 {
+		usernameClaim = *oauth2Spec.UsernameClaim
 	}
 
 	tlsConfig, err := bridge.GetAuthTlsConfig()
@@ -50,7 +53,7 @@ func getOAuth2AuthHandler(providerInfo *v1alpha1.AuthProviderInfo) (*OAuth2AuthH
 	}
 
 	// Build scope string (no default scopes for OAuth2 - scopes are mandatory)
-	scope := buildScopeParam(providerInfo.Scopes, "")
+	scope := buildScopeParam(oauth2Spec.Scopes, "")
 
 	// PKCE is now implemented, so we don't need a client secret for public clients
 	// If a client secret is needed for confidential clients, it should come from provider config

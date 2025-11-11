@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 
+export type { AAPProviderSpec } from './models/AAPProviderSpec';
 export type { AbsolutePath } from './models/AbsolutePath';
 export type { ApplicationContent } from './models/ApplicationContent';
 export type { ApplicationEnvVars } from './models/ApplicationEnvVars';
@@ -20,7 +21,6 @@ export type { AuthDynamicRoleAssignment } from './models/AuthDynamicRoleAssignme
 export type { AuthOrganizationAssignment } from './models/AuthOrganizationAssignment';
 export type { AuthPerUserOrganizationAssignment } from './models/AuthPerUserOrganizationAssignment';
 export type { AuthProvider } from './models/AuthProvider';
-export { AuthProviderInfo } from './models/AuthProviderInfo';
 export type { AuthProviderList } from './models/AuthProviderList';
 export type { AuthProviderSpec } from './models/AuthProviderSpec';
 export type { AuthRoleAssignment } from './models/AuthRoleAssignment';
@@ -124,6 +124,7 @@ export type { InlineApplicationProviderSpec } from './models/InlineApplicationPr
 export type { InlineConfigProviderSpec } from './models/InlineConfigProviderSpec';
 export type { InternalTaskFailedDetails } from './models/InternalTaskFailedDetails';
 export type { InternalTaskPermanentlyFailedDetails } from './models/InternalTaskPermanentlyFailedDetails';
+export type { K8sProviderSpec } from './models/K8sProviderSpec';
 export type { KubernetesSecretProviderSpec } from './models/KubernetesSecretProviderSpec';
 export type { LabelList } from './models/LabelList';
 export type { LabelSelector } from './models/LabelSelector';

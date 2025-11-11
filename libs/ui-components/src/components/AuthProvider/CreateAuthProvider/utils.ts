@@ -25,6 +25,7 @@ import {
   isRoleAssignmentStatic,
 } from './types';
 import { validDnsSubdomainPart, validKubernetesDnsSubdomain } from '../../form/validations';
+import { DynamicAuthProviderSpec } from '../../../types/extraTypes';
 
 export const getAssignmentTypeLabel = (
   type: AuthOrganizationAssignment['type'] | AuthRoleAssignment['type'] | undefined,
@@ -111,14 +112,14 @@ export const getInitValues = (authProvider?: AuthProvider): AuthProviderFormValu
     roleClaimPath = roleAssignment.claimPath || [];
   }
 
-  const spec = authProvider.spec;
+  const spec = authProvider.spec as DynamicAuthProviderSpec;
   const isOAuth2 = isOAuth2Provider(spec);
   return {
     exists: true,
     name: authProvider.metadata.name as string,
     displayName: spec.displayName,
     providerType: spec.providerType as ProviderType,
-    issuer: spec.issuer,
+    issuer: spec.issuer || '',
     clientId: spec.clientId,
     clientSecret: spec.clientSecret,
     enabled: spec.enabled ?? true,
@@ -304,8 +305,8 @@ export const getAuthProvider = (values: AuthProviderFormValues): AuthProvider =>
 
 const patchAuthProviderFields = (
   patches: PatchRequest,
-  spec: AuthProviderSpec,
-  newSpec: AuthProviderSpec,
+  spec: DynamicAuthProviderSpec,
+  newSpec: DynamicAuthProviderSpec,
   options: { skipSecrets?: boolean } = {},
 ) => {
   const { skipSecrets = false } = options;
@@ -409,10 +410,10 @@ const patchProviderTypeSpecificFields = (patches: PatchRequest, spec: AuthProvid
 
 export const getAuthProviderPatches = (values: AuthProviderFormValues, authProvider: AuthProvider): PatchRequest => {
   const patches: PatchRequest = [];
-  const prevSpec = authProvider.spec;
+  const prevSpec = authProvider.spec as DynamicAuthProviderSpec;
 
   const newAuthProvider = getAuthProvider(values);
-  const newSpec = newAuthProvider.spec;
+  const newSpec = newAuthProvider.spec as DynamicAuthProviderSpec;
 
   const providerTypeChanged = prevSpec.providerType !== newSpec.providerType;
   const secretWasChanged = values.clientSecret !== MASKED_SECRET_VALUE;

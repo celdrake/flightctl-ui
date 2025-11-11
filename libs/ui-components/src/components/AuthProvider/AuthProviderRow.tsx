@@ -9,11 +9,13 @@ import { useAccessReview } from '../../hooks/useAccessReview';
 import { RESOURCE, VERB } from '../../types/rbac';
 import { isOAuth2Provider } from './CreateAuthProvider/types';
 import { getProviderTypeLabel } from './CreateAuthProvider/utils';
+import { DynamicAuthProviderSpec } from '../../types/extraTypes';
 
 const AuthProviderRow = ({ provider, onDeleteClick }: { provider: AuthProvider; onDeleteClick: VoidFunction }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const providerName = provider.metadata.name || '';
+  const providerSpec = provider.spec as DynamicAuthProviderSpec;
 
   const [canUpdate] = useAccessReview(RESOURCE.AUTH_PROVIDER, VERB.UPDATE);
   const [canDelete] = useAccessReview(RESOURCE.AUTH_PROVIDER, VERB.DELETE);
@@ -41,15 +43,15 @@ const AuthProviderRow = ({ provider, onDeleteClick }: { provider: AuthProvider; 
 
   let url: string = 'N/A';
   let urlTitle: string = '';
-  if (isOAuth2Provider(provider.spec)) {
-    url = provider.spec.authorizationUrl;
+  if (isOAuth2Provider(providerSpec)) {
+    url = providerSpec.authorizationUrl;
     urlTitle = t('Authorization URL');
   } else {
-    url = provider.spec.issuer;
+    url = providerSpec.issuer;
     urlTitle = t('Issuer URL');
   }
 
-  const isEnabled = provider.spec.enabled ?? true;
+  const isEnabled = providerSpec.enabled ?? true;
 
   return (
     <Tr>
@@ -59,7 +61,7 @@ const AuthProviderRow = ({ provider, onDeleteClick }: { provider: AuthProvider; 
         </Link>
       </Td>
       <Td dataLabel={t('Type')}>
-        <Label color="blue">{getProviderTypeLabel(provider.spec.providerType, t)}</Label>
+        <Label color="blue">{getProviderTypeLabel(providerSpec.providerType, t)}</Label>
       </Td>
       <Td dataLabel={urlTitle}>{url || 'N/A'}</Td>
       <Td dataLabel={t('Enabled')}>

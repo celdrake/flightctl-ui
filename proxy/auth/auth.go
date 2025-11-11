@@ -63,32 +63,42 @@ func (a *AuthHandler) getProviderForLogin(providerName string) (AuthProvider, er
 	}
 
 	// Find the provider config
-	var providerInfo *v1alpha1.AuthProviderInfo
+	var providerConfig *v1alpha1.AuthProvider
 	for i, pc := range *authConfig.Providers {
-		if pc.Name != nil && *pc.Name == providerName {
-			providerInfo = &(*authConfig.Providers)[i]
+		if pc.Metadata.Name != nil && *pc.Metadata.Name == providerName {
+			providerConfig = &(*authConfig.Providers)[i]
 			break
 		}
 	}
 
-	if providerInfo == nil {
+	if providerConfig == nil {
 		return nil, fmt.Errorf("provider not found: %s", providerName)
+	}
+
+	// Get the provider type from the spec discriminator
+	providerTypeStr, err := providerConfig.Spec.Discriminator()
+	if err != nil {
+		return nil, fmt.Errorf("failed to determine provider type for %s: %w", providerName, err)
 	}
 
 	// Create provider based on type
 	var provider AuthProvider
-	providerTypeStr := ""
-	if providerInfo.Type != nil {
-		providerTypeStr = string(*providerInfo.Type)
-	}
 
 	switch providerTypeStr {
 	case ProviderTypeK8s:
-		// Distinguish between regular k8s token auth and OpenShift OAuth flow
-		// OpenShift OAuth has ClientId and TokenUrl, regular k8s token auth does not
-		if providerInfo.ClientId != nil && providerInfo.TokenUrl != nil {
+		k8sSpec, err := providerConfig.Spec.AsK8sProviderSpec()
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse K8s provider spec for %s: %w", providerName, err)
+		}
+		// For K8s providers, distinguish between OpenShift OAuth and vanilla K8s token auth:
+		// - OpenShift: externalOpenShiftApiUrl is set and different from apiUrl
+		// - Vanilla K8s: externalOpenShiftApiUrl is not set, empty, or same as apiUrl
+		isOpenShift := k8sSpec.ExternalOpenShiftApiUrl != nil &&
+			*k8sSpec.ExternalOpenShiftApiUrl != "" &&
+			*k8sSpec.ExternalOpenShiftApiUrl != k8sSpec.ApiUrl
+		if isOpenShift {
 			// This is OpenShift OAuth flow
-			openshiftHandler, err := getOpenShiftAuthHandler(providerInfo)
+			openshiftHandler, err := getOpenShiftAuthHandler(providerConfig, &k8sSpec)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create OpenShift provider %s: %w", providerName, err)
 			}
@@ -98,19 +108,31 @@ func (a *AuthHandler) getProviderForLogin(providerName string) (AuthProvider, er
 			provider = NewTokenAuthProvider(a.apiTlsConfig, config.FctlApiUrl)
 		}
 	case ProviderTypeOIDC:
-		oidcHandler, err := getOIDCAuthHandler(providerInfo)
+		oidcSpec, err := providerConfig.Spec.AsOIDCProviderSpec()
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse OIDC provider spec for %s: %w", providerName, err)
+		}
+		oidcHandler, err := getOIDCAuthHandler(providerConfig, &oidcSpec)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create OIDC provider %s: %w", providerName, err)
 		}
 		provider = oidcHandler
 	case ProviderTypeAAP:
-		aapHandler, err := getAAPAuthHandler(providerInfo)
+		aapSpec, err := providerConfig.Spec.AsAAPProviderSpec()
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse AAP provider spec for %s: %w", providerName, err)
+		}
+		aapHandler, err := getAAPAuthHandler(providerConfig, &aapSpec)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create AAP provider %s: %w", providerName, err)
 		}
 		provider = aapHandler
 	case ProviderTypeOAuth2:
-		oauth2Handler, err := getOAuth2AuthHandler(providerInfo)
+		oauth2Spec, err := providerConfig.Spec.AsOAuth2ProviderSpec()
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse OAuth2 provider spec for %s: %w", providerName, err)
+		}
+		oauth2Handler, err := getOAuth2AuthHandler(providerConfig, &oauth2Spec)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create OAuth2 provider %s: %w", providerName, err)
 		}

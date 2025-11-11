@@ -1,21 +1,23 @@
 import * as React from 'react';
 import { Alert, Bullseye, Spinner } from '@patternfly/react-core';
 
-import { AuthConfig, AuthProviderInfo } from '@flightctl/types';
+import { AuthConfig, AuthProvider } from '@flightctl/types';
 import ProviderSelector from '@flightctl/ui-components/src/components/Login/ProviderSelector';
 import TokenLoginForm from '@flightctl/ui-components/src/components/Login/TokenLoginForm';
 import { useFetch } from '@flightctl/ui-components/src/hooks/useFetch';
 import { useTranslation } from '@flightctl/ui-components/src/hooks/useTranslation';
 import { isK8sTokenProvider } from '@flightctl/ui-components/src/utils/k8sProvider';
+import { getProviderDisplayName } from '@flightctl/ui-components/src/utils/authProvider';
+import { ProviderType } from '@flightctl/ui-components/src/components/AuthProvider/CreateAuthProvider/types';
 
 import LoginPageLayout from './LoginPageLayout';
 
 // CELIA-WIP: move to ui-components and use proxyFetch to talk to loginApi
 import { loginAPI } from '../../utils/apiCalls';
 
-const redirectToProviderLogin = async (provider: AuthProviderInfo) => {
+const redirectToProviderLogin = async (provider: AuthProvider) => {
   // Backend generates PKCE parameters and stores code_verifier in a cookie
-  const response = await fetch(`${loginAPI}?provider=${provider.name}`);
+  const response = await fetch(`${loginAPI}?provider=${provider.metadata.name}`);
   const { url } = (await response.json()) as { url: string };
   window.location.href = url;
 };
@@ -25,11 +27,12 @@ const LoginPage = () => {
   const { get } = useFetch();
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string>();
-  const [providers, setProviders] = React.useState<AuthProviderInfo[]>([]);
-  const [userSelectedProvider, setUserSelectedProvider] = React.useState<AuthProviderInfo | null>(null);
+  const [providers, setProviders] = React.useState<AuthProvider[]>([]);
+  const [userSelectedProvider, setUserSelectedProvider] = React.useState<AuthProvider | null>(null);
+  const [defaultProviderType, setDefaultProviderType] = React.useState<ProviderType | null>(null);
   const [isRedirecting, setIsRedirecting] = React.useState(false);
 
-  const handleProviderSelect = async (provider: AuthProviderInfo) => {
+  const handleProviderSelect = async (provider: AuthProvider) => {
     // Prevent multiple clicks while redirect is in progress
     if (isRedirecting) {
       return;
@@ -48,7 +51,7 @@ const LoginPage = () => {
         setUserSelectedProvider(null);
         setError(
           t('Failed to initiate login with {{ providerName}} ', {
-            providerName: provider.displayName || provider.name,
+            providerName: getProviderDisplayName(provider) || provider.metadata.name,
           }),
         );
       }
@@ -62,6 +65,7 @@ const LoginPage = () => {
         const providers = config?.providers || [];
         if (providers.length > 0) {
           setProviders(providers);
+          setDefaultProviderType(config.defaultProvider as ProviderType);
           if (providers.length === 1 && !isK8sTokenProvider(providers[0])) {
             setIsRedirecting(true);
             try {
@@ -123,7 +127,7 @@ const LoginPage = () => {
       content = (
         <>
           {t('Redirecting to login for {{ provider }}...', {
-            provider: selectedProvider.displayName || selectedProvider.name,
+            provider: getProviderDisplayName(selectedProvider) || selectedProvider.metadata.name,
           })}
           <Spinner size="lg" />
         </>
@@ -131,7 +135,12 @@ const LoginPage = () => {
     }
   } else {
     content = (
-      <ProviderSelector providers={providers} onProviderSelect={handleProviderSelect} disabled={isRedirecting} />
+      <ProviderSelector
+        providers={providers}
+        defaultProviderType={defaultProviderType}
+        onProviderSelect={handleProviderSelect}
+        disabled={isRedirecting}
+      />
     );
   }
 

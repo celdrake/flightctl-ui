@@ -9,6 +9,8 @@ import {
   FileContent,
   Fleet,
   ImageApplicationProviderSpec,
+  OAuth2ProviderSpec,
+  OIDCProviderSpec,
   RelativePath,
   ResourceSync,
 } from '@flightctl/types';
@@ -76,3 +78,5 @@ export type AlertManagerAlert = {
   };
   receivers: Array<{ name: string }>;
 };
+
+export type DynamicAuthProviderSpec = OIDCProviderSpec | OAuth2ProviderSpec;

@@ -19,7 +19,7 @@ export type OAuth2ProviderSpec = {
   /**
    * The OAuth2 issuer identifier (used for issuer identification in tokens).
    */
-  issuer: string;
+  issuer?: string;
   /**
    * The OAuth2 authorization endpoint URL.
    */

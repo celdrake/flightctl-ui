@@ -17,7 +17,7 @@ import {
   TextVariants,
   Title,
 } from '@patternfly/react-core';
-import { AuthProvider } from '@flightctl/types';
+import { AuthProvider, OAuth2ProviderSpec, OIDCProviderSpec } from '@flightctl/types';
 
 import { useTranslation } from '../../../hooks/useTranslation';
 import { DEFAULT_USERNAME_CLAIM, OrgAssignmentType, isOAuth2Provider } from '../CreateAuthProvider/types';
@@ -47,7 +47,8 @@ const CopyUrl = ({ url }: { url: string }) => {
 
 const AuthProviderDetailsTab = ({ authProvider }: { authProvider: AuthProvider }) => {
   const { t } = useTranslation();
-  const spec = authProvider.spec;
+  // Dynamic auth providers can only be OAuth2 or OIDC
+  const spec = authProvider.spec as OIDCProviderSpec | OAuth2ProviderSpec;
   const isOAuth2 = isOAuth2Provider(spec);
   const orgAssignment = spec.organizationAssignment;
   const isEnabled = spec.enabled ?? true;

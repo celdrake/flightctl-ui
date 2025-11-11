@@ -1,4 +1,4 @@
-import { AuthProviderInfo } from '@flightctl/types';
+import { AuthProvider } from '@flightctl/types';
 
 // Simple JWT format validation - checks if token has 3 parts separated by dots
 export const isValidJwtTokenFormat = (token: string): boolean => {
@@ -12,7 +12,10 @@ export const isValidJwtTokenFormat = (token: string): boolean => {
 
 export const nowInSeconds = () => Math.round(Date.now() / 1000);
 
-export const isK8sTokenProvider = (provider: AuthProviderInfo): boolean => {
-  // CELIA-WIP: Determine how to distinguish from OpenShift OAuth flow with k8s type
-  return provider.type === 'k8s';
+export const isK8sTokenProvider = (provider: AuthProvider): boolean => {
+  if (provider.spec.providerType !== 'k8s') {
+    return false;
+  }
+  // OpenShift providers have providerType 'k8s' and externalOpenShiftApiUrl set and different from apiUrl
+  return provider.spec.externalOpenShiftApiUrl === provider.spec.apiUrl;
 };

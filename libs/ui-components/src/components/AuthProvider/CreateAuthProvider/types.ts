@@ -20,6 +20,8 @@ export enum OrgAssignmentType {
 export enum ProviderType {
   OIDC = 'oidc',
   OAuth2 = 'oauth2',
+  K8s = 'k8s',
+  AAP = 'aap',
 }
 
 export const DEFAULT_USERNAME_CLAIM = 'preferred_username';

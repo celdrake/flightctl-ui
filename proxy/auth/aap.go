@@ -51,19 +51,28 @@ func (c *AAPRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	return resp, nil
 }
 
-func getAAPAuthHandler(providerInfo *v1alpha1.AuthProviderInfo) (*AAPAuthHandler, error) {
+func getAAPAuthHandler(provider *v1alpha1.AuthProvider, aapSpec *v1alpha1.AAPProviderSpec) (*AAPAuthHandler, error) {
+	providerName := ""
+	if provider.Metadata.Name != nil {
+		providerName = *provider.Metadata.Name
+	}
+
 	// Validate required fields
-	if providerInfo.AuthUrl == nil {
-		return nil, fmt.Errorf("AAP provider %s missing AuthUrl", providerInfo.Name)
+	if aapSpec.ApiUrl == "" {
+		return nil, fmt.Errorf("AAP provider %s missing ApiUrl", providerName)
 	}
 
-	if providerInfo.ClientId == nil || *providerInfo.ClientId == "" {
-		return nil, fmt.Errorf("AAP provider %s missing ClientId", providerInfo.Name)
+	// Use externalApiUrl if available, otherwise use apiUrl
+	authURL := aapSpec.ApiUrl
+	if aapSpec.ExternalApiUrl != nil && *aapSpec.ExternalApiUrl != "" {
+		authURL = *aapSpec.ExternalApiUrl
 	}
 
-	authURL := *providerInfo.AuthUrl
-	clientId := *providerInfo.ClientId
-	internalAuthURL := (*string)(nil) // AAP doesn't use internalAuthURL for now
+	// AAP OAuth typically uses a default client ID or requires it to be configured
+	// Since the new spec doesn't include ClientId, we'll use a default or make it configurable
+	// For now, using a default client ID that AAP typically uses
+	clientId := "flightctl-ui"        // Default client ID for AAP
+	internalAuthURL := aapSpec.ApiUrl // Use internal URL for token exchange
 
 	tlsConfig, err := bridge.GetAuthTlsConfig()
 	if err != nil {
@@ -80,20 +89,20 @@ func getAAPAuthHandler(providerInfo *v1alpha1.AuthProviderInfo) (*AAPAuthHandler
 		internalClient:  client,
 		tlsConfig:       tlsConfig,
 		authURL:         authURL,
-		tokenURL:        fmt.Sprintf("%s/o/token/", authURL),
-		internalAuthURL: authURL,
+		tokenURL:        fmt.Sprintf("%s/o/token/", internalAuthURL),
+		internalAuthURL: internalAuthURL,
 		clientId:        clientId,
-		providerName:    *providerInfo.Name,
+		providerName:    providerName,
 	}
 
-	if internalAuthURL != nil {
-		internalClient, err := getClient(*internalAuthURL, tlsConfig, clientId)
+	// If we have both external and internal URLs, create separate clients
+	if aapSpec.ExternalApiUrl != nil && *aapSpec.ExternalApiUrl != "" && *aapSpec.ExternalApiUrl != aapSpec.ApiUrl {
+		internalClient, err := getClient(internalAuthURL, tlsConfig, clientId)
 		if err != nil {
 			return nil, err
 		}
 		handler.internalClient = internalClient
-		handler.internalAuthURL = *internalAuthURL
-		handler.tokenURL = fmt.Sprintf("%s/o/token/", *internalAuthURL)
+		handler.tokenURL = fmt.Sprintf("%s/o/token/", internalAuthURL)
 	}
 
 	return handler, nil

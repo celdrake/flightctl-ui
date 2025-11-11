@@ -32,23 +32,30 @@ type openshiftOAuthDiscovery struct {
 	TokenEndpoint         string `json:"token_endpoint"`
 }
 
-func getOpenShiftAuthHandler(providerInfo *v1alpha1.AuthProviderInfo) (*OpenShiftAuthHandler, error) {
-	if providerInfo.AuthUrl == nil {
-		return nil, fmt.Errorf("OpenShift provider %s missing AuthUrl", providerInfo.Name)
+func getOpenShiftAuthHandler(provider *v1alpha1.AuthProvider, k8sSpec *v1alpha1.K8sProviderSpec) (*OpenShiftAuthHandler, error) {
+	providerName := ""
+	if provider.Metadata.Name != nil {
+		providerName = *provider.Metadata.Name
 	}
 
-	if providerInfo.ClientId == nil || *providerInfo.ClientId == "" {
-		return nil, fmt.Errorf("OpenShift provider %s missing ClientId", providerInfo.Name)
+	// For OpenShift OAuth, we need externalOpenShiftApiUrl
+	authURL := ""
+	if k8sSpec.ExternalOpenShiftApiUrl != nil && *k8sSpec.ExternalOpenShiftApiUrl != "" {
+		authURL = *k8sSpec.ExternalOpenShiftApiUrl
+	} else if k8sSpec.ApiUrl != "" {
+		authURL = k8sSpec.ApiUrl
+	} else {
+		return nil, fmt.Errorf("OpenShift provider %s missing ApiUrl or ExternalOpenShiftApiUrl", providerName)
 	}
 
-	if providerInfo.TokenUrl == nil {
-		return nil, fmt.Errorf("OpenShift provider %s missing TokenUrl", providerInfo.Name)
-	}
-
-	authURL := *providerInfo.AuthUrl
 	apiServerURL := authURL // OpenShift API server URL (used for discovery)
-	clientId := *providerInfo.ClientId
-	tokenURL := *providerInfo.TokenUrl
+
+	// OpenShift OAuth typically uses "system:serviceaccount:openshift-authentication:oauth-proxy" as client ID
+	// or a configured client ID. Since K8sProviderSpec doesn't have ClientId, we'll use a default
+	clientId := "system:serviceaccount:openshift-authentication:oauth-proxy"
+
+	// OpenShift OAuth token endpoint is typically at {apiServerURL}/oauth/token
+	tokenURL := fmt.Sprintf("%s/oauth/token", apiServerURL)
 
 	tlsConfig, err := bridge.GetAuthTlsConfig()
 	if err != nil {
@@ -57,15 +64,12 @@ func getOpenShiftAuthHandler(providerInfo *v1alpha1.AuthProviderInfo) (*OpenShif
 
 	// OpenShift OAuth uses "user:full" scope by default
 	scope := "user:full"
-	if providerInfo.Scopes != nil && len(*providerInfo.Scopes) > 0 {
-		// Use provided scopes if available
-		scope = buildScopeParam(providerInfo.Scopes, scope)
-	}
+	// Note: K8sProviderSpec doesn't have Scopes field, so we use default
 
 	// Create OAuth2 client config for OpenShift
 	oauthClientConfig := &osincli.ClientConfig{
 		ClientId:                 clientId,
-		AuthorizeUrl:             authURL,
+		AuthorizeUrl:             fmt.Sprintf("%s/oauth/authorize", apiServerURL),
 		TokenUrl:                 tokenURL,
 		RedirectUrl:              config.BaseUiUrl + "/callback",
 		ErrorsInStatusCode:       true,
@@ -86,11 +90,11 @@ func getOpenShiftAuthHandler(providerInfo *v1alpha1.AuthProviderInfo) (*OpenShif
 		tlsConfig:      tlsConfig,
 		internalClient: client,
 		client:         client,
-		authURL:        authURL,
+		authURL:        fmt.Sprintf("%s/oauth/authorize", apiServerURL),
 		tokenURL:       tokenURL,
 		apiServerURL:   apiServerURL,
 		clientId:       clientId,
-		providerName:   *providerInfo.Name,
+		providerName:   providerName,
 	}
 
 	return handler, nil

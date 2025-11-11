@@ -20,7 +20,7 @@ import {
   Title,
 } from '@patternfly/react-core';
 import ArrowLeftIcon from '@patternfly/react-icons/dist/js/icons/arrow-left-icon';
-import { AuthProviderInfo } from '@flightctl/types';
+import { AuthProvider } from '@flightctl/types';
 
 import { useTranslation } from '../../hooks/useTranslation';
 import { getErrorMessage } from '../../utils/error';
@@ -29,7 +29,7 @@ import { isValidJwtTokenFormat, nowInSeconds } from '../../utils/k8sProvider';
 import FlightCtlForm from '../form/FlightCtlForm';
 
 type TokenLoginFormProps = {
-  provider: AuthProviderInfo;
+  provider: AuthProvider;
   onBack?: VoidFunction;
 };
 
@@ -53,7 +53,7 @@ const TokenLoginForm = ({ provider, onBack }: TokenLoginFormProps) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ token, provider: provider.name }),
+        body: JSON.stringify({ token, provider: provider.metadata.name }),
       });
 
       if (!response.ok) {

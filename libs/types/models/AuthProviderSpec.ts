@@ -2,7 +2,9 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { AAPProviderSpec } from './AAPProviderSpec';
+import type { K8sProviderSpec } from './K8sProviderSpec';
 import type { OAuth2ProviderSpec } from './OAuth2ProviderSpec';
 import type { OIDCProviderSpec } from './OIDCProviderSpec';
-export type AuthProviderSpec = (OIDCProviderSpec | OAuth2ProviderSpec);
+export type AuthProviderSpec = (OIDCProviderSpec | OAuth2ProviderSpec | AAPProviderSpec | K8sProviderSpec);
 
