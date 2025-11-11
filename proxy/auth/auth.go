@@ -146,7 +146,31 @@ func (a AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		loginUrl := provider.GetLoginRedirectURL()
+		// Generate PKCE parameters (code verifier and challenge)
+		codeVerifier, err := generateCodeVerifier()
+		if err != nil {
+			log.GetLogger().WithError(err).Warn("Failed to generate PKCE code verifier, proceeding without PKCE")
+			// Continue without PKCE if generation fails
+			loginUrl := provider.GetLoginRedirectURL("", "")
+			response, err := json.Marshal(RedirectResponse{Url: loginUrl})
+			if err != nil {
+				log.GetLogger().WithError(err).Warn("Failed to marshal response")
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			if _, err := w.Write(response); err != nil {
+				log.GetLogger().WithError(err).Warn("Failed to write response")
+			}
+			return
+		}
+
+		codeChallenge := generateCodeChallenge(codeVerifier)
+
+		// Store code verifier in cookie for later use during token exchange
+		setPKCEVerifierCookie(w, providerName, codeVerifier)
+
+		// Also encode code_verifier in state parameter as fallback if cookie fails
+		loginUrl := provider.GetLoginRedirectURL(codeChallenge, codeVerifier)
 		response, err := json.Marshal(RedirectResponse{Url: loginUrl})
 		if err != nil {
 			log.GetLogger().WithError(err).Warn("Failed to marshal response")
@@ -185,6 +209,40 @@ func (a AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
+
+		// If code_verifier is not provided in request body, try to retrieve it from cookie or state
+		if loginParams.CodeVerifier == "" {
+			// First try cookie
+			codeVerifier, err := getPKCEVerifierCookie(r, providerName)
+			if err != nil {
+				log.GetLogger().WithError(err).Warnf("Failed to get PKCE verifier from cookie for provider %s", providerName)
+			} else if codeVerifier != "" {
+				loginParams.CodeVerifier = codeVerifier
+				log.GetLogger().Infof("Retrieved PKCE verifier from cookie for provider %s", providerName)
+			} else {
+				// Fallback: try to extract from state parameter
+				state := r.URL.Query().Get("state")
+				if state != "" {
+					codeVerifier = extractCodeVerifierFromState(state, providerName)
+					if codeVerifier != "" {
+						loginParams.CodeVerifier = codeVerifier
+						log.GetLogger().Infof("Retrieved PKCE verifier from state parameter for provider %s (cookie fallback worked)", providerName)
+					} else {
+						log.GetLogger().Warnf("PKCE verifier not found in cookie or state for provider %s. State was: %s", providerName, state)
+					}
+				} else {
+					log.GetLogger().Warnf("PKCE verifier cookie not found and no state parameter for provider %s", providerName)
+				}
+			}
+		}
+
+		// If we still don't have a code_verifier, this will fail, but let's try anyway
+		if loginParams.CodeVerifier == "" {
+			log.GetLogger().Errorf("No code_verifier available for provider %s - PKCE flow will fail", providerName)
+		}
+
+		// Clear PKCE verifier cookie after use (success or failure)
+		clearPKCEVerifierCookie(w, providerName)
 
 		tokenData, expires, err := provider.GetToken(loginParams)
 		if err != nil {
@@ -262,19 +320,27 @@ func (a AuthHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 	provider, err := a.getProviderForLogin(tokenData.Provider)
 	if err != nil {
 		log.GetLogger().WithError(err).Warnf("Failed to get provider: %s", tokenData.Provider)
-		w.WriteHeader(http.StatusInternalServerError)
+		// If provider lookup fails, treat as authentication failure
+		w.Header().Set("Clear-Site-Data", `"cookies"`)
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	username, resp, err := provider.GetUserInfo(tokenData)
 	if err != nil {
 		log.GetLogger().WithError(err).Warnf("Failed to get user info from provider %s", tokenData.Provider)
-		w.WriteHeader(http.StatusInternalServerError)
+		// If user info retrieval fails, treat as authentication failure
+		w.Header().Set("Clear-Site-Data", `"cookies"`)
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	if resp.StatusCode != http.StatusOK {
 		log.GetLogger().Warnf("GetUserInfo returned status %d for provider %s", resp.StatusCode, tokenData.Provider)
+		// If the provider returns a non-OK status, treat as authentication failure
+		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+			w.Header().Set("Clear-Site-Data", `"cookies"`)
+		}
 		w.WriteHeader(resp.StatusCode)
 		return
 	}

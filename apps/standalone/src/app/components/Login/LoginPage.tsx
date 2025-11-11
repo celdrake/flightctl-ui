@@ -14,6 +14,7 @@ import LoginPageLayout from './LoginPageLayout';
 import { loginAPI } from '../../utils/apiCalls';
 
 const redirectToProviderLogin = async (provider: AuthProviderInfo) => {
+  // Backend generates PKCE parameters and stores code_verifier in a cookie
   const response = await fetch(`${loginAPI}?provider=${provider.name}`);
   const { url } = (await response.json()) as { url: string };
   window.location.href = url;
@@ -26,16 +27,25 @@ const LoginPage = () => {
   const [error, setError] = React.useState<string>();
   const [providers, setProviders] = React.useState<AuthProviderInfo[]>([]);
   const [userSelectedProvider, setUserSelectedProvider] = React.useState<AuthProviderInfo | null>(null);
+  const [isRedirecting, setIsRedirecting] = React.useState(false);
 
-  const handleProviderSelect = (provider: AuthProviderInfo) => {
+  const handleProviderSelect = async (provider: AuthProviderInfo) => {
+    // Prevent multiple clicks while redirect is in progress
+    if (isRedirecting) {
+      return;
+    }
+
     setUserSelectedProvider(provider);
 
     // For k8s token providers, we will show the TokenLoginForm.
     // For other providers, we will redirect to their OAuth flow.
     if (!isK8sTokenProvider(provider)) {
+      setIsRedirecting(true);
       try {
-        redirectToProviderLogin(provider);
+        await redirectToProviderLogin(provider);
       } catch (err) {
+        setIsRedirecting(false);
+        setUserSelectedProvider(null);
         setError(
           t('Failed to initiate login with {{ providerName}} ', {
             providerName: provider.displayName || provider.name,
@@ -53,7 +63,13 @@ const LoginPage = () => {
         if (providers.length > 0) {
           setProviders(providers);
           if (providers.length === 1 && !isK8sTokenProvider(providers[0])) {
-            redirectToProviderLogin(providers[0]);
+            setIsRedirecting(true);
+            try {
+              await redirectToProviderLogin(providers[0]);
+            } catch (err) {
+              setIsRedirecting(false);
+              setError(t('Failed to initiate login'));
+            }
           }
         } else {
           setError(t('No authentication providers found. Please contact your administrator.'));
@@ -114,7 +130,9 @@ const LoginPage = () => {
       );
     }
   } else {
-    content = <ProviderSelector providers={providers} onProviderSelect={handleProviderSelect} />;
+    content = (
+      <ProviderSelector providers={providers} onProviderSelect={handleProviderSelect} disabled={isRedirecting} />
+    );
   }
 
   return <LoginPageLayout>{content}</LoginPageLayout>;

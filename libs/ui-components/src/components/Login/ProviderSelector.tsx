@@ -12,6 +12,7 @@ import { useAppContext } from '../../hooks/useAppContext';
 type ProviderSelectorProps = {
   providers: AuthProviderInfo[];
   onProviderSelect: (provider: AuthProviderInfo) => void;
+  disabled?: boolean;
 };
 
 const getProviderDisplayName = (provider: AuthProviderInfo, t: TFunction) => {
@@ -27,7 +28,7 @@ const getProviderDisplayName = (provider: AuthProviderInfo, t: TFunction) => {
   return provider.name;
 };
 
-const ProviderSelector = ({ providers, onProviderSelect }: ProviderSelectorProps) => {
+const ProviderSelector = ({ providers, onProviderSelect, disabled = false }: ProviderSelectorProps) => {
   const { t } = useTranslation();
   const { settings } = useAppContext();
 
@@ -82,6 +83,7 @@ const ProviderSelector = ({ providers, onProviderSelect }: ProviderSelectorProps
                         isBlock
                         size="lg"
                         onClick={() => onProviderSelect(provider)}
+                        isDisabled={disabled}
                       >
                         {t('Log in with {{ providerName }}', { providerName: getProviderDisplayName(provider, t) })}
                       </Button>

@@ -22,6 +22,7 @@ type OIDCAuthHandler struct {
 	endSessionEndpoint string
 	userInfoEndpoint   string
 	authURL            string
+	tokenEndpoint      string
 	clientId           string
 	providerName       string
 	usernameClaim      []string // JSON path to username claim as array of path segments (e.g., ["preferred_username"], ["user", "name"])
@@ -103,6 +104,7 @@ func getOIDCAuthHandler(providerInfo *v1alpha1.AuthProviderInfo) (*OIDCAuthHandl
 		endSessionEndpoint: oidcResponse.EndSessionEndpoint,
 		userInfoEndpoint:   oidcResponse.UserInfoEndpoint,
 		authURL:            authURL,
+		tokenEndpoint:      oidcResponse.TokenEndpoint,
 		clientId:           clientId,
 		providerName:       *providerInfo.Name,
 		usernameClaim:      usernameClaim,
@@ -121,6 +123,7 @@ func getOIDCAuthHandler(providerInfo *v1alpha1.AuthProviderInfo) (*OIDCAuthHandl
 		}
 		handler.client = client
 		handler.endSessionEndpoint = extConfig.EndSessionEndpoint
+		handler.tokenEndpoint = extConfig.TokenEndpoint
 	}
 
 	return handler, nil
@@ -176,6 +179,11 @@ func getOIDCClient(oidcConfig oidcServerResponse, tlsConfig *tls.Config, clientI
 }
 
 func (a *OIDCAuthHandler) GetToken(loginParams LoginParameters) (TokenData, *int64, error) {
+	// If PKCE is used (code_verifier provided), use PKCE-specific token exchange
+	if loginParams.CodeVerifier != "" {
+		// Pass empty string for client_secret - we don't have access to it in the UI proxy
+		return exchangeTokenWithPKCE(loginParams, a.tokenEndpoint, a.clientId, config.BaseUiUrl+"/callback", "", a.tlsConfig)
+	}
 	return exchangeToken(loginParams, a.internalClient)
 }
 
@@ -238,6 +246,6 @@ func (o *OIDCAuthHandler) RefreshToken(refreshToken string) (TokenData, *int64, 
 	return refreshOAuthToken(refreshToken, o.internalClient)
 }
 
-func (a *OIDCAuthHandler) GetLoginRedirectURL() string {
-	return loginRedirect(a.client, a.providerName)
+func (a *OIDCAuthHandler) GetLoginRedirectURL(codeChallenge string, codeVerifier string) string {
+	return loginRedirect(a.client, a.providerName, codeChallenge, codeVerifier)
 }

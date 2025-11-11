@@ -20,6 +20,7 @@ type OpenShiftAuthHandler struct {
 	client         *osincli.Client
 	internalClient *osincli.Client
 	authURL        string
+	tokenURL       string
 	apiServerURL   string
 	clientId       string
 	providerName   string
@@ -86,6 +87,7 @@ func getOpenShiftAuthHandler(providerInfo *v1alpha1.AuthProviderInfo) (*OpenShif
 		internalClient: client,
 		client:         client,
 		authURL:        authURL,
+		tokenURL:       tokenURL,
 		apiServerURL:   apiServerURL,
 		clientId:       clientId,
 		providerName:   *providerInfo.Name,
@@ -95,6 +97,11 @@ func getOpenShiftAuthHandler(providerInfo *v1alpha1.AuthProviderInfo) (*OpenShif
 }
 
 func (o *OpenShiftAuthHandler) GetToken(loginParams LoginParameters) (TokenData, *int64, error) {
+	// If PKCE is used (code_verifier provided), use PKCE-specific token exchange
+	if loginParams.CodeVerifier != "" {
+		// Pass empty string for client_secret - we don't have access to it in the UI proxy
+		return exchangeTokenWithPKCE(loginParams, o.tokenURL, o.clientId, config.BaseUiUrl+"/callback", "", o.tlsConfig)
+	}
 	return exchangeToken(loginParams, o.internalClient)
 }
 
@@ -179,6 +186,6 @@ func (o *OpenShiftAuthHandler) Logout(token string) (string, error) {
 	return "", nil
 }
 
-func (o *OpenShiftAuthHandler) GetLoginRedirectURL() string {
-	return loginRedirect(o.client, o.providerName)
+func (o *OpenShiftAuthHandler) GetLoginRedirectURL(codeChallenge string, codeVerifier string) string {
+	return loginRedirect(o.client, o.providerName, codeChallenge, codeVerifier)
 }

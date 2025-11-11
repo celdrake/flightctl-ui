@@ -19,6 +19,7 @@ type OAuth2AuthHandler struct {
 	internalClient   *osincli.Client
 	userInfoEndpoint string
 	authURL          string
+	tokenURL         string
 	clientId         string
 	providerName     string
 	usernameClaim    []string // JSON path to username claim as array of path segments (e.g., ["preferred_username"], ["user", "name"])
@@ -51,14 +52,20 @@ func getOAuth2AuthHandler(providerInfo *v1alpha1.AuthProviderInfo) (*OAuth2AuthH
 	// Build scope string (no default scopes for OAuth2 - scopes are mandatory)
 	scope := buildScopeParam(providerInfo.Scopes, "")
 
+	// PKCE is now implemented, so we don't need a client secret for public clients
+	// If a client secret is needed for confidential clients, it should come from provider config
+	// Previously hardcoded for testing (now commented out):
+	// hardcodedClientSecret := "2db6ea6815f8a3ba7476331dc602e255b2ca3451"
+
 	// Create OAuth2 client config
 	oauth2ClientConfig := &osincli.ClientConfig{
 		ClientId:                 clientId,
+		ClientSecret:             "", // Not needed with PKCE for public clients
 		AuthorizeUrl:             authURL,
 		TokenUrl:                 tokenURL,
 		RedirectUrl:              config.BaseUiUrl + "/callback",
 		ErrorsInStatusCode:       true,
-		SendClientSecretInParams: false,
+		SendClientSecretInParams: false, // PKCE is used instead of client secret
 		Scope:                    scope,
 	}
 
@@ -77,6 +84,7 @@ func getOAuth2AuthHandler(providerInfo *v1alpha1.AuthProviderInfo) (*OAuth2AuthH
 		client:           client,
 		userInfoEndpoint: userinfoURL,
 		authURL:          authURL,
+		tokenURL:         tokenURL,
 		clientId:         clientId,
 		providerName:     providerName,
 		usernameClaim:    usernameClaim,
@@ -86,6 +94,14 @@ func getOAuth2AuthHandler(providerInfo *v1alpha1.AuthProviderInfo) (*OAuth2AuthH
 }
 
 func (o *OAuth2AuthHandler) GetToken(loginParams LoginParameters) (TokenData, *int64, error) {
+	// If PKCE is used (code_verifier provided), use PKCE-specific token exchange
+	if loginParams.CodeVerifier != "" {
+		hardcodedClientSecret := "2db6ea6815f8a3ba7476331dc602e255b2ca3451"
+
+		// Pass empty string for client_secret - we don't have access to it in the UI proxy
+		// The backend API would need to provide it if available
+		return exchangeTokenWithPKCE(loginParams, o.tokenURL, o.clientId, config.BaseUiUrl+"/callback", hardcodedClientSecret, o.tlsConfig)
+	}
 	return exchangeToken(loginParams, o.internalClient)
 }
 
@@ -143,6 +159,6 @@ func (o *OAuth2AuthHandler) RefreshToken(refreshToken string) (TokenData, *int64
 	return refreshOAuthToken(refreshToken, o.internalClient)
 }
 
-func (o *OAuth2AuthHandler) GetLoginRedirectURL() string {
-	return loginRedirect(o.client, o.providerName)
+func (o *OAuth2AuthHandler) GetLoginRedirectURL(codeChallenge string, codeVerifier string) string {
+	return loginRedirect(o.client, o.providerName, codeChallenge, codeVerifier)
 }

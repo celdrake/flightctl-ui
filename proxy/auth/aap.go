@@ -20,6 +20,7 @@ type AAPAuthHandler struct {
 	internalClient  *osincli.Client
 	tlsConfig       *tls.Config
 	authURL         string
+	tokenURL        string
 	internalAuthURL string
 	clientId        string
 	providerName    string
@@ -79,6 +80,7 @@ func getAAPAuthHandler(providerInfo *v1alpha1.AuthProviderInfo) (*AAPAuthHandler
 		internalClient:  client,
 		tlsConfig:       tlsConfig,
 		authURL:         authURL,
+		tokenURL:        fmt.Sprintf("%s/o/token/", authURL),
 		internalAuthURL: authURL,
 		clientId:        clientId,
 		providerName:    *providerInfo.Name,
@@ -91,6 +93,7 @@ func getAAPAuthHandler(providerInfo *v1alpha1.AuthProviderInfo) (*AAPAuthHandler
 		}
 		handler.internalClient = internalClient
 		handler.internalAuthURL = *internalAuthURL
+		handler.tokenURL = fmt.Sprintf("%s/o/token/", *internalAuthURL)
 	}
 
 	return handler, nil
@@ -127,6 +130,11 @@ func getClient(url string, tlsConfig *tls.Config, clientId string) (*osincli.Cli
 }
 
 func (a *AAPAuthHandler) GetToken(loginParams LoginParameters) (TokenData, *int64, error) {
+	// If PKCE is used (code_verifier provided), use PKCE-specific token exchange
+	if loginParams.CodeVerifier != "" {
+		// Pass empty string for client_secret - we don't have access to it in the UI proxy
+		return exchangeTokenWithPKCE(loginParams, a.tokenURL, a.clientId, config.BaseUiUrl+"/callback", "", a.tlsConfig)
+	}
 	return exchangeToken(loginParams, a.internalClient)
 }
 
@@ -191,6 +199,6 @@ func (a *AAPAuthHandler) RefreshToken(refreshToken string) (TokenData, *int64, e
 	return refreshOAuthToken(refreshToken, a.internalClient)
 }
 
-func (a *AAPAuthHandler) GetLoginRedirectURL() string {
-	return loginRedirect(a.client, a.providerName)
+func (a *AAPAuthHandler) GetLoginRedirectURL(codeChallenge string, codeVerifier string) string {
+	return loginRedirect(a.client, a.providerName, codeChallenge, codeVerifier)
 }

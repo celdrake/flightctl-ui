@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"crypto/rand"
+	"crypto/sha256"
 	"crypto/tls"
 	b64 "encoding/base64"
 	"encoding/json"
@@ -59,7 +61,8 @@ func (t TokenData) GetAuthToken() string {
 }
 
 type LoginParameters struct {
-	Code string `json:"code"`
+	Code         string `json:"code"`
+	CodeVerifier string `json:"codeVerifier,omitempty"` // Optional, will be retrieved from cookie if not provided
 }
 
 type AuthProvider interface {
@@ -67,7 +70,7 @@ type AuthProvider interface {
 	GetUserInfo(tokenData TokenData) (string, *http.Response, error)
 	RefreshToken(refreshToken string) (TokenData, *int64, error)
 	Logout(token string) (string, error)
-	GetLoginRedirectURL() string
+	GetLoginRedirectURL(codeChallenge string, codeVerifier string) string
 }
 
 func setCookie(w http.ResponseWriter, value TokenData) error {
@@ -183,12 +186,170 @@ func respondWithError(w http.ResponseWriter, statusCode int, message string) {
 }
 
 // exchangeToken exchanges an authorization code for an access token
+// If code_verifier is provided (PKCE flow), use exchangeTokenWithPKCE
+// Otherwise, use osincli's standard flow
+// Note: For PKCE, providers should call exchangeTokenWithPKCE directly with token URL
 func exchangeToken(loginParams LoginParameters, client *osincli.Client) (TokenData, *int64, error) {
+	// Standard OAuth flow without PKCE
+	// If PKCE is needed, providers should call exchangeTokenWithPKCE directly
 	req := client.NewAccessRequest(osincli.AUTHORIZATION_CODE, &osincli.AuthorizeData{
 		Code: loginParams.Code,
 	})
 
 	return executeOAuthFlow(req)
+}
+
+// exchangeTokenWithPKCE manually constructs the token request with PKCE parameters
+// This function makes a direct HTTP POST to the token endpoint because osincli doesn't support PKCE
+// clientSecret is optional - if provided, it will be included in the request
+// Some providers (like GitHub) may require client_secret even for public clients using PKCE
+func exchangeTokenWithPKCE(loginParams LoginParameters, tokenURL string, clientID string, redirectURI string, clientSecret string, tlsConfig *tls.Config) (TokenData, *int64, error) {
+	ret := TokenData{}
+
+	if loginParams.CodeVerifier == "" {
+		return ret, nil, fmt.Errorf("code_verifier is required for PKCE flow")
+	}
+
+	// Prepare form data for token request
+	data := url.Values{}
+	data.Set("grant_type", "authorization_code")
+	data.Set("code", loginParams.Code)
+	data.Set("code_verifier", loginParams.CodeVerifier)
+	data.Set("client_id", clientID)
+	data.Set("redirect_uri", redirectURI)
+	// Always include client_secret in the request
+	// Some providers (like GitHub) require the field to be present even if empty
+	// For providers that don't require it, an empty value should be harmless
+	data.Set("client_secret", clientSecret)
+
+	// Log the exact request being sent (without sensitive code/verifier values)
+	log.GetLogger().Infof("Token exchange request: grant_type=authorization_code, client_id=%s, redirect_uri=%s, code_verifier length=%d, code length=%d, token_url=%s", clientID, redirectURI, len(loginParams.CodeVerifier), len(loginParams.Code), tokenURL)
+	log.GetLogger().Debugf("Token exchange form data (sanitized): grant_type=%s, client_id=%s, redirect_uri=%s, code_verifier=[REDACTED], code=[REDACTED]", data.Get("grant_type"), data.Get("client_id"), data.Get("redirect_uri"))
+
+	// Create HTTP request
+	req, err := http.NewRequest(http.MethodPost, tokenURL, strings.NewReader(data.Encode()))
+	if err != nil {
+		return ret, nil, fmt.Errorf("failed to create token request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Accept", "application/json") // Request JSON response
+
+	// Create HTTP client with TLS config
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsConfig,
+		},
+	}
+
+	// Execute request
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return ret, nil, fmt.Errorf("failed to exchange token: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Read response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return ret, nil, fmt.Errorf("failed to read token response: %w", err)
+	}
+
+	// Check for HTTP error status
+	if resp.StatusCode != http.StatusOK {
+		// Log the full response for debugging
+		log.GetLogger().Warnf("Token exchange failed with status %d. Response body: %s", resp.StatusCode, string(body))
+		return ret, nil, fmt.Errorf("token exchange failed with status %d: %s", resp.StatusCode, string(body))
+	}
+
+	// Check content type to determine response format
+	contentType := resp.Header.Get("Content-Type")
+	bodyPreview := string(body)
+	if len(bodyPreview) > 200 {
+		bodyPreview = bodyPreview[:200] + "..."
+	}
+	log.GetLogger().Infof("Token response Content-Type: %s, Body length: %d, Body preview: %s", contentType, len(body), bodyPreview)
+
+	// Parse response based on content type
+	var tokenResponse map[string]interface{}
+
+	// GitHub and some OAuth providers return form-encoded responses
+	if strings.Contains(contentType, "application/x-www-form-urlencoded") {
+		// Parse as form-encoded
+		values, err := url.ParseQuery(string(body))
+		if err != nil {
+			log.GetLogger().Warnf("Failed to parse form-encoded token response. Status: %d, Content-Type: %s, Body: %s", resp.StatusCode, contentType, string(body))
+			return ret, nil, fmt.Errorf("failed to parse form-encoded token response: %w (response body: %s)", err, string(body))
+		}
+
+		// Log all parsed values for debugging
+		log.GetLogger().Debugf("Parsed form-encoded response values: %v", values)
+
+		// Check for errors in form-encoded response
+		errorParam := values.Get("error")
+		if errorParam != "" {
+			errorDesc := values.Get("error_description")
+			errorURI := values.Get("error_uri")
+			log.GetLogger().Warnf("OAuth provider returned error in form-encoded response: error=%s, error_description=%s, error_uri=%s", errorParam, errorDesc, errorURI)
+			return ret, nil, fmt.Errorf("oauth error: %s - %s", errorParam, errorDesc)
+		}
+
+		// Convert form values to map
+		tokenResponse = make(map[string]interface{})
+		for k, v := range values {
+			if len(v) > 0 {
+				tokenResponse[k] = v[0]
+			}
+		}
+		log.GetLogger().Debugf("Parsed form-encoded token response. Keys: %v", getMapKeys(tokenResponse))
+	} else {
+		// Try to parse as JSON
+		if err := json.Unmarshal(body, &tokenResponse); err != nil {
+			log.GetLogger().Warnf("Failed to parse token response as JSON. Status: %d, Content-Type: %s, Body: %s", resp.StatusCode, contentType, string(body))
+			return ret, nil, fmt.Errorf("failed to parse token response: %w (response body: %s)", err, string(body))
+		}
+		log.GetLogger().Debugf("Parsed JSON token response. Keys: %v", getMapKeys(tokenResponse))
+
+		// Check for errors in JSON response (some providers return JSON error responses)
+		if errorParam, ok := tokenResponse["error"].(string); ok && errorParam != "" {
+			errorDesc := ""
+			if desc, ok := tokenResponse["error_description"].(string); ok {
+				errorDesc = desc
+			}
+			errorURI := ""
+			if uri, ok := tokenResponse["error_uri"].(string); ok {
+				errorURI = uri
+			}
+			log.GetLogger().Warnf("OAuth provider returned error in JSON response: error=%s, error_description=%s, error_uri=%s", errorParam, errorDesc, errorURI)
+			return ret, nil, fmt.Errorf("oauth error: %s - %s", errorParam, errorDesc)
+		}
+	}
+
+	// Extract tokens
+	if accessToken, ok := tokenResponse["access_token"].(string); ok {
+		ret.AccessToken = accessToken
+		log.GetLogger().Debugf("Extracted access_token (length: %d)", len(accessToken))
+	} else {
+		log.GetLogger().Warnf("access_token not found in token response. Available keys: %v", getMapKeys(tokenResponse))
+	}
+
+	if idToken, ok := tokenResponse["id_token"].(string); ok {
+		ret.IDToken = idToken
+		log.GetLogger().Debugf("Extracted id_token (length: %d)", len(idToken))
+	}
+
+	if refreshToken, ok := tokenResponse["refresh_token"].(string); ok {
+		ret.RefreshToken = refreshToken
+		log.GetLogger().Debugf("Extracted refresh_token (length: %d)", len(refreshToken))
+	}
+
+	// Extract expires_in
+	expiresIn, err := getExpiresIn(osincli.ResponseData(tokenResponse))
+	if err != nil {
+		return ret, nil, fmt.Errorf("failed to parse expires_in: %w", err)
+	}
+
+	return ret, expiresIn, nil
 }
 
 // refreshOAuthToken refreshes an access token using a refresh token
@@ -197,14 +358,33 @@ func refreshOAuthToken(refreshToken string, client *osincli.Client) (TokenData, 
 	return executeOAuthFlow(req)
 }
 
-// loginRedirect generates the OAuth login redirect URL with provider state
-func loginRedirect(client *osincli.Client, providerName string) string {
+// loginRedirect generates the OAuth login redirect URL with provider state and PKCE parameters
+// If codeChallenge is empty, it will be generated automatically
+// codeVerifier can be optionally passed to encode it in the state parameter as a fallback
+func loginRedirect(client *osincli.Client, providerName string, codeChallenge string, codeVerifier string) string {
 	authorizeRequest := client.NewAuthorizeRequest(osincli.CODE)
 	authURL := authorizeRequest.GetAuthorizeUrl()
 
+	// Log the redirect_uri used in authorization request for debugging
+	// The redirect_uri is included in the authorization URL query parameters
+	parsedAuthURL, _ := url.Parse(authURL.String())
+	redirectURI := parsedAuthURL.Query().Get("redirect_uri")
+	if redirectURI == "" {
+		// Fallback: use the configured redirect URI from config
+		redirectURI = config.BaseUiUrl + "/callback"
+	}
+	log.GetLogger().Infof("Authorization request for provider %s: redirect_uri=%s", providerName, redirectURI)
+
 	// Include provider name in state parameter so callback can identify which provider to use
 	// Format: "provider:<providerName>" to match frontend expectations
+	// If codeVerifier is provided, encode it in state as a fallback if cookie fails
 	state := fmt.Sprintf("provider:%s", providerName)
+	if codeVerifier != "" {
+		// Encode code_verifier in state as base64url for fallback retrieval
+		// Format: "provider:<providerName>:<base64url_encoded_verifier>"
+		encodedVerifier := b64.URLEncoding.WithPadding(b64.NoPadding).EncodeToString([]byte(codeVerifier))
+		state = fmt.Sprintf("provider:%s:%s", providerName, encodedVerifier)
+	}
 
 	// Parse the URL and add state parameter
 	parsedURL, err := url.Parse(authURL.String())
@@ -216,6 +396,24 @@ func loginRedirect(client *osincli.Client, providerName string) string {
 	// Add state to query parameters
 	query := parsedURL.Query()
 	query.Set("state", state)
+
+	// Always add PKCE parameters (generate if not provided)
+	if codeChallenge == "" {
+		// Generate PKCE parameters
+		codeVerifier, err := generateCodeVerifier()
+		if err != nil {
+			log.GetLogger().WithError(err).Warn("Failed to generate code verifier, proceeding without PKCE")
+		} else {
+			codeChallenge = generateCodeChallenge(codeVerifier)
+			// Note: code verifier will be stored in cookie by the caller
+		}
+	}
+
+	if codeChallenge != "" {
+		query.Set("code_challenge", codeChallenge)
+		query.Set("code_challenge_method", "S256")
+	}
+
 	parsedURL.RawQuery = query.Encode()
 
 	return parsedURL.String()
@@ -362,4 +560,119 @@ func getMapKeys(m map[string]interface{}) []string {
 		keys = append(keys, k)
 	}
 	return keys
+}
+
+// PKCE cookie name prefix
+const pkceCookiePrefix = "pkce_verifier_"
+
+// generateCodeVerifier generates a cryptographically random code verifier
+// Returns a base64url-encoded string of 32 random bytes (43-128 characters per RFC 7636)
+func generateCodeVerifier() (string, error) {
+	// Generate 32 random bytes
+	randomBytes := make([]byte, 32)
+	if _, err := rand.Read(randomBytes); err != nil {
+		return "", fmt.Errorf("failed to generate random bytes: %w", err)
+	}
+
+	// Base64URL encode (RFC 4648 Section 5)
+	// Replace '+' with '-', '/' with '_', and remove padding '='
+	encoded := b64.URLEncoding.WithPadding(b64.NoPadding).EncodeToString(randomBytes)
+	return encoded, nil
+}
+
+// generateCodeChallenge generates a code challenge from a code verifier using SHA-256
+// Returns a base64url-encoded SHA-256 hash of the verifier
+func generateCodeChallenge(codeVerifier string) string {
+	// SHA-256 hash of the code verifier
+	hash := sha256.Sum256([]byte(codeVerifier))
+	// Base64URL encode without padding
+	return b64.URLEncoding.WithPadding(b64.NoPadding).EncodeToString(hash[:])
+}
+
+// setPKCEVerifierCookie stores the code verifier in a cookie
+func setPKCEVerifierCookie(w http.ResponseWriter, providerName string, codeVerifier string) {
+	cookieName := pkceCookiePrefix + providerName
+	cookie := http.Cookie{
+		Name:     cookieName,
+		Value:    codeVerifier,
+		Secure:   config.TlsCertPath != "",
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode, // Use Lax instead of Strict to allow cookie on redirect from OAuth provider
+		Path:     "/",
+		MaxAge:   600, // 10 minutes (same as authorization code expiration)
+		// Don't set Domain - let browser use default (current domain)
+	}
+	http.SetCookie(w, &cookie)
+	log.GetLogger().Infof("Set PKCE verifier cookie for provider %s (cookie: %s, value length: %d)", providerName, cookieName, len(codeVerifier))
+}
+
+// getPKCEVerifierCookie retrieves the code verifier from a cookie
+func getPKCEVerifierCookie(r *http.Request, providerName string) (string, error) {
+	cookieName := pkceCookiePrefix + providerName
+
+	// Log all cookies for debugging
+	allCookies := r.Cookies()
+	cookieNames := make([]string, len(allCookies))
+	for i, c := range allCookies {
+		cookieNames[i] = c.Name
+	}
+	log.GetLogger().Infof("Looking for PKCE cookie %s. Available cookies: %v (total: %d)", cookieName, cookieNames, len(allCookies))
+
+	cookie, err := r.Cookie(cookieName)
+	if err != nil {
+		if errors.Is(err, http.ErrNoCookie) {
+			log.GetLogger().Warnf("PKCE verifier cookie not found: %s (this will cause token exchange to fail)", cookieName)
+			return "", nil
+		}
+		return "", err
+	}
+	if cookie.Value == "" {
+		log.GetLogger().Warnf("PKCE verifier cookie is empty: %s", cookieName)
+		return "", nil
+	}
+	log.GetLogger().Debugf("Found PKCE verifier cookie for provider %s (length: %d)", providerName, len(cookie.Value))
+	return cookie.Value, nil
+}
+
+// clearPKCEVerifierCookie removes the PKCE verifier cookie
+func clearPKCEVerifierCookie(w http.ResponseWriter, providerName string) {
+	cookieName := pkceCookiePrefix + providerName
+	cookie := http.Cookie{
+		Name:     cookieName,
+		Value:    "",
+		MaxAge:   -1,
+		Path:     "/",
+		Secure:   config.TlsCertPath != "",
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode, // Use Lax to match the set cookie
+	}
+	http.SetCookie(w, &cookie)
+}
+
+// extractCodeVerifierFromState extracts code_verifier from state parameter if it was encoded there
+// State format: "provider:<providerName>:<base64url_encoded_verifier>"
+// Also handles legacy format: "provider:<providerName>" (no verifier)
+func extractCodeVerifierFromState(state string, providerName string) string {
+	prefix := fmt.Sprintf("provider:%s", providerName)
+	if !strings.HasPrefix(state, prefix) {
+		return ""
+	}
+
+	// Check if state has the encoded verifier (format: "provider:<name>:<encoded>")
+	if strings.HasPrefix(state, prefix+":") {
+		encodedVerifier := strings.TrimPrefix(state, prefix+":")
+		if encodedVerifier == "" {
+			return ""
+		}
+		// Decode base64url encoded verifier
+		decoded, err := b64.URLEncoding.WithPadding(b64.NoPadding).DecodeString(encodedVerifier)
+		if err != nil {
+			log.GetLogger().Debugf("Failed to decode code_verifier from state: %v", err)
+			return ""
+		}
+		return string(decoded)
+	}
+
+	// Legacy format without verifier
+	return ""
 }

@@ -1,8 +1,8 @@
 module github.com/flightctl/flightctl-ui
 
-go 1.23.0
+go 1.24.0
 
-toolchain go1.23.9
+toolchain go1.24.9
 
 require (
 	github.com/flightctl/flightctl v0.10.0-rc1
@@ -13,8 +13,9 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 )
 
-// Point to local flightctl with EDM-2347 branch checked out
-replace github.com/flightctl/flightctl => ../../flightctl
+// Point to asafbennatan/flightctl fork with EDM-2347 branch
+// This will be replaced during container build with the cloned repository
+replace github.com/flightctl/flightctl => ../../flightctl/
 
 require (
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
@@ -44,11 +45,11 @@ require (
 	github.com/secure-systems-lab/go-securesystemslib v0.8.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
-	golang.org/x/crypto v0.39.0 // indirect
+	golang.org/x/crypto v0.43.0 // indirect
 	golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8 // indirect
-	golang.org/x/net v0.41.0 // indirect
-	golang.org/x/sys v0.34.0 // indirect
-	golang.org/x/text v0.26.0 // indirect
+	golang.org/x/net v0.46.0 // indirect
+	golang.org/x/sys v0.37.0 // indirect
+	golang.org/x/text v0.30.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apimachinery v0.32.3 // indirect
