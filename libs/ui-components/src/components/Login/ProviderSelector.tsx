@@ -1,33 +1,36 @@
 import * as React from 'react';
-import { TFunction } from 'react-i18next';
 import { Button, Card, CardBody, CardTitle, Stack, StackItem, Title } from '@patternfly/react-core';
 
-import { AuthProviderInfo } from '@flightctl/types';
+import { AuthProvider } from '@flightctl/types';
 import fcLogo from '@fctl-assets/bgimages/flight-control-logo.svg';
 import rhemLogo from '@fctl-assets/bgimages/RHEM-logo.svg';
 
 import { useTranslation } from '../../hooks/useTranslation';
 import { useAppContext } from '../../hooks/useAppContext';
+import { ProviderType, isOAuth2Provider } from '../AuthProvider/CreateAuthProvider/types';
+import { getProviderDisplayName } from '../../utils/authProvider';
+import { DynamicAuthProviderSpec } from '../../types/extraTypes';
 
 type ProviderSelectorProps = {
-  providers: AuthProviderInfo[];
-  onProviderSelect: (provider: AuthProviderInfo) => void;
+  providers: AuthProvider[];
+  defaultProviderType: ProviderType | null;
+  onProviderSelect: (provider: AuthProvider) => void;
+  disabled?: boolean;
 };
 
-const getProviderDisplayName = (provider: AuthProviderInfo, t: TFunction) => {
-  if (provider.displayName) {
-    return provider.displayName;
-  }
-  if (provider.type === AuthProviderInfo.type.K8S) {
-    return t('Kubernetes');
-  }
-  if (provider.type === AuthProviderInfo.type.AAP) {
-    return t('Ansible Automation Platform');
-  }
-  return provider.name;
+const getProviderKey = (provider: AuthProvider): string => {
+  const name = provider.metadata.name as string;
+  const issuerUrl = 'issuer' in provider.spec ? provider.spec.issuer : 'issuer';
+  const clientId = 'clientId' in provider.spec ? provider.spec.clientId : 'clientId';
+  return `${name}-${issuerUrl}-${clientId}`;
 };
 
-const ProviderSelector = ({ providers, onProviderSelect }: ProviderSelectorProps) => {
+const ProviderSelector = ({
+  providers,
+  defaultProviderType,
+  onProviderSelect,
+  disabled = false,
+}: ProviderSelectorProps) => {
   const { t } = useTranslation();
   const { settings } = useAppContext();
 
@@ -36,7 +39,7 @@ const ProviderSelector = ({ providers, onProviderSelect }: ProviderSelectorProps
     const result: Record<string, boolean> = {};
 
     providers.forEach((provider) => {
-      const displayName = provider.displayName || (provider.name as string);
+      const displayName = getProviderDisplayName(provider, t) || (provider.metadata.name as string);
       if (result[displayName] === undefined) {
         result[displayName] = false;
       } else {
@@ -45,7 +48,7 @@ const ProviderSelector = ({ providers, onProviderSelect }: ProviderSelectorProps
     });
 
     return result;
-  }, [providers]);
+  }, [providers, t]);
 
   return (
     <>
@@ -70,26 +73,30 @@ const ProviderSelector = ({ providers, onProviderSelect }: ProviderSelectorProps
             <StackItem>
               <Stack hasGutter>
                 {providers.map((provider) => {
-                  const providerName = provider.name as string;
-                  const displayName = provider.displayName || providerName;
+                  const displayName = getProviderDisplayName(provider, t);
 
                   const isDuplicateName = duplicateProviderNames[displayName];
-
+                  let details;
+                  if (isDuplicateName) {
+                    const spec = provider.spec as DynamicAuthProviderSpec;
+                    if (isOAuth2Provider(spec)) {
+                      details = spec.authorizationUrl || spec.clientId || '';
+                    } else {
+                      details = spec.issuer || spec.clientId || '';
+                    }
+                  }
                   return (
-                    <StackItem key={`${providerName}-${provider.issuer}-${provider.clientId}`}>
+                    <StackItem key={getProviderKey(provider)}>
                       <Button
-                        variant={provider.isDefault ? 'primary' : 'secondary'}
+                        variant={defaultProviderType === provider.spec.providerType ? 'primary' : 'secondary'}
                         isBlock
                         size="lg"
                         onClick={() => onProviderSelect(provider)}
+                        isDisabled={disabled}
                       >
                         {t('Log in with {{ providerName }}', { providerName: getProviderDisplayName(provider, t) })}
                       </Button>
-                      {isDuplicateName && (
-                        <small>
-                          {provider.issuer || provider.authUrl || ''} {provider.clientId && `(${provider.clientId})`}
-                        </small>
-                      )}
+                      {isDuplicateName && <small>{details}</small>}
                     </StackItem>
                   );
                 })}

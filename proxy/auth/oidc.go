@@ -22,7 +22,9 @@ type OIDCAuthHandler struct {
 	endSessionEndpoint string
 	userInfoEndpoint   string
 	authURL            string
+	tokenEndpoint      string
 	clientId           string
+	clientSecret       string
 	providerName       string
 	usernameClaim      []string // JSON path to username claim as array of path segments (e.g., ["preferred_username"], ["user", "name"])
 }
@@ -34,17 +36,22 @@ type oidcServerResponse struct {
 	EndSessionEndpoint string `json:"end_session_endpoint"`
 }
 
-func getOIDCAuthHandler(providerInfo *v1alpha1.AuthProviderInfo) (*OIDCAuthHandler, error) {
-	if providerInfo.Issuer == nil {
-		return nil, fmt.Errorf("OIDC provider %s missing Issuer", providerInfo.Name)
+func getOIDCAuthHandler(provider *v1alpha1.AuthProvider, oidcSpec *v1alpha1.OIDCProviderSpec) (*OIDCAuthHandler, error) {
+	providerName := ""
+	if provider.Metadata.Name != nil {
+		providerName = *provider.Metadata.Name
 	}
 
-	if providerInfo.ClientId == nil || *providerInfo.ClientId == "" {
-		return nil, fmt.Errorf("OIDC provider %s missing ClientId", providerInfo.Name)
+	if oidcSpec.Issuer == "" {
+		return nil, fmt.Errorf("OIDC provider %s missing Issuer", providerName)
 	}
 
-	authURL := *providerInfo.Issuer
-	clientId := *providerInfo.ClientId
+	if oidcSpec.ClientId == "" {
+		return nil, fmt.Errorf("OIDC provider %s missing ClientId", providerName)
+	}
+
+	authURL := oidcSpec.Issuer
+	clientId := oidcSpec.ClientId
 	internalAuthURL := (*string)(nil) // OIDC doesn't use internalAuthURL for now
 
 	tlsConfig, err := bridge.GetAuthTlsConfig()
@@ -85,15 +92,23 @@ func getOIDCAuthHandler(providerInfo *v1alpha1.AuthProviderInfo) (*OIDCAuthHandl
 		return nil, fmt.Errorf("failed to parse oidc config: %w", err)
 	}
 
-	internalClient, err := getOIDCClient(oidcResponse, tlsConfig, clientId, providerInfo.Scopes)
+	internalClient, err := getOIDCClient(oidcResponse, tlsConfig, clientId, oidcSpec.Scopes)
 	if err != nil {
 		return nil, err
 	}
 
 	// Get username claim from provider config, default to DefaultUsernameClaim
 	usernameClaim := []string{DefaultUsernameClaim}
-	if providerInfo.UsernameClaim != nil && len(*providerInfo.UsernameClaim) > 0 {
-		usernameClaim = *providerInfo.UsernameClaim
+	if oidcSpec.UsernameClaim != nil && len(*oidcSpec.UsernameClaim) > 0 {
+		usernameClaim = *oidcSpec.UsernameClaim
+	}
+
+	// Extract client secret from spec (may be nil/empty for public clients)
+	// TODO: For testing, you can hardcode the clientSecret here:
+	// clientSecret := "YOUR_GOOGLE_CLIENT_SECRET_HERE"
+	clientSecret := ""
+	if oidcSpec.ClientSecret != nil {
+		clientSecret = *oidcSpec.ClientSecret
 	}
 
 	handler := &OIDCAuthHandler{
@@ -103,8 +118,10 @@ func getOIDCAuthHandler(providerInfo *v1alpha1.AuthProviderInfo) (*OIDCAuthHandl
 		endSessionEndpoint: oidcResponse.EndSessionEndpoint,
 		userInfoEndpoint:   oidcResponse.UserInfoEndpoint,
 		authURL:            authURL,
+		tokenEndpoint:      oidcResponse.TokenEndpoint,
 		clientId:           clientId,
-		providerName:       *providerInfo.Name,
+		clientSecret:       clientSecret,
+		providerName:       providerName,
 		usernameClaim:      usernameClaim,
 	}
 
@@ -115,12 +132,13 @@ func getOIDCAuthHandler(providerInfo *v1alpha1.AuthProviderInfo) (*OIDCAuthHandl
 			UserInfoEndpoint:   replaceBaseURL(oidcResponse.UserInfoEndpoint, *internalAuthURL, authURL),
 			EndSessionEndpoint: replaceBaseURL(oidcResponse.EndSessionEndpoint, *internalAuthURL, authURL),
 		}
-		client, err := getOIDCClient(extConfig, tlsConfig, clientId, providerInfo.Scopes)
+		client, err := getOIDCClient(extConfig, tlsConfig, clientId, oidcSpec.Scopes)
 		if err != nil {
 			return nil, err
 		}
 		handler.client = client
 		handler.endSessionEndpoint = extConfig.EndSessionEndpoint
+		handler.tokenEndpoint = extConfig.TokenEndpoint
 	}
 
 	return handler, nil
@@ -176,7 +194,7 @@ func getOIDCClient(oidcConfig oidcServerResponse, tlsConfig *tls.Config, clientI
 }
 
 func (a *OIDCAuthHandler) GetToken(loginParams LoginParameters) (TokenData, *int64, error) {
-	return exchangeToken(loginParams, a.internalClient)
+	return exchangeToken(loginParams, a.internalClient, a.tokenEndpoint, a.clientId, config.BaseUiUrl+"/callback", a.clientSecret)
 }
 
 func (o *OIDCAuthHandler) GetUserInfo(tokenData TokenData) (string, *http.Response, error) {
@@ -238,6 +256,6 @@ func (o *OIDCAuthHandler) RefreshToken(refreshToken string) (TokenData, *int64, 
 	return refreshOAuthToken(refreshToken, o.internalClient)
 }
 
-func (a *OIDCAuthHandler) GetLoginRedirectURL() string {
-	return loginRedirect(a.client, a.providerName)
+func (a *OIDCAuthHandler) GetLoginRedirectURL(codeChallenge string, codeVerifier string) string {
+	return loginRedirect(a.client, a.providerName, codeChallenge, codeVerifier)
 }

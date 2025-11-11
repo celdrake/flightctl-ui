@@ -14,7 +14,6 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 )
 
-// Point to local flightctl with EDM-2347 branch checked out
 replace github.com/flightctl/flightctl => ../../flightctl
 
 require (

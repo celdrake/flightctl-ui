@@ -50,10 +50,12 @@ export const useAuthContext = () => {
         callbackErr = searchParams.get('error');
         if (code && state) {
           // Extract provider name from the state parameter
-          // The state format is: "provider:<providerName>"
-          const providerName = state.startsWith('provider:') ? state.substring(9) : state;
+          // The state format is: "provider:<providerName>" or "provider:<providerName>:<encoded_verifier>"
+          const providerName = state.startsWith('provider:') ? state.substring(9).split(':')[0] : state;
 
-          const resp = await fetch(`${loginAPI}?provider=${providerName}`, {
+          // Backend retrieves code_verifier from cookie automatically, or from state as fallback
+          // Pass state in query parameter so backend can extract code_verifier if cookie fails
+          const resp = await fetch(`${loginAPI}?provider=${providerName}&state=${encodeURIComponent(state)}`, {
             headers: {
               'Content-Type': 'application/json',
             },
@@ -63,6 +65,7 @@ export const useAuthContext = () => {
               code: code,
             }),
           });
+
           const expiration = (await resp.json()) as { expiresIn: number };
           if (expiration.expiresIn) {
             const now = nowInSeconds();

@@ -19,28 +19,33 @@ type OAuth2AuthHandler struct {
 	internalClient   *osincli.Client
 	userInfoEndpoint string
 	authURL          string
+	tokenURL         string
 	clientId         string
+	clientSecret     string
 	providerName     string
 	usernameClaim    []string // JSON path to username claim as array of path segments (e.g., ["preferred_username"], ["user", "name"])
 }
 
 // getOAuth2AuthHandler creates an OAuth2 handler using explicit endpoints
-func getOAuth2AuthHandler(providerInfo *v1alpha1.AuthProviderInfo) (*OAuth2AuthHandler, error) {
-	providerName := *providerInfo.Name
+func getOAuth2AuthHandler(provider *v1alpha1.AuthProvider, oauth2Spec *v1alpha1.OAuth2ProviderSpec) (*OAuth2AuthHandler, error) {
+	providerName := ""
+	if provider.Metadata.Name != nil {
+		providerName = *provider.Metadata.Name
+	}
 
-	if providerInfo.AuthUrl == nil || providerInfo.TokenUrl == nil || providerInfo.UserinfoUrl == nil || providerInfo.ClientId == nil || *providerInfo.ClientId == "" || providerInfo.Scopes == nil || len(*providerInfo.Scopes) == 0 {
+	if oauth2Spec.AuthorizationUrl == "" || oauth2Spec.TokenUrl == "" || oauth2Spec.UserinfoUrl == "" || oauth2Spec.ClientId == "" || oauth2Spec.Scopes == nil || len(*oauth2Spec.Scopes) == 0 {
 		return nil, fmt.Errorf("OAuth2 provider %s missing required fields", providerName)
 	}
 
-	authURL := *providerInfo.AuthUrl
-	tokenURL := *providerInfo.TokenUrl
-	userinfoURL := *providerInfo.UserinfoUrl
-	clientId := *providerInfo.ClientId
+	authURL := oauth2Spec.AuthorizationUrl
+	tokenURL := oauth2Spec.TokenUrl
+	userinfoURL := oauth2Spec.UserinfoUrl
+	clientId := oauth2Spec.ClientId
 
 	// Get username claim from provider config, default to DefaultUsernameClaim
 	usernameClaim := []string{DefaultUsernameClaim}
-	if providerInfo.UsernameClaim != nil && len(*providerInfo.UsernameClaim) > 0 {
-		usernameClaim = *providerInfo.UsernameClaim
+	if oauth2Spec.UsernameClaim != nil && len(*oauth2Spec.UsernameClaim) > 0 {
+		usernameClaim = *oauth2Spec.UsernameClaim
 	}
 
 	tlsConfig, err := bridge.GetAuthTlsConfig()
@@ -49,16 +54,17 @@ func getOAuth2AuthHandler(providerInfo *v1alpha1.AuthProviderInfo) (*OAuth2AuthH
 	}
 
 	// Build scope string (no default scopes for OAuth2 - scopes are mandatory)
-	scope := buildScopeParam(providerInfo.Scopes, "")
+	scope := buildScopeParam(oauth2Spec.Scopes, "")
 
 	// Create OAuth2 client config
 	oauth2ClientConfig := &osincli.ClientConfig{
 		ClientId:                 clientId,
+		ClientSecret:             "", // Not needed with PKCE for public clients
 		AuthorizeUrl:             authURL,
 		TokenUrl:                 tokenURL,
 		RedirectUrl:              config.BaseUiUrl + "/callback",
 		ErrorsInStatusCode:       true,
-		SendClientSecretInParams: false,
+		SendClientSecretInParams: false, // PKCE is used instead of client secret
 		Scope:                    scope,
 	}
 
@@ -71,13 +77,20 @@ func getOAuth2AuthHandler(providerInfo *v1alpha1.AuthProviderInfo) (*OAuth2AuthH
 		TLSClientConfig: tlsConfig,
 	}
 
+	clientSecret := ""
+	if oauth2Spec.ClientSecret != nil {
+		clientSecret = *oauth2Spec.ClientSecret
+	}
+
 	handler := &OAuth2AuthHandler{
 		tlsConfig:        tlsConfig,
 		internalClient:   client,
 		client:           client,
 		userInfoEndpoint: userinfoURL,
 		authURL:          authURL,
+		tokenURL:         tokenURL,
 		clientId:         clientId,
+		clientSecret:     clientSecret,
 		providerName:     providerName,
 		usernameClaim:    usernameClaim,
 	}
@@ -86,7 +99,7 @@ func getOAuth2AuthHandler(providerInfo *v1alpha1.AuthProviderInfo) (*OAuth2AuthH
 }
 
 func (o *OAuth2AuthHandler) GetToken(loginParams LoginParameters) (TokenData, *int64, error) {
-	return exchangeToken(loginParams, o.internalClient)
+	return exchangeToken(loginParams, o.internalClient, o.tokenURL, o.clientId, config.BaseUiUrl+"/callback", o.clientSecret)
 }
 
 func (o *OAuth2AuthHandler) GetUserInfo(tokenData TokenData) (string, *http.Response, error) {
@@ -143,6 +156,6 @@ func (o *OAuth2AuthHandler) RefreshToken(refreshToken string) (TokenData, *int64
 	return refreshOAuthToken(refreshToken, o.internalClient)
 }
 
-func (o *OAuth2AuthHandler) GetLoginRedirectURL() string {
-	return loginRedirect(o.client, o.providerName)
+func (o *OAuth2AuthHandler) GetLoginRedirectURL(codeChallenge string, codeVerifier string) string {
+	return loginRedirect(o.client, o.providerName, codeChallenge, codeVerifier)
 }

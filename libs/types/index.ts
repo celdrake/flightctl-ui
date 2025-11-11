@@ -123,12 +123,7 @@ export type { InlineApplicationProviderSpec } from './models/InlineApplicationPr
 export type { InlineConfigProviderSpec } from './models/InlineConfigProviderSpec';
 export type { InternalTaskFailedDetails } from './models/InternalTaskFailedDetails';
 export type { InternalTaskPermanentlyFailedDetails } from './models/InternalTaskPermanentlyFailedDetails';
-<<<<<<< HEAD
 export type { K8sProviderSpec } from './models/K8sProviderSpec';
-||||||| parent of ddfc28f0 (EDM-2373: Implemented new Auth provider of type k8s)
-export type { JWKSResponse } from './models/JWKSResponse';
-=======
->>>>>>> ddfc28f0 (EDM-2373: Implemented new Auth provider of type k8s)
 export type { KubernetesSecretProviderSpec } from './models/KubernetesSecretProviderSpec';
 export type { LabelList } from './models/LabelList';
 export type { LabelSelector } from './models/LabelSelector';

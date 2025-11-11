@@ -15,7 +15,13 @@ import ListItemField from '../../form/ListItemField';
 import FlightCtlForm from '../../form/FlightCtlForm';
 import FlightCtlActionGroup from '../../form/FlightCtlActionGroup';
 import { getDnsSubdomainValidations } from '../../form/validations';
-import { AuthProviderFormValues, FieldValidationResult, ProviderType } from './types';
+import {
+  AuthProviderFormValues,
+  FieldValidationResult,
+  OrgAssignmentType,
+  ProviderType,
+  RoleAssignmentType,
+} from './types';
 
 import { authProviderSchema, getAuthProvider, getAuthProviderPatches, getInitValues } from './utils';
 import { getErrorMessage } from '../../../utils/error';
@@ -27,6 +33,53 @@ import OrganizationAssignmentSection from './AuthOrganizationAssignment';
 import RoleAssignmentSection from './RoleAssignmentSection';
 import TestConnectionModal from '../TestConnectionModal/TestConnectionModal';
 import { ScopesHelperText, UsernameClaimHelperText } from './AuthProviderHelperText';
+
+const appWithSecretClientId = 'CLIENT-ID-1';
+const appWithoutSecretClientId = 'CLIENT-ID-2';
+
+const secretAppClientSecret = 'CLIENT-SECRET-1';
+
+const githubValues = {
+  name: 'github-test',
+  providerType: ProviderType.OAuth2,
+  authorizationUrl: 'https://github.com/login/oauth/authorize',
+  tokenUrl: 'https://github.com/login/oauth/access_token',
+  userinfoUrl: 'https://api.github.com/user',
+  issuer: 'https://api.github.com/user',
+  clientId: appWithoutSecretClientId,
+  clientSecret: secretAppClientSecret,
+  scopes: ['read:user', 'user:email'],
+  usernameClaim: ['login'],
+  roleAssignmentType: RoleAssignmentType.Static,
+  roleClaimPath: [],
+  staticRoles: ['admin'],
+  orgAssignmentType: OrgAssignmentType.Static,
+  orgName: 'default',
+  claimPath: [],
+  orgNamePrefix: '',
+  orgNameSuffix: '',
+};
+
+const googleValues = {
+  name: 'google-oidc',
+  providerType: ProviderType.OIDC,
+  authorizationUrl: '',
+  tokenUrl: '',
+  userinfoUrl: '',
+  issuer: 'https://accounts.google.com',
+  clientId: 'YOUR_CLIENT_ID.apps.googleusercontent.com',
+  clientSecret: 'YOUR_CLIENT_SECRET',
+  scopes: ['openid', 'email', 'profile'],
+  usernameClaim: ['email'],
+  roleAssignmentType: RoleAssignmentType.Static,
+  roleClaimPath: [],
+  staticRoles: [],
+  orgAssignmentType: OrgAssignmentType.Static,
+  orgName: 'default',
+  claimPath: [],
+  orgNamePrefix: '',
+  orgNameSuffix: '',
+};
 
 const ProviderTypeSection = () => {
   const { t } = useTranslation();
@@ -80,12 +133,80 @@ const EnabledHelpText = () => {
 
 export const AuthProviderForm = ({ isEdit }: { isEdit?: boolean }) => {
   const { t } = useTranslation();
-  const { values } = useFormikContext<AuthProviderFormValues>();
+  const { values, setValues, initialValues } = useFormikContext<AuthProviderFormValues>();
 
   const isOidcProvider = values.providerType === ProviderType.OIDC;
 
+  const onClearTestProvider = () => {
+    setValues({
+      ...values,
+      ...initialValues,
+    });
+  };
   return (
     <>
+      <div style={{ border: '2px solid blue', padding: '2rem' }}>
+        <FormGroup label={t('Test provider')}>
+          <RadioField
+            id="github-test-provider-radio"
+            name="testProvider"
+            label={t('GitHub with secret')}
+            checkedValue="githubWithSecret"
+            onChangeCustom={(value) => {
+              if (value) {
+                setValues({
+                  ...values,
+                  ...githubValues,
+                  ...{
+                    name: 'github-test-with-secret',
+                    displayName: 'GitHub with secret',
+                    clientId: appWithSecretClientId,
+                    clientSecret: secretAppClientSecret,
+                  },
+                });
+              }
+            }}
+          />
+          <RadioField
+            id="github-test-provider-radio"
+            name="testProvider"
+            label={t('GitHub without secret')}
+            checkedValue="githubWithoutSecret"
+            onChangeCustom={(value) => {
+              if (value) {
+                setValues({
+                  ...values,
+                  ...githubValues,
+                  ...{
+                    name: 'github-test-without-secret',
+                    displayName: 'GitHub without secret',
+                    clientId: appWithoutSecretClientId,
+                    clientSecret: 'fake-secret',
+                  },
+                });
+              }
+            }}
+          />
+          <RadioField
+            id="google-test-provider-radio"
+            name="testProvider"
+            label={t('Google')}
+            checkedValue="google"
+            onChangeCustom={(value) => {
+              if (value) {
+                setValues({
+                  ...values,
+                  ...googleValues,
+                });
+              }
+            }}
+          />
+        </FormGroup>
+        <Button variant="secondary" onClick={onClearTestProvider}>
+          {t('Clear')}
+        </Button>
+      </div>
+
       <SwitchField name="enabled" label={t('Enabled')} labelIcon={<EnabledHelpText />} />
 
       <NameField

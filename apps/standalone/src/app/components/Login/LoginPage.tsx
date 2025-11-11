@@ -30,7 +30,7 @@ const EXPIRATION = 'expiration';
 const nowInSeconds = () => Math.floor(Date.now() / 1000);
 
 // Simple JWT format validation - checks if token has 3 parts separated by dots
-const isValidJwtTokenFormat = (token: string): boolean => {
+export const isValidJwtTokenFormat = (token: string): boolean => {
   if (!token) return false;
   const parts = token.split('.');
   if (parts.length !== 3) return false;
@@ -39,7 +39,7 @@ const isValidJwtTokenFormat = (token: string): boolean => {
   return parts.every((part) => part.length > 0 && base64urlPattern.test(part));
 };
 
-const LoginPage = () => {
+export const LoginPage = () => {
   const { t } = useTranslation();
   const [token, setToken] = React.useState('');
   const [validationError, setValidationError] = React.useState<string>('');
@@ -188,5 +188,3 @@ const LoginPage = () => {
     </Bullseye>
   );
 };
-
-export default LoginPage;

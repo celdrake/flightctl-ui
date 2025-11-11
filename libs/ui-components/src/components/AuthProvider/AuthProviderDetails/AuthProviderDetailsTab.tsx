@@ -23,6 +23,7 @@ import { useTranslation } from '../../../hooks/useTranslation';
 import { DEFAULT_USERNAME_CLAIM, OrgAssignmentType, isOAuth2Provider } from '../CreateAuthProvider/types';
 import { getAssignmentTypeLabel, getProviderTypeLabel } from '../CreateAuthProvider/utils';
 import RoleAssigmentDetails from './RoleAssigmentDetails';
+import { DynamicAuthProviderSpec } from '../../../types/extraTypes';
 
 const Scopes = ({ scopes }: { scopes: string[] | undefined }) => {
   if (!scopes || scopes.length === 0) {
@@ -47,7 +48,8 @@ const CopyUrl = ({ url }: { url: string }) => {
 
 const AuthProviderDetailsTab = ({ authProvider }: { authProvider: AuthProvider }) => {
   const { t } = useTranslation();
-  const spec = authProvider.spec;
+  // Dynamic auth providers can only be OAuth2 or OIDC
+  const spec = authProvider.spec as DynamicAuthProviderSpec;
   const isOAuth2 = isOAuth2Provider(spec);
   const orgAssignment = spec.organizationAssignment;
   const isEnabled = spec.enabled ?? true;
