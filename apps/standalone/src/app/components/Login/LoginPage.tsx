@@ -51,7 +51,7 @@ const LoginPage = () => {
         setUserSelectedProvider(null);
         setError(
           t('Failed to initiate login with {{ providerName}} ', {
-            providerName: getProviderDisplayName(provider) || provider.metadata.name,
+            providerName: getProviderDisplayName(provider, t) || (provider.metadata.name as string),
           }),
         );
       }
@@ -127,7 +127,7 @@ const LoginPage = () => {
       content = (
         <>
           {t('Redirecting to login for {{ provider }}...', {
-            provider: getProviderDisplayName(selectedProvider) || selectedProvider.metadata.name,
+            provider: getProviderDisplayName(selectedProvider, t) || selectedProvider.metadata.name,
           })}
           <Spinner size="lg" />
         </>

@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { TFunction } from 'react-i18next';
 import { Button, Card, CardBody, CardTitle, Stack, StackItem, Title } from '@patternfly/react-core';
 
 import { AuthProvider } from '@flightctl/types';
@@ -8,7 +7,9 @@ import rhemLogo from '@fctl-assets/bgimages/RHEM-logo.svg';
 
 import { useTranslation } from '../../hooks/useTranslation';
 import { useAppContext } from '../../hooks/useAppContext';
-import { ProviderType } from '../AuthProvider/CreateAuthProvider/types';
+import { ProviderType, isOAuth2Provider } from '../AuthProvider/CreateAuthProvider/types';
+import { getProviderDisplayName } from '../../utils/authProvider';
+import { DynamicAuthProviderSpec } from '../../types/extraTypes';
 
 type ProviderSelectorProps = {
   providers: AuthProvider[];
@@ -17,34 +18,11 @@ type ProviderSelectorProps = {
   disabled?: boolean;
 };
 
-const getProviderDisplayName = (provider: AuthProvider, t: TFunction) => {
-  const spec = provider.spec;
-  if ('displayName' in spec && spec.displayName) {
-    return spec.displayName;
-  }
-  if (provider.spec.providerType === ProviderType.K8s) {
-    return t('Kubernetes');
-  }
-
-  if (provider.spec.providerType === ProviderType.AAP) {
-    return t('Ansible Automation Platform');
-  }
-  return provider.metadata.name as string;
-};
-
-const getProviderKey = (provider: AuthProvider) => {
-  const spec = provider.spec;
-  if ('displayName' in spec && spec.displayName) {
-    return spec.displayName;
-  }
-  if (provider.spec.providerType === ProviderType.K8s) {
-    return t('Kubernetes');
-  }
-
-  if (provider.spec.providerType === ProviderType.AAP) {
-    return t('Ansible Automation Platform');
-  }
-  return provider.metadata.name as string;
+const getProviderKey = (provider: AuthProvider): string => {
+  const name = provider.metadata.name as string;
+  const issuerUrl = 'issuer' in provider.spec ? provider.spec.issuer : 'issuer';
+  const clientId = 'clientId' in provider.spec ? provider.spec.clientId : 'clientId';
+  return `${name}-${issuerUrl}-${clientId}`;
 };
 
 const ProviderSelector = ({
@@ -70,7 +48,7 @@ const ProviderSelector = ({
     });
 
     return result;
-  }, [providers]);
+  }, [providers, t]);
 
   return (
     <>
@@ -98,7 +76,15 @@ const ProviderSelector = ({
                   const displayName = getProviderDisplayName(provider, t);
 
                   const isDuplicateName = duplicateProviderNames[displayName];
-
+                  let details;
+                  if (isDuplicateName) {
+                    const spec = provider.spec as DynamicAuthProviderSpec;
+                    if (isOAuth2Provider(spec)) {
+                      details = spec.authorizationUrl || spec.clientId || '';
+                    } else {
+                      details = spec.issuer || spec.clientId || '';
+                    }
+                  }
                   return (
                     <StackItem key={getProviderKey(provider)}>
                       <Button
@@ -110,11 +96,7 @@ const ProviderSelector = ({
                       >
                         {t('Log in with {{ providerName }}', { providerName: getProviderDisplayName(provider, t) })}
                       </Button>
-                      {isDuplicateName && (
-                        <small>
-                          {provider.issuer || provider.authUrl || ''} {provider.clientId && `(${provider.clientId})`}
-                        </small>
-                      )}
+                      {isDuplicateName && <small>{details}</small>}
                     </StackItem>
                   );
                 })}
