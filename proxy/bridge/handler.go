@@ -75,8 +75,8 @@ func createAlertsReverseProxy(apiURL string) (*url.URL, *httputil.ReverseProxy) 
 			r.Header.Del(h)
 		}
 
-		// For alerts API, 401 means the service is unavailable/disabled,
-		// We should not log out the user, just disable alerts for them
+		// For alerts API, we may sometimes receive 401 instead of 403.
+		// To prevent login out the user, we convert 401 to 501.
 		if r.StatusCode == http.StatusUnauthorized {
 			r.StatusCode = http.StatusNotImplemented
 			r.Status = "501 Not Implemented"

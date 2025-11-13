@@ -1,6 +1,6 @@
 import { TFunction } from 'react-i18next';
 import { AuthProvider } from '@flightctl/types';
-import { ProviderType } from '../components/AuthProvider/CreateAuthProvider/types';
+import { ProviderType } from '../types/extraTypes';
 
 export const getProviderDisplayName = (provider: AuthProvider, t: TFunction): string => {
   const spec = provider.spec;

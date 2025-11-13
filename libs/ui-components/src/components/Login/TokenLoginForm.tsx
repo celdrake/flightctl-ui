@@ -24,10 +24,11 @@ import ArrowLeftIcon from '@patternfly/react-icons/dist/js/icons/arrow-left-icon
 
 import { AuthProvider } from '@flightctl/types';
 import { ORGANIZATION_STORAGE_KEY } from '../../utils/organizationStorage';
-import FlightCtlForm from '../../components/form/FlightCtlForm';
-import { useTranslation } from '../../hooks/useTranslation';
 import { isValidJwtTokenFormat } from '../../utils/k8sProvider';
+import { useTranslation } from '../../hooks/useTranslation';
+import { useFetch } from '../../hooks/useFetch';
 import { getErrorMessage } from '../../utils/error';
+import FlightCtlForm from '../../components/form/FlightCtlForm';
 
 const EXPIRATION = 'expiration';
 
@@ -40,13 +41,11 @@ type TokenLoginFormProps = {
 
 const TokenLoginForm = ({ provider, onBack }: TokenLoginFormProps) => {
   const { t } = useTranslation();
+  const { proxyFetch } = useFetch();
   const [token, setToken] = React.useState('');
   const [validationError, setValidationError] = React.useState<string>('');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState<string>();
-
-  // CELIA-WIP TODO FIX
-  const loginAPI = `WHATEVER?provider=${provider.metadata.name}`;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,15 +56,9 @@ const TokenLoginForm = ({ provider, onBack }: TokenLoginFormProps) => {
       localStorage.removeItem(EXPIRATION);
       localStorage.removeItem(ORGANIZATION_STORAGE_KEY);
 
-      const resp = await fetch(loginAPI, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
+      const resp = await proxyFetch(`login?provider=${provider.metadata.name}`, {
         method: 'POST',
-        body: JSON.stringify({
-          token: token.trim(),
-        }),
+        body: JSON.stringify({ token: token.trim() }),
       });
 
       if (!resp.ok) {

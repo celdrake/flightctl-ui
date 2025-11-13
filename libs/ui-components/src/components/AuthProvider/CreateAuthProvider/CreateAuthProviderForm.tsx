@@ -15,13 +15,8 @@ import ListItemField from '../../form/ListItemField';
 import FlightCtlForm from '../../form/FlightCtlForm';
 import FlightCtlActionGroup from '../../form/FlightCtlActionGroup';
 import { getDnsSubdomainValidations } from '../../form/validations';
-import {
-  AuthProviderFormValues,
-  FieldValidationResult,
-  OrgAssignmentType,
-  ProviderType,
-  RoleAssignmentType,
-} from './types';
+import { AuthProviderFormValues, FieldValidationResult, OrgAssignmentType, RoleAssignmentType } from './types';
+import { ProviderType } from '../../../types/extraTypes';
 
 import { authProviderSchema, getAuthProvider, getAuthProviderPatches, getInitValues } from './utils';
 import { getErrorMessage } from '../../../utils/error';

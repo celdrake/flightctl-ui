@@ -10,6 +10,7 @@ import {
   OAuth2ProviderSpec,
   OIDCProviderSpec,
 } from '@flightctl/types';
+import { ProviderType } from '../../../types/extraTypes';
 
 export enum OrgAssignmentType {
   Static = 'static',
@@ -17,18 +18,8 @@ export enum OrgAssignmentType {
   PerUser = 'perUser',
 }
 
-export enum ProviderType {
-  OIDC = 'oidc',
-  OAuth2 = 'oauth2',
-  K8s = 'k8s',
-  AAP = 'aap',
-}
-
 export const DEFAULT_USERNAME_CLAIM = 'preferred_username';
 export const DEFAULT_ROLE_CLAIM = 'groups';
-
-// The backend masks secrets with this value via HideSensitiveData()
-export const MASKED_SECRET_VALUE = '*****';
 
 export const isOidcProvider = (providerSpec: AuthProviderSpec): providerSpec is OIDCProviderSpec =>
   providerSpec.providerType === ProviderType.OIDC;

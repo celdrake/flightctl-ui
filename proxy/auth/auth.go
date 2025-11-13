@@ -171,6 +171,22 @@ func (a AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// Check if this is a token-based auth provider (k8s) - token providers don't use PKCE flow
+		if _, ok := provider.(*TokenAuthProvider); ok {
+			// Token providers don't need a redirect URL - they handle login via POST with token
+			loginUrl := provider.GetLoginRedirectURL("", "")
+			response, err := json.Marshal(RedirectResponse{Url: loginUrl})
+			if err != nil {
+				log.GetLogger().WithError(err).Warn("Failed to marshal response")
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			if _, err := w.Write(response); err != nil {
+				log.GetLogger().WithError(err).Warn("Failed to write response")
+			}
+			return
+		}
+
 		// Generate PKCE parameters (code verifier and challenge)
 		// PKCE is required - fail if generation fails
 		codeVerifier, err := generateCodeVerifier()
@@ -199,6 +215,7 @@ func (a AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	} else if r.Method == http.MethodPost {
 		// For POST requests (OAuth callback), extract provider from query parameter
 		providerName := r.URL.Query().Get("provider")
+		log.GetLogger().Infof("Provider name: %s", providerName)
 		if providerName == "" {
 			respondWithError(w, http.StatusBadRequest, "provider query parameter is required")
 			return
@@ -208,6 +225,34 @@ func (a AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.GetLogger().WithError(err).Warnf("Could not find provider: %s", providerName)
 			respondWithError(w, http.StatusBadRequest, fmt.Sprintf("Invalid authentication provider: %s", providerName))
+			return
+		}
+
+		// Check if this is a token-based auth provider (k8s)
+		if tokenProvider, ok := provider.(*TokenAuthProvider); ok {
+			var loginParams TokenLoginParameters
+			body, err := io.ReadAll(r.Body)
+			err = json.Unmarshal(body, &loginParams)
+			if err != nil {
+				log.GetLogger().WithError(err).Warn("Failed to unmarshal request body")
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+
+			if loginParams.Token == "" {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+
+			tokenData, expires, err := tokenProvider.ValidateToken(loginParams.Token)
+			if err != nil {
+				log.GetLogger().WithError(err).Warn("Token validation failed")
+				respondWithError(w, http.StatusUnauthorized, err.Error())
+				return
+			}
+			// Store the provider name in the token data so we can route to it later
+			tokenData.Provider = providerName
+			respondWithToken(w, tokenData, expires)
 			return
 		}
 

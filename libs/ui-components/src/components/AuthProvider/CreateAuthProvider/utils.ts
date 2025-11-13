@@ -13,9 +13,7 @@ import {
 import { appendJSONPatch } from '../../../utils/patch';
 import {
   AuthProviderFormValues,
-  MASKED_SECRET_VALUE,
   OrgAssignmentType,
-  ProviderType,
   RoleAssignmentType,
   isOAuth2Provider,
   isOrgAssignmentDynamic,
@@ -24,8 +22,8 @@ import {
   isRoleAssignmentDynamic,
   isRoleAssignmentStatic,
 } from './types';
-import { validDnsSubdomainPart, validKubernetesDnsSubdomain } from '../../form/validations';
-import { DynamicAuthProviderSpec } from '../../../types/extraTypes';
+import { validKubernetesDnsSubdomain } from '../../form/validations';
+import { DynamicAuthProviderSpec, ProviderType } from '../../../types/extraTypes';
 
 export const getAssignmentTypeLabel = (
   type: AuthOrganizationAssignment['type'] | AuthRoleAssignment['type'] | undefined,
@@ -416,7 +414,7 @@ export const getAuthProviderPatches = (values: AuthProviderFormValues, authProvi
   const newSpec = newAuthProvider.spec as DynamicAuthProviderSpec;
 
   const providerTypeChanged = prevSpec.providerType !== newSpec.providerType;
-  const secretWasChanged = values.clientSecret !== MASKED_SECRET_VALUE;
+  const secretWasChanged = values.clientSecret !== newSpec.clientSecret;
 
   // If provider type changed AND user provided a new secret, we can do a full replace
   if (providerTypeChanged && secretWasChanged) {
@@ -510,14 +508,14 @@ export const authProviderSchema = (t: TFunction) => (values: AuthProviderFormVal
         .of(Yup.string())
         .min(1, t('At least one claim path segment is required'))
         .required(t('Claim path is required')),
-      orgNamePrefix: validDnsSubdomainPart(t),
-      orgNameSuffix: validDnsSubdomainPart(t),
+      orgNamePrefix: Yup.string(),
+      orgNameSuffix: Yup.string(),
     };
   } else if (values.orgAssignmentType === OrgAssignmentType.PerUser) {
     schema = {
       ...schema,
-      orgNamePrefix: validDnsSubdomainPart(t),
-      orgNameSuffix: validDnsSubdomainPart(t),
+      orgNamePrefix: Yup.string(),
+      orgNameSuffix: Yup.string(),
     };
   }
 

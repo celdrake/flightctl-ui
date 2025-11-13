@@ -2,13 +2,13 @@ import * as React from 'react';
 import { Alert, Bullseye, Spinner } from '@patternfly/react-core';
 
 import { AuthConfig, AuthProvider } from '@flightctl/types';
+import { ProviderType } from '@flightctl/ui-components/src/types/extraTypes';
 import ProviderSelector from '@flightctl/ui-components/src/components/Login/ProviderSelector';
 import TokenLoginForm from '@flightctl/ui-components/src/components/Login/TokenLoginForm';
 import { useFetch } from '@flightctl/ui-components/src/hooks/useFetch';
 import { useTranslation } from '@flightctl/ui-components/src/hooks/useTranslation';
 import { isK8sTokenProvider } from '@flightctl/ui-components/src/utils/k8sProvider';
 import { getProviderDisplayName } from '@flightctl/ui-components/src/utils/authProvider';
-import { ProviderType } from '@flightctl/ui-components/src/components/AuthProvider/CreateAuthProvider/types';
 
 import LoginPageLayout from './LoginPageLayout';
 import { loginAPI } from '../../utils/apiCalls';
@@ -60,7 +60,17 @@ const LoginPage = () => {
     const loadAuthConfig = async () => {
       try {
         const config = await get<AuthConfig>('auth/config');
-        const providers = config?.providers || [];
+        const providers = (config?.providers || [])
+          .filter((provider) => provider.spec.enabled !== false)
+          .sort((a, b) => {
+            if (a.metadata.name === config.defaultProvider) {
+              return -1;
+            }
+            if (b.metadata.name === config.defaultProvider) {
+              return 1;
+            }
+            return 0;
+          });
         if (providers.length > 0) {
           setProviders(providers);
           setDefaultProviderType(config.defaultProvider as ProviderType);

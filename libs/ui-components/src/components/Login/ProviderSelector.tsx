@@ -7,9 +7,9 @@ import rhemLogo from '@fctl-assets/bgimages/RHEM-logo.svg';
 
 import { useTranslation } from '../../hooks/useTranslation';
 import { useAppContext } from '../../hooks/useAppContext';
-import { ProviderType, isOAuth2Provider } from '../AuthProvider/CreateAuthProvider/types';
+import { isOAuth2Provider } from '../AuthProvider/CreateAuthProvider/types';
 import { getProviderDisplayName } from '../../utils/authProvider';
-import { DynamicAuthProviderSpec } from '../../types/extraTypes';
+import { DynamicAuthProviderSpec, ProviderType } from '../../types/extraTypes';
 
 type ProviderSelectorProps = {
   providers: AuthProvider[];
@@ -18,6 +18,8 @@ type ProviderSelectorProps = {
   disabled?: boolean;
 };
 
+// Returns a unique key for a provider.
+// Theoretically there could be multiple providers with the same name across different organizations.
 const getProviderKey = (provider: AuthProvider): string => {
   const name = provider.metadata.name as string;
   const issuerUrl = 'issuer' in provider.spec ? provider.spec.issuer : 'issuer';
@@ -76,7 +78,7 @@ const ProviderSelector = ({
                   const displayName = getProviderDisplayName(provider, t);
 
                   const isDuplicateName = duplicateProviderNames[displayName];
-                  let details;
+                  let details: string | undefined;
                   if (isDuplicateName) {
                     const spec = provider.spec as DynamicAuthProviderSpec;
                     if (isOAuth2Provider(spec)) {

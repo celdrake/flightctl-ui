@@ -78,4 +78,12 @@ export type AlertManagerAlert = {
   receivers: Array<{ name: string }>;
 };
 
+// AuthProviders that can be added dynamically to the system can only be OAuth2 or OIDC.
 export type DynamicAuthProviderSpec = OIDCProviderSpec | OAuth2ProviderSpec;
+
+export enum ProviderType {
+  OIDC = 'oidc',
+  OAuth2 = 'oauth2',
+  K8s = 'k8s',
+  AAP = 'aap',
+}

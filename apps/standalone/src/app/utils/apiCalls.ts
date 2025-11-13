@@ -55,12 +55,8 @@ export const logout = async () => {
   url ? (window.location.href = url) : window.location.reload();
 };
 
-export const redirectToLogin = async () => {
-  const response = await fetch(loginAPI);
-  const { url } = (await response.json()) as { url: string };
-  // If URL is empty, it means token-based auth (k8s) - redirect to login page
-  // Otherwise, it's OAuth - redirect to external provider
-  window.location.href = url || '/login';
+export const redirectToLogin = () => {
+  window.location.href = '/login';
 };
 
 const handleApiJSONResponse = async <R>(response: Response): Promise<R> => {
@@ -75,11 +71,7 @@ const handleApiJSONResponse = async <R>(response: Response): Promise<R> => {
   }
 
   if (response.status === 401) {
-    // Don't redirect if we're already on the login page
-    if (window.location.pathname !== '/login') {
-      await redirectToLogin();
-    }
-    // CELIA-WIP DO WE NEED TO RETURN FROM HERE?
+    redirectToLogin();
   }
 
   throw new Error(await getErrorMsgFromApiResponse(response));
@@ -95,9 +87,10 @@ const handleAlertsJSONResponse = async <R>(response: Response): Promise<R> => {
     throw new Error(`Error ${response.status}: ${response.statusText}`);
   }
 
-  // For 500/501 errors, return the status code for detection
-  // If we get 401 only for alerts, we consider it disabled but keep the UI working otherwise
-  if (response.status === 500 || response.status === 501 || response.status === 401) {
+  // The UI proxy should convert alert errors 401 to 501, but we guard against 401 here as well.
+  const isAlertsDisabled = response.status === 500 || response.status === 501 || response.status === 401;
+  if (isAlertsDisabled) {
+    // Return the status code to correctly detect that alerts are disabled
     throw new Error(`${response.status}`);
   }
 

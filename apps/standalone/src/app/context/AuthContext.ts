@@ -3,7 +3,7 @@ import { loginAPI, redirectToLogin } from '../utils/apiCalls';
 import { ORGANIZATION_STORAGE_KEY } from '@flightctl/ui-components/src/utils/organizationStorage';
 
 const AUTH_DISABLED_STATUS_CODE = 418;
-export const EXPIRATION = 'expiration';
+const EXPIRATION = 'expiration';
 export let lastRefresh = 0;
 
 // max value for setTimeout
@@ -53,6 +53,7 @@ export const useAuthContext = () => {
           // The state format is: "provider:<providerName>" or "provider:<providerName>:<encoded_verifier>"
           const providerName = state.startsWith('provider:') ? state.substring(9).split(':')[0] : state;
 
+          // CELIA-WIP WE SHOULD ONLY USE PROVIDER HERE, THE OTHER SHOULD BE WITH THE PKCE FLOW
           // Backend retrieves code_verifier from cookie automatically, or from state as fallback
           // Pass state in query parameter so backend can extract code_verifier if cookie fails
           const resp = await fetch(`${loginAPI}?provider=${providerName}&state=${encodeURIComponent(state)}`, {
@@ -90,9 +91,8 @@ export const useAuthContext = () => {
           if (resp.status === 401) {
             // Don't redirect if we're already on the login page
             if (window.location.pathname !== '/login') {
-              await redirectToLogin();
+              redirectToLogin();
             }
-            // User is not authenticated - let the router handle redirect
             setLoading(false);
             return;
           }
