@@ -102,7 +102,7 @@ func getOpenShiftAuthHandler(provider *v1alpha1.AuthProvider, k8sSpec *v1alpha1.
 
 func (o *OpenShiftAuthHandler) GetToken(loginParams LoginParameters) (TokenData, *int64, error) {
 	// OpenShift typically doesn't require client_secret with PKCE
-	return exchangeToken(loginParams, o.internalClient, o.tokenURL, o.clientId, config.BaseUiUrl+"/callback", "")
+	return exchangeToken(loginParams, o.internalClient, o.tokenURL, o.clientId, config.BaseUiUrl+"/callback")
 }
 
 func (o *OpenShiftAuthHandler) GetUserInfo(tokenData TokenData) (string, *http.Response, error) {

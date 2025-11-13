@@ -105,7 +105,10 @@ func (a *AuthHandler) getProviderForLogin(providerName string) (AuthProvider, er
 			provider = openshiftHandler
 		} else {
 			// This is regular k8s token auth
-			provider = NewTokenAuthProvider(a.apiTlsConfig, config.FctlApiUrl)
+			provider, err = getK8sAuthHandler(providerConfig, &k8sSpec)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create K8s provider %s: %w", providerName, err)
+			}
 		}
 	case ProviderTypeOIDC:
 		oidcSpec, err := providerConfig.Spec.AsOIDCProviderSpec()

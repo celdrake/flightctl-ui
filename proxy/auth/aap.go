@@ -139,9 +139,8 @@ func getClient(url string, tlsConfig *tls.Config, clientId string) (*osincli.Cli
 }
 
 func (a *AAPAuthHandler) GetToken(loginParams LoginParameters) (TokenData, *int64, error) {
-	// AAP typically requires client_secret, but it's handled via SendClientSecretInParams in the osincli config
-	// For PKCE flow, we don't pass it here
-	return exchangeToken(loginParams, a.internalClient, a.tokenURL, a.clientId, config.BaseUiUrl+"/callback", "")
+	// UI proxy uses PKCE only - client_secret is not used
+	return exchangeToken(loginParams, a.internalClient, a.tokenURL, a.clientId, config.BaseUiUrl+"/callback")
 }
 
 func (a *AAPAuthHandler) GetUserInfo(tokenData TokenData) (string, *http.Response, error) {

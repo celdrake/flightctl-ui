@@ -190,8 +190,7 @@ func respondWithError(w http.ResponseWriter, statusCode int, message string) {
 // and TLS config from the osincli client and manually constructs the token exchange request
 // with PKCE parameters.
 // If tokenURL, clientID, and redirectURI are provided, they will be used instead of reflection.
-// clientSecret is optional - some providers (like Google) require it even with PKCE.
-func exchangeToken(loginParams LoginParameters, client *osincli.Client, tokenURL string, clientID string, redirectURI string, clientSecret string) (TokenData, *int64, error) {
+func exchangeToken(loginParams LoginParameters, client *osincli.Client, tokenURL string, clientID string, redirectURI string) (TokenData, *int64, error) {
 	// PKCE is required - fail if code_verifier is missing
 	if loginParams.CodeVerifier == "" {
 		return TokenData{}, nil, fmt.Errorf("PKCE code_verifier is required but not provided")
@@ -200,9 +199,7 @@ func exchangeToken(loginParams LoginParameters, client *osincli.Client, tokenURL
 	// Manually construct the token request with PKCE parameters
 	// Use provided config values if available, otherwise extract from client using reflection
 	var configValue reflect.Value
-	var usedReflection bool
 	if tokenURL == "" || clientID == "" || redirectURI == "" {
-		usedReflection = true
 		// Extract token URL from client config using reflection
 		// osincli.Client.Config is not exported, so we use reflection to access it
 		clientValue := reflect.ValueOf(client)
@@ -309,15 +306,6 @@ func exchangeToken(loginParams LoginParameters, client *osincli.Client, tokenURL
 		}
 	}
 
-	// Use provided clientSecret if available, otherwise try to extract from config via reflection
-	// Only try reflection if we used it above and clientSecret wasn't provided
-	if clientSecret == "" && usedReflection {
-		clientSecretField := configValue.FieldByName("ClientSecret")
-		if clientSecretField.IsValid() {
-			clientSecret = clientSecretField.String()
-		}
-	}
-
 	// Manually construct the token exchange request with PKCE parameters
 	ret := TokenData{}
 
@@ -328,18 +316,10 @@ func exchangeToken(loginParams LoginParameters, client *osincli.Client, tokenURL
 	data.Set("code_verifier", loginParams.CodeVerifier)
 	data.Set("client_id", clientID)
 	data.Set("redirect_uri", redirectURI)
-	// Include client_secret only if provided and non-empty
-	// Some providers (like GitHub) may require client_secret even with PKCE
-	// If empty, we omit the field entirely (some providers reject empty values)
-	data.Set("client_secret", clientSecret)
 
 	// Log the exact request being sent (without sensitive code/verifier values)
-	clientSecretStatus := "not included"
-	if clientSecret != "" {
-		clientSecretStatus = fmt.Sprintf("included (length: %d)", len(clientSecret))
-	}
-	log.GetLogger().Infof("Token exchange request (PKCE): grant_type=authorization_code, client_id=%s, redirect_uri=%s, code_verifier length=%d, code length=%d, client_secret=%s, token_url=%s", clientID, redirectURI, len(loginParams.CodeVerifier), len(loginParams.Code), clientSecretStatus, tokenURL)
-	log.GetLogger().Debugf("Token exchange form data (sanitized): grant_type=%s, client_id=%s, redirect_uri=%s, code_verifier=[REDACTED], code=[REDACTED], client_secret=%s", data.Get("grant_type"), data.Get("client_id"), data.Get("redirect_uri"), clientSecretStatus)
+	log.GetLogger().Infof("Token exchange request (PKCE): grant_type=authorization_code, client_id=%s, redirect_uri=%s, code_verifier length=%d, code length=%d, token_url=%s", clientID, redirectURI, len(loginParams.CodeVerifier), len(loginParams.Code), tokenURL)
+	log.GetLogger().Debugf("Token exchange form data (sanitized): grant_type=%s, client_id=%s, redirect_uri=%s, code_verifier=[REDACTED], code=[REDACTED]", data.Get("grant_type"), data.Get("client_id"), data.Get("redirect_uri"))
 
 	// Create HTTP request
 	req, err := http.NewRequest(http.MethodPost, tokenURL, strings.NewReader(data.Encode()))

@@ -81,7 +81,6 @@ func main() {
 			os.Exit(1)
 		}
 		apiRouter.HandleFunc("/login", authHandler.Login)
-		apiRouter.HandleFunc("/login/token", authHandler.TokenLogin)
 		apiRouter.HandleFunc("/login/info", authHandler.GetUserInfo)
 		apiRouter.HandleFunc("/login/refresh", authHandler.Refresh)
 		apiRouter.HandleFunc("/logout", authHandler.Logout)

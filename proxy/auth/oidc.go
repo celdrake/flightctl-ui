@@ -24,7 +24,6 @@ type OIDCAuthHandler struct {
 	authURL            string
 	tokenEndpoint      string
 	clientId           string
-	clientSecret       string
 	providerName       string
 	usernameClaim      []string // JSON path to username claim as array of path segments (e.g., ["preferred_username"], ["user", "name"])
 }
@@ -103,14 +102,6 @@ func getOIDCAuthHandler(provider *v1alpha1.AuthProvider, oidcSpec *v1alpha1.OIDC
 		usernameClaim = *oidcSpec.UsernameClaim
 	}
 
-	// Extract client secret from spec (may be nil/empty for public clients)
-	// TODO: For testing, you can hardcode the clientSecret here:
-	// clientSecret := "YOUR_GOOGLE_CLIENT_SECRET_HERE"
-	clientSecret := ""
-	if oidcSpec.ClientSecret != nil {
-		clientSecret = *oidcSpec.ClientSecret
-	}
-
 	handler := &OIDCAuthHandler{
 		tlsConfig:          tlsConfig,
 		internalClient:     internalClient,
@@ -120,7 +111,6 @@ func getOIDCAuthHandler(provider *v1alpha1.AuthProvider, oidcSpec *v1alpha1.OIDC
 		authURL:            authURL,
 		tokenEndpoint:      oidcResponse.TokenEndpoint,
 		clientId:           clientId,
-		clientSecret:       clientSecret,
 		providerName:       providerName,
 		usernameClaim:      usernameClaim,
 	}
@@ -194,7 +184,7 @@ func getOIDCClient(oidcConfig oidcServerResponse, tlsConfig *tls.Config, clientI
 }
 
 func (a *OIDCAuthHandler) GetToken(loginParams LoginParameters) (TokenData, *int64, error) {
-	return exchangeToken(loginParams, a.internalClient, a.tokenEndpoint, a.clientId, config.BaseUiUrl+"/callback", a.clientSecret)
+	return exchangeToken(loginParams, a.internalClient, a.tokenEndpoint, a.clientId, config.BaseUiUrl+"/callback")
 }
 
 func (o *OIDCAuthHandler) GetUserInfo(tokenData TokenData) (string, *http.Response, error) {

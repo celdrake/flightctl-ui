@@ -21,7 +21,6 @@ type OAuth2AuthHandler struct {
 	authURL          string
 	tokenURL         string
 	clientId         string
-	clientSecret     string
 	providerName     string
 	usernameClaim    []string // JSON path to username claim as array of path segments (e.g., ["preferred_username"], ["user", "name"])
 }
@@ -77,11 +76,6 @@ func getOAuth2AuthHandler(provider *v1alpha1.AuthProvider, oauth2Spec *v1alpha1.
 		TLSClientConfig: tlsConfig,
 	}
 
-	clientSecret := ""
-	if oauth2Spec.ClientSecret != nil {
-		clientSecret = *oauth2Spec.ClientSecret
-	}
-
 	handler := &OAuth2AuthHandler{
 		tlsConfig:        tlsConfig,
 		internalClient:   client,
@@ -90,7 +84,6 @@ func getOAuth2AuthHandler(provider *v1alpha1.AuthProvider, oauth2Spec *v1alpha1.
 		authURL:          authURL,
 		tokenURL:         tokenURL,
 		clientId:         clientId,
-		clientSecret:     clientSecret,
 		providerName:     providerName,
 		usernameClaim:    usernameClaim,
 	}
@@ -99,7 +92,7 @@ func getOAuth2AuthHandler(provider *v1alpha1.AuthProvider, oauth2Spec *v1alpha1.
 }
 
 func (o *OAuth2AuthHandler) GetToken(loginParams LoginParameters) (TokenData, *int64, error) {
-	return exchangeToken(loginParams, o.internalClient, o.tokenURL, o.clientId, config.BaseUiUrl+"/callback", o.clientSecret)
+	return exchangeToken(loginParams, o.internalClient, o.tokenURL, o.clientId, config.BaseUiUrl+"/callback")
 }
 
 func (o *OAuth2AuthHandler) GetUserInfo(tokenData TokenData) (string, *http.Response, error) {
