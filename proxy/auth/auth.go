@@ -147,6 +147,18 @@ func (a *AuthHandler) getProviderForLogin(providerName string) (AuthProvider, er
 	return provider, nil
 }
 
+// usesCustomerToken determines if a provider uses customer-provided tokens (K8s)
+// Returns true for K8s token providers (they use direct validation)
+// Returns false for OIDC, OAuth2, AAP, and OpenShift providers (they use backend BFF)
+func usesCustomerToken(provider AuthProvider) bool {
+	// K8s token providers use direct validation, not OAuth2 flow
+	if _, ok := provider.(*TokenAuthProvider); ok {
+		return true
+	}
+	// All other providers (OIDC, OAuth2, AAP, OpenShift) use backend BFF
+	return false
+}
+
 func (a AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	// Check if auth is completely disabled (no config at all)
 	if a.authConfigData == nil {
@@ -229,7 +241,8 @@ func (a AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Check if this is a token-based auth provider (k8s)
-		if tokenProvider, ok := provider.(*TokenAuthProvider); ok {
+		if usesCustomerToken(provider) {
+			tokenProvider := provider.(*TokenAuthProvider)
 			var loginParams TokenLoginParameters
 			body, err := io.ReadAll(r.Body)
 			err = json.Unmarshal(body, &loginParams)
@@ -303,24 +316,41 @@ func (a AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		// Clear PKCE verifier cookie after use (success or failure)
 		clearPKCEVerifierCookie(w, providerName)
 
-		tokenData, expires, err := provider.GetToken(loginParams)
+		// All the other providers should use backend BFF
+		tokenReq := &ApiTokenRequest{
+			GrantType:    "authorization_code",
+			ProviderName: providerName,
+			Code:         &loginParams.Code,
+			CodeVerifier: &loginParams.CodeVerifier,
+		}
+
+		// Call backend BFF token endpoint
+		tokenResp, err := exchangeTokenWithApiServer(a.apiTlsConfig, tokenReq)
 		if err != nil {
-			log.GetLogger().WithError(err).Warn("Failed to exchange token")
-			respondWithError(w, http.StatusInternalServerError, "Failed to exchange authorization code for token")
+			log.GetLogger().WithError(err).Warn("Failed to exchange token with backend")
+			// Check if it's an OAuth2 error response
+			if tokenResp != nil && tokenResp.Error != nil {
+				errorDesc := ""
+				if tokenResp.ErrorDescription != nil {
+					errorDesc = *tokenResp.ErrorDescription
+				}
+				respondWithError(w, http.StatusBadRequest, fmt.Sprintf("OAuth2 error: %s - %s", *tokenResp.Error, errorDesc))
+			} else {
+				respondWithError(w, http.StatusInternalServerError, "Failed to exchange authorization code for token")
+			}
 			return
 		}
 
-		// Store the provider name in the token data so we can route to it later
-		tokenData.Provider = providerName
-
-		respondWithToken(w, tokenData, expires)
+		// Convert backend response to TokenData
+		tokenData, expiresIn := convertTokenResponseToTokenData(tokenResp, providerName)
+		respondWithToken(w, tokenData, expiresIn)
 	} else {
 		respondWithError(w, http.StatusMethodNotAllowed, "Method not allowed")
 	}
 }
 
 func (a AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
-	if a.provider == nil {
+	if a.authConfigData == nil {
 		w.WriteHeader(http.StatusTeapot)
 		return
 	}
@@ -330,12 +360,61 @@ func (a AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokenData, expires, err := a.provider.RefreshToken(tokenData.RefreshToken)
+	// Check if provider is specified
+	if tokenData.Provider == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Get provider to determine routing
+	provider, err := a.getProviderForLogin(tokenData.Provider)
 	if err != nil {
+		log.GetLogger().WithError(err).Warnf("Failed to get provider: %s", tokenData.Provider)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	respondWithToken(w, tokenData, expires)
+
+	// Route based on provider type
+	if usesCustomerToken(provider) {
+		// K8s token providers don't support refresh
+		w.WriteHeader(http.StatusBadRequest)
+		respondWithError(w, http.StatusBadRequest, "Token refresh not supported for K8s token providers")
+		return
+	}
+
+	// OAuth2/OIDC/AAP/OpenShift providers use backend BFF
+	if tokenData.RefreshToken == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Construct token request for backend
+	tokenReq := &ApiTokenRequest{
+		GrantType:    "refresh_token",
+		ProviderName: tokenData.Provider,
+		RefreshToken: &tokenData.RefreshToken,
+	}
+
+	// Call backend BFF token endpoint
+	tokenResp, err := exchangeTokenWithApiServer(a.apiTlsConfig, tokenReq)
+	if err != nil {
+		log.GetLogger().WithError(err).Warn("Failed to refresh token with backend")
+		// Check if it's an OAuth2 error response
+		if tokenResp != nil && tokenResp.Error != nil {
+			errorDesc := ""
+			if tokenResp.ErrorDescription != nil {
+				errorDesc = *tokenResp.ErrorDescription
+			}
+			respondWithError(w, http.StatusBadRequest, fmt.Sprintf("OAuth2 error: %s - %s", *tokenResp.Error, errorDesc))
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Convert backend response to TokenData
+	newTokenData, expiresIn := convertTokenResponseToTokenData(tokenResp, tokenData.Provider)
+	respondWithToken(w, newTokenData, expiresIn)
 }
 
 func respondWithToken(w http.ResponseWriter, tokenData TokenData, expires *int64) {
@@ -376,41 +455,31 @@ func (a AuthHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	provider, err := a.getProviderForLogin(tokenData.Provider)
-	if err != nil {
-		log.GetLogger().WithError(err).Warnf("Failed to get provider: %s", tokenData.Provider)
-		// If provider lookup fails, treat as authentication failure
+	token := tokenData.GetAuthToken()
+	if token == "" {
+		log.GetLogger().Warn("No token found in session cookie")
 		w.Header().Set("Clear-Site-Data", `"cookies"`)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
-	username, resp, err := provider.GetUserInfo(tokenData)
+	// Route ALL providers to API server userinfo endpoint
+	username, err := getUserInfoFromApiServer(a.apiTlsConfig, token)
 	if err != nil {
-		log.GetLogger().WithError(err).Warnf("Failed to get user info from provider %s", tokenData.Provider)
+		log.GetLogger().WithError(err).Warnf("Failed to get user info from API server for provider %s", tokenData.Provider)
 		// If user info retrieval fails, treat as authentication failure
 		w.Header().Set("Clear-Site-Data", `"cookies"`)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		log.GetLogger().Warnf("GetUserInfo returned status %d for provider %s", resp.StatusCode, tokenData.Provider)
-		// If the provider returns a non-OK status, treat as authentication failure
-		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
-			w.Header().Set("Clear-Site-Data", `"cookies"`)
-		}
-		w.WriteHeader(resp.StatusCode)
-		return
-	}
-
 	if username == "" {
-		log.GetLogger().Warnf("GetUserInfo returned empty username for provider %s", tokenData.Provider)
+		log.GetLogger().Warnf("API server userinfo returned empty username for provider %s", tokenData.Provider)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	log.GetLogger().Debugf("Successfully retrieved username '%s' from provider %s", username, tokenData.Provider)
+	log.GetLogger().Debugf("Successfully retrieved username '%s' from backend for provider %s", username, tokenData.Provider)
 	a.respondWithUserInfo(w, username)
 }
 
