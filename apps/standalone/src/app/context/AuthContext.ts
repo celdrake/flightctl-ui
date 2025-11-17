@@ -67,6 +67,28 @@ export const useAuthContext = () => {
             }),
           });
 
+          if (!resp.ok) {
+            let errorMessage = 'Authentication failed';
+            try {
+              const contentType = resp.headers.get('content-type');
+              if (contentType && contentType.includes('application/json')) {
+                const errorData = (await resp.json()) as { error?: string };
+                errorMessage = errorData.error || errorMessage;
+              } else {
+                const text = await resp.text();
+                if (text) {
+                  errorMessage = text;
+                }
+              }
+            } catch (parseErr) {
+              // If parsing fails, use default error message
+              errorMessage = 'Authentication failed';
+            }
+            setError(errorMessage);
+            setLoading(false);
+            return;
+          }
+
           const expiration = (await resp.json()) as { expiresIn: number };
           if (expiration.expiresIn) {
             const now = nowInSeconds();
@@ -76,6 +98,7 @@ export const useAuthContext = () => {
         } else if (callbackErr) {
           setError(callbackErr);
           setLoading(false);
+          return;
         }
       }
       if (!callbackErr) {
@@ -89,6 +112,23 @@ export const useAuthContext = () => {
             return;
           }
           if (resp.status === 401) {
+            // Extract error message from response if available
+            let errorMessage = 'Authentication failed. Please try logging in again.';
+            try {
+              const contentType = resp.headers.get('content-type');
+              if (contentType && contentType.includes('application/json')) {
+                const errorData = (await resp.json()) as { error?: string };
+                errorMessage = errorData.error || errorMessage;
+              } else {
+                const text = await resp.text();
+                if (text) {
+                  errorMessage = text;
+                }
+              }
+            } catch (parseErr) {
+              // If parsing fails, use default error message
+            }
+            setError(errorMessage);
             // Don't redirect if we're already on the login page
             if (window.location.pathname !== '/login') {
               redirectToLogin();
@@ -97,7 +137,23 @@ export const useAuthContext = () => {
             return;
           }
           if (resp.status !== 200) {
-            setError('Failed to get user info');
+            // Extract error message from response if available
+            let errorMessage = 'Failed to get user info';
+            try {
+              const contentType = resp.headers.get('content-type');
+              if (contentType && contentType.includes('application/json')) {
+                const errorData = (await resp.json()) as { error?: string };
+                errorMessage = errorData.error || errorMessage;
+              } else {
+                const text = await resp.text();
+                if (text) {
+                  errorMessage = text;
+                }
+              }
+            } catch (parseErr) {
+              // If parsing fails, use default error message
+            }
+            setError(errorMessage);
             setLoading(false);
             return;
           }
@@ -107,7 +163,8 @@ export const useAuthContext = () => {
         } catch (err) {
           // eslint-disable-next-line
           console.log(err);
-          setError('Failed to get user info');
+          const errorMessage = err instanceof Error ? err.message : 'Failed to get user info';
+          setError(errorMessage);
           setLoading(false);
         }
       }

@@ -551,14 +551,14 @@ func (a AuthHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 	tokenData, err := ParseSessionCookie(r)
 	if err != nil {
 		w.Header().Set("Clear-Site-Data", `"cookies"`)
-		w.WriteHeader(http.StatusUnauthorized)
+		respondWithError(w, http.StatusUnauthorized, "Invalid or missing session cookie")
 		return
 	}
 
 	// If no provider specified, clear the cookie and force a new login
 	if tokenData.Provider == "" {
 		w.Header().Set("Clear-Site-Data", `"cookies"`)
-		w.WriteHeader(http.StatusUnauthorized)
+		respondWithError(w, http.StatusUnauthorized, "No authentication provider specified in session")
 		return
 	}
 
@@ -566,7 +566,7 @@ func (a AuthHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 	if token == "" {
 		log.GetLogger().Warn("No token found in session cookie")
 		w.Header().Set("Clear-Site-Data", `"cookies"`)
-		w.WriteHeader(http.StatusUnauthorized)
+		respondWithError(w, http.StatusUnauthorized, "No authentication token found in session")
 		return
 	}
 
@@ -576,13 +576,13 @@ func (a AuthHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 		log.GetLogger().WithError(err).Warnf("Failed to get user info from API server for provider %s", tokenData.Provider)
 		// If user info retrieval fails, treat as authentication failure
 		w.Header().Set("Clear-Site-Data", `"cookies"`)
-		w.WriteHeader(http.StatusUnauthorized)
+		respondWithError(w, http.StatusUnauthorized, fmt.Sprintf("Failed to get user info: %v", err))
 		return
 	}
 
 	if username == "" {
 		log.GetLogger().Warnf("API server userinfo returned empty username for provider %s", tokenData.Provider)
-		w.WriteHeader(http.StatusInternalServerError)
+		respondWithError(w, http.StatusInternalServerError, "User info response missing username")
 		return
 	}
 
