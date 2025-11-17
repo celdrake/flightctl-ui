@@ -18,6 +18,7 @@ import (
 type ApiTokenRequest struct {
 	GrantType    string  `json:"grant_type"`
 	ProviderName string  `json:"provider_name"`
+	ClientId     string  `json:"client_id"`
 	Code         *string `json:"code,omitempty"`
 	CodeVerifier *string `json:"code_verifier,omitempty"`
 	RefreshToken *string `json:"refresh_token,omitempty"`
@@ -63,7 +64,7 @@ func exchangeTokenWithApiServer(apiTlsConfig *tls.Config, tokenReq *ApiTokenRequ
 		Timeout: 30 * time.Second,
 	}
 
-	tokenURL := config.FctlApiUrl + "/api/v1/auth/token"
+	tokenURL := config.FctlApiUrl + "/api/v1/auth/" + tokenReq.ProviderName + "/token"
 
 	// Marshal request body
 	reqBody, err := json.Marshal(tokenReq)
@@ -80,7 +81,7 @@ func exchangeTokenWithApiServer(apiTlsConfig *tls.Config, tokenReq *ApiTokenRequ
 	req.Header.Set("Accept", "application/json")
 
 	// Log request details
-	log.GetLogger().Infof("API server token request: method=%s, url=%s, grant_type=%s, provider_name=%s, body=%s", req.Method, req.URL.String(), tokenReq.GrantType, tokenReq.ProviderName, string(reqBody))
+	log.GetLogger().Infof("API server token request: method=%s, url=%s, grant_type=%s, provider_name=%s, client_id=%s, body=%s", req.Method, req.URL.String(), tokenReq.GrantType, tokenReq.ProviderName, tokenReq.ClientId, string(reqBody))
 
 	resp, err := client.Do(req)
 	if err != nil {

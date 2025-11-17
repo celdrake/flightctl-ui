@@ -147,10 +147,52 @@ func (a *AuthHandler) getProviderForLogin(providerName string) (AuthProvider, er
 	return provider, nil
 }
 
-// usesCustomerToken determines if a provider uses customer-provided tokens (K8s)
+// getClientIdFromProviderConfig extracts the client_id from a provider config
+func getClientIdFromProviderConfig(providerConfig *v1alpha1.AuthProvider) (string, error) {
+	providerTypeStr, err := providerConfig.Spec.Discriminator()
+	if err != nil {
+		return "", fmt.Errorf("failed to determine provider type: %w", err)
+	}
+
+	switch providerTypeStr {
+	case ProviderTypeOIDC:
+		oidcSpec, err := providerConfig.Spec.AsOIDCProviderSpec()
+		if err != nil {
+			return "", fmt.Errorf("failed to parse OIDC provider spec: %w", err)
+		}
+		return oidcSpec.ClientId, nil
+	case ProviderTypeOAuth2:
+		oauth2Spec, err := providerConfig.Spec.AsOAuth2ProviderSpec()
+		if err != nil {
+			return "", fmt.Errorf("failed to parse OAuth2 provider spec: %w", err)
+		}
+		return oauth2Spec.ClientId, nil
+	case ProviderTypeAAP:
+		return "", fmt.Errorf("AAP providers client_id needs to be retrieved")
+	case ProviderTypeK8s:
+		// For K8s providers, check if it's OpenShift OAuth
+		k8sSpec, err := providerConfig.Spec.AsK8sProviderSpec()
+		if err != nil {
+			return "", fmt.Errorf("failed to parse K8s provider spec: %w", err)
+		}
+		isOpenShift := k8sSpec.ExternalOpenShiftApiUrl != nil &&
+			*k8sSpec.ExternalOpenShiftApiUrl != "" &&
+			*k8sSpec.ExternalOpenShiftApiUrl != k8sSpec.ApiUrl
+		if isOpenShift {
+			// OpenShift OAuth uses a default client ID
+			return "system:serviceaccount:openshift-authentication:oauth-proxy", nil
+		}
+		// Regular K8s token providers don't use this endpoint
+		return "", fmt.Errorf("K8s token providers don't use token exchange endpoint")
+	default:
+		return "", fmt.Errorf("unknown provider type: %s", providerTypeStr)
+	}
+}
+
+// isProviderWithCustomerToken determines if a provider uses customer-provided tokens (K8s)
 // Returns true for K8s token providers (they use direct validation)
 // Returns false for OIDC, OAuth2, AAP, and OpenShift providers (they use backend BFF)
-func usesCustomerToken(provider AuthProvider) bool {
+func isProviderWithCustomerToken(provider AuthProvider) bool {
 	// K8s token providers use direct validation, not OAuth2 flow
 	if _, ok := provider.(*TokenAuthProvider); ok {
 		return true
@@ -240,8 +282,8 @@ func (a AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Check if this is a token-based auth provider (k8s)
-		if usesCustomerToken(provider) {
+		// Check if this is a token-based auth provider (K8s)
+		if isProviderWithCustomerToken(provider) {
 			tokenProvider := provider.(*TokenAuthProvider)
 			var loginParams TokenLoginParameters
 			body, err := io.ReadAll(r.Body)
@@ -316,10 +358,42 @@ func (a AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		// Clear PKCE verifier cookie after use (success or failure)
 		clearPKCEVerifierCookie(w, providerName)
 
+		// Get provider config to extract client_id
+		authConfig, err := getAuthInfo(a.apiTlsConfig)
+		if err != nil {
+			log.GetLogger().WithError(err).Warn("Failed to get auth config for client_id")
+			respondWithError(w, http.StatusInternalServerError, "Failed to get provider configuration")
+			return
+		}
+		if authConfig == nil || authConfig.Providers == nil {
+			respondWithError(w, http.StatusInternalServerError, "No providers configured")
+			return
+		}
+
+		var providerConfig *v1alpha1.AuthProvider
+		for i, pc := range *authConfig.Providers {
+			if pc.Metadata.Name != nil && *pc.Metadata.Name == providerName {
+				providerConfig = &(*authConfig.Providers)[i]
+				break
+			}
+		}
+		if providerConfig == nil {
+			respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Provider config not found: %s", providerName))
+			return
+		}
+
+		clientId, err := getClientIdFromProviderConfig(providerConfig)
+		if err != nil {
+			log.GetLogger().WithError(err).Warnf("Failed to get client_id for provider %s", providerName)
+			respondWithError(w, http.StatusInternalServerError, "Failed to get client_id from provider configuration")
+			return
+		}
+
 		// All the other providers should use backend BFF
 		tokenReq := &ApiTokenRequest{
 			GrantType:    "authorization_code",
 			ProviderName: providerName,
+			ClientId:     clientId,
 			Code:         &loginParams.Code,
 			CodeVerifier: &loginParams.CodeVerifier,
 		}
@@ -375,7 +449,7 @@ func (a AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Route based on provider type
-	if usesCustomerToken(provider) {
+	if isProviderWithCustomerToken(provider) {
 		// K8s token providers don't support refresh
 		w.WriteHeader(http.StatusBadRequest)
 		respondWithError(w, http.StatusBadRequest, "Token refresh not supported for K8s token providers")
@@ -388,10 +462,43 @@ func (a AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get provider config to extract client_id
+	authConfig, err := getAuthInfo(a.apiTlsConfig)
+	if err != nil {
+		log.GetLogger().WithError(err).Warn("Failed to get auth config for client_id")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if authConfig == nil || authConfig.Providers == nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	var providerConfig *v1alpha1.AuthProvider
+	for i, pc := range *authConfig.Providers {
+		if pc.Metadata.Name != nil && *pc.Metadata.Name == tokenData.Provider {
+			providerConfig = &(*authConfig.Providers)[i]
+			break
+		}
+	}
+	if providerConfig == nil {
+		log.GetLogger().Warnf("Provider config not found: %s", tokenData.Provider)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	clientId, err := getClientIdFromProviderConfig(providerConfig)
+	if err != nil {
+		log.GetLogger().WithError(err).Warnf("Failed to get client_id for provider %s", tokenData.Provider)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	// Construct token request for backend
 	tokenReq := &ApiTokenRequest{
 		GrantType:    "refresh_token",
 		ProviderName: tokenData.Provider,
+		ClientId:     clientId,
 		RefreshToken: &tokenData.RefreshToken,
 	}
 
