@@ -2,7 +2,6 @@ import * as React from 'react';
 import { Alert, Bullseye, Spinner } from '@patternfly/react-core';
 
 import { AuthConfig, AuthProvider } from '@flightctl/types';
-import { ProviderType } from '@flightctl/ui-components/src/types/extraTypes';
 import ProviderSelector from '@flightctl/ui-components/src/components/Login/ProviderSelector';
 import TokenLoginForm from '@flightctl/ui-components/src/components/Login/TokenLoginForm';
 import { useFetch } from '@flightctl/ui-components/src/hooks/useFetch';

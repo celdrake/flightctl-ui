@@ -9,7 +9,7 @@ import { useTranslation } from '../../hooks/useTranslation';
 import { useAppContext } from '../../hooks/useAppContext';
 import { isOAuth2Provider } from '../AuthProvider/CreateAuthProvider/types';
 import { getProviderDisplayName } from '../../utils/authProvider';
-import { DynamicAuthProviderSpec, ProviderType } from '../../types/extraTypes';
+import { DynamicAuthProviderSpec } from '../../types/extraTypes';
 
 type ProviderSelectorProps = {
   providers: AuthProvider[];

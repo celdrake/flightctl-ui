@@ -20,6 +20,7 @@ export enum OrgAssignmentType {
 
 export const DEFAULT_USERNAME_CLAIM = 'preferred_username';
 export const DEFAULT_ROLE_CLAIM = 'groups';
+export const DEFAULT_ROLE_SEPARATOR = ':';
 
 export const isOidcProvider = (providerSpec: AuthProviderSpec): providerSpec is OIDCProviderSpec =>
   providerSpec.providerType === ProviderType.OIDC;
@@ -65,6 +66,7 @@ export type AuthProviderFormValues = {
   usernameClaim?: string[]; // Array of path segments (e.g., ["preferred_username"] or ["custom", "user_id"])
   roleAssignmentType?: RoleAssignmentType;
   roleClaimPath?: string[]; // For dynamic role assignment
+  roleSeparator?: string; // For dynamic role assignment - separator for org:role format
   staticRoles?: string[]; // For static role assignment
 
   // OAuth2 specific fields

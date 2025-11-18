@@ -13,6 +13,7 @@ import {
 import { appendJSONPatch } from '../../../utils/patch';
 import {
   AuthProviderFormValues,
+  DEFAULT_ROLE_SEPARATOR,
   OrgAssignmentType,
   RoleAssignmentType,
   isOAuth2Provider,
@@ -67,6 +68,7 @@ export const getInitValues = (authProvider?: AuthProvider): AuthProviderFormValu
       usernameClaim: [],
       roleAssignmentType: RoleAssignmentType.Static,
       roleClaimPath: [],
+      roleSeparator: DEFAULT_ROLE_SEPARATOR,
       staticRoles: [],
       orgAssignmentType: OrgAssignmentType.Static,
       orgName: '',
@@ -99,6 +101,7 @@ export const getInitValues = (authProvider?: AuthProvider): AuthProviderFormValu
 
   let roleAssignmentType: RoleAssignmentType = RoleAssignmentType.Dynamic;
   let roleClaimPath: string[] = [];
+  let roleSeparator: string = DEFAULT_ROLE_SEPARATOR;
   let staticRoles: string[] = [];
 
   const roleAssignment = authProvider.spec.roleAssignment;
@@ -108,6 +111,7 @@ export const getInitValues = (authProvider?: AuthProvider): AuthProviderFormValu
   } else if (isRoleAssignmentDynamic(roleAssignment)) {
     roleAssignmentType = RoleAssignmentType.Dynamic;
     roleClaimPath = roleAssignment.claimPath || [];
+    roleSeparator = roleAssignment.separator || DEFAULT_ROLE_SEPARATOR;
   }
 
   const spec = authProvider.spec as DynamicAuthProviderSpec;
@@ -128,6 +132,7 @@ export const getInitValues = (authProvider?: AuthProvider): AuthProviderFormValu
     usernameClaim: spec.usernameClaim || [],
     roleAssignmentType,
     roleClaimPath,
+    roleSeparator,
     staticRoles,
     orgAssignmentType,
     orgName,
@@ -239,7 +244,10 @@ const isRoleAssignmentEqual = (a: AuthRoleAssignment, b: AuthRoleAssignment): bo
         return false;
       }
       // Compare claim path arrays (order matters)
-      return aClaimPath.every((val, idx) => val === bClaimPath[idx]);
+      if (!aClaimPath.every((val, idx) => val === bClaimPath[idx])) {
+        return false;
+      }
+      return (a.separator || DEFAULT_ROLE_SEPARATOR) === (b.separator || DEFAULT_ROLE_SEPARATOR);
     default:
       return false;
   }
@@ -256,6 +264,7 @@ const getRoleAssignment = (values: AuthProviderFormValues): AuthRoleAssignment =
     const dynamicAssignment: AuthDynamicRoleAssignment = {
       type: RoleAssignmentType.Dynamic,
       claimPath: values.roleClaimPath || [],
+      separator: values.roleSeparator || DEFAULT_ROLE_SEPARATOR,
     };
     return dynamicAssignment as AuthRoleAssignment;
   }
@@ -465,6 +474,7 @@ export const authProviderSchema = (t: TFunction) => (values: AuthProviderFormVal
         is: RoleAssignmentType.Dynamic,
         then: (schema) => schema.min(1, t('At least one claim path segment is required for dynamic role assignment')),
       }),
+    roleSeparator: Yup.string().optional().nullable(),
     staticRoles: Yup.array()
       .of(Yup.string())
       .when('roleAssignmentType', {

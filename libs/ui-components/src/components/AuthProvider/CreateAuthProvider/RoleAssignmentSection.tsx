@@ -17,16 +17,18 @@ import { useField, useFormikContext } from 'formik';
 import { useTranslation } from '../../../hooks/useTranslation';
 import RadioField from '../../form/RadioField';
 import ListItemField from '../../form/ListItemField';
+import TextField from '../../form/TextField';
+import ErrorHelperText, { DefaultHelperText } from '../../form/FieldHelperText';
 import { AuthProviderFormValues, RoleAssignmentType } from './types';
 import { FormGroupWithHelperText } from '../../common/WithHelperText';
-import { RoleClaimHelperText } from './AuthProviderHelperText';
-import ErrorHelperText, { DefaultHelperText } from '../../form/FieldHelperText';
+import { RoleClaimHelperText, RoleSeparatorHelperText } from './AuthProviderHelperText';
 
 const getAvailableRoles = (t: TFunction): Record<string, string> => ({
   admin: t('Administrator'),
+  'org-admin': t('Organization administrator'),
   operator: t('Operator'),
-  viewer: t('Viewer'),
   installer: t('Installer'),
+  viewer: t('Viewer'),
 });
 
 const RoleSelector = () => {
@@ -140,15 +142,21 @@ const RoleAssignmentSection = () => {
       )}
 
       {values.roleAssignmentType === RoleAssignmentType.Dynamic && (
-        <FormGroupWithHelperText label={t('Role claim path')} content={<RoleClaimHelperText />}>
-          <ListItemField
-            name="roleClaimPath"
-            helperText={t(
-              'Path segments to the role/group claim (e.g., ["groups"], ["roles"], ["realm_access", "roles"])',
-            )}
-            addButtonText={t('Add path segment')}
-          />
-        </FormGroupWithHelperText>
+        <>
+          <FormGroupWithHelperText label={t('Role claim path')} content={<RoleClaimHelperText />}>
+            <ListItemField
+              name="roleClaimPath"
+              helperText={t(
+                'Path segments to the role/group claim (e.g., ["groups"], ["roles"], ["realm_access", "roles"])',
+              )}
+              addButtonText={t('Add path segment')}
+            />
+          </FormGroupWithHelperText>
+
+          <FormGroupWithHelperText label={t('Separator')} content={<RoleSeparatorHelperText />}>
+            <TextField name="roleSeparator" id="roleSeparator" aria-label={t('Separator')} placeholder=":" />
+          </FormGroupWithHelperText>
+        </>
       )}
     </FormSection>
   );
