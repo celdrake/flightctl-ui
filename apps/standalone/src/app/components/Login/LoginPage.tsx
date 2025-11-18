@@ -27,7 +27,7 @@ const LoginPage = () => {
   const [error, setError] = React.useState<string>();
   const [providers, setProviders] = React.useState<AuthProvider[]>([]);
   const [userSelectedProvider, setUserSelectedProvider] = React.useState<AuthProvider | null>(null);
-  const [defaultProviderType, setDefaultProviderType] = React.useState<ProviderType | null>(null);
+  const [defaultProviderName, setDefaultProviderName] = React.useState<string>('');
   const [isRedirecting, setIsRedirecting] = React.useState(false);
 
   const handleProviderSelect = async (provider: AuthProvider) => {
@@ -73,7 +73,7 @@ const LoginPage = () => {
           });
         if (providers.length > 0) {
           setProviders(providers);
-          setDefaultProviderType(config.defaultProvider as ProviderType);
+          setDefaultProviderName(config.defaultProvider || '');
           if (providers.length === 1 && !isK8sTokenProvider(providers[0])) {
             setIsRedirecting(true);
             try {
@@ -145,7 +145,7 @@ const LoginPage = () => {
     content = (
       <ProviderSelector
         providers={providers}
-        defaultProviderType={defaultProviderType}
+        defaultProviderName={defaultProviderName}
         onProviderSelect={handleProviderSelect}
         disabled={isRedirecting}
       />

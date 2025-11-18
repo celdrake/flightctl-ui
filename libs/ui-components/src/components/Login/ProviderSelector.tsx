@@ -13,7 +13,7 @@ import { DynamicAuthProviderSpec, ProviderType } from '../../types/extraTypes';
 
 type ProviderSelectorProps = {
   providers: AuthProvider[];
-  defaultProviderType: ProviderType | null;
+  defaultProviderName: string;
   onProviderSelect: (provider: AuthProvider) => void;
   disabled?: boolean;
 };
@@ -29,7 +29,7 @@ const getProviderKey = (provider: AuthProvider): string => {
 
 const ProviderSelector = ({
   providers,
-  defaultProviderType,
+  defaultProviderName,
   onProviderSelect,
   disabled = false,
 }: ProviderSelectorProps) => {
@@ -90,7 +90,7 @@ const ProviderSelector = ({
                   return (
                     <StackItem key={getProviderKey(provider)}>
                       <Button
-                        variant={defaultProviderType === provider.spec.providerType ? 'primary' : 'secondary'}
+                        variant={defaultProviderName === provider.metadata.name ? 'primary' : 'secondary'}
                         isBlock
                         size="lg"
                         onClick={() => onProviderSelect(provider)}
