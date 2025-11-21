@@ -1,3 +1,4 @@
+import { compare } from 'fast-json-patch';
 import {
   AppType,
   // eslint-disable-next-line no-restricted-imports
@@ -315,83 +316,48 @@ export const getApplicationPatches = (
   basePath: string,
   currentApps: ApplicationProviderSpec[],
   updatedApps: AppForm[],
-) => {
-  const patches: PatchRequest = [];
+): PatchRequest => {
+  const patchPath = `${basePath}/applications`;
+  const updatedApiApps = updatedApps.map(toAPIApplication);
 
-  const currentLen = currentApps.length;
-  const newLen = updatedApps.length;
-  if (currentLen === 0 && newLen > 0) {
-    // First apps(s) have been added
-    patches.push({
-      path: `${basePath}/applications`,
-      op: 'add',
-      value: updatedApps.map(toAPIApplication),
-    });
-  } else if (currentLen > 0 && newLen === 0) {
-    // Last app(s) have been removed
-    patches.push({
-      path: `${basePath}/applications`,
-      op: 'remove',
-    });
-  } else if (currentLen !== newLen) {
-    patches.push({
-      path: `${basePath}/applications`,
-      op: 'replace',
-      value: updatedApps.map(toAPIApplication),
-    });
-  } else {
-    const needsPatch = currentApps.some((currentApp, index) => {
-      const updatedApp = updatedApps[index];
-      const isCurrentImageApp = isImageAppProvider(currentApp);
-      const currentAppSpecType = isCurrentImageApp ? AppSpecType.OCI_IMAGE : AppSpecType.INLINE;
-      if (currentAppSpecType !== updatedApp.specType || updatedApp.name !== currentApp.name) {
-        return true;
-      }
-      const currentVars = Object.entries(currentApp.envVars || {});
-      if (currentVars.length !== updatedApp.variables.length) {
-        return true;
-      } else {
-        const hasChangedVars = updatedApp.variables.some((variable) => {
-          const currentValue = currentApp.envVars ? currentApp.envVars[variable.name] : undefined;
-          return !currentValue || currentValue !== variable.value;
-        });
-        if (hasChangedVars) {
-          return true;
-        }
-      }
+  // Generate patches using fast-json-patch
+  const rawPatches = compare({ applications: currentApps }, { applications: updatedApiApps }) as PatchRequest;
 
-      if (isCurrentImageApp) {
-        const imageChanged =
-          (isQuadletImageAppForm(updatedApp) || isComposeImageAppForm(updatedApp) ? updatedApp.image : '') !==
-          currentApp.image;
-        if (imageChanged) {
-          return true;
-        }
-        // For Container type, also check ports and resources
-        if (isContainerAppForm(updatedApp)) {
-          const currentAppImage = currentApp as ImageApplicationProviderSpec;
-          // Convert form ports to API format for comparison
-          const updatedPortsAsStrings =
-            updatedApp.ports?.map((p) => `${p.hostPort}:${p.containerPort}`).filter((p) => p !== ':') || [];
-          const portsChanged = JSON.stringify(currentAppImage.ports || []) !== JSON.stringify(updatedPortsAsStrings);
-          const limitsChanged =
-            JSON.stringify(currentAppImage.resources?.limits || {}) !== JSON.stringify(updatedApp.limits || {});
-          return portsChanged || limitsChanged;
-        }
-        return false;
-      }
-      return hasInlineApplicationChanged(currentApp, updatedApp as QuadletInlineAppForm | ComposeInlineAppForm);
-    });
-    if (needsPatch) {
-      patches.push({
-        path: `${basePath}/applications`,
-        op: 'replace',
-        value: updatedApps.map(toAPIApplication),
-      });
-    }
+  const apiPatches = rawPatches.map((patch) => ({
+    ...patch,
+    path: patch.path.replace('/applications', patchPath),
+  }));
+
+  const supportedOps = ['add', 'replace', 'remove', 'test'];
+  const hasOnlySupportedOperations = apiPatches.every((patch) => supportedOps.includes(patch.op));
+  if (hasOnlySupportedOperations) {
+    return apiPatches;
   }
 
-  return patches;
+  // If there are unsupported operations, use a simple replace strategy
+  if (currentApps.length === 0 && updatedApiApps.length > 0) {
+    return [
+      {
+        path: patchPath,
+        op: 'add',
+        value: updatedApiApps,
+      },
+    ];
+  } else if (currentApps.length > 0 && updatedApiApps.length === 0) {
+    return [
+      {
+        path: patchPath,
+        op: 'remove',
+      },
+    ];
+  }
+  return [
+    {
+      path: patchPath,
+      op: 'replace',
+      value: updatedApiApps,
+    },
+  ];
 };
 
 export const getApiConfig = (ct: SpecConfigTemplate): ConfigSourceProvider => {
