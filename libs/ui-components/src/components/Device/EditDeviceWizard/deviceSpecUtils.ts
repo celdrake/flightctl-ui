@@ -241,24 +241,16 @@ export const toAPIApplication = (app: AppForm): ApplicationProviderSpec => {
     if (app.name) {
       data.name = app.name;
     }
-    // Add ports if present
     if (app.ports && app.ports.length > 0) {
-      data.ports = app.ports.filter((p) => p.trim() !== '');
+      data.ports = app.ports
+        .filter((p) => p.hostPort?.trim() && p.containerPort?.trim())
+        .map((p) => `${p.hostPort}:${p.containerPort}`);
     }
-    // Add resources if present
-    if (app.resources?.limits) {
-      const resources: ApplicationResources = {
-        limits: {},
+    const appLimits = app.limits || {};
+    if (appLimits.cpu || appLimits.memory) {
+      data.resources = {
+        limits: appLimits,
       };
-      if (app.resources.limits.cpu) {
-        resources.limits!.cpu = app.resources.limits.cpu;
-      }
-      if (app.resources.limits.memory) {
-        resources.limits!.memory = app.resources.limits.memory;
-      }
-      if (resources.limits && (resources.limits.cpu || resources.limits.memory)) {
-        data.resources = resources;
-      }
     }
     return data as ApplicationProviderSpec;
   }
@@ -369,10 +361,13 @@ export const getApplicationPatches = (
         // For Container type, also check ports and resources
         if (isContainerAppForm(updatedApp)) {
           const currentAppImage = currentApp as ImageApplicationProviderSpec;
-          const portsChanged = JSON.stringify(currentAppImage.ports || []) !== JSON.stringify(updatedApp.ports || []);
-          const resourcesChanged =
-            JSON.stringify(currentAppImage.resources || {}) !== JSON.stringify(updatedApp.resources || {});
-          return portsChanged || resourcesChanged;
+          // Convert form ports to API format for comparison
+          const updatedPortsAsStrings =
+            updatedApp.ports?.map((p) => `${p.hostPort}:${p.containerPort}`).filter((p) => p !== ':') || [];
+          const portsChanged = JSON.stringify(currentAppImage.ports || []) !== JSON.stringify(updatedPortsAsStrings);
+          const limitsChanged =
+            JSON.stringify(currentAppImage.resources?.limits || {}) !== JSON.stringify(updatedApp.limits || {});
+          return portsChanged || limitsChanged;
         }
         return false;
       }
@@ -454,6 +449,13 @@ export const getApplicationValues = (deviceSpec?: DeviceSpec): AppForm[] => {
     // Check for Container type first (it's also image-based)
     if (app.appType === AppType.AppTypeContainer && isImageAppProvider(app)) {
       const imageApp = app as ImageApplicationProviderSpec;
+      // Convert ports from API string format to object format
+      const ports =
+        imageApp.ports?.map((portString) => {
+          const [hostPort, containerPort] = portString.split(':');
+          return { hostPort: hostPort || '', containerPort: containerPort || '' };
+        }) || [];
+
       return {
         specType: AppSpecType.OCI_IMAGE,
         name: app.name || '',
@@ -461,7 +463,7 @@ export const getApplicationValues = (deviceSpec?: DeviceSpec): AppForm[] => {
         appType: AppType.AppTypeContainer,
         variables: getAppFormVariables(app),
         volumes: app.volumes || [],
-        ports: imageApp.ports || [],
+        ports,
         resources: imageApp.resources
           ? {
               limits: {

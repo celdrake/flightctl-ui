@@ -1,6 +1,6 @@
 import {
   AppType,
-  ApplicationResources,
+  ApplicationResourceLimits,
   ApplicationVolume,
   ConfigProviderSpec,
   DisruptionBudget,
@@ -55,13 +55,18 @@ type AppBase = {
   volumes?: ApplicationVolumeForm[];
 };
 
+export type PortMapping = {
+  hostPort: string;
+  containerPort: string;
+};
+
 export type SingleContainerAppForm = AppBase & {
   appType: AppType.AppTypeContainer;
   specType: AppSpecType.OCI_IMAGE;
   name: string;
   image: string;
-  ports?: string[]; // Format: "hostPort:containerPort"
-  resources?: ApplicationResources;
+  ports?: PortMapping[];
+  limits?: ApplicationResourceLimits;
 };
 
 export type QuadletImageAppForm = AppBase & {

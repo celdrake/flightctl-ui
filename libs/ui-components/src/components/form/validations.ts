@@ -556,11 +556,15 @@ export const validApplicationsSchema = (t: TFunction) => {
               .matches(APPLICATION_IMAGE_REGEXP, t('Application image includes invalid characters.')),
             ports: Yup.array()
               .of(
-                Yup.string()
-                  .matches(
-                    PORT_MAPPING_REGEXP,
-                    t('Port mapping must be in format "hostPort:containerPort" (e.g., "8080:80")'),
-                  )
+                Yup.object()
+                  .shape({
+                    hostPort: Yup.string()
+                      .matches(/^\d+$/, t('Host port must be a number'))
+                      .required(t('Host port is required')),
+                    containerPort: Yup.string()
+                      .matches(/^\d+$/, t('Container port must be a number'))
+                      .required(t('Container port is required')),
+                  })
                   .required(),
               )
               .optional(),
