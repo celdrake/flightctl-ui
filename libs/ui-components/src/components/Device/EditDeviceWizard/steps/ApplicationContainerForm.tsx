@@ -1,6 +1,16 @@
 import * as React from 'react';
 import { useField } from 'formik';
-import { Button, FormGroup, Grid, Label, LabelGroup, Split, SplitItem, TextInput } from '@patternfly/react-core';
+import {
+  Button,
+  FormGroup,
+  FormSection,
+  Grid,
+  Label,
+  LabelGroup,
+  Split,
+  SplitItem,
+  TextInput,
+} from '@patternfly/react-core';
 import { ArrowRightIcon } from '@patternfly/react-icons/dist/js/icons/arrow-right-icon';
 
 import { FormGroupWithHelperText } from '../../../common/WithHelperText';
@@ -8,7 +18,7 @@ import TextField from '../../../form/TextField';
 import ErrorHelperText from '../../../form/FieldHelperText';
 import { isDuplicatePortMapping, isValidPortMapping, validatePortNumber } from '../../../form/validations';
 import { useTranslation } from '../../../../hooks/useTranslation';
-import { SingleContainerAppForm, PortMapping } from '../../../../types/deviceSpec';
+import { PortMapping, SingleContainerAppForm } from '../../../../types/deviceSpec';
 import ApplicationVolumeForm from './ApplicationVolumeForm';
 
 const ApplicationContainerForm = ({
@@ -157,146 +167,159 @@ const ApplicationContainerForm = ({
   };
 
   return (
-    <Grid hasGutter>
-      <FormGroup label={t('Image')} isRequired>
-        <TextField
-          aria-label={t('Image')}
-          name={`${appFieldName}.image`}
-          value={app.image || ''}
-          isDisabled={isReadOnly}
-          helperText={t('Provide a valid image reference')}
-        />
-      </FormGroup>
+    <FormSection>
+      <Grid hasGutter>
+        <FormGroupWithHelperText
+          label={t('Application name')}
+          content={t('If not specified, the image name will be used. Application name must be unique.')}
+        >
+          <TextField aria-label={t('Application name')} name={`${appFieldName}.name`} isDisabled={isReadOnly} />
+        </FormGroupWithHelperText>
+        <FormGroup label={t('Image')} isRequired>
+          <TextField
+            aria-label={t('Image')}
+            name={`${appFieldName}.image`}
+            value={app.image || ''}
+            isDisabled={isReadOnly}
+            helperText={t('Provide a valid image reference')}
+          />
+        </FormGroup>
 
-      <FormGroup label={t('Ports')}>
-        <small>{t('Provide a list of ports to map to the container')}</small>
-        {!isReadOnly && (
-          <Split hasGutter className="pf-v5-u-mt-sm">
-            <SplitItem isFilled>
-              <FormGroupWithHelperText
-                label={t('Host port')}
-                content={t('The port on the host machine (e.g., "8080")')}
+        <FormGroup label={t('Ports')}>
+          <small>{t('Provide a list of ports to map to the container')}</small>
+          {!isReadOnly && (
+            <Split hasGutter className="pf-v5-u-mt-sm">
+              <SplitItem isFilled>
+                <FormGroupWithHelperText
+                  label={t('Host port')}
+                  content={t('The port on the host machine (e.g., "8080")')}
+                >
+                  <TextInput
+                    aria-label={t('Host port')}
+                    value={hostPort}
+                    placeholder={t('Type here')}
+                    onChange={(_, value) => {
+                      setHostPort(value);
+                      setHostPortTouched(true);
+                    }}
+                    onBlur={() => setHostPortTouched(true)}
+                    onKeyDown={handleKeyDown}
+                    isDisabled={isReadOnly}
+                    validated={hostPortError ? 'error' : 'default'}
+                  />
+                  {hostPortError ? <ErrorHelperText error={hostPortError} touchRequired={false} /> : <div>&nbsp;</div>}
+                </FormGroupWithHelperText>
+              </SplitItem>
+              <SplitItem isFilled>
+                <FormGroupWithHelperText
+                  label={t('Container port')}
+                  content={t('The port inside the container (e.g., "80")')}
+                >
+                  <TextInput
+                    aria-label={t('Container port')}
+                    value={containerPort}
+                    placeholder={t('Type here')}
+                    onChange={(_, value) => {
+                      setContainerPort(value);
+                      setContainerPortTouched(true);
+                    }}
+                    onBlur={() => setContainerPortTouched(true)}
+                    onKeyDown={handleKeyDown}
+                    isDisabled={isReadOnly}
+                    validated={containerPortError ? 'error' : 'default'}
+                  />
+                </FormGroupWithHelperText>
+              </SplitItem>
+              <SplitItem style={{ alignSelf: 'center' }}>
+                <Button
+                  aria-label={t('Add port mapping')}
+                  variant="control"
+                  icon={<ArrowRightIcon />}
+                  iconPosition="end"
+                  onClick={onAddPort}
+                  isDisabled={!canAddPorts}
+                >
+                  {t('Add')}
+                </Button>
+              </SplitItem>
+            </Split>
+          )}
+          {ports && ports.length > 0 && (
+            <>
+              <LabelGroup
+                numLabels={5}
+                categoryName={t('Added ports')}
+                isEditable={!isReadOnly}
+                className="pf-v5-u-mt-md"
               >
-                <TextInput
-                  aria-label={t('Host port')}
-                  value={hostPort}
-                  placeholder={t('Type here')}
-                  onChange={(_, value) => {
-                    setHostPort(value);
-                    setHostPortTouched(true);
-                  }}
-                  onBlur={() => setHostPortTouched(true)}
-                  onKeyDown={handleKeyDown}
-                  isDisabled={isReadOnly}
-                  validated={hostPortError ? 'error' : 'default'}
-                />
-                {hostPortError ? <ErrorHelperText error={hostPortError} touchRequired={false} /> : <div>&nbsp;</div>}
-              </FormGroupWithHelperText>
-            </SplitItem>
-            <SplitItem isFilled>
-              <FormGroupWithHelperText
-                label={t('Container port')}
-                content={t('The port inside the container (e.g., "80")')}
-              >
-                <TextInput
-                  aria-label={t('Container port')}
-                  value={containerPort}
-                  placeholder={t('Type here')}
-                  onChange={(_, value) => {
-                    setContainerPort(value);
-                    setContainerPortTouched(true);
-                  }}
-                  onBlur={() => setContainerPortTouched(true)}
-                  onKeyDown={handleKeyDown}
-                  isDisabled={isReadOnly}
-                  validated={containerPortError ? 'error' : 'default'}
-                />
-              </FormGroupWithHelperText>
-            </SplitItem>
-            <SplitItem style={{ alignSelf: 'center' }}>
-              <Button
-                aria-label={t('Add port mapping')}
-                variant="control"
-                icon={<ArrowRightIcon />}
-                iconPosition="end"
-                onClick={onAddPort}
-                isDisabled={!canAddPorts}
-              >
-                {t('Add')}
-              </Button>
-            </SplitItem>
-          </Split>
-        )}
-        {ports && ports.length > 0 && (
-          <>
-            <LabelGroup
-              numLabels={5}
-              categoryName={t('Added ports')}
-              isEditable={!isReadOnly}
-              className="pf-v5-u-mt-md"
+                {ports.map((port, portIndex) => {
+                  const portText = `${port.hostPort}:${port.containerPort}`;
+                  const isEditing = editingPortIndex === portIndex;
+                  const hasError = isEditing && editingPortError;
+                  return (
+                    <Label
+                      key={`${port.hostPort}_${port.containerPort}_${portIndex}`}
+                      textMaxWidth="16ch"
+                      onClose={!isReadOnly ? () => onDeletePort(portIndex) : undefined}
+                      onEditComplete={!isReadOnly ? (_, newText) => onEditPort(portIndex, newText) : undefined}
+                      onEditCancel={!isReadOnly ? () => onEditCancel(portIndex) : undefined}
+                      title={portText}
+                      isEditable={!isReadOnly && (!editingPortError || portIndex === editingPortIndex)}
+                      color={hasError ? 'red' : undefined}
+                    >
+                      {portText}
+                    </Label>
+                  );
+                })}
+              </LabelGroup>
+              {editingPortError && editingPortIndex !== null && (
+                <ErrorHelperText error={editingPortError} touchRequired={false} />
+              )}
+            </>
+          )}
+        </FormGroup>
+        <FormGroup label={t('Resources')}>
+          <Grid hasGutter>
+            <FormGroupWithHelperText
+              label={t('CPU limit')}
+              content={t(
+                'Set the maximum CPU usage for your container. Use fractional values ("0.5" for half a CPU core) or whole numbers ("1", "2" for full cores). Consider your device\'s total CPU capacity when setting limits.',
+              )}
             >
-              {ports.map((port, portIndex) => {
-                const portText = `${port.hostPort}:${port.containerPort}`;
-                const isEditing = editingPortIndex === portIndex;
-                const hasError = isEditing && editingPortError;
-                return (
-                  <Label
-                    key={`${port.hostPort}_${port.containerPort}_${portIndex}`}
-                    textMaxWidth="16ch"
-                    onClose={!isReadOnly ? () => onDeletePort(portIndex) : undefined}
-                    onEditComplete={!isReadOnly ? (_, newText) => onEditPort(portIndex, newText) : undefined}
-                    onEditCancel={!isReadOnly ? () => onEditCancel(portIndex) : undefined}
-                    title={portText}
-                    isEditable={!isReadOnly && (!editingPortError || portIndex === editingPortIndex)}
-                    color={hasError ? 'red' : undefined}
-                  >
-                    {portText}
-                  </Label>
-                );
-              })}
-            </LabelGroup>
-            {editingPortError && editingPortIndex !== null && (
-              <ErrorHelperText error={editingPortError} touchRequired={false} />
-            )}
-          </>
-        )}
-      </FormGroup>
-      <FormGroup label={t('Resources')}>
-        <Grid hasGutter>
-          <FormGroupWithHelperText
-            label={t('CPU limit')}
-            content={t(
-              'Set the maximum CPU usage for your container. Use fractional values ("0.5" for half a CPU core) or whole numbers ("1", "2" for full cores). Consider your device\'s total CPU capacity when setting limits.',
-            )}
-          >
-            <TextField
-              aria-label={t('CPU limit')}
-              name={`${appFieldName}.limits.cpu`}
-              value={app.limits?.cpu || ''}
-              placeholder={t('Type here')}
-              isDisabled={isReadOnly}
-              helperText={t('Provide a valid CPU value (e.g., "0.4" or "2").')}
-            />
-          </FormGroupWithHelperText>
-          <FormGroupWithHelperText
-            label={t('Memory limit')}
-            content={t(
-              'Set the maximum memory usage for your container using Podman format: "b" (bytes), "k" (kibibytes), "m" (mebibytes), "g" (gibibytes). Examples: "512m", "1g", "2048k". Ensure the limit fits within your device\'s available memory and accounts for other applications and system processes.',
-            )}
-          >
-            <TextField
-              aria-label={t('Memory limit')}
-              name={`${appFieldName}.limits.memory`}
-              value={app.limits?.memory || ''}
-              placeholder={t('Type here')}
-              isDisabled={isReadOnly}
-              helperText={t('Provide a valid memory value (e.g., "512m", "2g", "1024k").')}
-            />
-          </FormGroupWithHelperText>
-        </Grid>
-      </FormGroup>
-      <ApplicationVolumeForm appFieldName={appFieldName} volumes={app.volumes || []} isReadOnly={isReadOnly} />
-    </Grid>
+              <TextField
+                aria-label={t('CPU limit')}
+                name={`${appFieldName}.limits.cpu`}
+                value={app.limits?.cpu || ''}
+                placeholder={t('Type here')}
+                isDisabled={isReadOnly}
+                helperText={t('Provide a valid CPU value (e.g., "0.4" or "2").')}
+              />
+            </FormGroupWithHelperText>
+            <FormGroupWithHelperText
+              label={t('Memory limit')}
+              content={t(
+                'Set the maximum memory usage for your container using Podman format: "b" (bytes), "k" (kibibytes), "m" (mebibytes), "g" (gibibytes). Examples: "512m", "1g", "2048k". Ensure the limit fits within your device\'s available memory and accounts for other applications and system processes.',
+              )}
+            >
+              <TextField
+                aria-label={t('Memory limit')}
+                name={`${appFieldName}.limits.memory`}
+                value={app.limits?.memory || ''}
+                placeholder={t('Type here')}
+                isDisabled={isReadOnly}
+                helperText={t('Provide a valid memory value (e.g., "512m", "2g", "1024k").')}
+              />
+            </FormGroupWithHelperText>
+          </Grid>
+        </FormGroup>
+        <ApplicationVolumeForm
+          appFieldName={appFieldName}
+          volumes={app.volumes || []}
+          isReadOnly={isReadOnly}
+          isSingleContainerApp={true}
+        />
+      </Grid>
+    </FormSection>
   );
 };
 

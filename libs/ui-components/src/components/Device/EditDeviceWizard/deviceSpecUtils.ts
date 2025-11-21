@@ -2,7 +2,6 @@ import {
   AppType,
   // eslint-disable-next-line no-restricted-imports
   ApplicationProviderSpec,
-  ApplicationResources,
   ApplicationVolume,
   ConfigProviderSpec,
   DeviceSpec,
@@ -12,6 +11,7 @@ import {
   HttpConfigProviderSpec,
   ImageApplicationProviderSpec,
   ImageMountVolumeProviderSpec,
+  ImagePullPolicy,
   InlineApplicationProviderSpec,
   InlineConfigProviderSpec,
   KubernetesSecretProviderSpec,
@@ -31,6 +31,7 @@ import {
   QuadletInlineAppForm,
   SpecConfigTemplate,
   SystemdUnitFormValue,
+  VolumeType,
   isComposeImageAppForm,
   isContainerAppForm,
   isGitConfigTemplate,
@@ -220,13 +221,18 @@ export const toAPIApplication = (app: AppForm): ApplicationProviderSpec => {
     const volume: Partial<ApplicationVolume & ImageMountVolumeProviderSpec> = {
       name: v.name || '',
     };
-    if (v.imageRef) {
+
+    // Use volumeType to determine which fields to include
+    const hasImage = v.volumeType === VolumeType.IMAGE_ONLY || v.volumeType === VolumeType.IMAGE_MOUNT;
+    const hasMount = v.volumeType === VolumeType.MOUNT_ONLY || v.volumeType === VolumeType.IMAGE_MOUNT;
+
+    if (hasImage && v.imageRef) {
       volume.image = {
         reference: v.imageRef,
         pullPolicy: v.imagePullPolicy,
       };
     }
-    if (v.mountPath) {
+    if (hasMount && v.mountPath) {
       volume.mount = {
         path: v.mountPath,
       };
@@ -445,14 +451,22 @@ const getAppFormVariables = (app: ApplicationProviderSpecFixed) =>
 
 const convertVolumesToForm = (volumes?: ApplicationVolume[]) => {
   if (!volumes) return [];
-  return volumes.map((v) => {
-    let volForm: ApplicationVolumeForm = { name: v.name };
-    if ('image' in v) {
-      volForm.imageRef = v.image.reference;
-      volForm.imagePullPolicy = v.image.pullPolicy;
-    }
-    if ('mount' in v) {
-      volForm.mountPath = v.mount.path;
+  return volumes.map((vol) => {
+    const fullVolume = vol as ApplicationVolume & ImageMountVolumeProviderSpec;
+    const volForm: ApplicationVolumeForm = {
+      name: fullVolume.name,
+      imageRef: fullVolume.image?.reference || '',
+      imagePullPolicy: fullVolume.image?.pullPolicy || ImagePullPolicy.PullIfNotPresent,
+      mountPath: fullVolume.mount?.path || '',
+    };
+
+    // Determine volumeType based on which fields are present
+    if (volForm.imageRef && volForm.mountPath) {
+      volForm.volumeType = VolumeType.IMAGE_MOUNT;
+    } else if (volForm.imageRef) {
+      volForm.volumeType = VolumeType.IMAGE_ONLY;
+    } else if (volForm.mountPath) {
+      volForm.volumeType = VolumeType.MOUNT_ONLY;
     }
     return volForm;
   });

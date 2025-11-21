@@ -109,7 +109,7 @@ const ApplicationSection = ({ index, isReadOnly }: { index: number; isReadOnly?:
 
   return (
     <ExpandableFormSection
-      title={t('Application {{ appNum }}', { appNum: index + 1 })}
+      title={app.name || t('Application {{ appNum }}', { appNum: index + 1 })}
       fieldName={appFieldName}
       description={app.name}
     >
@@ -124,15 +124,7 @@ const ApplicationSection = ({ index, isReadOnly }: { index: number; isReadOnly?:
         </FormGroup>
 
         {isContainer ? (
-          <>
-            <FormGroupWithHelperText
-              label={t('Application name')}
-              content={t('If not specified, the image name will be used. Application name must be unique.')}
-            >
-              <TextField aria-label={t('Application name')} name={`${appFieldName}.name`} isDisabled={isReadOnly} />
-            </FormGroupWithHelperText>
-            <ApplicationContainerForm app={app} index={index} isReadOnly={isReadOnly} />
-          </>
+          <ApplicationContainerForm app={app} index={index} isReadOnly={isReadOnly} />
         ) : (
           <>
             <FormGroupWithHelperText

@@ -23,6 +23,7 @@ import {
   SpecConfigTemplate,
   SystemdUnitFormValue,
   UpdatePolicyForm,
+  VolumeType,
   getAppIdentifier,
   isComposeImageAppForm,
   isContainerAppForm,
@@ -533,7 +534,6 @@ const quadletFilesAtRoot =
   };
 
 const PORT_NUMBER_REGEXP = /^\d+$/;
-const MIN_PORT = 1;
 const MAX_PORT = 65535;
 
 export const validatePortNumber = (port: string, t: TFunction): string | undefined => {
@@ -646,41 +646,41 @@ export const validApplicationsSchema = (t: TFunction) => {
               .optional(),
             volumes: Yup.array()
               .of(
-                Yup.object()
-                  .shape({
-                    name: Yup.string()
-                      .required(t('Volume name is required'))
-                      .matches(
-                        APPLICATION_NAME_REGEXP,
-                        t(
-                          'Use lowercase alphanumeric characters, or dash (-). Must start and end with an alphanumeric character.',
-                        ),
+                Yup.object().shape({
+                  name: Yup.string()
+                    .required(t('Volume name is required'))
+                    .matches(
+                      APPLICATION_NAME_REGEXP,
+                      t(
+                        'Use lowercase alphanumeric characters, or dash (-). Must start and end with an alphanumeric character.',
                       ),
-                    imageRef: Yup.string()
-                      .matches(APPLICATION_IMAGE_REGEXP, t('Image reference includes invalid characters.'))
-                      .optional(),
-                    imagePullPolicy: Yup.string()
-                      .oneOf(
-                        [ImagePullPolicy.PullAlways, ImagePullPolicy.PullIfNotPresent, ImagePullPolicy.PullNever],
-                        t('Pull policy must be one of: Always, IfNotPresent, or Never'),
-                      )
-                      .optional(),
-                    mountPath: Yup.string().optional(),
-                  })
-                  .test(
-                    'volume-has-content',
-                    t('Volume must have either an image reference or a mount path'),
-                    function (value) {
-                      const hasImage = value?.imageRef?.trim();
-                      const hasMount = value?.mountPath?.trim();
-                      if (!hasImage && !hasMount) {
-                        return this.createError({
-                          message: t('Volume must have either an image reference or a mount path'),
-                        });
-                      }
-                      return true;
-                    },
-                  ),
+                    ),
+                  volumeType: Yup.string()
+                    .oneOf([VolumeType.IMAGE_ONLY, VolumeType.MOUNT_ONLY, VolumeType.IMAGE_MOUNT])
+                    .required(t('Volume type is required')),
+                  imageRef: Yup.string().when('volumeType', {
+                    is: (val: VolumeType) => val === VolumeType.IMAGE_ONLY || val === VolumeType.IMAGE_MOUNT,
+                    then: (schema) =>
+                      schema
+                        .required(t('Image reference is required for this volume type'))
+                        .matches(APPLICATION_IMAGE_REGEXP, t('Image reference includes invalid characters.')),
+                    otherwise: (schema) =>
+                      schema
+                        .matches(APPLICATION_IMAGE_REGEXP, t('Image reference includes invalid characters.'))
+                        .optional(),
+                  }),
+                  imagePullPolicy: Yup.string()
+                    .oneOf(
+                      [ImagePullPolicy.PullAlways, ImagePullPolicy.PullIfNotPresent, ImagePullPolicy.PullNever],
+                      t('Pull policy must be one of: Always, IfNotPresent, or Never'),
+                    )
+                    .optional(),
+                  mountPath: Yup.string().when('volumeType', {
+                    is: (val: VolumeType) => val === VolumeType.MOUNT_ONLY || val === VolumeType.IMAGE_MOUNT,
+                    then: (schema) => schema.required(t('Mount path is required for this volume type')),
+                    otherwise: (schema) => schema.optional(),
+                  }),
+                }),
               )
               .optional(),
             variables: appVariablesSchema(t),

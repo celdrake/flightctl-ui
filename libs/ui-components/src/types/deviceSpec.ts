@@ -1,18 +1,15 @@
 import {
   AppType,
   ApplicationResourceLimits,
-  ApplicationVolume,
   ConfigProviderSpec,
   DisruptionBudget,
   GitConfigProviderSpec,
   HttpConfigProviderSpec,
   ImageApplicationProviderSpec,
   ImagePullPolicy,
-  ImageVolumeSource,
   InlineApplicationProviderSpec,
   InlineConfigProviderSpec,
   KubernetesSecretProviderSpec,
-  VolumeMount,
 } from '@flightctl/types';
 import { FlightCtlLabel } from './extraTypes';
 import { UpdateScheduleMode } from '../utils/time';
@@ -137,8 +134,15 @@ export const isComposeInlineAppForm = (app: AppBase): app is ComposeInlineAppFor
 export const isContainerAppForm = (app: AppBase): app is SingleContainerAppForm =>
   app.appType === AppType.AppTypeContainer;
 
+export enum VolumeType {
+  IMAGE_ONLY = 'image',
+  MOUNT_ONLY = 'mount',
+  IMAGE_MOUNT = 'imageMount',
+}
+
 export type ApplicationVolumeForm = {
   name: string;
+  volumeType?: VolumeType;
   imageRef?: string;
   imagePullPolicy?: ImagePullPolicy;
   mountPath?: string;

@@ -1,125 +1,174 @@
 import * as React from 'react';
 import { FieldArray, useField } from 'formik';
+import { TFunction } from 'react-i18next';
 import { Button, FormGroup, FormSection, Grid, Split, SplitItem } from '@patternfly/react-core';
 import { MinusCircleIcon } from '@patternfly/react-icons/dist/js/icons/minus-circle-icon';
 import { PlusCircleIcon } from '@patternfly/react-icons/dist/js/icons/plus-circle-icon';
 
 import { ImagePullPolicy } from '@flightctl/types';
-import { ApplicationVolumeForm as VolumeFormType } from '../../../../types/deviceSpec';
+import { ApplicationVolumeForm as VolumeFormType, VolumeType } from '../../../../types/deviceSpec';
 import { useTranslation } from '../../../../hooks/useTranslation';
 import TextField from '../../../form/TextField';
 import FormSelect from '../../../form/FormSelect';
 import ErrorHelperText from '../../../form/FieldHelperText';
+import ExpandableFormSection from '../../../form/ExpandableFormSection';
 import { FormGroupWithHelperText } from '../../../common/WithHelperText';
 
 type ApplicationVolumeFormProps = {
   appFieldName: string;
   volumes: VolumeFormType[];
   isReadOnly?: boolean;
+  isSingleContainerApp?: boolean;
 };
 
-const ApplicationVolumeForm = ({ appFieldName, volumes, isReadOnly }: ApplicationVolumeFormProps) => {
+const getPullPolicyOptions = (t: TFunction) => ({
+  [ImagePullPolicy.PullIfNotPresent]: t('If not present'),
+  [ImagePullPolicy.PullAlways]: t('Always'),
+  [ImagePullPolicy.PullNever]: t('Never'),
+});
+
+const getVolumeTypeOptions = (t: TFunction, isSingleContainerApp: boolean) => {
+  const validTypes: Partial<Record<VolumeType, string>> = {
+    [VolumeType.MOUNT_ONLY]: t('Mount volume'),
+    [VolumeType.IMAGE_MOUNT]: t('Image mount volume'),
+  };
+  if (!isSingleContainerApp) {
+    validTypes[VolumeType.IMAGE_ONLY] = t('Image volume');
+  }
+  return validTypes;
+};
+
+const ApplicationVolumeForm = ({
+  appFieldName,
+  volumes,
+  isReadOnly,
+  isSingleContainerApp = false,
+}: ApplicationVolumeFormProps) => {
   const { t } = useTranslation();
   const [, { error }] = useField<VolumeFormType[]>(`${appFieldName}.volumes`);
 
-  const pullPolicyOptions = {
-    [ImagePullPolicy.PullIfNotPresent]: t('IfNotPresent'),
-    [ImagePullPolicy.PullAlways]: t('Always'),
-    [ImagePullPolicy.PullNever]: t('Never'),
-  };
+  const { volumeTypeOptions, pullPolicyOptions } = React.useMemo(
+    () => ({
+      volumeTypeOptions: getVolumeTypeOptions(t, isSingleContainerApp),
+      pullPolicyOptions: getPullPolicyOptions(t),
+    }),
+    [t, isSingleContainerApp],
+  );
 
   const volumesError = typeof error === 'string' ? error : undefined;
-
   return (
     <FormGroup label={t('Volumes')}>
-      <small>
-        {t(
-          'Configure persistent volumes for your application. Volumes can be populated from OCI artifacts or mounted at specific paths.',
-        )}
-      </small>
       <FieldArray name={`${appFieldName}.volumes`}>
         {({ push, remove }) => (
           <>
             {volumes.map((volume, volumeIndex) => {
               const volumeFieldName = `${appFieldName}.volumes[${volumeIndex}]`;
+              const hasImage =
+                volume.volumeType === VolumeType.IMAGE_ONLY || volume.volumeType === VolumeType.IMAGE_MOUNT;
+              const hasMount =
+                volume.volumeType === VolumeType.MOUNT_ONLY || volume.volumeType === VolumeType.IMAGE_MOUNT;
+
               return (
                 <FormSection key={volumeIndex} className="pf-v5-u-mt-md">
-                  <Grid hasGutter>
-                    <FormGroup label={t('Volume {{ number }}', { number: volumeIndex + 1 })}>
-                      <Split hasGutter>
-                        <SplitItem isFilled>
+                  <Split hasGutter>
+                    <SplitItem isFilled>
+                      <ExpandableFormSection
+                        title={volume.name || t('Volume {{ number }}', { number: volumeIndex + 1 })}
+                        fieldName={volumeFieldName}
+                      >
+                        <Grid hasGutter>
+                          <FormGroup label={t('Volume type')} isRequired>
+                            <FormSelect
+                              name={`${volumeFieldName}.volumeType`}
+                              items={volumeTypeOptions}
+                              placeholderText={t('Select volume type')}
+                              isDisabled={isReadOnly}
+                            />
+                          </FormGroup>
+
                           <FormGroup label={t('Name')} isRequired>
                             <TextField
                               aria-label={t('Volume name')}
                               name={`${volumeFieldName}.name`}
                               value={volume.name || ''}
                               isDisabled={isReadOnly}
-                              helperText={t('Unique name for this volume within the application')}
                             />
                           </FormGroup>
-                        </SplitItem>
-                        {!isReadOnly && (
-                          <SplitItem>
-                            <Button
-                              aria-label={t('Delete volume')}
-                              variant="link"
-                              icon={<MinusCircleIcon />}
-                              iconPosition="end"
-                              onClick={() => remove(volumeIndex)}
-                            />
-                          </SplitItem>
-                        )}
-                      </Split>
-                    </FormGroup>
 
-                    <FormGroupWithHelperText
-                      label={t('Image reference')}
-                      content={t(
-                        'Optional: OCI artifact reference containing the volume contents. This allows delivering large datasets (such as ML models or static assets) as part of the application deployment.',
-                      )}
-                    >
-                      <TextField
-                        aria-label={t('Image reference')}
-                        name={`${volumeFieldName}.imageRef`}
-                        value={volume.imageRef || ''}
-                        placeholder={t('e.g., registry.example.com/data:latest')}
-                        isDisabled={isReadOnly}
-                        helperText={t('Fully qualified OCI artifact reference')}
-                      />
-                    </FormGroupWithHelperText>
+                          {hasImage && (
+                            <>
+                              <FormGroup label={t('Image reference')} isRequired>
+                                <TextField
+                                  aria-label={t('Image reference')}
+                                  name={`${volumeFieldName}.imageRef`}
+                                  value={volume.imageRef || ''}
+                                  isDisabled={isReadOnly}
+                                  helperText={t('Provide a valid container image reference for the volume.')}
+                                />
+                              </FormGroup>
 
-                    {volume.imageRef && (
-                      <FormGroupWithHelperText
-                        label={t('Pull policy')}
-                        content={t(
-                          'Defines pull behavior: Always pulls every time, IfNotPresent only pulls if not already present, Never requires the image to already exist on the device.',
-                        )}
-                      >
-                        <FormSelect
-                          name={`${volumeFieldName}.imagePullPolicy`}
-                          items={pullPolicyOptions}
-                          placeholderText={t('Select pull policy')}
-                          helperText={t('Defaults to IfNotPresent if not specified')}
+                              <FormGroupWithHelperText
+                                label={t('Pull policy')}
+                                content={
+                                  <div>
+                                    <p>
+                                      <strong>{t('Pull options:')}</strong>
+                                    </p>
+                                    <ul>
+                                      <li>
+                                        <strong>{t('Always')}</strong> -{' '}
+                                        {t('Attempts to always pull the latest image (uses more bandwidth)')}
+                                      </li>
+                                      <li>
+                                        <strong>{t('If not present')}</strong> -{' '}
+                                        {t('Pull only if missing locally (efficient)')}
+                                      </li>
+                                      <li>
+                                        <strong>{t('Never')}</strong> -{' '}
+                                        {t('Use cached images only (fastest, may fail)')}
+                                      </li>
+                                    </ul>
+                                    <p>
+                                      <strong>{t('💡 Trade-off:')}</strong> {t('Freshness vs. bandwidth efficiency.')}
+                                    </p>
+                                  </div>
+                                }
+                              >
+                                <FormSelect
+                                  name={`${volumeFieldName}.imagePullPolicy`}
+                                  items={pullPolicyOptions}
+                                  placeholderText={t('Select pull policy')}
+                                />
+                              </FormGroupWithHelperText>
+                            </>
+                          )}
+
+                          {hasMount && (
+                            <FormGroup label={t('Mount path')} isRequired>
+                              <TextField
+                                aria-label={t('Mount path')}
+                                name={`${volumeFieldName}.mountPath`}
+                                value={volume.mountPath || ''}
+                                isDisabled={isReadOnly}
+                                helperText={t('Absolute path where the volume will be mounted on the container.')}
+                              />
+                            </FormGroup>
+                          )}
+                        </Grid>
+                      </ExpandableFormSection>
+                    </SplitItem>
+                    {!isReadOnly && (
+                      <SplitItem>
+                        <Button
+                          aria-label={t('Delete volume')}
+                          variant="link"
+                          icon={<MinusCircleIcon />}
+                          iconPosition="start"
+                          onClick={() => remove(volumeIndex)}
                         />
-                      </FormGroupWithHelperText>
+                      </SplitItem>
                     )}
-
-                    <FormGroupWithHelperText
-                      label={t('Mount path')}
-                      content={t(
-                        'Optional: Mount path in the container. Can include options like ":ro" for read-only (e.g., "/data:ro").',
-                      )}
-                    >
-                      <TextField
-                        aria-label={t('Mount path')}
-                        name={`${volumeFieldName}.mountPath`}
-                        value={volume.mountPath || ''}
-                        placeholder={t('e.g., /data or /data:ro')}
-                        isDisabled={isReadOnly}
-                        helperText={t('Path where the volume will be mounted in the container')}
-                      />
-                    </FormGroupWithHelperText>
-                  </Grid>
+                  </Split>
                 </FormSection>
               );
             })}
@@ -133,6 +182,7 @@ const ApplicationVolumeForm = ({ appFieldName, volumes, isReadOnly }: Applicatio
                   onClick={() => {
                     push({
                       name: '',
+                      volumeType: undefined,
                     });
                   }}
                 >
