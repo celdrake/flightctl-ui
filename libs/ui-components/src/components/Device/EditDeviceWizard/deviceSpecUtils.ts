@@ -2,6 +2,7 @@ import {
   AppType,
   // eslint-disable-next-line no-restricted-imports
   ApplicationProviderSpec,
+  ApplicationResources,
   ApplicationVolume,
   ConfigProviderSpec,
   DeviceSpec,
@@ -9,6 +10,7 @@ import {
   FileSpec,
   GitConfigProviderSpec,
   HttpConfigProviderSpec,
+  ImageApplicationProviderSpec,
   ImageMountVolumeProviderSpec,
   InlineApplicationProviderSpec,
   InlineConfigProviderSpec,
@@ -18,25 +20,27 @@ import {
 import {
   AppForm,
   AppSpecType,
+  ComposeInlineAppForm,
   ConfigSourceProvider,
   ConfigType,
   GitConfigTemplate,
   HttpConfigTemplate,
-  ImageAppForm,
-  InlineAppForm,
   InlineConfigTemplate,
   KubeSecretTemplate,
+  QuadletInlineAppForm,
   SpecConfigTemplate,
   SystemdUnitFormValue,
+  isComposeImageAppForm,
+  isContainerAppForm,
   isGitConfigTemplate,
   isGitProviderSpec,
   isHttpConfigTemplate,
   isHttpProviderSpec,
-  isImageAppForm,
   isImageAppProvider,
   isInlineProviderSpec,
   isKubeProviderSpec,
   isKubeSecretTemplate,
+  isQuadletImageAppForm,
 } from '../../../types/deviceSpec';
 import { ApplicationProviderSpecFixed, InlineApplicationFileFixed } from '../../../types/extraTypes';
 
@@ -227,7 +231,39 @@ export const toAPIApplication = (app: AppForm): ApplicationProviderSpec => {
     return volume;
   });
 
-  if (isImageAppForm(app)) {
+  if (isContainerAppForm(app)) {
+    const data: ImageApplicationProviderSpec & ApplicationProviderSpec = {
+      image: app.image,
+      appType: app.appType,
+      envVars,
+      volumes,
+    };
+    if (app.name) {
+      data.name = app.name;
+    }
+    // Add ports if present
+    if (app.ports && app.ports.length > 0) {
+      data.ports = app.ports.filter((p) => p.trim() !== '');
+    }
+    // Add resources if present
+    if (app.resources?.limits) {
+      const resources: ApplicationResources = {
+        limits: {},
+      };
+      if (app.resources.limits.cpu) {
+        resources.limits!.cpu = app.resources.limits.cpu;
+      }
+      if (app.resources.limits.memory) {
+        resources.limits!.memory = app.resources.limits.memory;
+      }
+      if (resources.limits && (resources.limits.cpu || resources.limits.memory)) {
+        data.resources = resources;
+      }
+    }
+    return data as ApplicationProviderSpec;
+  }
+
+  if (isQuadletImageAppForm(app) || isComposeImageAppForm(app)) {
     const data: ApplicationProviderSpec = {
       image: app.image,
       appType: app.appType,
@@ -240,6 +276,7 @@ export const toAPIApplication = (app: AppForm): ApplicationProviderSpec => {
     return data;
   }
 
+  // Inline applications (Quadlet or Compose)
   return {
     name: app.name,
     appType: app.appType,
@@ -255,7 +292,10 @@ export const toAPIApplication = (app: AppForm): ApplicationProviderSpec => {
   };
 };
 
-const hasInlineApplicationChanged = (currentApp: InlineApplicationProviderSpec, updatedApp: InlineAppForm) => {
+const hasInlineApplicationChanged = (
+  currentApp: InlineApplicationProviderSpec,
+  updatedApp: QuadletInlineAppForm | ComposeInlineAppForm,
+) => {
   if (currentApp.inline.length != updatedApp.files.length) {
     return true;
   }
@@ -320,9 +360,23 @@ export const getApplicationPatches = (
       }
 
       if (isCurrentImageApp) {
-        return (updatedApp as ImageAppForm).image !== currentApp.image;
+        const imageChanged =
+          (isQuadletImageAppForm(updatedApp) || isComposeImageAppForm(updatedApp) ? updatedApp.image : '') !==
+          currentApp.image;
+        if (imageChanged) {
+          return true;
+        }
+        // For Container type, also check ports and resources
+        if (isContainerAppForm(updatedApp)) {
+          const currentAppImage = currentApp as ImageApplicationProviderSpec;
+          const portsChanged = JSON.stringify(currentAppImage.ports || []) !== JSON.stringify(updatedApp.ports || []);
+          const resourcesChanged =
+            JSON.stringify(currentAppImage.resources || {}) !== JSON.stringify(updatedApp.resources || {});
+          return portsChanged || resourcesChanged;
+        }
+        return false;
       }
-      return hasInlineApplicationChanged(currentApp, updatedApp as InlineAppForm);
+      return hasInlineApplicationChanged(currentApp, updatedApp as QuadletInlineAppForm | ComposeInlineAppForm);
     });
     if (needsPatch) {
       patches.push({
@@ -397,6 +451,27 @@ export const getApplicationValues = (deviceSpec?: DeviceSpec): AppForm[] => {
     if (!app.appType) {
       throw new Error('Application appType is required');
     }
+    // Check for Container type first (it's also image-based)
+    if (app.appType === AppType.AppTypeContainer && isImageAppProvider(app)) {
+      const imageApp = app as ImageApplicationProviderSpec;
+      return {
+        specType: AppSpecType.OCI_IMAGE,
+        name: app.name || '',
+        image: app.image,
+        appType: AppType.AppTypeContainer,
+        variables: getAppFormVariables(app),
+        volumes: app.volumes || [],
+        ports: imageApp.ports || [],
+        resources: imageApp.resources
+          ? {
+              limits: {
+                cpu: imageApp.resources.limits?.cpu,
+                memory: imageApp.resources.limits?.memory,
+              },
+            }
+          : undefined,
+      };
+    }
     if (isImageAppProvider(app)) {
       return {
         specType: AppSpecType.OCI_IMAGE,
@@ -416,7 +491,7 @@ export const getApplicationValues = (deviceSpec?: DeviceSpec): AppForm[] => {
       files: inlineApp.inline,
       variables: getAppFormVariables(app),
       volumes: app.volumes || [],
-    } as InlineAppForm;
+    } as QuadletInlineAppForm | ComposeInlineAppForm;
   });
 };
 

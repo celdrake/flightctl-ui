@@ -11,8 +11,11 @@ import {
   AppForm,
   AppSpecType,
   DeviceSpecConfigFormValues,
-  isImageAppForm,
-  isInlineAppForm,
+  isComposeImageAppForm,
+  isComposeInlineAppForm,
+  isContainerAppForm,
+  isQuadletImageAppForm,
+  isQuadletInlineAppForm,
 } from '../../../../types/deviceSpec';
 import { useTranslation } from '../../../../hooks/useTranslation';
 import TextField from '../../../form/TextField';
@@ -23,10 +26,12 @@ import ExpandableFormSection from '../../../form/ExpandableFormSection';
 import { FormGroupWithHelperText } from '../../../common/WithHelperText';
 import ApplicationImageForm from './ApplicationImageForm';
 import ApplicationInlineForm from './ApplicationInlineForm';
+import ApplicationContainerForm from './ApplicationContainerForm';
 
 import './ApplicationsForm.css';
 
 const appTypeOptions = (t: TFunction) => ({
+  [AppType.AppTypeContainer]: t('Single Container'),
   [AppType.AppTypeQuadlet]: t('Quadlet application'),
   [AppType.AppTypeCompose]: t('Compose application'),
 });
@@ -35,8 +40,9 @@ const ApplicationSection = ({ index, isReadOnly }: { index: number; isReadOnly?:
   const { t } = useTranslation();
   const appFieldName = `applications[${index}]`;
   const [{ value: app }, { error }, { setValue }] = useField<AppForm>(appFieldName);
-  const isImageIncomplete = app.specType === AppSpecType.OCI_IMAGE && !('image' in app);
-  const isInlineIncomplete = app.specType === AppSpecType.INLINE && !('files' in app);
+  const isContainer = isContainerAppForm(app);
+  const isImageIncomplete = !isContainer && app.specType === AppSpecType.OCI_IMAGE && !('image' in app);
+  const isInlineIncomplete = !isContainer && app.specType === AppSpecType.INLINE && !('files' in app);
   const shouldResetApp = isInlineIncomplete || isImageIncomplete;
 
   // @ts-expect-error Formik error object includes "variables"
@@ -45,27 +51,52 @@ const ApplicationSection = ({ index, isReadOnly }: { index: number; isReadOnly?:
   const appTypesOptions = appTypeOptions(t);
 
   React.useEffect(() => {
+    // When switching appType to Container, initialize Container-specific fields
+    if (isContainer && !('image' in app)) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+      const appName = (app as AppForm).name;
+      setValue(
+        {
+          appType: AppType.AppTypeContainer,
+          specType: AppSpecType.OCI_IMAGE,
+          name: appName || '',
+          image: '',
+          variables: [],
+          ports: [],
+        } as AppForm,
+        false,
+      );
+      return;
+    }
+
     // When switching specType, the app becomes "incomplete" and we must add the required fields for the new type
-    if (shouldResetApp) {
-      if (app.specType === AppSpecType.INLINE) {
+    if (shouldResetApp && !isContainer) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+      const appType = (app as AppForm).appType;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+      const appName = (app as AppForm).name;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+      const specType = (app as AppForm).specType;
+
+      if (specType === AppSpecType.INLINE) {
         // Switching to inline - need files
         setValue(
           {
             specType: AppSpecType.INLINE,
-            appType: app.appType,
-            name: app.name || '',
+            appType: appType,
+            name: appName || '',
             files: [{ path: '', content: '' }],
             variables: [],
           } as AppForm,
           false,
         );
-      } else if (app.specType === AppSpecType.OCI_IMAGE) {
+      } else if (specType === AppSpecType.OCI_IMAGE) {
         // Switching to image - need image field
         setValue(
           {
             specType: AppSpecType.OCI_IMAGE,
-            appType: app.appType,
-            name: app.name || '',
+            appType: appType,
+            name: appName || '',
             image: '',
             variables: [],
           } as AppForm,
@@ -73,7 +104,7 @@ const ApplicationSection = ({ index, isReadOnly }: { index: number; isReadOnly?:
         );
       }
     }
-  }, [shouldResetApp, app.specType, app.appType, app.name, setValue]);
+  }, [shouldResetApp, isContainer, app.specType, app.appType, app.name, app, setValue]);
 
   return (
     <ExpandableFormSection
@@ -91,65 +122,83 @@ const ApplicationSection = ({ index, isReadOnly }: { index: number; isReadOnly?:
           />
         </FormGroup>
 
-        <FormGroupWithHelperText
-          label={t('Definition source')}
-          isRequired
-          content={
-            <Stack hasGutter>
-              <StackItem>
-                <strong>{t('Configuration Sources')}:</strong>
-              </StackItem>
-              <StackItem>
-                <u>
-                  <li>
-                    <strong>{t('OCI reference')}</strong> -{' '}
-                    {t('Pull definitions from container registry (reusable, versioned).')}
-                  </li>
-                  <li>
-                    <strong>{t('Inline')}</strong> -{' '}
-                    {t('Define application files directly in this interface (custom, one-off).')}
-                  </li>
-                </u>
-              </StackItem>
-            </Stack>
-          }
-        >
-          <Split hasGutter>
-            <SplitItem>
-              <RadioField
-                id={`${appFieldName}-spec-type-image`}
-                name={`${appFieldName}.specType`}
-                label={t('OCI reference URL')}
-                checkedValue={AppSpecType.OCI_IMAGE}
-                isDisabled={isReadOnly}
-              />
-            </SplitItem>
-            <SplitItem>
-              <RadioField
-                id={`${appFieldName}-spec-type-inline`}
-                name={`${appFieldName}.specType`}
-                label={t('Inline')}
-                checkedValue={AppSpecType.INLINE}
-                isDisabled={isReadOnly}
-              />
-            </SplitItem>{' '}
-          </Split>
-        </FormGroupWithHelperText>
+        {isContainer ? (
+          <>
+            <FormGroupWithHelperText
+              label={t('Application name')}
+              content={t('If not specified, the image name will be used. Application name must be unique.')}
+            >
+              <TextField aria-label={t('Application name')} name={`${appFieldName}.name`} isDisabled={isReadOnly} />
+            </FormGroupWithHelperText>
+            <ApplicationContainerForm app={app} index={index} isReadOnly={isReadOnly} />
+          </>
+        ) : (
+          <>
+            <FormGroupWithHelperText
+              label={t('Definition source')}
+              isRequired
+              content={
+                <Stack hasGutter>
+                  <StackItem>
+                    <strong>{t('Configuration Sources')}:</strong>
+                  </StackItem>
+                  <StackItem>
+                    <u>
+                      <li>
+                        <strong>{t('OCI reference')}</strong> -{' '}
+                        {t('Pull definitions from container registry (reusable, versioned).')}
+                      </li>
+                      <li>
+                        <strong>{t('Inline')}</strong> -{' '}
+                        {t('Define application files directly in this interface (custom, one-off).')}
+                      </li>
+                    </u>
+                  </StackItem>
+                </Stack>
+              }
+            >
+              <Split hasGutter>
+                <SplitItem>
+                  <RadioField
+                    id={`${appFieldName}-spec-type-image`}
+                    name={`${appFieldName}.specType`}
+                    label={t('OCI reference URL')}
+                    checkedValue={AppSpecType.OCI_IMAGE}
+                    isDisabled={isReadOnly}
+                  />
+                </SplitItem>
+                <SplitItem>
+                  <RadioField
+                    id={`${appFieldName}-spec-type-inline`}
+                    name={`${appFieldName}.specType`}
+                    label={t('Inline')}
+                    checkedValue={AppSpecType.INLINE}
+                    isDisabled={isReadOnly}
+                  />
+                </SplitItem>{' '}
+              </Split>
+            </FormGroupWithHelperText>
 
-        <FormGroupWithHelperText
-          label={t('Application name')}
-          content={
-            app.specType === AppSpecType.INLINE
-              ? t('The unique identifier for this application.')
-              : t('If not specified, the image name will be used. Application name must be unique.')
-          }
-          isRequired={app.specType === AppSpecType.INLINE}
-        >
-          <TextField aria-label={t('Application name')} name={`${appFieldName}.name`} isDisabled={isReadOnly} />
-        </FormGroupWithHelperText>
+            <FormGroupWithHelperText
+              label={t('Application name')}
+              content={
+                app.specType === AppSpecType.INLINE
+                  ? t('The unique identifier for this application.')
+                  : t('If not specified, the image name will be used. Application name must be unique.')
+              }
+              isRequired={app.specType === AppSpecType.INLINE}
+            >
+              <TextField aria-label={t('Application name')} name={`${appFieldName}.name`} isDisabled={isReadOnly} />
+            </FormGroupWithHelperText>
 
-        {isImageAppForm(app) && <ApplicationImageForm app={app} index={index} isReadOnly={isReadOnly} />}
-        {isInlineAppForm(app) && <ApplicationInlineForm app={app} index={index} isReadOnly={isReadOnly} />}
+            {(isQuadletImageAppForm(app) || isComposeImageAppForm(app)) && (
+              <ApplicationImageForm app={app} index={index} isReadOnly={isReadOnly} />
+            )}
+            {(isQuadletInlineAppForm(app) || isComposeInlineAppForm(app)) && (
+              <ApplicationInlineForm app={app} index={index} isReadOnly={isReadOnly} />
+            )}
+          </>
+        )}
 
         <FieldArray name={`${appFieldName}.variables`}>
           {({ push, remove }) => (
@@ -266,10 +315,12 @@ const ApplicationTemplates = ({ isReadOnly }: { isReadOnly?: boolean }) => {
                       iconPosition="start"
                       onClick={() => {
                         push({
-                          appType: AppType.AppTypeQuadlet,
-                          specType: AppSpecType.INLINE,
+                          appType: AppType.AppTypeContainer,
+                          specType: AppSpecType.OCI_IMAGE,
                           name: '',
+                          image: '',
                           variables: [],
+                          ports: [],
                         });
                       }}
                     >

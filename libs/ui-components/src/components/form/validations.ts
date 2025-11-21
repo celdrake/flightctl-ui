@@ -9,26 +9,28 @@ import {
   AppSpecType,
   BatchForm,
   BatchLimitType,
-  ComposeAppForm,
+  ComposeImageAppForm,
+  ComposeInlineAppForm,
   DisruptionBudgetForm,
   GitConfigTemplate,
   HttpConfigTemplate,
-  ImageAppForm,
-  InlineAppForm,
   InlineConfigTemplate,
   KubeSecretTemplate,
-  QuadletAppForm,
+  QuadletImageAppForm,
+  QuadletInlineAppForm,
   RolloutPolicyForm,
   SpecConfigTemplate,
   SystemdUnitFormValue,
   UpdatePolicyForm,
   getAppIdentifier,
+  isComposeImageAppForm,
+  isContainerAppForm,
   isGitConfigTemplate,
   isHttpConfigTemplate,
-  isImageAppForm,
   isInlineConfigTemplate,
   isKubeSecretTemplate,
-  isQuadletAppForm,
+  isQuadletImageAppForm,
+  isQuadletInlineAppForm,
 } from '../../types/deviceSpec';
 import { labelToString } from '../../utils/labels';
 import { UpdateScheduleMode } from '../../utils/time';
@@ -365,7 +367,11 @@ const inlineAppFileSchema = (t: TFunction) =>
 
 // Common test for unique file paths in inline applications
 const uniqueFilePathsTest =
-  (t: TFunction) => (files: InlineAppForm['files'] | undefined, testContext: Yup.TestContext<Yup.AnyObject>) => {
+  (t: TFunction) =>
+  (
+    files: (QuadletInlineAppForm | ComposeInlineAppForm)['files'] | undefined,
+    testContext: Yup.TestContext<Yup.AnyObject>,
+  ) => {
     if (!files || files.length === 0) {
       return true;
     }
@@ -380,10 +386,9 @@ const uniqueFilePathsTest =
       return true;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    const duplicateIndex = ((testContext.parent.files || []) as InlineAppForm['files']).findIndex((file) =>
-      duplicateFilePaths.includes(file.path),
-    );
+    const parentFiles = (testContext.parent as { files?: (QuadletInlineAppForm | ComposeInlineAppForm)['files'] })
+      .files;
+    const duplicateIndex = (parentFiles || []).findIndex((file) => duplicateFilePaths.includes(file.path));
 
     if (duplicateIndex === -1) {
       return true;
@@ -396,7 +401,7 @@ const uniqueFilePathsTest =
   };
 
 const composeFileName =
-  (t: TFunction) => (files: ComposeAppForm['files'], testContext: Yup.TestContext<Yup.AnyObject>) => {
+  (t: TFunction) => (files: ComposeInlineAppForm['files'], testContext: Yup.TestContext<Yup.AnyObject>) => {
     const invalidFiles = files
       .map((file, index) => {
         if (!file.path) {
@@ -437,7 +442,7 @@ const isAtRoot = (path: string): boolean => {
 
 // Validation for quadlet applications: checks for unsupported types first, then requires at least one supported type
 const quadletFileTypesValidation =
-  (t: TFunction) => (files: QuadletAppForm['files'], testContext: Yup.TestContext<Yup.AnyObject>) => {
+  (t: TFunction) => (files: QuadletInlineAppForm['files'], testContext: Yup.TestContext<Yup.AnyObject>) => {
     if (!files || files.length === 0) {
       return true; // This is handled by the min(1) requirement
     }
@@ -496,7 +501,7 @@ const quadletFileTypesValidation =
 
 // Validation for quadlet applications: quadlet files must be at root level
 const quadletFilesAtRoot =
-  (t: TFunction) => (files: QuadletAppForm['files'], testContext: Yup.TestContext<Yup.AnyObject>) => {
+  (t: TFunction) => (files: QuadletInlineAppForm['files'], testContext: Yup.TestContext<Yup.AnyObject>) => {
     if (!files || files.length === 0) {
       return true;
     }
@@ -526,13 +531,56 @@ const quadletFilesAtRoot =
     return true;
   };
 
+// Port mapping format: "hostPort:containerPort"
+const PORT_MAPPING_REGEXP = /^\d+:\d+$/;
+
 export const validApplicationsSchema = (t: TFunction) => {
   return Yup.array()
     .of(
       Yup.lazy((value: AppForm) => {
-        if (isImageAppForm(value)) {
-          // Image applications (can be either compose or quadlet)
-          return Yup.object<ImageAppForm>().shape({
+        // Container applications (image-based with ports and resources)
+        if (isContainerAppForm(value)) {
+          return Yup.object().shape({
+            specType: Yup.string()
+              .oneOf([AppSpecType.OCI_IMAGE])
+              .required(t('Definition source must be image for this type of applications')),
+            appType: Yup.string().oneOf([AppType.AppTypeContainer]).required(t('Application type is required')),
+            name: Yup.string().matches(
+              APPLICATION_NAME_REGEXP,
+              t(
+                'Use lowercase alphanumeric characters, or dash (-). Must start and end with an alphanumeric character.',
+              ),
+            ),
+            image: Yup.string()
+              .required(t('Image is required.'))
+              .matches(APPLICATION_IMAGE_REGEXP, t('Application image includes invalid characters.')),
+            ports: Yup.array()
+              .of(
+                Yup.string()
+                  .matches(
+                    PORT_MAPPING_REGEXP,
+                    t('Port mapping must be in format "hostPort:containerPort" (e.g., "8080:80")'),
+                  )
+                  .required(),
+              )
+              .optional(),
+            resources: Yup.object()
+              .shape({
+                limits: Yup.object()
+                  .shape({
+                    cpu: Yup.string().optional(),
+                    memory: Yup.string().optional(),
+                  })
+                  .optional(),
+              })
+              .optional(),
+            variables: appVariablesSchema(t),
+          });
+        }
+
+        // Image applications (Quadlet or Compose)
+        if (isQuadletImageAppForm(value) || isComposeImageAppForm(value)) {
+          return Yup.object<QuadletImageAppForm | ComposeImageAppForm>().shape({
             specType: Yup.string()
               .oneOf([AppSpecType.OCI_IMAGE])
               .required(t('Definition source must be image for this type of applications')),
@@ -553,8 +601,8 @@ export const validApplicationsSchema = (t: TFunction) => {
         }
 
         // Inline quadlet applications
-        if (isQuadletAppForm(value)) {
-          return Yup.object<QuadletAppForm>().shape({
+        if (isQuadletInlineAppForm(value)) {
+          return Yup.object<QuadletInlineAppForm>().shape({
             specType: appSpecTypeSchema(t),
             appType: Yup.string().oneOf([AppType.AppTypeQuadlet]).required(t('Application type is required')),
             name: inlineAppNameSchema(t, 'quadlet'),
@@ -567,7 +615,7 @@ export const validApplicationsSchema = (t: TFunction) => {
         }
 
         // Inline compose applications
-        return Yup.object<ComposeAppForm>().shape({
+        return Yup.object<ComposeInlineAppForm>().shape({
           specType: appSpecTypeSchema(t),
           appType: Yup.string().oneOf([AppType.AppTypeCompose]).required(t('Application type is required')),
           name: inlineAppNameSchema(t, 'compose'),

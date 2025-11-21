@@ -1,5 +1,6 @@
 import {
   AppType,
+  ApplicationResources,
   ApplicationVolume,
   ConfigProviderSpec,
   DisruptionBudget,
@@ -47,30 +48,45 @@ type InlineContent = {
 };
 
 type AppBase = {
-  specType: AppSpecType;
   appType: AppType;
+  specType: AppSpecType;
   name?: string;
   variables: { name: string; value: string }[];
   volumes?: ApplicationVolumeForm[];
 };
 
-export type ImageAppForm = AppBase & {
-  appType: AppType.AppTypeCompose | AppType.AppTypeQuadlet;
+export type SingleContainerAppForm = AppBase & {
+  appType: AppType.AppTypeContainer;
+  specType: AppSpecType.OCI_IMAGE;
+  name: string;
+  image: string;
+  ports?: string[]; // Format: "hostPort:containerPort"
+  resources?: ApplicationResources;
+};
+
+export type QuadletImageAppForm = AppBase & {
+  appType: AppType.AppTypeQuadlet;
+  specType: AppSpecType.OCI_IMAGE;
   image: string;
 };
 
-export type InlineAppForm = ComposeAppForm | QuadletAppForm;
-
-export type ComposeAppForm = AppBase & {
-  appType: AppType.AppTypeCompose;
-  name: string; // name can only be optional for image applications
+export type QuadletInlineAppForm = AppBase & {
+  appType: AppType.AppTypeQuadlet;
+  specType: AppSpecType.INLINE;
+  name: string; // transforms the field in required
   files: InlineContent[];
 };
 
-// Technically it's the same as ComposeAppForm, with a different "appType"
-export type QuadletAppForm = AppBase & {
-  appType: AppType.AppTypeQuadlet;
-  name: string; // name can only be optional for image applications
+export type ComposeImageAppForm = AppBase & {
+  appType: AppType.AppTypeCompose;
+  specType: AppSpecType.OCI_IMAGE;
+  image: string;
+};
+
+export type ComposeInlineAppForm = AppBase & {
+  appType: AppType.AppTypeCompose;
+  specType: AppSpecType.INLINE;
+  name: string;
   files: InlineContent[];
 };
 
@@ -91,16 +107,29 @@ export type RepoConfig = GitConfigProviderSpec | HttpConfigProviderSpec;
 export const isRepoConfig = (config: ConfigSourceProvider): config is RepoConfig =>
   isGitProviderSpec(config) || isHttpProviderSpec(config);
 
-export type AppForm = ImageAppForm | InlineAppForm;
+export type AppForm =
+  | QuadletImageAppForm
+  | QuadletInlineAppForm
+  | ComposeImageAppForm
+  | ComposeInlineAppForm
+  | SingleContainerAppForm;
 
 export const isInlineAppProvider = (app: ApplicationProviderSpecFixed): app is InlineApplicationProviderSpec =>
   'inline' in app;
 export const isImageAppProvider = (app: ApplicationProviderSpecFixed): app is ImageApplicationProviderSpec =>
   'image' in app;
 
-export const isImageAppForm = (app: AppBase): app is ImageAppForm => app.specType === AppSpecType.OCI_IMAGE;
-export const isInlineAppForm = (app: AppBase): app is InlineAppForm => app.specType === AppSpecType.INLINE;
-export const isQuadletAppForm = (app: AppBase): app is QuadletAppForm => app.appType === AppType.AppTypeQuadlet;
+// Type guards for the 5 explicit types
+export const isQuadletImageAppForm = (app: AppBase): app is QuadletImageAppForm =>
+  app.appType === AppType.AppTypeQuadlet && app.specType === AppSpecType.OCI_IMAGE;
+export const isQuadletInlineAppForm = (app: AppBase): app is QuadletInlineAppForm =>
+  app.appType === AppType.AppTypeQuadlet && app.specType === AppSpecType.INLINE;
+export const isComposeImageAppForm = (app: AppBase): app is ComposeImageAppForm =>
+  app.appType === AppType.AppTypeCompose && app.specType === AppSpecType.OCI_IMAGE;
+export const isComposeInlineAppForm = (app: AppBase): app is ComposeInlineAppForm =>
+  app.appType === AppType.AppTypeCompose && app.specType === AppSpecType.INLINE;
+export const isContainerAppForm = (app: AppBase): app is SingleContainerAppForm =>
+  app.appType === AppType.AppTypeContainer;
 
 export type ApplicationVolumeForm = ApplicationVolume & {
   image?: ImageVolumeSource;
@@ -110,7 +139,10 @@ export type ApplicationVolumeForm = ApplicationVolume & {
 const hasTemplateVariables = (str: string) => /{{.+?}}/.test(str);
 
 export const getAppIdentifier = (app: AppForm) => {
-  if (isImageAppForm(app)) {
+  if (isContainerAppForm(app)) {
+    return app.name || app.image;
+  }
+  if (isQuadletImageAppForm(app) || isComposeImageAppForm(app)) {
     return app.name || app.image;
   }
   // Name is mandatory for inline applications
