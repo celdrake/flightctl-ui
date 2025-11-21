@@ -40,10 +40,14 @@ const ApplicationSection = ({ index, isReadOnly }: { index: number; isReadOnly?:
   const { t } = useTranslation();
   const appFieldName = `applications[${index}]`;
   const [{ value: app }, { error }, { setValue }] = useField<AppForm>(appFieldName);
+  const { appType, specType, name: appName } = app;
+
   const isContainer = isContainerAppForm(app);
-  const isImageIncomplete = !isContainer && app.specType === AppSpecType.OCI_IMAGE && !('image' in app);
-  const isInlineIncomplete = !isContainer && app.specType === AppSpecType.INLINE && !('files' in app);
-  const shouldResetApp = isInlineIncomplete || isImageIncomplete;
+  const isImageIncomplete = !isContainer && specType === AppSpecType.OCI_IMAGE && !('image' in app);
+  const isInlineIncomplete = !isContainer && specType === AppSpecType.INLINE && !('files' in app);
+  const isContainerIncomplete = isContainer && !('image' in app);
+
+  const shouldResetApp = isInlineIncomplete || isImageIncomplete || isContainerIncomplete;
 
   // @ts-expect-error Formik error object includes "variables"
   const appVarsError = typeof error?.variables === 'string' ? (error.variables as string) : undefined; // eslint-disable @typescript-eslint/no-unsafe-assignment
@@ -51,10 +55,11 @@ const ApplicationSection = ({ index, isReadOnly }: { index: number; isReadOnly?:
   const appTypesOptions = appTypeOptions(t);
 
   React.useEffect(() => {
+    if (!shouldResetApp) {
+      return;
+    }
     // When switching appType to Container, initialize Container-specific fields
-    if (isContainer && !('image' in app)) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-      const appName = (app as AppForm).name;
+    if (isContainer) {
       setValue(
         {
           appType: AppType.AppTypeContainer,
@@ -71,41 +76,32 @@ const ApplicationSection = ({ index, isReadOnly }: { index: number; isReadOnly?:
     }
 
     // When switching specType, the app becomes "incomplete" and we must add the required fields for the new type
-    if (shouldResetApp && !isContainer) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-      const appType = (app as AppForm).appType;
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-      const appName = (app as AppForm).name;
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-      const specType = (app as AppForm).specType;
-
-      if (specType === AppSpecType.INLINE) {
-        // Switching to inline - need files
-        setValue(
-          {
-            specType: AppSpecType.INLINE,
-            appType: appType,
-            name: appName || '',
-            files: [{ path: '', content: '' }],
-            variables: [],
-          } as AppForm,
-          false,
-        );
-      } else if (specType === AppSpecType.OCI_IMAGE) {
-        // Switching to image - need image field
-        setValue(
-          {
-            specType: AppSpecType.OCI_IMAGE,
-            appType: appType,
-            name: appName || '',
-            image: '',
-            variables: [],
-          } as AppForm,
-          false,
-        );
-      }
+    if (specType === AppSpecType.INLINE) {
+      // Switching to inline - need files
+      setValue(
+        {
+          specType: AppSpecType.INLINE,
+          appType,
+          name: appName || '',
+          files: [{ path: '', content: '' }],
+          variables: [],
+        } as AppForm,
+        false,
+      );
+    } else if (specType === AppSpecType.OCI_IMAGE) {
+      // Switching to image - need image field
+      setValue(
+        {
+          specType: AppSpecType.OCI_IMAGE,
+          appType,
+          name: appName || '',
+          image: '',
+          variables: [],
+        } as AppForm,
+        false,
+      );
     }
-  }, [shouldResetApp, isContainer, app.specType, app.appType, app.name, app, setValue]);
+  }, [shouldResetApp, isContainer, specType, appType, appName, setValue]);
 
   return (
     <ExpandableFormSection
