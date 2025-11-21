@@ -16,6 +16,7 @@ import {
   HttpConfigTemplate,
   InlineConfigTemplate,
   KubeSecretTemplate,
+  PortMapping,
   QuadletImageAppForm,
   QuadletInlineAppForm,
   RolloutPolicyForm,
@@ -531,8 +532,69 @@ const quadletFilesAtRoot =
     return true;
   };
 
-// Port mapping format: "hostPort:containerPort"
-const PORT_MAPPING_REGEXP = /^\d+:\d+$/;
+const PORT_NUMBER_REGEXP = /^\d+$/;
+const MIN_PORT = 1;
+const MAX_PORT = 65535;
+
+export const validatePortNumber = (port: string, t: TFunction): string | undefined => {
+  if (!port.trim()) {
+    return undefined; // Empty is allowed (not required until adding)
+  }
+  if (!PORT_NUMBER_REGEXP.test(port)) {
+    return t('Port must be a number');
+  }
+  // Check port range: must be between 1 and 65535
+  const num = Number.parseInt(port.trim(), 10);
+  if (Number.isNaN(num)) {
+    return t('Port must be a number');
+  }
+  if (num === 0) {
+    return t('Port 0 is reserved and cannot be used');
+  }
+  if (num < MIN_PORT || num > MAX_PORT) {
+    return t('Port must be between 1 and 65535');
+  }
+  return undefined;
+};
+
+export const isValidPortNumber = (port: string): boolean => {
+  const trimmed = port.trim();
+  if (!trimmed) return false;
+  const num = Number.parseInt(trimmed, 10);
+  return !Number.isNaN(num) && num > 0 && num <= MAX_PORT && num.toString() === trimmed;
+};
+
+/**
+ * Checks if a port mapping already exists in the list of existing ports
+ * @param hostPort - Host port string
+ * @param containerPort - Container port string
+ * @param existingPorts - Array of existing port mappings to check against
+ * @returns true if the mapping is a duplicate
+ */
+export const isDuplicatePortMapping = (
+  hostPort: string,
+  containerPort: string,
+  existingPorts: PortMapping[] = [],
+): boolean => {
+  if (!hostPort.trim() || !containerPort.trim()) {
+    return false;
+  }
+  const trimmedHostPort = hostPort.trim();
+  const trimmedContainerPort = containerPort.trim();
+  return existingPorts.some((port) => port.hostPort === trimmedHostPort && port.containerPort === trimmedContainerPort);
+};
+
+export const isValidPortMapping = (
+  hostPort: string,
+  containerPort: string,
+  existingPorts: PortMapping[] = [],
+): boolean => {
+  if (!isValidPortNumber(hostPort) || !isValidPortNumber(containerPort)) {
+    return false;
+  }
+  // Check for duplicate
+  return !isDuplicatePortMapping(hostPort, containerPort, existingPorts);
+};
 
 export const validApplicationsSchema = (t: TFunction) => {
   return Yup.array()
@@ -559,11 +621,17 @@ export const validApplicationsSchema = (t: TFunction) => {
                 Yup.object()
                   .shape({
                     hostPort: Yup.string()
-                      .matches(/^\d+$/, t('Host port must be a number'))
-                      .required(t('Host port is required')),
+                      .required(t('Host port is required'))
+                      .test('valid-host-port', (value, testContext) => {
+                        const error = validatePortNumber(value || '', t);
+                        return error ? testContext.createError({ message: error }) : true;
+                      }),
                     containerPort: Yup.string()
-                      .matches(/^\d+$/, t('Container port must be a number'))
-                      .required(t('Container port is required')),
+                      .required(t('Container port is required'))
+                      .test('valid-container-port', (value, testContext) => {
+                        const error = validatePortNumber(value || '', t);
+                        return error ? testContext.createError({ message: error }) : true;
+                      }),
                   })
                   .required(),
               )
