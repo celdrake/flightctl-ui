@@ -5,8 +5,8 @@ import { InfoCircleIcon } from '@patternfly/react-icons/dist/js/icons/info-circl
 import { useTranslation } from '../../../hooks/useTranslation';
 import { TFunction } from 'react-i18next';
 
-const generalInfoStepIndex = 0;
-const deviceTemplateStepIndex = 1;
+const generalInfoStepIndex = 1;
+const deviceTemplateStepIndex = 0;
 const deviceUpdatesStepIndex = 2;
 const reviewDeviceStepIndex = 3;
 

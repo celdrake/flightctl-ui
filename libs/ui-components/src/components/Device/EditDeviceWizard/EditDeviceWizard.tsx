@@ -133,11 +133,11 @@ const EditDeviceWizard = () => {
                   }
                 }}
               >
-                <WizardStep name={t('General info')} id={generalInfoStepId}>
-                  <GeneralInfoStep />
-                </WizardStep>
                 <WizardStep name={t('Device template')} id={deviceTemplateStepId} isDisabled={isTemplateStepDisabled}>
                   <DeviceTemplateStep isFleet={false} />
+                </WizardStep>
+                <WizardStep name={t('General info')} id={generalInfoStepId}>
+                  <GeneralInfoStep />
                 </WizardStep>
                 <WizardStep name={t('Updates')} id={deviceUpdatePolicyStepId} isDisabled={isUpdateStepDisabled}>
                   <DeviceUpdateStep />

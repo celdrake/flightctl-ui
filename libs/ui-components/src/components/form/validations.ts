@@ -2,33 +2,37 @@ import * as Yup from 'yup';
 import { TFunction } from 'i18next';
 import countBy from 'lodash/countBy';
 
-import { AppType } from '@flightctl/types';
+import { AppType, ImagePullPolicy } from '@flightctl/types';
 import { FlightCtlLabel } from '../../types/extraTypes';
 import {
   AppForm,
   AppSpecType,
   BatchForm,
   BatchLimitType,
-  ComposeAppForm,
+  ComposeImageAppForm,
+  ComposeInlineAppForm,
   DisruptionBudgetForm,
   GitConfigTemplate,
   HttpConfigTemplate,
-  ImageAppForm,
-  InlineAppForm,
   InlineConfigTemplate,
   KubeSecretTemplate,
-  QuadletAppForm,
+  PortMapping,
+  QuadletImageAppForm,
+  QuadletInlineAppForm,
   RolloutPolicyForm,
   SpecConfigTemplate,
   SystemdUnitFormValue,
   UpdatePolicyForm,
+  VolumeType,
   getAppIdentifier,
+  isComposeImageAppForm,
+  isContainerAppForm,
   isGitConfigTemplate,
   isHttpConfigTemplate,
-  isImageAppForm,
   isInlineConfigTemplate,
   isKubeSecretTemplate,
-  isQuadletAppForm,
+  isQuadletImageAppForm,
+  isQuadletInlineAppForm,
 } from '../../types/deviceSpec';
 import { labelToString } from '../../utils/labels';
 import { UpdateScheduleMode } from '../../utils/time';
@@ -365,7 +369,11 @@ const inlineAppFileSchema = (t: TFunction) =>
 
 // Common test for unique file paths in inline applications
 const uniqueFilePathsTest =
-  (t: TFunction) => (files: InlineAppForm['files'] | undefined, testContext: Yup.TestContext<Yup.AnyObject>) => {
+  (t: TFunction) =>
+  (
+    files: (QuadletInlineAppForm | ComposeInlineAppForm)['files'] | undefined,
+    testContext: Yup.TestContext<Yup.AnyObject>,
+  ) => {
     if (!files || files.length === 0) {
       return true;
     }
@@ -380,10 +388,9 @@ const uniqueFilePathsTest =
       return true;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    const duplicateIndex = ((testContext.parent.files || []) as InlineAppForm['files']).findIndex((file) =>
-      duplicateFilePaths.includes(file.path),
-    );
+    const parentFiles = (testContext.parent as { files?: (QuadletInlineAppForm | ComposeInlineAppForm)['files'] })
+      .files;
+    const duplicateIndex = (parentFiles || []).findIndex((file) => duplicateFilePaths.includes(file.path));
 
     if (duplicateIndex === -1) {
       return true;
@@ -396,7 +403,7 @@ const uniqueFilePathsTest =
   };
 
 const composeFileName =
-  (t: TFunction) => (files: ComposeAppForm['files'], testContext: Yup.TestContext<Yup.AnyObject>) => {
+  (t: TFunction) => (files: ComposeInlineAppForm['files'], testContext: Yup.TestContext<Yup.AnyObject>) => {
     const invalidFiles = files
       .map((file, index) => {
         if (!file.path) {
@@ -437,7 +444,7 @@ const isAtRoot = (path: string): boolean => {
 
 // Validation for quadlet applications: checks for unsupported types first, then requires at least one supported type
 const quadletFileTypesValidation =
-  (t: TFunction) => (files: QuadletAppForm['files'], testContext: Yup.TestContext<Yup.AnyObject>) => {
+  (t: TFunction) => (files: QuadletInlineAppForm['files'], testContext: Yup.TestContext<Yup.AnyObject>) => {
     if (!files || files.length === 0) {
       return true; // This is handled by the min(1) requirement
     }
@@ -496,7 +503,7 @@ const quadletFileTypesValidation =
 
 // Validation for quadlet applications: quadlet files must be at root level
 const quadletFilesAtRoot =
-  (t: TFunction) => (files: QuadletAppForm['files'], testContext: Yup.TestContext<Yup.AnyObject>) => {
+  (t: TFunction) => (files: QuadletInlineAppForm['files'], testContext: Yup.TestContext<Yup.AnyObject>) => {
     if (!files || files.length === 0) {
       return true;
     }
@@ -526,13 +533,163 @@ const quadletFilesAtRoot =
     return true;
   };
 
+const PORT_NUMBER_REGEXP = /^\d+$/;
+const MAX_PORT = 65535;
+
+export const validatePortNumber = (port: string, t: TFunction): string | undefined => {
+  if (!port.trim()) {
+    return undefined; // Empty is allowed (not required until adding)
+  }
+  if (!PORT_NUMBER_REGEXP.test(port)) {
+    return t('Port must be a number');
+  }
+  // Check port range: must be between 0 and 65535 (0 is valid for auto-assign ephemeral port)
+  const num = Number.parseInt(port.trim(), 10);
+  if (Number.isNaN(num)) {
+    return t('Port must be a number');
+  }
+  if (num < 0 || num > MAX_PORT) {
+    return t('Port must be between 0 and 65535');
+  }
+  return undefined;
+};
+
+export const isValidPortNumber = (port: string): boolean => {
+  const trimmed = port.trim();
+  if (!trimmed) return false;
+  const num = Number.parseInt(trimmed, 10);
+  return !Number.isNaN(num) && num >= 0 && num <= MAX_PORT && num.toString() === trimmed;
+};
+
+/**
+ * Checks if a port mapping already exists in the list of existing ports
+ * @param hostPort - Host port string
+ * @param containerPort - Container port string
+ * @param existingPorts - Array of existing port mappings to check against
+ * @returns true if the mapping is a duplicate
+ */
+export const isDuplicatePortMapping = (
+  hostPort: string,
+  containerPort: string,
+  existingPorts: PortMapping[] = [],
+): boolean => {
+  if (!hostPort.trim() || !containerPort.trim()) {
+    return false;
+  }
+  const trimmedHostPort = hostPort.trim();
+  const trimmedContainerPort = containerPort.trim();
+  return existingPorts.some((port) => port.hostPort === trimmedHostPort && port.containerPort === trimmedContainerPort);
+};
+
+export const isValidPortMapping = (
+  hostPort: string,
+  containerPort: string,
+  existingPorts: PortMapping[] = [],
+): boolean => {
+  // Both host and container ports can be 0 (backend accepts it)
+  if (!isValidPortNumber(hostPort) || !isValidPortNumber(containerPort)) {
+    return false;
+  }
+  // Check for duplicate
+  return !isDuplicatePortMapping(hostPort, containerPort, existingPorts);
+};
+
 export const validApplicationsSchema = (t: TFunction) => {
   return Yup.array()
     .of(
       Yup.lazy((value: AppForm) => {
-        if (isImageAppForm(value)) {
-          // Image applications (can be either compose or quadlet)
-          return Yup.object<ImageAppForm>().shape({
+        // Container applications (image-based with ports and resources)
+        if (isContainerAppForm(value)) {
+          return Yup.object().shape({
+            specType: Yup.string()
+              .oneOf([AppSpecType.OCI_IMAGE])
+              .required(t('Definition source must be image for this type of applications')),
+            appType: Yup.string().oneOf([AppType.AppTypeContainer]).required(t('Application type is required')),
+            name: Yup.string().matches(
+              APPLICATION_NAME_REGEXP,
+              t(
+                'Use lowercase alphanumeric characters, or dash (-). Must start and end with an alphanumeric character.',
+              ),
+            ),
+            image: Yup.string()
+              .required(t('Image is required.'))
+              .matches(APPLICATION_IMAGE_REGEXP, t('Application image includes invalid characters.')),
+            ports: Yup.array()
+              .of(
+                Yup.object()
+                  .shape({
+                    hostPort: Yup.string()
+                      .required(t('Host port is required'))
+                      .test('valid-host-port', (value, testContext) => {
+                        const error = validatePortNumber(value || '', t);
+                        return error ? testContext.createError({ message: error }) : true;
+                      }),
+                    containerPort: Yup.string()
+                      .required(t('Container port is required'))
+                      .test('valid-container-port', (value, testContext) => {
+                        const error = validatePortNumber(value || '', t);
+                        return error ? testContext.createError({ message: error }) : true;
+                      }),
+                  })
+                  .required(),
+              )
+              .optional(),
+            resources: Yup.object()
+              .shape({
+                limits: Yup.object()
+                  .shape({
+                    cpu: Yup.string().optional(),
+                    memory: Yup.string().optional(),
+                  })
+                  .optional(),
+              })
+              .optional(),
+            volumes: Yup.array()
+              .of(
+                Yup.object().shape({
+                  name: Yup.string()
+                    .required(t('Volume name is required'))
+                    .matches(
+                      APPLICATION_NAME_REGEXP,
+                      t(
+                        'Use lowercase alphanumeric characters, or dash (-). Must start and end with an alphanumeric character.',
+                      ),
+                    ),
+                  volumeType: Yup.string()
+                    .oneOf([VolumeType.IMAGE_ONLY, VolumeType.MOUNT_ONLY, VolumeType.IMAGE_MOUNT])
+                    .required(t('Volume type is required')),
+                  imageRef: Yup.string().when('volumeType', {
+                    is: (val: VolumeType) => val === VolumeType.IMAGE_ONLY || val === VolumeType.IMAGE_MOUNT,
+                    then: (schema) =>
+                      schema
+                        .required(t('Image reference is required for this volume type'))
+                        .matches(APPLICATION_IMAGE_REGEXP, t('Image reference includes invalid characters.')),
+                    otherwise: (schema) =>
+                      schema
+                        .matches(APPLICATION_IMAGE_REGEXP, t('Image reference includes invalid characters.'))
+                        .optional(),
+                  }),
+                  imagePullPolicy: Yup.string()
+                    .oneOf(
+                      [ImagePullPolicy.PullAlways, ImagePullPolicy.PullIfNotPresent, ImagePullPolicy.PullNever],
+                      t('Pull policy must be one of: Always, IfNotPresent, or Never'),
+                    )
+                    .optional(),
+                  mountPath: Yup.string().when('volumeType', {
+                    is: (val: VolumeType) => val === VolumeType.MOUNT_ONLY || val === VolumeType.IMAGE_MOUNT,
+                    then: (schema) => schema.required(t('Mount path is required for this volume type')),
+                    otherwise: (schema) => schema.optional(),
+                  }),
+                }),
+              )
+              .optional(),
+            variables: appVariablesSchema(t),
+          });
+        }
+
+        // Image applications (Quadlet or Compose)
+        if (isQuadletImageAppForm(value) || isComposeImageAppForm(value)) {
+          return Yup.object<QuadletImageAppForm | ComposeImageAppForm>().shape({
             specType: Yup.string()
               .oneOf([AppSpecType.OCI_IMAGE])
               .required(t('Definition source must be image for this type of applications')),
@@ -553,8 +710,8 @@ export const validApplicationsSchema = (t: TFunction) => {
         }
 
         // Inline quadlet applications
-        if (isQuadletAppForm(value)) {
-          return Yup.object<QuadletAppForm>().shape({
+        if (isQuadletInlineAppForm(value)) {
+          return Yup.object<QuadletInlineAppForm>().shape({
             specType: appSpecTypeSchema(t),
             appType: Yup.string().oneOf([AppType.AppTypeQuadlet]).required(t('Application type is required')),
             name: inlineAppNameSchema(t, 'quadlet'),
@@ -567,7 +724,7 @@ export const validApplicationsSchema = (t: TFunction) => {
         }
 
         // Inline compose applications
-        return Yup.object<ComposeAppForm>().shape({
+        return Yup.object<ComposeInlineAppForm>().shape({
           specType: appSpecTypeSchema(t),
           appType: Yup.string().oneOf([AppType.AppTypeCompose]).required(t('Application type is required')),
           name: inlineAppNameSchema(t, 'compose'),

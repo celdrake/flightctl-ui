@@ -39,15 +39,16 @@ import { useAppContext } from '../../../hooks/useAppContext';
 
 import './CreateFleetWizard.css';
 
-const orderedIds = [generalInfoStepId, deviceTemplateStepId, updatePolicyStepId, reviewStepId];
+const orderedIds = [deviceTemplateStepId, generalInfoStepId, updatePolicyStepId, reviewStepId];
 
 const getValidStepIds = (formikErrors: FormikErrors<FleetFormValues>): string[] => {
   const validStepIds: string[] = [];
-  if (isGeneralInfoStepValid(formikErrors)) {
-    validStepIds.push(generalInfoStepId);
-  }
+
   if (isDeviceTemplateStepValid(formikErrors)) {
     validStepIds.push(deviceTemplateStepId);
+  }
+  if (isGeneralInfoStepValid(formikErrors)) {
+    validStepIds.push(generalInfoStepId);
   }
   if (isUpdatePolicyStepValid(formikErrors)) {
     validStepIds.push(updatePolicyStepId);
@@ -86,6 +87,16 @@ const CreateFleetWizard = () => {
   const isReadOnly = !!fleet?.metadata.owner || (isEdit && !canEdit);
 
   let body: React.ReactNode;
+
+  React.useEffect(() => {
+    setCurrentStep({
+      id: deviceTemplateStepId,
+      name: t('Device template'),
+      isDisabled: false,
+      parentId: undefined,
+      index: 0,
+    });
+  }, []);
 
   if (loading) {
     body = (
@@ -147,17 +158,18 @@ const CreateFleetWizard = () => {
                 }}
                 className="fctl-create-fleet"
               >
-                <WizardStep name={t('General info')} id={generalInfoStepId}>
-                  {(!currentStep || currentStep?.id === generalInfoStepId) && (
-                    <GeneralInfoStep isEdit={isEdit} isReadOnly={isReadOnly} />
-                  )}
-                </WizardStep>
                 <WizardStep
                   name={t('Device template')}
                   id={deviceTemplateStepId}
                   isDisabled={isDisabledStep(deviceTemplateStepId, validStepIds)}
                 >
-                  {currentStep?.id === deviceTemplateStepId && <DeviceTemplateStep isFleet isReadOnly={isReadOnly} />}
+                  {!currentStep ||
+                    (currentStep?.id === deviceTemplateStepId && (
+                      <DeviceTemplateStep isFleet isReadOnly={isReadOnly} />
+                    ))}
+                </WizardStep>
+                <WizardStep name={t('General info')} id={generalInfoStepId}>
+                  {currentStep?.id === generalInfoStepId && <GeneralInfoStep isEdit={isEdit} isReadOnly={isReadOnly} />}
                 </WizardStep>
                 <WizardStep
                   name={t('Updates')}
