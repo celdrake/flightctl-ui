@@ -2,7 +2,7 @@ import * as Yup from 'yup';
 import { TFunction } from 'i18next';
 import countBy from 'lodash/countBy';
 
-import { AppType } from '@flightctl/types';
+import { AppType, ImagePullPolicy } from '@flightctl/types';
 import { FlightCtlLabel } from '../../types/extraTypes';
 import {
   AppForm,
@@ -543,16 +543,13 @@ export const validatePortNumber = (port: string, t: TFunction): string | undefin
   if (!PORT_NUMBER_REGEXP.test(port)) {
     return t('Port must be a number');
   }
-  // Check port range: must be between 1 and 65535
+  // Check port range: must be between 0 and 65535 (0 is valid for auto-assign ephemeral port)
   const num = Number.parseInt(port.trim(), 10);
   if (Number.isNaN(num)) {
     return t('Port must be a number');
   }
-  if (num === 0) {
-    return t('Port 0 is reserved and cannot be used');
-  }
-  if (num < MIN_PORT || num > MAX_PORT) {
-    return t('Port must be between 1 and 65535');
+  if (num < 0 || num > MAX_PORT) {
+    return t('Port must be between 0 and 65535');
   }
   return undefined;
 };
@@ -561,7 +558,7 @@ export const isValidPortNumber = (port: string): boolean => {
   const trimmed = port.trim();
   if (!trimmed) return false;
   const num = Number.parseInt(trimmed, 10);
-  return !Number.isNaN(num) && num > 0 && num <= MAX_PORT && num.toString() === trimmed;
+  return !Number.isNaN(num) && num >= 0 && num <= MAX_PORT && num.toString() === trimmed;
 };
 
 /**
@@ -589,6 +586,7 @@ export const isValidPortMapping = (
   containerPort: string,
   existingPorts: PortMapping[] = [],
 ): boolean => {
+  // Both host and container ports can be 0 (backend accepts it)
   if (!isValidPortNumber(hostPort) || !isValidPortNumber(containerPort)) {
     return false;
   }
@@ -645,6 +643,45 @@ export const validApplicationsSchema = (t: TFunction) => {
                   })
                   .optional(),
               })
+              .optional(),
+            volumes: Yup.array()
+              .of(
+                Yup.object()
+                  .shape({
+                    name: Yup.string()
+                      .required(t('Volume name is required'))
+                      .matches(
+                        APPLICATION_NAME_REGEXP,
+                        t(
+                          'Use lowercase alphanumeric characters, or dash (-). Must start and end with an alphanumeric character.',
+                        ),
+                      ),
+                    imageRef: Yup.string()
+                      .matches(APPLICATION_IMAGE_REGEXP, t('Image reference includes invalid characters.'))
+                      .optional(),
+                    imagePullPolicy: Yup.string()
+                      .oneOf(
+                        [ImagePullPolicy.PullAlways, ImagePullPolicy.PullIfNotPresent, ImagePullPolicy.PullNever],
+                        t('Pull policy must be one of: Always, IfNotPresent, or Never'),
+                      )
+                      .optional(),
+                    mountPath: Yup.string().optional(),
+                  })
+                  .test(
+                    'volume-has-content',
+                    t('Volume must have either an image reference or a mount path'),
+                    function (value) {
+                      const hasImage = value?.imageRef?.trim();
+                      const hasMount = value?.mountPath?.trim();
+                      if (!hasImage && !hasMount) {
+                        return this.createError({
+                          message: t('Volume must have either an image reference or a mount path'),
+                        });
+                      }
+                      return true;
+                    },
+                  ),
+              )
               .optional(),
             variables: appVariablesSchema(t),
           });

@@ -7,6 +7,7 @@ import {
   GitConfigProviderSpec,
   HttpConfigProviderSpec,
   ImageApplicationProviderSpec,
+  ImagePullPolicy,
   ImageVolumeSource,
   InlineApplicationProviderSpec,
   InlineConfigProviderSpec,
@@ -136,9 +137,11 @@ export const isComposeInlineAppForm = (app: AppBase): app is ComposeInlineAppFor
 export const isContainerAppForm = (app: AppBase): app is SingleContainerAppForm =>
   app.appType === AppType.AppTypeContainer;
 
-export type ApplicationVolumeForm = ApplicationVolume & {
-  image?: ImageVolumeSource;
-  mount?: VolumeMount;
+export type ApplicationVolumeForm = {
+  name: string;
+  imageRef?: string;
+  imagePullPolicy?: ImagePullPolicy;
+  mountPath?: string;
 };
 
 const hasTemplateVariables = (str: string) => /{{.+?}}/.test(str);

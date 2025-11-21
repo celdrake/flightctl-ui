@@ -63,6 +63,7 @@ const ApplicationSection = ({ index, isReadOnly }: { index: number; isReadOnly?:
           image: '',
           variables: [],
           ports: [],
+          volumes: [],
         } as AppForm,
         false,
       );
@@ -321,6 +322,7 @@ const ApplicationTemplates = ({ isReadOnly }: { isReadOnly?: boolean }) => {
                           image: '',
                           variables: [],
                           ports: [],
+                          volumes: [],
                         });
                       }}
                     >

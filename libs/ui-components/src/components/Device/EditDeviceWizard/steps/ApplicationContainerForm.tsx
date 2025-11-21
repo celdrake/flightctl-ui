@@ -9,6 +9,7 @@ import ErrorHelperText from '../../../form/FieldHelperText';
 import { isDuplicatePortMapping, isValidPortMapping, validatePortNumber } from '../../../form/validations';
 import { useTranslation } from '../../../../hooks/useTranslation';
 import { SingleContainerAppForm, PortMapping } from '../../../../types/deviceSpec';
+import ApplicationVolumeForm from './ApplicationVolumeForm';
 
 const ApplicationContainerForm = ({
   app,
@@ -274,6 +275,7 @@ const ApplicationContainerForm = ({
               value={app.limits?.cpu || ''}
               placeholder={t('Type here')}
               isDisabled={isReadOnly}
+              helperText={t('Provide a valid CPU value (e.g., "0.4" or "2").')}
             />
           </FormGroupWithHelperText>
           <FormGroupWithHelperText
@@ -288,10 +290,12 @@ const ApplicationContainerForm = ({
               value={app.limits?.memory || ''}
               placeholder={t('Type here')}
               isDisabled={isReadOnly}
+              helperText={t('Provide a valid memory value (e.g., "512m", "2g", "1024k").')}
             />
           </FormGroupWithHelperText>
         </Grid>
       </FormGroup>
+      <ApplicationVolumeForm appFieldName={appFieldName} volumes={app.volumes || []} isReadOnly={isReadOnly} />
     </Grid>
   );
 };

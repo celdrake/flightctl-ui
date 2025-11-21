@@ -20,6 +20,7 @@ import {
 import {
   AppForm,
   AppSpecType,
+  ApplicationVolumeForm,
   ComposeInlineAppForm,
   ConfigSourceProvider,
   ConfigType,
@@ -216,19 +217,21 @@ export const toAPIApplication = (app: AppForm): ApplicationProviderSpec => {
   }, {});
 
   const volumes = app.volumes?.map((v) => {
-    // @ts-expect-error We will only set the fields that are present
-    const volume: ApplicationVolume = {
-      name: v.name,
+    const volume: Partial<ApplicationVolume & ImageMountVolumeProviderSpec> = {
+      name: v.name || '',
     };
-    // It's either one of the two fields, or both.
-    // ImageMountVolumeProviderSpec is the spec that has both fields
-    if (v.image) {
-      (volume as ImageMountVolumeProviderSpec).image = v.image;
+    if (v.imageRef) {
+      volume.image = {
+        reference: v.imageRef,
+        pullPolicy: v.imagePullPolicy,
+      };
     }
-    if (v.mount) {
-      (volume as ImageMountVolumeProviderSpec).mount = v.mount;
+    if (v.mountPath) {
+      volume.mount = {
+        path: v.mountPath,
+      };
     }
-    return volume;
+    return volume as ApplicationVolume;
   });
 
   if (isContainerAppForm(app)) {
@@ -440,13 +443,28 @@ export const getApiConfig = (ct: SpecConfigTemplate): ConfigSourceProvider => {
 const getAppFormVariables = (app: ApplicationProviderSpecFixed) =>
   Object.entries(app.envVars || {}).map(([varName, varValue]) => ({ name: varName, value: varValue }));
 
+const convertVolumesToForm = (volumes?: ApplicationVolume[]) => {
+  if (!volumes) return [];
+  return volumes.map((v) => {
+    let volForm: ApplicationVolumeForm = { name: v.name };
+    if ('image' in v) {
+      volForm.imageRef = v.image.reference;
+      volForm.imagePullPolicy = v.image.pullPolicy;
+    }
+    if ('mount' in v) {
+      volForm.mountPath = v.mount.path;
+    }
+    return volForm;
+  });
+};
+
 export const getApplicationValues = (deviceSpec?: DeviceSpec): AppForm[] => {
   const apps = deviceSpec?.applications || [];
   return apps.map((app) => {
     if (!app.appType) {
       throw new Error('Application appType is required');
     }
-    // Check for Container type first (it's also image-based)
+    // Single container application
     if (app.appType === AppType.AppTypeContainer && isImageAppProvider(app)) {
       const imageApp = app as ImageApplicationProviderSpec;
       // Convert ports from API string format to object format
@@ -458,33 +476,36 @@ export const getApplicationValues = (deviceSpec?: DeviceSpec): AppForm[] => {
 
       return {
         specType: AppSpecType.OCI_IMAGE,
+        appType: AppType.AppTypeContainer,
         name: app.name || '',
         image: app.image,
-        appType: AppType.AppTypeContainer,
         variables: getAppFormVariables(app),
-        volumes: app.volumes || [],
+        volumes: convertVolumesToForm(app.volumes),
         ports,
         resources: imageApp.resources
           ? {
               limits: {
-                cpu: imageApp.resources.limits?.cpu,
-                memory: imageApp.resources.limits?.memory,
+                cpu: imageApp.resources.limits?.cpu || '',
+                memory: imageApp.resources.limits?.memory || '',
               },
             }
           : undefined,
       };
     }
+
+    // Compose or Quadlet image application
     if (isImageAppProvider(app)) {
       return {
         specType: AppSpecType.OCI_IMAGE,
         name: app.name || '',
         image: app.image,
-        appType: app.appType as AppType.AppTypeCompose | AppType.AppTypeQuadlet,
+        appType: app.appType,
         variables: getAppFormVariables(app),
-        volumes: app.volumes || [],
+        volumes: convertVolumesToForm(app.volumes),
       };
     }
 
+    // Compose or Quadlet inline application
     const inlineApp = app as InlineApplicationProviderSpec;
     return {
       specType: AppSpecType.INLINE,
@@ -492,7 +513,7 @@ export const getApplicationValues = (deviceSpec?: DeviceSpec): AppForm[] => {
       name: app.name || '',
       files: inlineApp.inline,
       variables: getAppFormVariables(app),
-      volumes: app.volumes || [],
+      volumes: convertVolumesToForm(app.volumes),
     } as QuadletInlineAppForm | ComposeInlineAppForm;
   });
 };
