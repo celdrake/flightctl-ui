@@ -1,17 +1,22 @@
 import * as React from 'react';
 import { RESOURCE, VERB } from '../types/rbac';
-import { useAccessReview } from './useAccessReview';
+import { usePermissionsContext } from '../components/common/PermissionsContext';
 import { useFetch } from './useFetch';
 
-// Alerts are considered disabled if the service returns either 501 (Not Implemented) or 500
-const isDisabledAlertManagerService = (error: Error): boolean =>
-  Number(error.message) === 501 || Number(error.message) === 500;
+// Alerts are considered disabled if:
+// - Service returns 501 (Not Implemented) or 500 (Internal Server Error)
+// - Service returns 401 (Unauthorized) - authentication issue with alerts service
+const isDisabledAlertManagerService = (error: Error): boolean => {
+  const errorCode = Number(error.message);
+  return errorCode === 501 || errorCode === 500 || errorCode === 401;
+};
 
 export const useAlertsEnabled = (): boolean => {
   const { get } = useFetch();
   const [alertsEnabled, setAlertsEnabled] = React.useState(false);
 
-  const [canListAlerts, alertsLoading] = useAccessReview(RESOURCE.ALERTS, VERB.LIST);
+  const { checkPermissions, loading: alertsLoading } = usePermissionsContext();
+  const [canListAlerts] = checkPermissions([{ kind: RESOURCE.ALERTS, verb: VERB.LIST }]);
 
   React.useEffect(() => {
     let abortController: AbortController;

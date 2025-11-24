@@ -6,7 +6,6 @@ import {
   NavLinkFC,
   PromptFC,
 } from '@flightctl/ui-components/src/hooks/useAppContext';
-import { SystemRestoreProvider } from '@flightctl/ui-components/src/hooks/useSystemRestoreContext';
 import { ROUTE } from '@flightctl/ui-components/src/hooks/useNavigate';
 import {
   Link,
@@ -27,18 +26,14 @@ import { useFetch } from '../../hooks/useFetch';
 import './AppContext.css';
 
 /**
- * OCP Plugin App Context Provider that includes SystemRestoreProvider
+ * OCP Plugin App Context Provider
  * The OCP plugin system calls useValuesAppContext separately and passes the value as a prop
  */
 export const OCPPluginAppContext: React.FC<React.PropsWithChildren<{ value: AppContextProps }>> = ({
   children,
   value,
 }) => {
-  return (
-    <AppContext.Provider value={value}>
-      <SystemRestoreProvider>{children}</SystemRestoreProvider>
-    </AppContext.Provider>
-  );
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
 
 const appRoutes = {
@@ -58,7 +53,12 @@ const appRoutes = {
   [ROUTE.RESOURCE_SYNC_DETAILS]: '/edge/resourcesyncs',
   [ROUTE.ENROLLMENT_REQUESTS]: '/edge/enrollmentrequests',
   [ROUTE.ENROLLMENT_REQUEST_DETAILS]: '/edge/enrollmentrequests',
+  // Unimplemented UI routes for OCP plugin
   [ROUTE.COMMAND_LINE_TOOLS]: '/', // CLI downloads are shown embedded in OCP's CLI downloads page and not as an independent route
+  [ROUTE.AUTH_PROVIDERS]: '/', // Authentication providers must be defined in the OpenShift Console, not through Flight Control
+  [ROUTE.AUTH_PROVIDER_CREATE]: '/',
+  [ROUTE.AUTH_PROVIDER_EDIT]: '/',
+  [ROUTE.AUTH_PROVIDER_DETAILS]: '/',
 };
 
 export const useValuesAppContext = (): AppContextProps => {

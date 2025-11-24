@@ -5,7 +5,7 @@ import { dump, load } from 'js-yaml';
 import { compare } from 'fast-json-patch';
 import type * as monacoEditor from 'monaco-editor/esm/vs/editor/editor.api';
 
-import { Device, Fleet, PatchRequest, Repository, ResourceKind } from '@flightctl/types';
+import { AuthProvider, Device, Fleet, PatchRequest, Repository, ResourceKind } from '@flightctl/types';
 import { fromAPILabel } from '../../../utils/labels';
 import { getLabelPatches } from '../../../utils/patch';
 import { getErrorMessage, isResourceVersionTestFailure } from '../../../utils/error';
@@ -16,7 +16,7 @@ import YamlEditorBase from './YamlEditorBase';
 
 import './YamlEditor.css';
 
-type FlightCtlYamlResource = Fleet | Device | Repository;
+type FlightCtlYamlResource = Fleet | Device | Repository | AuthProvider;
 
 type YamlEditorProps<R extends FlightCtlYamlResource> = Partial<Omit<PfCodeEditorProps, 'ref' | 'code'>> & {
   /** FlightCtl resource to display in the editor. */
@@ -25,6 +25,8 @@ type YamlEditorProps<R extends FlightCtlYamlResource> = Partial<Omit<PfCodeEdito
   refetch: VoidFunction;
   /** Reason why editing is disabled, if applicable */
   disabledEditReason?: string;
+  /** Whether the user can edit the resource (controls Save button visibility) */
+  canEdit?: boolean;
 };
 
 const convertObjToYAMLString = (obj: FlightCtlYamlResource) => {
@@ -49,6 +51,8 @@ const getResourceEndpoint = (obj: FlightCtlYamlResource) => {
       return `devices/${resourceName}`;
     case ResourceKind.REPOSITORY:
       return `repositories/${resourceName}`;
+    case ResourceKind.AUTH_PROVIDER:
+      return `authproviders/${resourceName}`;
     default:
       throw new Error(`Unsupported resource kind: ${kind}`);
   }
@@ -103,7 +107,12 @@ const createPatchList = (original: FlightCtlYamlResource, updated: FlightCtlYaml
   return getFallbackPatches(original, updated);
 };
 
-const YamlEditor = <R extends FlightCtlYamlResource>({ apiObj, refetch, disabledEditReason }: YamlEditorProps<R>) => {
+const YamlEditor = <R extends FlightCtlYamlResource>({
+  apiObj,
+  refetch,
+  disabledEditReason,
+  canEdit = true,
+}: YamlEditorProps<R>) => {
   const [yaml, setYaml] = React.useState<string>(convertObjToYAMLString(apiObj));
   const [yamlResourceVersion, setYamlResourceVersion] = React.useState<string>(apiObj.metadata.resourceVersion || '0');
   const [doUpdate, setDoUpdate] = React.useState<boolean>(false);
@@ -200,9 +209,9 @@ const YamlEditor = <R extends FlightCtlYamlResource>({ apiObj, refetch, disabled
           setSaveError(undefined);
           setDoUpdate(true);
         }}
-        onSave={handleSave}
+        onSave={canEdit ? handleSave : undefined}
         isSaving={isSaving}
-        disabledEditReason={disabledEditReason}
+        disabledEditReason={canEdit ? disabledEditReason : undefined}
         editorRef={editorRef}
       />
 

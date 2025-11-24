@@ -14,7 +14,6 @@ import {
 } from 'react-router-dom';
 import { PatchRequest } from '@flightctl/types';
 import { ROUTE } from './useNavigate';
-import { RESOURCE, VERB } from '../types/rbac';
 
 export const appRoutes = {
   [ROUTE.ROOT]: '/',
@@ -34,6 +33,10 @@ export const appRoutes = {
   [ROUTE.ENROLLMENT_REQUESTS]: '/devicemanagement/enrollmentrequests',
   [ROUTE.ENROLLMENT_REQUEST_DETAILS]: '/devicemanagement/enrollmentrequests',
   [ROUTE.COMMAND_LINE_TOOLS]: '/command-line-tools',
+  [ROUTE.AUTH_PROVIDERS]: '/admin/authproviders',
+  [ROUTE.AUTH_PROVIDER_CREATE]: '/admin/authproviders/create',
+  [ROUTE.AUTH_PROVIDER_EDIT]: '/admin/authproviders/edit',
+  [ROUTE.AUTH_PROVIDER_DETAILS]: '/admin/authproviders',
 };
 
 export type NavLinkFC = React.FC<{ to: string; children: (props: { isActive: boolean }) => React.ReactNode }>;
@@ -78,7 +81,6 @@ export type AppContextProps = {
     put: <TRequest>(kind: string, data: TRequest, abortSignal?: AbortSignal) => Promise<TRequest>;
     remove: <R>(kind: string, abortSignal?: AbortSignal) => Promise<R>;
     patch: <R>(kind: string, patches: PatchRequest, abortSignal?: AbortSignal) => Promise<R>;
-    checkPermissions: (resource: RESOURCE, verb: VERB) => Promise<boolean>;
     // All methods to the UI proxy are handled in the same method - returns raw Response
     proxyFetch: (endpoint: string, requestInit: RequestInit) => Promise<Response>;
   };
@@ -113,7 +115,6 @@ export const AppContext = React.createContext<AppContextProps>({
     put: async () => ({}) as any,
     remove: async () => ({}) as any,
     patch: async () => ({}) as any,
-    checkPermissions: async () => true,
     proxyFetch: async () => ({}) as any,
   },
   /* eslint-enable */
