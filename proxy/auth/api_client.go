@@ -11,7 +11,9 @@ import (
 	"time"
 
 	"github.com/flightctl/flightctl-ui/common"
+	"github.com/flightctl/flightctl-ui/log"
 	"github.com/flightctl/flightctl/api/v1beta1"
+	"github.com/sirupsen/logrus"
 )
 
 // k8s service account prefix
@@ -231,6 +233,22 @@ func convertTokenResponseToTokenData(tokenResp *v1beta1.TokenResponse, providerC
 
 	if tokenResp.RefreshToken != nil {
 		tokenData.RefreshToken = *tokenResp.RefreshToken
+		// Log refresh token obtained (without logging the actual token value for security)
+		logger := log.GetLogger()
+		if logger != nil {
+			refreshTokenLength := len(*tokenResp.RefreshToken)
+			logger.WithFields(logrus.Fields{
+				"provider":     tokenData.Provider,
+				"token_length": refreshTokenLength,
+			}).Info("Refresh token obtained from API server")
+		}
+	} else {
+		logger := log.GetLogger()
+		if logger != nil {
+			logger.WithFields(logrus.Fields{
+				"provider": tokenData.Provider,
+			}).Warn("No refresh token in API server response")
+		}
 	}
 
 	var expiresIn *int64

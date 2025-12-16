@@ -12,6 +12,7 @@ import (
 	"github.com/flightctl/flightctl-ui/config"
 	"github.com/flightctl/flightctl-ui/log"
 	"github.com/flightctl/flightctl/api/v1beta1"
+	"github.com/sirupsen/logrus"
 )
 
 type ExpiresInResp struct {
@@ -402,11 +403,23 @@ func (a AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 		tokenResp, err := exchangeTokenWithApiServer(a.apiTlsConfig, providerConfig, tokenReq)
 		if err != nil {
+			log.GetLogger().WithError(err).WithField("provider", providerName).Error("Failed to exchange authorization code for tokens")
 			handleOAuthErrorResponse(w, tokenResp, "Failed to obtain login authorization code")
 			return
 		}
 
 		tokenData, expiresIn := convertTokenResponseToTokenData(tokenResp, providerConfig)
+
+		// Log initial token acquisition including refresh token status
+		hasRefreshToken := tokenData.RefreshToken != ""
+		refreshTokenLength := len(tokenData.RefreshToken)
+		log.GetLogger().WithFields(logrus.Fields{
+			"provider":             providerName,
+			"has_refresh_token":    hasRefreshToken,
+			"refresh_token_length": refreshTokenLength,
+			"expires_in":           expiresIn,
+		}).Info("Initial login successful, tokens obtained from API server")
+
 		respondWithToken(w, tokenData, expiresIn)
 	} else {
 		respondWithError(w, http.StatusMethodNotAllowed, "Method not allowed")
@@ -416,12 +429,14 @@ func (a AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 func (a AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	tokenData, err := ParseSessionCookie(r)
 	if err != nil {
+		log.GetLogger().WithError(err).Error("Failed to parse session cookie during token refresh")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	// Validate provider name from cookie to prevent SSRF attacks
 	if !common.IsSafeResourceName(tokenData.Provider) {
+		log.GetLogger().WithField("provider", tokenData.Provider).Warn("Invalid provider name during token refresh")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -430,22 +445,32 @@ func (a AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	var providerConfig *v1beta1.AuthProvider
 	provider, providerConfig, err := a.getProviderInstance(tokenData.Provider)
 	if err != nil {
+		log.GetLogger().WithError(err).WithField("provider", tokenData.Provider).Error("Failed to get provider instance during token refresh")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	if isProviderWithCustomerToken(provider) {
+		log.GetLogger().WithField("provider", tokenData.Provider).Warn("Token refresh attempted for K8s token provider (not supported)")
 		respondWithError(w, http.StatusBadRequest, "Token refresh not supported for K8s token providers")
 		return
 	}
 
+	refreshTokenLength := len(tokenData.RefreshToken)
 	if tokenData.RefreshToken == "" {
+		log.GetLogger().WithField("provider", tokenData.Provider).Warn("Refresh token is empty in session cookie")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
+	log.GetLogger().WithFields(logrus.Fields{
+		"provider":             tokenData.Provider,
+		"refresh_token_length": refreshTokenLength,
+	}).Info("Starting token refresh using refresh token from session cookie")
+
 	clientId, err := getClientIdFromProviderConfig(providerConfig)
 	if err != nil {
+		log.GetLogger().WithError(err).WithField("provider", tokenData.Provider).Error("Failed to get client ID during token refresh")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -458,12 +483,32 @@ func (a AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 
 	tokenResp, err := exchangeTokenWithApiServer(a.apiTlsConfig, providerConfig, tokenReq)
 	if err != nil {
+		log.GetLogger().WithError(err).WithField("provider", tokenData.Provider).Error("Failed to exchange refresh token with API server")
 		handleOAuthErrorResponse(w, tokenResp, "Failed to obtain new access token")
 		return
 	}
 
 	// Convert backend response to TokenData
 	newTokenData, expiresIn := convertTokenResponseToTokenData(tokenResp, providerConfig)
+
+	// Log refresh token update status
+	newRefreshTokenLength := len(newTokenData.RefreshToken)
+	hasNewRefreshToken := newRefreshTokenLength > 0
+	log.GetLogger().WithFields(logrus.Fields{
+		"provider":                 tokenData.Provider,
+		"has_new_refresh_token":    hasNewRefreshToken,
+		"new_refresh_token_length": newRefreshTokenLength,
+		"expires_in":               expiresIn,
+	}).Info("Token refresh completed successfully")
+
+	if !hasNewRefreshToken {
+		log.GetLogger().WithField("provider", tokenData.Provider).Warn("No new refresh token in refresh response - using existing refresh token")
+		// Preserve existing refresh token if new one not provided
+		if tokenData.RefreshToken != "" {
+			newTokenData.RefreshToken = tokenData.RefreshToken
+		}
+	}
+
 	respondWithToken(w, newTokenData, expiresIn)
 }
 

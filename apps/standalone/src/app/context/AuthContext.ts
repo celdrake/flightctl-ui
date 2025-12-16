@@ -85,6 +85,9 @@ export const useAuthContext = () => {
             const now = nowInSeconds();
             localStorage.setItem(EXPIRATION, `${now + expiration.expiresIn}`);
             lastRefresh = now;
+            console.log(`[AuthContext] Initial login successful, token expires in ${expiration.expiresIn}s`);
+          } else {
+            console.warn('[AuthContext] Initial login response missing expiresIn');
           }
         } else if (callbackErr) {
           setError(callbackErr);
@@ -178,28 +181,47 @@ export const useAuthContext = () => {
           const expiresIn = expiresAt - now - 15;
           const timeout = Math.min(maxTimeout, expiresIn * 1000);
           if (timeout > 0) {
+            console.log(
+              `[AuthContext] Scheduling token refresh in ${Math.round(timeout / 1000)}s (expires in ${expiresIn}s)`,
+            );
             refreshRef.current = setTimeout(refreshToken, timeout);
+          } else {
+            console.warn('[AuthContext] Token already expired or expires very soon, scheduling immediate refresh');
+            refreshRef.current = setTimeout(refreshToken, 0);
           }
+        } else {
+          console.warn('[AuthContext] No expiration time found, cannot schedule token refresh');
         }
       };
 
       const refreshToken = async () => {
+        const now = nowInSeconds();
+        console.log(
+          `[AuthContext] Attempting to refresh token (last refresh: ${lastRefresh > 0 ? `${now - lastRefresh}s ago` : 'never'})`,
+        );
         try {
           const resp = await fetch(`${loginAPI}/refresh`, {
             credentials: 'include',
             method: 'GET',
           });
+
+          if (!resp.ok) {
+            console.error(`[AuthContext] Token refresh failed with status ${resp.status}`);
+            throw new Error(`Token refresh failed: ${resp.status}`);
+          }
+
           const expiration = (await resp.json()) as { expiresIn: number };
-          const now = nowInSeconds();
           if (expiration.expiresIn) {
             localStorage.setItem(EXPIRATION, `${now + expiration.expiresIn}`);
+            console.log(`[AuthContext] Token refresh successful, new expiration in ${expiration.expiresIn}s`);
           } else {
             localStorage.removeItem(EXPIRATION);
+            console.warn('[AuthContext] Token refresh response missing expiresIn, cleared expiration');
           }
           lastRefresh = now;
         } catch (err) {
           // eslint-disable-next-line
-          console.log('failed to refresh token:', err);
+          console.error('[AuthContext] Failed to refresh token:', err);
         } finally {
           scheduleRefresh();
         }
