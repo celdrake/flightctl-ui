@@ -62,6 +62,18 @@ func exchangeTokenWithApiServer(apiTlsConfig *tls.Config, providerConfig *v1beta
 		return nil, fmt.Errorf("failed to read token response: %w", err)
 	}
 
+	// Log entire response for debugging
+	logger := log.GetLogger()
+	if logger != nil {
+		logger.WithFields(logrus.Fields{
+			"status_code": resp.StatusCode,
+			"status":      resp.Status,
+			"headers":     resp.Header,
+			"body":        string(body),
+			"body_length": len(body),
+		}).Info("Full API token exchange response")
+	}
+
 	if resp.StatusCode != http.StatusOK {
 		// Try to parse as JSON first (OAuth2 errors are usually JSON)
 		var tokenResp v1beta1.TokenResponse
@@ -84,6 +96,39 @@ func exchangeTokenWithApiServer(apiTlsConfig *tls.Config, providerConfig *v1beta
 	var tokenResp v1beta1.TokenResponse
 	if err := json.Unmarshal(body, &tokenResp); err != nil {
 		return nil, fmt.Errorf("failed to parse API server token response: %w", err)
+	}
+
+	// Log parsed response structure for debugging
+	if logger != nil {
+		// Create a safe copy for logging (don't log actual token values)
+		logFields := logrus.Fields{
+			"has_access_token":  tokenResp.AccessToken != nil,
+			"has_id_token":      tokenResp.IdToken != nil,
+			"has_refresh_token": tokenResp.RefreshToken != nil,
+			"has_expires_in":    tokenResp.ExpiresIn != nil,
+			"has_error":         tokenResp.Error != nil,
+		}
+		if tokenResp.AccessToken != nil {
+			logFields["access_token_length"] = len(*tokenResp.AccessToken)
+		}
+		if tokenResp.IdToken != nil {
+			logFields["id_token_length"] = len(*tokenResp.IdToken)
+		}
+		if tokenResp.RefreshToken != nil {
+			logFields["refresh_token_length"] = len(*tokenResp.RefreshToken)
+		}
+		if tokenResp.ExpiresIn != nil {
+			logFields["expires_in"] = *tokenResp.ExpiresIn
+		}
+		if tokenResp.Error != nil {
+			logFields["error"] = *tokenResp.Error
+		}
+		if tokenResp.ErrorDescription != nil {
+			logFields["error_description"] = *tokenResp.ErrorDescription
+		}
+		// Log the full JSON response body as well
+		logFields["raw_response"] = string(body)
+		logger.WithFields(logFields).Info("Parsed API token exchange response")
 	}
 
 	// Check for errors in response (even with 200 status)
