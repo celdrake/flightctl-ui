@@ -118,6 +118,36 @@ func NewAlertManagerHandler(tlsConfig *tls.Config) handler {
 	return handler{target: target, proxy: proxy}
 }
 
+type imageBuilderHandler struct {
+	target *url.URL
+	proxy  *httputil.ReverseProxy
+}
+
+func (h imageBuilderHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	r.URL.Host = h.target.Host
+	r.URL.Scheme = h.target.Scheme
+	r.Header.Set("X-Forwarded-Host", r.Header.Get("Host"))
+	r.Host = h.target.Host
+	forward := mux.Vars(r)["forward"]
+	if forward == "" {
+		r.URL.Path = "/api/v1/imagebuilds"
+	} else {
+		r.URL.Path = "/api/v1/imagebuilds/" + forward
+	}
+	// Query parameters (r.URL.RawQuery) are preserved automatically
+	h.proxy.ServeHTTP(w, r)
+}
+
+func NewImageBuilderHandler(tlsConfig *tls.Config) imageBuilderHandler {
+	target, proxy := createReverseProxy(config.FctlImageBuilderApiUrl)
+
+	proxy.Transport = &http.Transport{
+		TLSClientConfig: tlsConfig,
+	}
+
+	return imageBuilderHandler{target: target, proxy: proxy}
+}
+
 func UnimplementedHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
