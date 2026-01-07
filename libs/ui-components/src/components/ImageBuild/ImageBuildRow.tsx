@@ -5,6 +5,7 @@ import { ImageBuild } from '@flightctl/types/imagebuilder';
 import { useTranslation } from '../../hooks/useTranslation';
 import ResourceLink from '../common/ResourceLink';
 import ImageBuildStatus from './ImageBuildStatus';
+import { getImageBuildDestinationImage, getImageBuildSourceImage } from '../../utils/imageBuilds';
 
 type ImageBuildRowProps = {
   imageBuild: ImageBuild;
@@ -39,7 +40,7 @@ const useImageBuildActions = (imageBuildName: string, canEdit: boolean) => {
   return actions;
 };
 
-const ImageBuildRow: React.FC<ImageBuildRowProps> = ({
+const ImageBuildRow = ({
   imageBuild,
   rowIndex,
   onRowSelect,
@@ -47,7 +48,7 @@ const ImageBuildRow: React.FC<ImageBuildRowProps> = ({
   onDeleteClick,
   canDelete,
   canEdit,
-}) => {
+}: ImageBuildRowProps) => {
   const { t } = useTranslation();
   const imageBuildName = imageBuild.metadata.name || '';
 
@@ -60,13 +61,8 @@ const ImageBuildRow: React.FC<ImageBuildRowProps> = ({
     });
   }
 
-  const sourceImage = imageBuild.spec.source
-    ? `${imageBuild.spec.source.repository}/${imageBuild.spec.source.imageName}:${imageBuild.spec.source.imageTag}`
-    : '-';
-
-  const destinationImage = imageBuild.spec.destination
-    ? `${imageBuild.spec.destination.repository}/${imageBuild.spec.destination.imageName}:${imageBuild.spec.destination.tag}`
-    : '-';
+  const sourceImage = getImageBuildSourceImage(imageBuild);
+  const destinationImage = getImageBuildDestinationImage(imageBuild);
 
   return (
     <Tr>

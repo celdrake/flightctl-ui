@@ -27,8 +27,11 @@ import { useTableSelect } from '../../hooks/useTableSelect';
 import { getResourceId } from '../../utils/resource';
 import ImageBuildRow from './ImageBuildRow';
 import { useImageBuildBackendFilters, useImageBuilds } from './useImageBuilds';
+import { useFetch } from '../../hooks/useFetch';
+import { getErrorMessage } from '../../utils/error';
+import { ImagePipelineRequest } from '@flightctl/types/imagebuilder';
 
-const ImageBuildsEmptyState = () => {
+const ImageBuildsEmptyState = ({ onCreateClick }: { onCreateClick: () => void }) => {
   const { t } = useTranslation();
   return (
     <ResourceListEmptyState icon={PlusCircleIcon} titleText={t('There are no image builds in your environment.')}>
@@ -37,7 +40,7 @@ const ImageBuildsEmptyState = () => {
       </EmptyStateBody>
       <EmptyStateFooter>
         <EmptyStateActions>
-          <Button variant="primary" onClick={() => {}}>
+          <Button variant="primary" onClick={onCreateClick}>
             {t('Create an image build')}
           </Button>
         </EmptyStateActions>
@@ -76,11 +79,55 @@ const ImageBuildTable = () => {
   const { imageBuilds, isLoading, error, isUpdating, refetch, pagination } = useImageBuilds({ name });
 
   const [imageBuildToDeleteId, setImageBuildToDeleteId] = React.useState<string>();
+  const [isCreating, setIsCreating] = React.useState(false);
+  const [createError, setCreateError] = React.useState<string | undefined>();
 
   const { onRowSelect, isAllSelected, hasSelectedRows, isRowSelected, setAllSelected } = useTableSelect();
 
   const { checkPermissions } = usePermissionsContext();
   const [canDelete, canCreate, canEdit] = checkPermissions(imageBuildTablePermissions);
+
+  const { post } = useFetch();
+
+  const handleCreateImageBuild = React.useCallback(async () => {
+    setIsCreating(true);
+    setCreateError(undefined);
+
+    try {
+      // Hardcoded image build data for testing
+      const imageBuildRequest: ImagePipelineRequest = {
+        imageBuild: {
+          apiVersion: 'imagebuilder.flightctl.io/v1beta1',
+          kind: 'ImageBuild',
+          metadata: {
+            name: `test-image-build-${Date.now()}`,
+          },
+          spec: {
+            source: {
+              repository: 'test-source-repo',
+              imageName: 'test-source-image',
+              imageTag: 'latest',
+            },
+            destination: {
+              repository: 'test-dest-repo',
+              imageName: 'test-dest-image',
+              tag: 'latest',
+            },
+            binding: {
+              type: 'late',
+            },
+          },
+        },
+      };
+
+      await post<ImagePipelineRequest>('imagepipelines', imageBuildRequest);
+      refetch();
+    } catch (e) {
+      setCreateError(getErrorMessage(e));
+    } finally {
+      setIsCreating(false);
+    }
+  }, [post, refetch]);
 
   return (
     <ListPageBody error={error} loading={isLoading}>
@@ -93,7 +140,7 @@ const ImageBuildTable = () => {
           </ToolbarGroup>
           {canCreate && (
             <ToolbarItem>
-              <Button variant="primary" onClick={() => {}}>
+              <Button variant="primary" onClick={handleCreateImageBuild} isLoading={isCreating}>
                 {t('Create image build')}
               </Button>
             </ToolbarItem>

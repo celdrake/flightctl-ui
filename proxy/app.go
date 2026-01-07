@@ -40,11 +40,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Route imagebuild requests to the imagebuilder API (must be before the general flightctl route)
-	// Handle list endpoint: /api/flightctl/api/v1/imagebuilds
-	apiRouter.Handle("/flightctl/api/v1/imagebuilds", bridge.NewImageBuilderHandler(tlsConfig))
-	// Handle detail endpoints: /api/flightctl/api/v1/imagebuilds/{name}
-	apiRouter.Handle("/flightctl/api/v1/imagebuilds/{forward:.*}", bridge.NewImageBuilderHandler(tlsConfig))
+	apiRouter.Handle("/imagebuilder/{forward:.*}", bridge.NewImageBuilderHandler(tlsConfig))
 
 	apiRouter.Handle("/flightctl/{forward:.*}", bridge.NewFlightCtlHandler(tlsConfig))
 
