@@ -1,5 +1,5 @@
 import * as React from 'react';
-import ImageBuildsPage from '@flightctl/ui-components/src/components/ImageBuild/ImageBuildsPage';
+import ImageBuildsPage from '@flightctl/ui-components/src/components/ImageBuilds/ImageBuildsPage';
 import WithPageLayout from '../common/WithPageLayout';
 
 const OcpImageBuildsPage = () => {

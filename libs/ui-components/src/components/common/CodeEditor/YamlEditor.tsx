@@ -6,7 +6,7 @@ import { compare } from 'fast-json-patch';
 import type * as monacoEditor from 'monaco-editor/esm/vs/editor/editor.api';
 
 import { AuthProvider, Device, Fleet, PatchRequest, Repository, ResourceKind } from '@flightctl/types';
-import { ImageBuild } from '@flightctl/types/imagebuilder';
+import { ImageBuild, ResourceKind as ImageBuilderResourceKind } from '@flightctl/types/imagebuilder';
 import { FlightctlKind } from '../../../types/extraTypes';
 import { fromAPILabel } from '../../../utils/labels';
 import { getLabelPatches } from '../../../utils/patch';
@@ -55,10 +55,9 @@ const getResourceEndpoint = (obj: FlightCtlYamlResource) => {
       return `repositories/${resourceName}`;
     case ResourceKind.AUTH_PROVIDER:
       return `authproviders/${resourceName}`;
-    // CELIA-WIP: use the kind from schema when it's available
-    case 'ImageBuild':
+    case ImageBuilderResourceKind.IMAGE_BUILD:
       return `imagebuilds/${resourceName}`;
-    case 'ImageExport':
+    case ImageBuilderResourceKind.IMAGE_EXPORT:
       return `imageexports/${resourceName}`;
     default:
       throw new Error(`Unsupported resource kind: ${kind}`);
@@ -136,8 +135,7 @@ const YamlEditor = <R extends FlightCtlYamlResource>({
   const { patch } = useFetch();
 
   const resourceName = getFilename(apiObj);
-  const objResourceVersion = apiObj.metadata.resourceVersion || '0';
-  const needsReload = yamlResourceVersion !== objResourceVersion;
+  const needsReload = yamlResourceVersion !== apiObj.metadata.resourceVersion || '0';
 
   React.useEffect(() => {
     if (doUpdate) {
@@ -147,7 +145,7 @@ const YamlEditor = <R extends FlightCtlYamlResource>({
       if (editorRef.current) {
         editorRef.current.setValue(newYaml);
       }
-      setYamlResourceVersion(objResourceVersion);
+      setYamlResourceVersion(apiObj.metadata.resourceVersion || '0');
       setDoUpdate(false);
     }
   }, [doUpdate, apiObj]);

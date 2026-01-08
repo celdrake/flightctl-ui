@@ -13,3 +13,4 @@ export type ImageBuildSpec = {
   destination: ImageBuildDestination;
   binding: ImageBuildBinding;
 };
+

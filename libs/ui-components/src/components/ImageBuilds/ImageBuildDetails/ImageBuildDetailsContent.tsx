@@ -11,8 +11,7 @@ import {
   GridItem,
 } from '@patternfly/react-core';
 
-import { ImageBuild } from '@flightctl/types/imagebuilder';
-import { ResourceKind } from '@flightctl/types';
+import { ResourceKind as ImageBuilderResourceKind, ImagePipelineResponse } from '@flightctl/types/imagebuilder';
 import FlightControlDescriptionList from '../../common/FlightCtlDescriptionList';
 import { getDateTimeDisplay } from '../../../utils/dates';
 import { useTranslation } from '../../../hooks/useTranslation';
@@ -22,12 +21,13 @@ import EventsCard from '../../Events/EventsCard';
 
 // CELIA-WIP: DEtermine if there will be events for image builds
 
-const ImageBuildDetailsContent = ({ imageBuild }: { imageBuild: ImageBuild }) => {
+const ImageBuildDetailsContent = ({ imagePipeline }: { imagePipeline: ImagePipelineResponse }) => {
   const { t } = useTranslation();
-  const imageBuildId = imageBuild.metadata.name as string;
+  const imageBuild = imagePipeline.imageBuild;
+  const name = imageBuild.metadata.name as string;
   const sourceImage = getImageBuildSourceImage(imageBuild);
   const destinationImage = getImageBuildDestinationImage(imageBuild);
-  const exportImagesCount = imageBuild.status?.exportImages?.length || 0;
+  const exportImagesCount = imagePipeline.imageExports?.length || 0;
   const imageReference = imageBuild.status?.imageReference;
   const architecture = imageBuild.status?.architecture;
   const manifestDigest = imageBuild.status?.manifestDigest;
@@ -59,6 +59,7 @@ const ImageBuildDetailsContent = ({ imageBuild }: { imageBuild: ImageBuild }) =>
                 <DescriptionListTerm>{t('Output image')}</DescriptionListTerm>
                 <DescriptionListDescription>{destinationImage}</DescriptionListDescription>
               </DescriptionListGroup>
+
               {imageReference && (
                 <DescriptionListGroup>
                   <DescriptionListTerm>{t('Image reference')}</DescriptionListTerm>
@@ -86,7 +87,7 @@ const ImageBuildDetailsContent = ({ imageBuild }: { imageBuild: ImageBuild }) =>
         </Card>
       </GridItem>
       <GridItem md={3}>
-        <EventsCard kind={'ImageBuild' as ResourceKind} objId={imageBuildId} />
+        <EventsCard kind={ImageBuilderResourceKind.IMAGE_BUILD} objId={name} />
       </GridItem>
     </Grid>
   );

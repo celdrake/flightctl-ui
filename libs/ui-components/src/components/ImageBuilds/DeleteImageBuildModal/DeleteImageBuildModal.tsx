@@ -22,7 +22,8 @@ const DeleteImageBuildModal = ({
 
   const onDelete = async () => {
     try {
-      await remove(`imagebuilds/${imageBuildId}`);
+      // By using the "imagepipelines" endpoint, we can delete both the image build and its associated image exports.
+      await remove(`imagepipelines/${imageBuildId}`);
     } catch (imageBuildErr) {
       setError({
         text: t('Deletion of image build {{imageBuildId}} failed.'),

@@ -1,11 +1,11 @@
 import * as React from 'react';
 
+import { ConditionStatus } from '@flightctl/types';
 import { ImageBuildConditionType, ImageBuildStatus } from '@flightctl/types/imagebuilder';
 import { useTranslation } from '../../hooks/useTranslation';
 import { StatusDisplayContent } from '../Status/StatusDisplay';
 import { StatusLevel } from '../../utils/status/common';
 import { getCondition } from '../../utils/api';
-import { ConditionStatus } from '@flightctl/types';
 
 const ImageBuildStatus = ({ buildStatus }: { buildStatus?: ImageBuildStatus }) => {
   const { t } = useTranslation();

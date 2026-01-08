@@ -76,9 +76,9 @@ const CreateAuthProvider = React.lazy(
 const AuthProviderDetails = React.lazy(
   () => import('@flightctl/ui-components/src/components/AuthProvider/AuthProviderDetails/AuthProviderDetails'),
 );
-const ImageBuildsPage = React.lazy(() => import('@flightctl/ui-components/src/components/ImageBuild/ImageBuildsPage'));
+const ImageBuildsPage = React.lazy(() => import('@flightctl/ui-components/src/components/ImageBuilds/ImageBuildsPage'));
 const ImageBuildDetails = React.lazy(
-  () => import('@flightctl/ui-components/src/components/ImageBuild/ImageBuildDetails/ImageBuildDetailsPage'),
+  () => import('@flightctl/ui-components/src/components/ImageBuilds/ImageBuildDetails/ImageBuildDetailsPage'),
 );
 
 export type ExtendedRouteObject = RouteObject & {

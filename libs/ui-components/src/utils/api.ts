@@ -7,7 +7,7 @@ import {
   RepositoryList,
   ResourceSyncList,
 } from '@flightctl/types';
-import { ImageBuildList } from '@flightctl/types/imagebuilder';
+import { ImageBuildList, ImagePipelineList } from '@flightctl/types/imagebuilder';
 
 import { AnnotationType, GenericCondition, GenericConditionType } from '../types/extraTypes';
 
@@ -17,7 +17,8 @@ export type ApiList =
   | FleetList
   | RepositoryList
   | ResourceSyncList
-  | ImageBuildList;
+  | ImageBuildList
+  | ImagePipelineList;
 
 const getApiListCount = (listResponse: ApiList | undefined): number | undefined => {
   if (listResponse === undefined) {
