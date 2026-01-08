@@ -1,25 +1,25 @@
 import * as React from 'react';
 import { ActionsColumn, IAction, OnSelect, Td, Tr } from '@patternfly/react-table';
 
-import { ImageBuild } from '@flightctl/types/imagebuilder';
+import { ImagePipelineResponse } from '@flightctl/types/imagebuilder';
 import { useTranslation } from '../../hooks/useTranslation';
 import { ROUTE, useNavigate } from '../../hooks/useNavigate';
-import ResourceLink from '../common/ResourceLink';
-import ImageBuildStatus from './ImageBuildStatus';
 import { getImageBuildDestinationImage, getImageBuildSourceImage } from '../../utils/imageBuilds';
 import { getDateDisplay } from '../../utils/dates';
+import ResourceLink from '../common/ResourceLink';
+import ImageBuildStatus from './ImageBuildStatus';
 
 type ImageBuildRowProps = {
-  imageBuild: ImageBuild;
+  imagePipeline: ImagePipelineResponse;
   rowIndex: number;
-  onRowSelect: (imageBuild: ImageBuild) => OnSelect;
-  isRowSelected: (imageBuild: ImageBuild) => boolean;
+  onRowSelect: (imagePipeline: ImagePipelineResponse) => OnSelect;
+  isRowSelected: (imagePipeline: ImagePipelineResponse) => boolean;
   onDeleteClick: () => void;
   canDelete: boolean;
 };
 
 const ImageBuildRow = ({
-  imageBuild,
+  imagePipeline,
   rowIndex,
   onRowSelect,
   isRowSelected,
@@ -29,6 +29,7 @@ const ImageBuildRow = ({
   const { t } = useTranslation();
   const navigate = useNavigate();
 
+  const imageBuild = imagePipeline.imageBuild;
   const imageBuildName = imageBuild.metadata.name || '';
 
   const actions: IAction[] = [
@@ -42,22 +43,22 @@ const ImageBuildRow = ({
 
   if (canDelete) {
     actions.push({
-      title: t('Delete'),
+      title: t('Delete image build'),
       onClick: onDeleteClick,
     });
   }
 
   const sourceImage = getImageBuildSourceImage(imageBuild);
   const destinationImage = getImageBuildDestinationImage(imageBuild);
-  const exportImagesCount = imageBuild.status?.exportImages?.length || 0;
+  const exportImagesCount = imagePipeline.imageExports?.length || 0;
 
   return (
     <Tr>
       <Td
         select={{
           rowIndex,
-          onSelect: onRowSelect(imageBuild),
-          isSelected: isRowSelected(imageBuild),
+          onSelect: onRowSelect(imagePipeline),
+          isSelected: isRowSelected(imagePipeline),
         }}
       />
       <Td dataLabel={t('Name')}>

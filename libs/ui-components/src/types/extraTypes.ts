@@ -19,6 +19,7 @@ import {
 import {
   ImageBuildCondition,
   ImageBuildConditionType,
+  ResourceKind as ImageBuilderResourceKind,
   ImageExportCondition,
   ImageExportConditionType,
 } from '@flightctl/types/imagebuilder';
@@ -43,8 +44,7 @@ export enum DeviceAnnotation {
 
 export type GenericCondition = Condition | ImageBuildCondition | ImageExportCondition;
 export type GenericConditionType = ConditionType | ImageBuildConditionType | ImageExportConditionType;
-// CELIA-WIP: Asaf will add ResourceKind for imagebuilder to its schema
-export type FlightctlKind = ResourceKind | 'ImageBuild' | 'ImageExport';
+export type FlightctlKind = ResourceKind | ImageBuilderResourceKind;
 
 export const isEnrollmentRequest = (resource: Device | EnrollmentRequest): resource is EnrollmentRequest =>
   resource.kind === 'EnrollmentRequest';

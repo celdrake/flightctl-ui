@@ -1,8 +1,8 @@
 import * as React from 'react';
-import ImageBuildDetails from '@flightctl/ui-components/src/components/ImageBuild/ImageBuildDetails/ImageBuildDetailsPage';
+import ImageBuildDetails from '@flightctl/ui-components/src/components/ImageBuilds/ImageBuildDetails/ImageBuildDetailsPage';
 import WithPageLayout from '../common/WithPageLayout';
 
-const ImageBuildDetailsPage = () => {
+const OcpImageBuildDetailsPage = () => {
   return (
     <WithPageLayout>
       <ImageBuildDetails />
@@ -10,4 +10,4 @@ const ImageBuildDetailsPage = () => {
   );
 };
 
-export default ImageBuildDetailsPage;
+export default OcpImageBuildDetailsPage;

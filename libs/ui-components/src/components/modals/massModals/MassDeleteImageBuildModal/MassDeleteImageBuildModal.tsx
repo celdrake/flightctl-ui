@@ -1,9 +1,9 @@
 import * as React from 'react';
 import { Alert, Button, Progress, ProgressMeasureLocation, Stack, StackItem } from '@patternfly/react-core';
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@patternfly/react-core/next';
-import { ImageBuild } from '@flightctl/types/imagebuilder';
 import { Table, Tbody, Td, Th, Thead, Tr } from '@patternfly/react-table';
 
+import { ImagePipelineResponse } from '@flightctl/types/imagebuilder';
 import { getErrorMessage } from '../../../../utils/error';
 import { useFetch } from '../../../../hooks/useFetch';
 import { useTranslation } from '../../../../hooks/useTranslation';
@@ -12,11 +12,11 @@ import { getImageBuildDestinationImage, getImageBuildSourceImage } from '../../.
 
 type MassDeleteImageBuildModalProps = {
   onClose: VoidFunction;
-  imageBuilds: Array<ImageBuild>;
+  imagePipelines: Array<ImagePipelineResponse>;
   onDeleteSuccess: VoidFunction;
 };
 
-const MassDeleteImageBuildTable = ({ imageBuilds }: { imageBuilds: Array<ImageBuild> }) => {
+const MassDeleteImageBuildTable = ({ imagePipelines }: { imagePipelines: Array<ImagePipelineResponse> }) => {
   const { t } = useTranslation();
   return (
     <Table>
@@ -28,7 +28,8 @@ const MassDeleteImageBuildTable = ({ imageBuilds }: { imageBuilds: Array<ImageBu
         </Tr>
       </Thead>
       <Tbody>
-        {imageBuilds.map((imageBuild) => {
+        {imagePipelines.map((pipeline) => {
+          const imageBuild = pipeline.imageBuild;
           const name = imageBuild.metadata.name || '';
           const baseImage = getImageBuildSourceImage(imageBuild);
           const outputImage = getImageBuildDestinationImage(imageBuild);
@@ -46,8 +47,7 @@ const MassDeleteImageBuildTable = ({ imageBuilds }: { imageBuilds: Array<ImageBu
 };
 
 // CELIA-WIP: we need copy from UX designers
-
-const MassDeleteImageBuildModal = ({ onClose, imageBuilds, onDeleteSuccess }: MassDeleteImageBuildModalProps) => {
+const MassDeleteImageBuildModal = ({ onClose, imagePipelines, onDeleteSuccess }: MassDeleteImageBuildModalProps) => {
   const { t } = useTranslation();
   const [progress, setProgress] = React.useState(0);
   const [progressTotal, setProgressTotal] = React.useState(0);
@@ -55,11 +55,12 @@ const MassDeleteImageBuildModal = ({ onClose, imageBuilds, onDeleteSuccess }: Ma
   const [errors, setErrors] = React.useState<string[]>();
   const { remove } = useFetch();
 
-  const deleteImageBuilds = async () => {
+  const deleteImagePipelines = async () => {
     setProgress(0);
     setIsDeleting(true);
-    const promises = imageBuilds.map(async (r) => {
-      await remove(`imagebuilds/${r.metadata.name}`);
+    const promises = imagePipelines.map(async (p) => {
+      // Deleting an image pipeline will delete both the imageBuild and any associated imageExport
+      await remove(`imagepipelines/${p.imageBuild.metadata.name}`);
       setProgress((p) => p + 1);
     });
 
@@ -87,7 +88,7 @@ const MassDeleteImageBuildModal = ({ onClose, imageBuilds, onDeleteSuccess }: Ma
             </Alert>
           </StackItem>
           <StackItem>
-            <MassDeleteImageBuildTable imageBuilds={imageBuilds} />
+            <MassDeleteImageBuildTable imagePipelines={imagePipelines} />
           </StackItem>
 
           {isDeleting && (
@@ -120,7 +121,7 @@ const MassDeleteImageBuildModal = ({ onClose, imageBuilds, onDeleteSuccess }: Ma
         <Button
           key="delete"
           variant="danger"
-          onClick={deleteImageBuilds}
+          onClick={deleteImagePipelines}
           isLoading={isDeleting}
           isDisabled={isDeleting}
         >

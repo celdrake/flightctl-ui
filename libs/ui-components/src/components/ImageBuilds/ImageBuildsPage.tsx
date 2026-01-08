@@ -22,7 +22,6 @@ import {
   ImagePipelineRequest,
 } from '@flightctl/types/imagebuilder';
 import { RESOURCE, VERB } from '../../types/rbac';
-import { getResourceId } from '../../utils/resource';
 import { getErrorMessage } from '../../utils/error';
 import { useTableSelect } from '../../hooks/useTableSelect';
 import { useTranslation } from '../../hooks/useTranslation';
@@ -36,10 +35,10 @@ import TablePagination from '../Table/TablePagination';
 import TableTextSearch from '../Table/TableTextSearch';
 import Table, { ApiSortTableColumn } from '../Table/Table';
 
-import DeleteImageBuildModal from './DeleteImageBuildModal/DeleteImageBuildModal';
-import { useImageBuildBackendFilters, useImageBuilds } from './useImageBuilds';
-import ImageBuildRow from './ImageBuildRow';
 import MassDeleteImageBuildModal from '../modals/massModals/MassDeleteImageBuildModal/MassDeleteImageBuildModal';
+import DeleteImageBuildModal from './DeleteImageBuildModal/DeleteImageBuildModal';
+import { useImagePipelines, useImagePipelinesBackendFilters } from './useImagePipelines';
+import ImageBuildRow from './ImageBuildRow';
 
 const getColumns = (t: TFunction): ApiSortTableColumn[] => [
   {
@@ -85,7 +84,7 @@ const ImageBuildsEmptyState = ({ onCreateClick }: { onCreateClick: () => void })
   );
 };
 
-const imageBuild: ImageBuild = {
+const getFakeImageBuild = (): ImageBuild => ({
   apiVersion: 'imagebuilder.flightctl.io/v1beta1',
   kind: 'ImageBuild',
   metadata: {
@@ -106,9 +105,9 @@ const imageBuild: ImageBuild = {
       type: BindingType.BindingTypeLate,
     },
   },
-};
+});
 
-const imageExport: ImageExport = {
+const getFakeImageExport = (): ImageExport => ({
   apiVersion: 'imagebuilder.flightctl.io/v1beta1',
   kind: 'ImageExport',
   metadata: {
@@ -128,15 +127,15 @@ const imageExport: ImageExport = {
     },
     format: ExportFormatType.ExportFormatTypeISO,
   },
-};
+});
 
 const ImageBuildTable = () => {
   const { t } = useTranslation();
 
   const imageBuildColumns = React.useMemo(() => getColumns(t), [t]);
-  const { name, setName, hasFiltersEnabled } = useImageBuildBackendFilters();
+  const { name, setName, hasFiltersEnabled } = useImagePipelinesBackendFilters();
 
-  const { imageBuilds, isLoading, error, isUpdating, refetch, pagination } = useImageBuilds({ name });
+  const { imagePipelines, isLoading, error, isUpdating, refetch, pagination } = useImagePipelines({ name });
 
   const [imageBuildToDeleteId, setImageBuildToDeleteId] = React.useState<string>();
   const [isMassDeleteModalOpen, setIsMassDeleteModalOpen] = React.useState(false);
@@ -150,18 +149,18 @@ const ImageBuildTable = () => {
 
   const { post } = useFetch();
 
-  const handleCreateImageBuild = React.useCallback(async () => {
+  const handleCreateImagePipeline = React.useCallback(async () => {
     setIsCreating(true);
     setCreateError(undefined);
 
     try {
       // Hardcoded image build data for testing
-      const imageBuildRequest: ImagePipelineRequest = {
-        imageBuild,
-        imageExport,
+      const imagePipelineRequest: ImagePipelineRequest = {
+        imageBuild: getFakeImageBuild(),
+        imageExports: [getFakeImageExport()],
       };
 
-      await post<ImagePipelineRequest>('imagepipelines', imageBuildRequest);
+      await post<ImagePipelineRequest>('imagepipelines', imagePipelineRequest);
       refetch();
     } catch (e) {
       setCreateError(getErrorMessage(e));
@@ -181,7 +180,7 @@ const ImageBuildTable = () => {
           </ToolbarGroup>
           {canCreate && (
             <ToolbarItem>
-              <Button variant="primary" onClick={handleCreateImageBuild} isLoading={isCreating}>
+              <Button variant="primary" onClick={handleCreateImagePipeline} isLoading={isCreating}>
                 {t('Create image build')}
               </Button>
             </ToolbarItem>
@@ -200,30 +199,34 @@ const ImageBuildTable = () => {
         loading={isUpdating}
         columns={imageBuildColumns}
         hasFilters={hasFiltersEnabled}
-        emptyData={imageBuilds.length === 0}
+        emptyData={imagePipelines.length === 0}
         clearFilters={() => setName('')}
         isAllSelected={isAllSelected}
         onSelectAll={setAllSelected}
       >
         <Tbody>
-          {imageBuilds.map((imageBuild, rowIndex) => (
-            <ImageBuildRow
-              key={getResourceId(imageBuild)}
-              imageBuild={imageBuild}
-              rowIndex={rowIndex}
-              canDelete={canDelete}
-              onDeleteClick={() => {
-                setImageBuildToDeleteId(imageBuild.metadata.name || '');
-              }}
-              isRowSelected={isRowSelected}
-              onRowSelect={onRowSelect}
-            />
-          ))}
+          {imagePipelines.map((imagePipeline, rowIndex) => {
+            const imageBuild = imagePipeline.imageBuild;
+            const name = imageBuild.metadata.name || '';
+            return (
+              <ImageBuildRow
+                key={name}
+                imagePipeline={imagePipeline}
+                rowIndex={rowIndex}
+                canDelete={canDelete}
+                onDeleteClick={() => {
+                  setImageBuildToDeleteId(name);
+                }}
+                isRowSelected={() => isRowSelected(imageBuild)}
+                onRowSelect={() => onRowSelect(imageBuild)}
+              />
+            );
+          })}
         </Tbody>
       </Table>
       <TablePagination pagination={pagination} isUpdating={isUpdating} />
-      {!isUpdating && imageBuilds.length === 0 && !name && (
-        <ImageBuildsEmptyState onCreateClick={handleCreateImageBuild} />
+      {!isUpdating && imagePipelines.length === 0 && !name && (
+        <ImageBuildsEmptyState onCreateClick={handleCreateImagePipeline} />
       )}
       {createError && (
         <Alert variant="danger" title={t('Error creating image build')} isInline>
@@ -245,7 +248,7 @@ const ImageBuildTable = () => {
       {isMassDeleteModalOpen && (
         <MassDeleteImageBuildModal
           onClose={() => setIsMassDeleteModalOpen(false)}
-          imageBuilds={imageBuilds.filter(isRowSelected)}
+          imagePipelines={imagePipelines.filter((imagePipeline) => isRowSelected(imagePipeline.imageBuild))}
           onDeleteSuccess={() => {
             setIsMassDeleteModalOpen(false);
             refetch();

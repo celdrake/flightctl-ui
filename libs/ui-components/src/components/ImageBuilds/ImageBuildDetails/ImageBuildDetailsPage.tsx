@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { DropdownItem, DropdownList, Nav, NavList } from '@patternfly/react-core';
 
-import { ImageBuild } from '@flightctl/types/imagebuilder';
+import { ImagePipelineResponse } from '@flightctl/types/imagebuilder';
 import { RESOURCE, VERB } from '../../../types/rbac';
 import PageWithPermissions from '../../common/PageWithPermissions';
 import { useFetchPeriodically } from '../../../hooks/useFetchPeriodically';
@@ -13,33 +13,27 @@ import NavItem from '../../NavItem/NavItem';
 import DetailsPage from '../../DetailsPage/DetailsPage';
 import DetailsPageActions from '../../DetailsPage/DetailsPageActions';
 import DeleteImageBuildModal from '../DeleteImageBuildModal/DeleteImageBuildModal';
-import ImageBuildDetailsContent from './ImageBuildDetailsContent';
 import YamlEditor from '../../common/CodeEditor/YamlEditor';
+import ImageBuildDetailsContent from './ImageBuildDetailsContent';
 
-const imageBuildDetailsPermissions = [
-  { kind: RESOURCE.IMAGE_BUILD, verb: VERB.DELETE },
-  { kind: RESOURCE.IMAGE_BUILD, verb: VERB.PATCH },
-];
+// Image pipelines have the same permissions as image builds
+const imageBuildDetailsPermissions = [{ kind: RESOURCE.IMAGE_BUILD, verb: VERB.DELETE }];
 
 const ImageBuildDetailsPage = () => {
   const { t } = useTranslation();
-
+  const navigate = useNavigate();
   const {
     router: { useParams, Routes, Route, Navigate },
   } = useAppContext();
 
   const { imageBuildId } = useParams() as { imageBuildId: string };
-  const [imageBuild, isLoading, error, refetch] = useFetchPeriodically<Required<ImageBuild>>({
-    endpoint: `imagebuilds/${imageBuildId}`,
+  // By fetching "imagePipelines", we fetch the combined entity of the image build and its associated image exports.
+  const [imagePipeline, isLoading, error, refetch] = useFetchPeriodically<Required<ImagePipelineResponse>>({
+    endpoint: `imagepipelines/${imageBuildId}`,
   });
   const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState<boolean>();
-
-  const navigate = useNavigate();
-
   const { checkPermissions } = usePermissionsContext();
-  const [canDelete, canEdit] = checkPermissions(imageBuildDetailsPermissions);
-
-  const hasActions = canDelete || canEdit;
+  const [canDelete] = checkPermissions(imageBuildDetailsPermissions);
 
   return (
     <DetailsPage
@@ -58,23 +52,24 @@ const ImageBuildDetailsPage = () => {
         </Nav>
       }
       actions={
-        hasActions && (
+        canDelete && (
           <DetailsPageActions>
             <DropdownList>
-              {canDelete && (
-                <DropdownItem onClick={() => setIsDeleteModalOpen(true)}>{t('Delete image build')}</DropdownItem>
-              )}
+              <DropdownItem onClick={() => setIsDeleteModalOpen(true)}>{t('Delete image build')}</DropdownItem>
             </DropdownList>
           </DetailsPageActions>
         )
       }
     >
-      {imageBuild && (
+      {imagePipeline && (
         <>
           <Routes>
             <Route index element={<Navigate to="details" replace />} />
-            <Route path="details" element={<ImageBuildDetailsContent imageBuild={imageBuild} />} />
-            <Route path="yaml" element={<YamlEditor apiObj={imageBuild} refetch={refetch} canEdit={canEdit} />} />
+            <Route path="details" element={<ImageBuildDetailsContent imagePipeline={imagePipeline} />} />
+            <Route
+              path="yaml"
+              element={<YamlEditor apiObj={imagePipeline.imageBuild} refetch={refetch} canEdit={false} />}
+            />
           </Routes>
           {isDeleteModalOpen && (
             <DeleteImageBuildModal
