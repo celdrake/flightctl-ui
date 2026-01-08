@@ -3,6 +3,7 @@ import {
   ApplicationEnvVars,
   ApplicationVolumeProviderSpec,
   AuthProvider,
+  Condition,
   ConditionType,
   Device,
   EnrollmentRequest,
@@ -14,6 +15,12 @@ import {
   RelativePath,
   ResourceSync,
 } from '@flightctl/types';
+import {
+  ImageBuildCondition,
+  ImageBuildConditionType,
+  ImageExportCondition,
+  ImageExportConditionType,
+} from '@flightctl/types/imagebuilder';
 
 export interface FlightCtlLabel {
   key: string;
@@ -32,6 +39,9 @@ export enum DeviceAnnotation {
   TemplateVersion = 'fleet-controller/templateVersion',
   RenderedVersion = 'device-controller/renderedVersion',
 }
+
+export type GenericCondition = Condition | ImageBuildCondition | ImageExportCondition;
+export type GenericConditionType = ConditionType | ImageBuildConditionType | ImageExportConditionType;
 
 export const isEnrollmentRequest = (resource: Device | EnrollmentRequest): resource is EnrollmentRequest =>
   resource.kind === 'EnrollmentRequest';

@@ -54,13 +54,16 @@ const getColumns = (t: TFunction): ApiSortTableColumn[] => [
     name: t('Name'),
   },
   {
-    name: t('Source image'),
+    name: t('Base image'),
   },
   {
-    name: t('Destination image'),
+    name: t('Output image'),
   },
   {
     name: t('Status'),
+  },
+  {
+    name: t('Date'),
   },
 ];
 
@@ -182,7 +185,14 @@ const ImageBuildTable = () => {
         </Tbody>
       </Table>
       <TablePagination pagination={pagination} isUpdating={isUpdating} />
-      {!isUpdating && imageBuilds.length === 0 && !name && <ImageBuildsEmptyState />}
+      {!isUpdating && imageBuilds.length === 0 && !name && (
+        <ImageBuildsEmptyState onCreateClick={handleCreateImageBuild} />
+      )}
+      {createError && (
+        <div style={{ marginTop: '1rem', color: 'var(--pf-v5-global--danger-color--100)' }}>
+          {t('Error creating image build: {{error}}', { error: createError })}
+        </div>
+      )}
       {imageBuildToDeleteId && (
         // TODO: Add DeleteImageBuildModal when available
         <div>{/* Delete modal would go here */}</div>

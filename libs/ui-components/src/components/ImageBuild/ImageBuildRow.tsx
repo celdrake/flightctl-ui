@@ -6,6 +6,7 @@ import { useTranslation } from '../../hooks/useTranslation';
 import ResourceLink from '../common/ResourceLink';
 import ImageBuildStatus from './ImageBuildStatus';
 import { getImageBuildDestinationImage, getImageBuildSourceImage } from '../../utils/imageBuilds';
+import { getDateDisplay } from '../../utils/dates';
 
 type ImageBuildRowProps = {
   imageBuild: ImageBuild;
@@ -76,11 +77,12 @@ const ImageBuildRow = ({
       <Td dataLabel={t('Name')}>
         <ResourceLink id={imageBuildName} />
       </Td>
-      <Td dataLabel={t('Source image')}>{sourceImage}</Td>
-      <Td dataLabel={t('Destination image')}>{destinationImage}</Td>
+      <Td dataLabel={t('Base image')}>{sourceImage}</Td>
+      <Td dataLabel={t('Output image')}>{destinationImage}</Td>
       <Td dataLabel={t('Status')}>
-        <ImageBuildStatus imageBuild={imageBuild} />
+        <ImageBuildStatus buildStatus={imageBuild.status} />
       </Td>
+      <Td dataLabel={t('Date')}>{getDateDisplay(imageBuild.metadata.creationTimestamp)}</Td>
       <Td isActionCell>
         <ActionsColumn items={actions} />
       </Td>

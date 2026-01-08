@@ -18,11 +18,11 @@ import { Event, ResourceKind } from '@flightctl/types';
 import { AlertManagerAlert } from '../../../../types/extraTypes';
 import { useFetchPeriodically } from '../../../../hooks/useFetchPeriodically';
 import { useTranslation } from '../../../../hooks/useTranslation';
-import { getDateDisplay } from '../../../../utils/dates';
 import { getErrorMessage } from '../../../../utils/error';
 import ResourceLink from '../../../common/ResourceLink';
 
 import AlertsEmptyState from './AlertsEmptyState';
+import { getDateTimeDisplay } from '../../../../utils/dates';
 
 const ALERTS_TIMEOUT = 20000; // 20 seconds
 
@@ -177,7 +177,7 @@ const AlertsCard = () => {
                   </Content>
                 </StackItem>
                 <StackItem>
-                  <Content component="small">{getDateDisplay(alert.startsAt || '')}</Content>
+                  <Content component="small">{getDateTimeDisplay(alert.startsAt || '')}</Content>
                 </StackItem>
               </Stack>
             </ListItem>
