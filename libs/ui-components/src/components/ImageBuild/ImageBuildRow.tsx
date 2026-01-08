@@ -3,6 +3,7 @@ import { ActionsColumn, IAction, OnSelect, Td, Tr } from '@patternfly/react-tabl
 
 import { ImageBuild } from '@flightctl/types/imagebuilder';
 import { useTranslation } from '../../hooks/useTranslation';
+import { ROUTE, useNavigate } from '../../hooks/useNavigate';
 import ResourceLink from '../common/ResourceLink';
 import ImageBuildStatus from './ImageBuildStatus';
 import { getImageBuildDestinationImage, getImageBuildSourceImage } from '../../utils/imageBuilds';
@@ -26,6 +27,7 @@ const ImageBuildRow = ({
   canDelete,
 }: ImageBuildRowProps) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   const imageBuildName = imageBuild.metadata.name || '';
 
@@ -33,7 +35,7 @@ const ImageBuildRow = ({
     {
       title: t('View details'),
       onClick: () => {
-        // TODO: Navigate to image build details when route is available
+        navigate({ route: ROUTE.IMAGE_BUILD_DETAILS, postfix: imageBuildName });
       },
     },
   ];
@@ -59,7 +61,7 @@ const ImageBuildRow = ({
         }}
       />
       <Td dataLabel={t('Name')}>
-        <ResourceLink id={imageBuildName} />
+        <ResourceLink id={imageBuildName} routeLink={ROUTE.IMAGE_BUILD_DETAILS} />
       </Td>
       <Td dataLabel={t('Base image')}>{sourceImage}</Td>
       <Td dataLabel={t('Output image')}>{destinationImage}</Td>

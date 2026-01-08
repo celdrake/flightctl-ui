@@ -1,7 +1,13 @@
 import * as React from 'react';
 import { useDebounce } from 'use-debounce';
 
-import { ImageBuild, ImageBuildList, ImageExport, ImageExportList } from '@flightctl/types/imagebuilder';
+import {
+  ImageBuild,
+  ImageBuildList,
+  ImageExport,
+  ImageExportList,
+  ImageExportSourceType,
+} from '@flightctl/types/imagebuilder';
 import { useAppContext } from '../../hooks/useAppContext';
 import { useFetchPeriodically } from '../../hooks/useFetchPeriodically';
 import { PaginationDetails, useTablePagination } from '../../hooks/useTablePagination';
@@ -76,7 +82,7 @@ const enrichImageBuildsWithExports = (imageBuilds: ImageBuild[], imageExports: I
   return imageBuilds.map((imageBuild) => {
     const matchedExports = imageExports.filter((imageExport) => {
       return (
-        imageExport.spec.source.type === 'imageBuild' &&
+        imageExport.spec.source.type === ImageExportSourceType.ImageExportSourceTypeImageBuild &&
         imageExport.spec.source.imageBuildRef === imageBuild.metadata?.name
       );
     });
