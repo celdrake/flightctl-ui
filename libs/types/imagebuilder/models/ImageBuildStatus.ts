@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { ImageBuildCondition } from './ImageBuildCondition';
+import { ImageExport } from './ImageExport';
 /**
  * ImageBuildStatus represents the current status of an ImageBuild.
  */
@@ -27,5 +28,7 @@ export type ImageBuildStatus = {
    * The last time the build was seen (heartbeat).
    */
   lastSeen?: string;
-};
 
+  // CELIA-WIP: Asaf will add a joined query for imageBuilds together with their imageExports
+  exportImages?: ImageExport[];
+};

@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+  Alert,
   Button,
   EmptyStateActions,
   EmptyStateBody,
@@ -13,8 +14,19 @@ import { Tbody } from '@patternfly/react-table';
 import PlusCircleIcon from '@patternfly/react-icons/dist/js/icons/plus-circle-icon';
 import { TFunction } from 'i18next';
 
+import {
+  BindingType,
+  ExportFormatType,
+  ImageBuild,
+  ImageExport,
+  ImagePipelineRequest,
+} from '@flightctl/types/imagebuilder';
 import { RESOURCE, VERB } from '../../types/rbac';
+import { getResourceId } from '../../utils/resource';
+import { getErrorMessage } from '../../utils/error';
+import { useTableSelect } from '../../hooks/useTableSelect';
 import { useTranslation } from '../../hooks/useTranslation';
+import { useFetch } from '../../hooks/useFetch';
 import ResourceListEmptyState from '../common/ResourceListEmptyState';
 import PageWithPermissions from '../common/PageWithPermissions';
 import { usePermissionsContext } from '../common/PermissionsContext';
@@ -23,13 +35,37 @@ import ListPageBody from '../ListPage/ListPageBody';
 import TablePagination from '../Table/TablePagination';
 import TableTextSearch from '../Table/TableTextSearch';
 import Table, { ApiSortTableColumn } from '../Table/Table';
-import { useTableSelect } from '../../hooks/useTableSelect';
-import { getResourceId } from '../../utils/resource';
-import ImageBuildRow from './ImageBuildRow';
+
+import DeleteImageBuildModal from './DeleteImageBuildModal/DeleteImageBuildModal';
 import { useImageBuildBackendFilters, useImageBuilds } from './useImageBuilds';
-import { useFetch } from '../../hooks/useFetch';
-import { getErrorMessage } from '../../utils/error';
-import { ImagePipelineRequest } from '@flightctl/types/imagebuilder';
+import ImageBuildRow from './ImageBuildRow';
+import MassDeleteImageBuildModal from '../modals/massModals/MassDeleteImageBuildModal/MassDeleteImageBuildModal';
+
+const getColumns = (t: TFunction): ApiSortTableColumn[] => [
+  {
+    name: t('Name'),
+  },
+  {
+    name: t('Base image'),
+  },
+  {
+    name: t('Output image'),
+  },
+  {
+    name: t('Status'),
+  },
+  {
+    name: t('Export images'),
+  },
+  {
+    name: t('Date'),
+  },
+];
+
+const imageBuildTablePermissions = [
+  { kind: RESOURCE.IMAGE_BUILD, verb: VERB.CREATE },
+  { kind: RESOURCE.IMAGE_BUILD, verb: VERB.DELETE },
+];
 
 const ImageBuildsEmptyState = ({ onCreateClick }: { onCreateClick: () => void }) => {
   const { t } = useTranslation();
@@ -49,29 +85,50 @@ const ImageBuildsEmptyState = ({ onCreateClick }: { onCreateClick: () => void })
   );
 };
 
-const getColumns = (t: TFunction): ApiSortTableColumn[] => [
-  {
-    name: t('Name'),
+const imageBuild: ImageBuild = {
+  apiVersion: 'imagebuilder.flightctl.io/v1beta1',
+  kind: 'ImageBuild',
+  metadata: {
+    name: `test-image-build-${Date.now()}`,
   },
-  {
-    name: t('Base image'),
+  spec: {
+    source: {
+      repository: 'test-source-repo',
+      imageName: 'test-source-image',
+      imageTag: 'latest',
+    },
+    destination: {
+      repository: 'test-dest-repo',
+      imageName: 'test-dest-image',
+      tag: 'latest',
+    },
+    binding: {
+      type: BindingType.BindingTypeLate,
+    },
   },
-  {
-    name: t('Output image'),
-  },
-  {
-    name: t('Status'),
-  },
-  {
-    name: t('Date'),
-  },
-];
+};
 
-const imageBuildTablePermissions = [
-  { kind: RESOURCE.IMAGE_BUILD, verb: VERB.DELETE },
-  { kind: RESOURCE.IMAGE_BUILD, verb: VERB.CREATE },
-  { kind: RESOURCE.IMAGE_BUILD, verb: VERB.PATCH },
-];
+const imageExport: ImageExport = {
+  apiVersion: 'imagebuilder.flightctl.io/v1beta1',
+  kind: 'ImageExport',
+  metadata: {
+    name: `test-image-export-${Date.now()}`,
+  },
+  spec: {
+    source: {
+      type: 'imageReference',
+      repository: 'test-source-repo',
+      imageName: 'test-source-image',
+      imageTag: 'latest',
+    },
+    destination: {
+      repository: 'test-export-repo',
+      imageName: 'test-export-image',
+      tag: 'latest',
+    },
+    format: ExportFormatType.ExportFormatTypeISO,
+  },
+};
 
 const ImageBuildTable = () => {
   const { t } = useTranslation();
@@ -82,13 +139,14 @@ const ImageBuildTable = () => {
   const { imageBuilds, isLoading, error, isUpdating, refetch, pagination } = useImageBuilds({ name });
 
   const [imageBuildToDeleteId, setImageBuildToDeleteId] = React.useState<string>();
+  const [isMassDeleteModalOpen, setIsMassDeleteModalOpen] = React.useState(false);
   const [isCreating, setIsCreating] = React.useState(false);
   const [createError, setCreateError] = React.useState<string | undefined>();
 
   const { onRowSelect, isAllSelected, hasSelectedRows, isRowSelected, setAllSelected } = useTableSelect();
 
   const { checkPermissions } = usePermissionsContext();
-  const [canDelete, canCreate, canEdit] = checkPermissions(imageBuildTablePermissions);
+  const [canCreate, canDelete] = checkPermissions(imageBuildTablePermissions);
 
   const { post } = useFetch();
 
@@ -99,28 +157,8 @@ const ImageBuildTable = () => {
     try {
       // Hardcoded image build data for testing
       const imageBuildRequest: ImagePipelineRequest = {
-        imageBuild: {
-          apiVersion: 'imagebuilder.flightctl.io/v1beta1',
-          kind: 'ImageBuild',
-          metadata: {
-            name: `test-image-build-${Date.now()}`,
-          },
-          spec: {
-            source: {
-              repository: 'test-source-repo',
-              imageName: 'test-source-image',
-              imageTag: 'latest',
-            },
-            destination: {
-              repository: 'test-dest-repo',
-              imageName: 'test-dest-image',
-              tag: 'latest',
-            },
-            binding: {
-              type: 'late',
-            },
-          },
-        },
+        imageBuild,
+        imageExport,
       };
 
       await post<ImagePipelineRequest>('imagepipelines', imageBuildRequest);
@@ -150,7 +188,7 @@ const ImageBuildTable = () => {
           )}
           {canDelete && (
             <ToolbarItem>
-              <Button isDisabled={!hasSelectedRows} onClick={() => {}} variant="secondary">
+              <Button isDisabled={!hasSelectedRows} onClick={() => setIsMassDeleteModalOpen(true)} variant="secondary">
                 {t('Delete image builds')}
               </Button>
             </ToolbarItem>
@@ -179,7 +217,6 @@ const ImageBuildTable = () => {
               }}
               isRowSelected={isRowSelected}
               onRowSelect={onRowSelect}
-              canEdit={canEdit}
             />
           ))}
         </Tbody>
@@ -189,13 +226,31 @@ const ImageBuildTable = () => {
         <ImageBuildsEmptyState onCreateClick={handleCreateImageBuild} />
       )}
       {createError && (
-        <div style={{ marginTop: '1rem', color: 'var(--pf-v5-global--danger-color--100)' }}>
-          {t('Error creating image build: {{error}}', { error: createError })}
-        </div>
+        <Alert variant="danger" title={t('Error creating image build')} isInline>
+          {createError}
+        </Alert>
       )}
+
       {imageBuildToDeleteId && (
-        // TODO: Add DeleteImageBuildModal when available
-        <div>{/* Delete modal would go here */}</div>
+        <DeleteImageBuildModal
+          imageBuildId={imageBuildToDeleteId}
+          onClose={(hasDeleted) => {
+            setImageBuildToDeleteId(undefined);
+            if (hasDeleted) {
+              refetch();
+            }
+          }}
+        />
+      )}
+      {isMassDeleteModalOpen && (
+        <MassDeleteImageBuildModal
+          onClose={() => setIsMassDeleteModalOpen(false)}
+          imageBuilds={imageBuilds.filter(isRowSelected)}
+          onDeleteSuccess={() => {
+            setIsMassDeleteModalOpen(false);
+            refetch();
+          }}
+        />
       )}
     </ListPageBody>
   );

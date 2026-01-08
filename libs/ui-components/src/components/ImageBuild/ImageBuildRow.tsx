@@ -15,30 +15,6 @@ type ImageBuildRowProps = {
   isRowSelected: (imageBuild: ImageBuild) => boolean;
   onDeleteClick: () => void;
   canDelete: boolean;
-  canEdit: boolean;
-};
-
-const useImageBuildActions = (imageBuildName: string, canEdit: boolean) => {
-  const actions: IAction[] = [];
-  const { t } = useTranslation();
-
-  actions.push({
-    title: t('View image build details'),
-    onClick: () => {
-      // TODO: Navigate to image build details when route is available
-    },
-  });
-
-  if (canEdit) {
-    actions.push({
-      title: t('Edit image build'),
-      onClick: () => {
-        // TODO: Navigate to image build edit when route is available
-      },
-    });
-  }
-
-  return actions;
 };
 
 const ImageBuildRow = ({
@@ -48,22 +24,30 @@ const ImageBuildRow = ({
   isRowSelected,
   onDeleteClick,
   canDelete,
-  canEdit,
 }: ImageBuildRowProps) => {
   const { t } = useTranslation();
+
   const imageBuildName = imageBuild.metadata.name || '';
 
-  const actions = useImageBuildActions(imageBuildName, canEdit);
+  const actions: IAction[] = [
+    {
+      title: t('View details'),
+      onClick: () => {
+        // TODO: Navigate to image build details when route is available
+      },
+    },
+  ];
 
   if (canDelete) {
     actions.push({
-      title: t('Delete image build'),
+      title: t('Delete'),
       onClick: onDeleteClick,
     });
   }
 
   const sourceImage = getImageBuildSourceImage(imageBuild);
   const destinationImage = getImageBuildDestinationImage(imageBuild);
+  const exportImagesCount = imageBuild.status?.exportImages?.length || 0;
 
   return (
     <Tr>
@@ -82,6 +66,7 @@ const ImageBuildRow = ({
       <Td dataLabel={t('Status')}>
         <ImageBuildStatus buildStatus={imageBuild.status} />
       </Td>
+      <Td dataLabel={t('Export images')}>{`${exportImagesCount}`}</Td>
       <Td dataLabel={t('Date')}>{getDateDisplay(imageBuild.metadata.creationTimestamp)}</Td>
       <Td isActionCell>
         <ActionsColumn items={actions} />
