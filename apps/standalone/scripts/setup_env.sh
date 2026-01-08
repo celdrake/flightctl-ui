@@ -62,6 +62,8 @@ echo "Using external IP: $EXTERNAL_IP" >&2
 # Set core environment variables for kind development
 export FLIGHTCTL_SERVER_INSECURE_SKIP_VERIFY='true'
 export FLIGHTCTL_SERVER="https://$EXTERNAL_IP:3443"
+export FLIGHTCTL_IMAGEBUILDER_SERVER="https://$EXTERNAL_IP:8445"
+
 
 # CLI artifacts - get setting from kind cluster, unless it has been configured already
 if [ -z "$ENABLE_CLI_ARTIFACTS" ]; then
@@ -89,6 +91,7 @@ echo ""
 echo "🌐 Environment variables set:" >&2
 echo "  FLIGHTCTL_SERVER_INSECURE_SKIP_VERIFY=$FLIGHTCTL_SERVER_INSECURE_SKIP_VERIFY" >&2
 echo "  FLIGHTCTL_SERVER=$FLIGHTCTL_SERVER" >&2
+echo "  FLIGHTCTL_IMAGEBUILDER_SERVER=$FLIGHTCTL_IMAGEBUILDER_SERVER" >&2
 echo "  FLIGHTCTL_CLI_ARTIFACTS_SERVER=${FLIGHTCTL_CLI_ARTIFACTS_SERVER:-'(disabled)'}" >&2
 echo "  FLIGHTCTL_ALERTMANAGER_PROXY=${FLIGHTCTL_ALERTMANAGER_PROXY:-'(disabled)'}" >&2
 echo >&2

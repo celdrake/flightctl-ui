@@ -1,48 +1,44 @@
 import * as React from 'react';
 
-import { ImageBuild } from '@flightctl/types/imagebuilder';
+import { ImageBuildConditionType, ImageBuildStatus } from '@flightctl/types/imagebuilder';
 import { useTranslation } from '../../hooks/useTranslation';
 import { StatusDisplayContent } from '../Status/StatusDisplay';
 import { StatusLevel } from '../../utils/status/common';
+import { getCondition } from '../../utils/api';
+import { ConditionStatus } from '@flightctl/types';
 
-const ImageBuildStatus = ({ imageBuild }: { imageBuild: ImageBuild }) => {
+const ImageBuildStatus = ({ buildStatus }: { buildStatus?: ImageBuildStatus }) => {
   const { t } = useTranslation();
 
   let level: StatusLevel;
   let label: string;
   let message: string | undefined;
 
-  if (imageBuild.status?.imageReference) {
-    // Build completed successfully
+  if (!buildStatus) {
+    return <StatusDisplayContent label={t('Unknown')} level="unknown" message={t('No status information available')} />;
+  }
+
+  if (buildStatus.imageReference) {
     level = 'success';
     label = t('Built');
-    message = imageBuild.status.imageReference;
-  } else if (imageBuild.status?.conditions && imageBuild.status.conditions.length > 0) {
+    message = buildStatus.imageReference;
+  } else {
     // Check conditions for status
-    const latestCondition = imageBuild.status.conditions[imageBuild.status.conditions.length - 1];
-    const conditionType = latestCondition.type;
-    const conditionStatus = latestCondition.status;
+    const conditions = buildStatus.conditions || [];
 
-    if (conditionStatus === 'True') {
-      if (conditionType === 'Ready' || conditionType === 'Complete') {
-        level = 'success';
-        label = t('Ready');
-      } else {
-        level = 'info';
-        label = conditionType;
-      }
-    } else if (conditionStatus === 'False') {
-      level = 'danger';
-      label = t('Failed');
-      message = latestCondition.message;
+    const readyCondition = getCondition(conditions, ImageBuildConditionType.ImageBuildConditionTypeReady);
+    if (readyCondition === undefined) {
+      level = 'unknown';
+      label = t('Unknown');
+    } else if (readyCondition.status === ConditionStatus.ConditionStatusTrue) {
+      level = 'success';
+      label = t('Ready');
+      message = readyCondition.message;
     } else {
       level = 'info';
       label = t('In progress');
+      message = readyCondition.message;
     }
-  } else {
-    // No status information available
-    level = 'unknown';
-    label = t('Unknown');
   }
 
   return <StatusDisplayContent label={label} level={level} message={message} />;

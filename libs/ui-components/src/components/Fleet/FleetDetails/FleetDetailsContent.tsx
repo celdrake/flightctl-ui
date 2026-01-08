@@ -14,7 +14,7 @@ import {
 import { Fleet, ResourceKind } from '@flightctl/types';
 import FlightControlDescriptionList from '../../common/FlightCtlDescriptionList';
 import LabelsView from '../../common/LabelsView';
-import { getDateDisplay } from '../../../utils/dates';
+import { getDateTimeDisplay } from '../../../utils/dates';
 import { getFleetRolloutStatusWarning } from '../../../utils/status/fleet';
 import { useTranslation } from '../../../hooks/useTranslation';
 import RepositorySourceList from '../../Repository/RepositoryDetails/RepositorySourceList';
@@ -40,7 +40,7 @@ const FleetDetailsContent = ({ fleet }: { fleet: Fleet }) => {
               <DescriptionListGroup>
                 <DescriptionListTerm>{t('Created')}</DescriptionListTerm>
                 <DescriptionListDescription>
-                  {getDateDisplay(fleet.metadata.creationTimestamp || '')}
+                  {getDateTimeDisplay(fleet.metadata.creationTimestamp || '')}
                 </DescriptionListDescription>
               </DescriptionListGroup>
               <DescriptionListGroup>

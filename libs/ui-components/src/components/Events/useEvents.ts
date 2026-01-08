@@ -4,7 +4,7 @@ import { TFunction } from 'react-i18next';
 import { Event, EventList, ObjectReference, ResourceKind } from '@flightctl/types';
 import { useFetchPeriodically } from '../../hooks/useFetchPeriodically';
 import { EVENT_PAGE_SIZE } from '../../constants';
-import { getDateDisplay } from '../../utils/dates';
+import { getDateTimeDisplay } from '../../utils/dates';
 import * as queryUtils from '../../utils/query';
 
 const getTimeout = (kind?: ResourceKind) => {
@@ -119,7 +119,7 @@ const redundantMessageReasons = [
 const displayEventMapper = (event: Event, reasonTxt: string): DisplayEvent => ({
   name: event.metadata.name as string,
   type: event.type,
-  dateText: getDateDisplay(event.metadata.creationTimestamp || ''),
+  dateText: getDateTimeDisplay(event.metadata.creationTimestamp || ''),
   reasonText: reasonTxt || event.reason,
   message: redundantMessageReasons.includes(event.reason) ? '' : event.message,
 });

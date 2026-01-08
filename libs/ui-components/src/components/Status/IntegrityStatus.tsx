@@ -12,7 +12,7 @@ import { useTranslation } from '../../hooks/useTranslation';
 import { getIntegrityStatusItems, integrityCheckToSummaryType } from '../../utils/status/integrity';
 import { StatusItem, getDefaultStatusColor } from '../../utils/status/common';
 import { getDefaultStatusIcon } from '../../utils/status/common';
-import { getDateDisplay } from '../../utils/dates';
+import { getDateTimeDisplay } from '../../utils/dates';
 import StatusDisplay from './StatusDisplay';
 
 const getIntegrityCheckItem = (
@@ -98,7 +98,9 @@ const IntegrityStatus = ({ integrityStatus }: { integrityStatus?: DeviceIntegrit
         {integrityStatus.lastVerified && (
           <StackItem>
             <small>
-              {t('Last verification at: {{ timestamp }}', { timestamp: getDateDisplay(integrityStatus.lastVerified) })}
+              {t('Last verification at: {{ timestamp }}', {
+                timestamp: getDateTimeDisplay(integrityStatus.lastVerified),
+              })}
             </small>
           </StackItem>
         )}
