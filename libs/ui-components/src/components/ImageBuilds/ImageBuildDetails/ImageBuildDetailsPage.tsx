@@ -46,8 +46,10 @@ const ImageBuildDetailsPage = () => {
       nav={
         <Nav variant="tertiary">
           <NavList>
-            <NavItem to="details">{t('Details')}</NavItem>
+            <NavItem to="details">{t('Image details')}</NavItem>
+            <NavItem to="exports">{t('Export images')}</NavItem>
             <NavItem to="yaml">{t('YAML')}</NavItem>
+            <NavItem to="logs">{t('Logs')}</NavItem>
           </NavList>
         </Nav>
       }
@@ -66,10 +68,12 @@ const ImageBuildDetailsPage = () => {
           <Routes>
             <Route index element={<Navigate to="details" replace />} />
             <Route path="details" element={<ImageBuildDetailsContent imagePipeline={imagePipeline} />} />
+            <Route path="exports" element={<ImageBuildDetailsContent imagePipeline={imagePipeline} />} />
             <Route
               path="yaml"
               element={<YamlEditor apiObj={imagePipeline.imageBuild} refetch={refetch} canEdit={false} />}
             />
+            <Route path="logs" element={<div>TODO Logs</div>} />
           </Routes>
           {isDeleteModalOpen && (
             <DeleteImageBuildModal
