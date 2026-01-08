@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useDebounce } from 'use-debounce';
 
-import { ImageBuild, ImageBuildList } from '@flightctl/types/imagebuilder';
+import { ImageBuild, ImageBuildList, ImageExport, ImageExportList } from '@flightctl/types/imagebuilder';
 import { useAppContext } from '../../hooks/useAppContext';
 import { useFetchPeriodically } from '../../hooks/useFetchPeriodically';
 import { PaginationDetails, useTablePagination } from '../../hooks/useTablePagination';
@@ -72,6 +72,21 @@ export type ImageBuildLoad = {
   pagination: PaginationDetails<ImageBuildList>;
 };
 
+const enrichImageBuildsWithExports = (imageBuilds: ImageBuild[], imageExports: ImageExport[]): ImageBuild[] => {
+  return imageBuilds.map((imageBuild) => {
+    const matchedExports = imageExports.filter((imageExport) => {
+      return (
+        imageExport.spec.source.type === 'imageBuild' &&
+        imageExport.spec.source.imageBuildRef === imageBuild.metadata?.name
+      );
+    });
+    return {
+      ...imageBuild,
+      status: { ...imageBuild.status, exportImages: matchedExports },
+    };
+  });
+};
+
 export const useImageBuilds = (args: ImageBuildsEndpointArgs): ImageBuildLoad => {
   const pagination = useTablePagination<ImageBuildList>();
   const [imageBuildsEndpoint, imageBuildsDebouncing] = useImageBuildsEndpoint({
@@ -84,12 +99,34 @@ export const useImageBuilds = (args: ImageBuildsEndpointArgs): ImageBuildLoad =>
     },
     pagination.onPageFetched,
   );
+
+  // Fetch all image exports to match with image builds
+  // TODO: Remove this temporary fix once backend provides joined query
+  const [imageExportsList, isLoadingExports, errorExports, refetchExports, updatingExports] =
+    useFetchPeriodically<ImageExportList>(
+      {
+        endpoint: 'imageexports',
+      },
+      undefined,
+    );
+
+  const imageBuildsWithExports = React.useMemo(
+    () => enrichImageBuildsWithExports(imageBuildsList?.items || [], imageExportsList?.items || []),
+    [imageBuildsList, imageExportsList],
+  );
+
+  // Combine refetch functions
+  const combinedRefetch = React.useCallback(() => {
+    refetch();
+    refetchExports();
+  }, [refetch, refetchExports]);
+
   return {
-    imageBuilds: imageBuildsList?.items || [],
-    isLoading,
-    error,
-    isUpdating: updating || imageBuildsDebouncing,
-    refetch,
+    imageBuilds: imageBuildsWithExports,
+    isLoading: isLoading || isLoadingExports,
+    error: error || errorExports,
+    isUpdating: updating || imageBuildsDebouncing || updatingExports,
+    refetch: combinedRefetch,
     pagination,
   };
 };

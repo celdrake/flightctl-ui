@@ -3,7 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { ImageBuildCondition } from './ImageBuildCondition';
-import { ImageExport } from './ImageExport';
+import type { ImageExport } from './ImageExport';
 /**
  * ImageBuildStatus represents the current status of an ImageBuild.
  */
