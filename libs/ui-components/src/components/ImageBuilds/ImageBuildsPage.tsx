@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { TFunction } from 'i18next';
 import {
   Alert,
   Button,
@@ -12,7 +13,7 @@ import {
 } from '@patternfly/react-core';
 import { Tbody } from '@patternfly/react-table';
 import PlusCircleIcon from '@patternfly/react-icons/dist/js/icons/plus-circle-icon';
-import { TFunction } from 'i18next';
+import PlusIcon from '@patternfly/react-icons/dist/js/icons/plus-icon';
 
 import {
   BindingType,
@@ -75,8 +76,8 @@ const ImageBuildsEmptyState = ({ onCreateClick }: { onCreateClick: () => void })
       </EmptyStateBody>
       <EmptyStateFooter>
         <EmptyStateActions>
-          <Button variant="primary" onClick={onCreateClick}>
-            {t('Create an image build')}
+          <Button variant="primary" onClick={onCreateClick} icon={<PlusIcon />}>
+            {t('Build a new image')}
           </Button>
         </EmptyStateActions>
       </EmptyStateFooter>
