@@ -14,7 +14,13 @@ import { Tbody } from '@patternfly/react-table';
 import PlusCircleIcon from '@patternfly/react-icons/dist/js/icons/plus-circle-icon';
 import { TFunction } from 'i18next';
 
-import { ImagePipelineRequest } from '@flightctl/types/imagebuilder';
+import {
+  BindingType,
+  ExportFormatType,
+  ImageBuild,
+  ImageExport,
+  ImagePipelineRequest,
+} from '@flightctl/types/imagebuilder';
 import { RESOURCE, VERB } from '../../types/rbac';
 import { getResourceId } from '../../utils/resource';
 import { getErrorMessage } from '../../utils/error';
@@ -79,6 +85,51 @@ const ImageBuildsEmptyState = ({ onCreateClick }: { onCreateClick: () => void })
   );
 };
 
+const imageBuild: ImageBuild = {
+  apiVersion: 'imagebuilder.flightctl.io/v1beta1',
+  kind: 'ImageBuild',
+  metadata: {
+    name: `test-image-build-${Date.now()}`,
+  },
+  spec: {
+    source: {
+      repository: 'test-source-repo',
+      imageName: 'test-source-image',
+      imageTag: 'latest',
+    },
+    destination: {
+      repository: 'test-dest-repo',
+      imageName: 'test-dest-image',
+      tag: 'latest',
+    },
+    binding: {
+      type: BindingType.BindingTypeLate,
+    },
+  },
+};
+
+const imageExport: ImageExport = {
+  apiVersion: 'imagebuilder.flightctl.io/v1beta1',
+  kind: 'ImageExport',
+  metadata: {
+    name: `test-image-export-${Date.now()}`,
+  },
+  spec: {
+    source: {
+      type: 'imageReference',
+      repository: 'test-source-repo',
+      imageName: 'test-source-image',
+      imageTag: 'latest',
+    },
+    destination: {
+      repository: 'test-export-repo',
+      imageName: 'test-export-image',
+      tag: 'latest',
+    },
+    format: ExportFormatType.ExportFormatTypeISO,
+  },
+};
+
 const ImageBuildTable = () => {
   const { t } = useTranslation();
 
@@ -106,28 +157,8 @@ const ImageBuildTable = () => {
     try {
       // Hardcoded image build data for testing
       const imageBuildRequest: ImagePipelineRequest = {
-        imageBuild: {
-          apiVersion: 'imagebuilder.flightctl.io/v1beta1',
-          kind: 'ImageBuild',
-          metadata: {
-            name: `test-image-build-${Date.now()}`,
-          },
-          spec: {
-            source: {
-              repository: 'test-source-repo',
-              imageName: 'test-source-image',
-              imageTag: 'latest',
-            },
-            destination: {
-              repository: 'test-dest-repo',
-              imageName: 'test-dest-image',
-              tag: 'latest',
-            },
-            binding: {
-              type: 'late',
-            },
-          },
-        },
+        imageBuild,
+        imageExport,
       };
 
       await post<ImagePipelineRequest>('imagepipelines', imageBuildRequest);

@@ -47,9 +47,8 @@ const ImageBuildRow = ({
 
   const sourceImage = getImageBuildSourceImage(imageBuild);
   const destinationImage = getImageBuildDestinationImage(imageBuild);
+  const exportImagesCount = imageBuild.status?.exportImages?.length || 0;
 
-  // CELIA-WIP Count export images properly
-  const exportImagesCount = imageBuild.status?.imageReference ? 1 : 0;
   return (
     <Tr>
       <Td
