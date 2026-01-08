@@ -5,10 +5,13 @@
 import type { ImageBuild } from './ImageBuild';
 import type { ImageExport } from './ImageExport';
 /**
- * Response containing the created ImagePipeline resources (ImageBuild and optionally ImageExport).
+ * Response containing the created ImagePipeline resources (ImageBuild and optionally a list of ImageExports).
  */
 export type ImagePipelineResponse = {
   imageBuild: ImageBuild;
-  imageExport?: ImageExport;
+  /**
+   * List of created ImageExport resources.
+   */
+  imageExports?: Array<ImageExport>;
 };
 
