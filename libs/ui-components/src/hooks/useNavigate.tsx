@@ -30,6 +30,7 @@ export enum ROUTE {
   AUTH_PROVIDER_EDIT = 'AUTH_PROVIDER_EDIT',
   AUTH_PROVIDER_DETAILS = 'AUTH_PROVIDER_DETAILS',
   IMAGE_BUILDS = 'IMAGE_BUILDS',
+  IMAGE_BUILD_DETAILS = 'IMAGE_BUILD_DETAILS',
 }
 
 export type RouteWithPostfix =
@@ -42,7 +43,8 @@ export type RouteWithPostfix =
   | ROUTE.DEVICE_EDIT
   | ROUTE.ENROLLMENT_REQUEST_DETAILS
   | ROUTE.AUTH_PROVIDER_EDIT
-  | ROUTE.AUTH_PROVIDER_DETAILS;
+  | ROUTE.AUTH_PROVIDER_DETAILS
+  | ROUTE.IMAGE_BUILD_DETAILS;
 export type Route = Exclude<ROUTE, RouteWithPostfix>;
 
 type ToObj = { route: RouteWithPostfix; postfix: string | undefined };

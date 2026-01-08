@@ -77,6 +77,9 @@ const AuthProviderDetails = React.lazy(
   () => import('@flightctl/ui-components/src/components/AuthProvider/AuthProviderDetails/AuthProviderDetails'),
 );
 const ImageBuildsPage = React.lazy(() => import('@flightctl/ui-components/src/components/ImageBuild/ImageBuildsPage'));
+const ImageBuildDetails = React.lazy(
+  () => import('@flightctl/ui-components/src/components/ImageBuild/ImageBuildDetails/ImageBuildDetailsPage'),
+);
 
 export type ExtendedRouteObject = RouteObject & {
   title?: string;
@@ -271,6 +274,15 @@ const getAppRoutes = (t: TFunction): ExtendedRouteObject[] => [
         element: (
           <TitledRoute title={t('Image builds')}>
             <ImageBuildsPage />
+          </TitledRoute>
+        ),
+      },
+      {
+        path: ':imageBuildId/*',
+        title: t('Image build'),
+        element: (
+          <TitledRoute title={t('Image build')}>
+            <ImageBuildDetails />
           </TitledRoute>
         ),
       },

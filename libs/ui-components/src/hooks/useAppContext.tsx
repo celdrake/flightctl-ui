@@ -38,6 +38,7 @@ export const appRoutes = {
   [ROUTE.AUTH_PROVIDER_EDIT]: '/admin/authproviders/edit',
   [ROUTE.AUTH_PROVIDER_DETAILS]: '/admin/authproviders',
   [ROUTE.IMAGE_BUILDS]: '/devicemanagement/imagebuilds',
+  [ROUTE.IMAGE_BUILD_DETAILS]: '/devicemanagement/imagebuilds',
 };
 
 export type NavLinkFC = React.FC<{ to: string; children: (props: { isActive: boolean }) => React.ReactNode }>;

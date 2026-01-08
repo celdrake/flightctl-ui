@@ -6,6 +6,8 @@ import { compare } from 'fast-json-patch';
 import type * as monacoEditor from 'monaco-editor/esm/vs/editor/editor.api';
 
 import { AuthProvider, Device, Fleet, PatchRequest, Repository, ResourceKind } from '@flightctl/types';
+import { ImageBuild } from '@flightctl/types/imagebuilder';
+import { FlightctlKind } from '../../../types/extraTypes';
 import { fromAPILabel } from '../../../utils/labels';
 import { getLabelPatches } from '../../../utils/patch';
 import { getErrorMessage, isResourceVersionTestFailure } from '../../../utils/error';
@@ -16,9 +18,7 @@ import YamlEditorBase from './YamlEditorBase';
 
 import './YamlEditor.css';
 
-// CELIA-WIP entire YAML editor needs to be reviewed for PF6.
-// SEe how it works in OCP and ACM, and make sure we are consistent.
-type FlightCtlYamlResource = Fleet | Device | Repository | AuthProvider;
+type FlightCtlYamlResource = Fleet | Device | Repository | AuthProvider | ImageBuild;
 
 type YamlEditorProps<R extends FlightCtlYamlResource> = Partial<Omit<PfCodeEditorProps, 'ref' | 'code'>> & {
   /** FlightCtl resource to display in the editor. */
@@ -44,7 +44,7 @@ const convertObjToYAMLString = (obj: FlightCtlYamlResource) => {
 };
 
 const getResourceEndpoint = (obj: FlightCtlYamlResource) => {
-  const kind = obj.kind as ResourceKind;
+  const kind = obj.kind as FlightctlKind;
   const resourceName = obj.metadata.name || '';
   switch (kind) {
     case ResourceKind.FLEET:
@@ -55,6 +55,11 @@ const getResourceEndpoint = (obj: FlightCtlYamlResource) => {
       return `repositories/${resourceName}`;
     case ResourceKind.AUTH_PROVIDER:
       return `authproviders/${resourceName}`;
+    // CELIA-WIP: use the kind from schema when it's available
+    case 'ImageBuild':
+      return `imagebuilds/${resourceName}`;
+    case 'ImageExport':
+      return `imageexports/${resourceName}`;
     default:
       throw new Error(`Unsupported resource kind: ${kind}`);
   }
@@ -131,7 +136,8 @@ const YamlEditor = <R extends FlightCtlYamlResource>({
   const { patch } = useFetch();
 
   const resourceName = getFilename(apiObj);
-  const needsReload = yamlResourceVersion !== apiObj.metadata.resourceVersion;
+  const objResourceVersion = apiObj.metadata.resourceVersion || '0';
+  const needsReload = yamlResourceVersion !== objResourceVersion;
 
   React.useEffect(() => {
     if (doUpdate) {
@@ -141,7 +147,7 @@ const YamlEditor = <R extends FlightCtlYamlResource>({
       if (editorRef.current) {
         editorRef.current.setValue(newYaml);
       }
-      setYamlResourceVersion(apiObj.metadata.resourceVersion || '0');
+      setYamlResourceVersion(objResourceVersion);
       setDoUpdate(false);
     }
   }, [doUpdate, apiObj]);
