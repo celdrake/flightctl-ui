@@ -3,7 +3,7 @@ import { Alert, Button, Progress, ProgressMeasureLocation, Stack, StackItem } fr
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@patternfly/react-core/next';
 import { Table, Tbody, Td, Th, Thead, Tr } from '@patternfly/react-table';
 
-import { ImagePipelineResponse } from '@flightctl/types/imagebuilder';
+import { ImageBuild } from '@flightctl/types/imagebuilder';
 import { getErrorMessage } from '../../../../utils/error';
 import { useFetch } from '../../../../hooks/useFetch';
 import { useTranslation } from '../../../../hooks/useTranslation';
@@ -12,11 +12,11 @@ import { getImageBuildDestinationImage, getImageBuildSourceImage } from '../../.
 
 type MassDeleteImageBuildModalProps = {
   onClose: VoidFunction;
-  imagePipelines: Array<ImagePipelineResponse>;
+  imageBuilds: Array<ImageBuild>;
   onDeleteSuccess: VoidFunction;
 };
 
-const MassDeleteImageBuildTable = ({ imagePipelines }: { imagePipelines: Array<ImagePipelineResponse> }) => {
+const MassDeleteImageBuildTable = ({ imageBuilds }: { imageBuilds: Array<ImageBuild> }) => {
   const { t } = useTranslation();
   return (
     <Table>
@@ -28,8 +28,7 @@ const MassDeleteImageBuildTable = ({ imagePipelines }: { imagePipelines: Array<I
         </Tr>
       </Thead>
       <Tbody>
-        {imagePipelines.map((pipeline) => {
-          const imageBuild = pipeline.imageBuild;
+        {imageBuilds.map((imageBuild) => {
           const name = imageBuild.metadata.name || '';
           const baseImage = getImageBuildSourceImage(imageBuild);
           const outputImage = getImageBuildDestinationImage(imageBuild);
@@ -47,7 +46,7 @@ const MassDeleteImageBuildTable = ({ imagePipelines }: { imagePipelines: Array<I
 };
 
 // CELIA-WIP: we need copy from UX designers
-const MassDeleteImageBuildModal = ({ onClose, imagePipelines, onDeleteSuccess }: MassDeleteImageBuildModalProps) => {
+const MassDeleteImageBuildModal = ({ onClose, imageBuilds, onDeleteSuccess }: MassDeleteImageBuildModalProps) => {
   const { t } = useTranslation();
   const [progress, setProgress] = React.useState(0);
   const [progressTotal, setProgressTotal] = React.useState(0);
@@ -55,12 +54,12 @@ const MassDeleteImageBuildModal = ({ onClose, imagePipelines, onDeleteSuccess }:
   const [errors, setErrors] = React.useState<string[]>();
   const { remove } = useFetch();
 
-  const deleteImagePipelines = async () => {
+  const deleteImageBuilds = async () => {
     setProgress(0);
     setIsDeleting(true);
-    const promises = imagePipelines.map(async (p) => {
-      // Deleting an image pipeline will delete both the imageBuild and any associated imageExport
-      await remove(`imagepipelines/${p.imageBuild.metadata.name}`);
+    const promises = imageBuilds.map(async (imageBuild) => {
+      // CELIA-WIP: we need to delete the associated imageExports, or would the API do it for us?
+      await remove(`imagebuilds/${imageBuild.metadata.name}`);
       setProgress((p) => p + 1);
     });
 
@@ -88,7 +87,7 @@ const MassDeleteImageBuildModal = ({ onClose, imagePipelines, onDeleteSuccess }:
             </Alert>
           </StackItem>
           <StackItem>
-            <MassDeleteImageBuildTable imagePipelines={imagePipelines} />
+            <MassDeleteImageBuildTable imageBuilds={imageBuilds} />
           </StackItem>
 
           {isDeleting && (
@@ -121,7 +120,7 @@ const MassDeleteImageBuildModal = ({ onClose, imagePipelines, onDeleteSuccess }:
         <Button
           key="delete"
           variant="danger"
-          onClick={deleteImagePipelines}
+          onClick={deleteImageBuilds}
           isLoading={isDeleting}
           isDisabled={isDeleting}
         >

@@ -51,6 +51,7 @@ const appRoutes = {
   [ROUTE.REPO_DETAILS]: '/edge/repositories',
   [ROUTE.REPOSITORIES]: '/edge/repositories',
   [ROUTE.IMAGE_BUILDS]: '/edge/imagebuilds',
+  [ROUTE.IMAGE_BUILD_CREATE]: '/edge/imagebuilds/create',
   [ROUTE.IMAGE_BUILD_DETAILS]: '/edge/imagebuilds',
   [ROUTE.RESOURCE_SYNC_DETAILS]: '/edge/resourcesyncs',
   [ROUTE.ENROLLMENT_REQUESTS]: '/edge/enrollmentrequests',

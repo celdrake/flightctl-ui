@@ -1,11 +1,13 @@
 import * as React from 'react';
 import { useDebounce } from 'use-debounce';
 
-import { ImagePipelineList, ImagePipelineResponse } from '@flightctl/types/imagebuilder';
+import { ImageBuild, ImageBuildList } from '@flightctl/types/imagebuilder';
 import { useAppContext } from '../../hooks/useAppContext';
 import { useFetchPeriodically } from '../../hooks/useFetchPeriodically';
 import { PaginationDetails, useTablePagination } from '../../hooks/useTablePagination';
 import { PAGE_SIZE } from '../../constants';
+
+// CELIA-WIP: rename everything to ImageBuilds
 
 export enum ImagePipelinesSearchParams {
   Name = 'name',
@@ -54,7 +56,7 @@ const getImagePipelinesEndpoint = ({ name, nextContinue }: { name?: string; next
   if (nextContinue) {
     params.set('continue', nextContinue);
   }
-  return `imagepipelines?${params.toString()}`;
+  return `imagebuilds?${params.toString()}`;
 };
 
 const useImagePipelinesEndpoint = (args: ImagePipelinesEndpointArgs): [string, boolean] => {
@@ -64,12 +66,12 @@ const useImagePipelinesEndpoint = (args: ImagePipelinesEndpointArgs): [string, b
 };
 
 export type ImagePipelinesLoad = {
-  imagePipelines: ImagePipelineResponse[];
+  imageBuilds: ImageBuild[];
   isLoading: boolean;
   error: unknown;
   isUpdating: boolean;
   refetch: VoidFunction;
-  pagination: PaginationDetails<ImagePipelineList>;
+  pagination: PaginationDetails<ImageBuildList>;
 };
 
 /**
@@ -81,12 +83,12 @@ export type ImagePipelinesLoad = {
  * @returns information about the image pipelines
  */
 export const useImagePipelines = (args: ImagePipelinesEndpointArgs): ImagePipelinesLoad => {
-  const pagination = useTablePagination<ImagePipelineList>();
+  const pagination = useTablePagination<ImageBuildList>();
   const [pipelinesEndpoint, pipelinesDebouncing] = useImagePipelinesEndpoint({
     ...args,
     nextContinue: pagination.nextContinue,
   });
-  const [pipelinesList, isLoading, error, refetch, updating] = useFetchPeriodically<ImagePipelineList>(
+  const [imageBuildsList, isLoading, error, refetch, updating] = useFetchPeriodically<ImageBuildList>(
     {
       endpoint: pipelinesEndpoint,
     },
@@ -94,7 +96,7 @@ export const useImagePipelines = (args: ImagePipelinesEndpointArgs): ImagePipeli
   );
 
   return {
-    imagePipelines: pipelinesList?.items || [],
+    imageBuilds: imageBuildsList?.items || [],
     isLoading,
     error,
     isUpdating: updating || pipelinesDebouncing,

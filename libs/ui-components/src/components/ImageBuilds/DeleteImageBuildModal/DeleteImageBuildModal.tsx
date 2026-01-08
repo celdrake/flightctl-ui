@@ -22,8 +22,8 @@ const DeleteImageBuildModal = ({
 
   const onDelete = async () => {
     try {
-      // By using the "imagepipelines" endpoint, we can delete both the image build and its associated image exports.
-      await remove(`imagepipelines/${imageBuildId}`);
+      // CELIA-WIP: we need to delete the associated imageExports, or would the API do it for us?
+      await remove(`imagebuilds/${imageBuildId}`);
     } catch (imageBuildErr) {
       setError({
         text: t('Deletion of image build {{imageBuildId}} failed.'),

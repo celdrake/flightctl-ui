@@ -5,13 +5,10 @@
 import type { ImageBuild } from './ImageBuild';
 import type { ImageExport } from './ImageExport';
 /**
- * Request to create an ImagePipeline consisting of an ImageBuild and optionally a list of ImageExports atomically. If imageExports are provided, the server will override their source to reference the created ImageBuild.
+ * Request to create an ImagePipeline consisting of an ImageBuild and optionally an ImageExport atomically. If imageExport is provided, the server will override its source to reference the created ImageBuild.
  */
 export type ImagePipelineRequest = {
   imageBuild: ImageBuild;
-  /**
-   * List of ImageExport resources to create.
-   */
-  imageExports?: Array<ImageExport>;
+  imageExport?: ImageExport;
 };
 

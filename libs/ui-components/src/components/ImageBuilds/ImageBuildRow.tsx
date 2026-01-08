@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { ActionsColumn, IAction, OnSelect, Td, Tr } from '@patternfly/react-table';
 
-import { ImagePipelineResponse } from '@flightctl/types/imagebuilder';
+import { ImageBuild } from '@flightctl/types/imagebuilder';
 import { useTranslation } from '../../hooks/useTranslation';
 import { ROUTE, useNavigate } from '../../hooks/useNavigate';
 import { getImageBuildDestinationImage, getImageBuildSourceImage } from '../../utils/imageBuilds';
@@ -10,16 +10,16 @@ import ResourceLink from '../common/ResourceLink';
 import ImageBuildStatus from './ImageBuildStatus';
 
 type ImageBuildRowProps = {
-  imagePipeline: ImagePipelineResponse;
+  imageBuild: ImageBuild;
   rowIndex: number;
-  onRowSelect: (imagePipeline: ImagePipelineResponse) => OnSelect;
-  isRowSelected: (imagePipeline: ImagePipelineResponse) => boolean;
+  onRowSelect: (imageBuild: ImageBuild) => OnSelect;
+  isRowSelected: (imageBuild: ImageBuild) => boolean;
   onDeleteClick: () => void;
   canDelete: boolean;
 };
 
 const ImageBuildRow = ({
-  imagePipeline,
+  imageBuild,
   rowIndex,
   onRowSelect,
   isRowSelected,
@@ -29,7 +29,6 @@ const ImageBuildRow = ({
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  const imageBuild = imagePipeline.imageBuild;
   const imageBuildName = imageBuild.metadata.name || '';
 
   const actions: IAction[] = [
@@ -50,15 +49,16 @@ const ImageBuildRow = ({
 
   const sourceImage = getImageBuildSourceImage(imageBuild);
   const destinationImage = getImageBuildDestinationImage(imageBuild);
-  const exportImagesCount = imagePipeline.imageExports?.length || 0;
+  // CELIA-WIP_ ASK UX designsers to remove the column
+  const exportImagesCount = 0;
 
   return (
     <Tr>
       <Td
         select={{
           rowIndex,
-          onSelect: onRowSelect(imagePipeline),
-          isSelected: isRowSelected(imagePipeline),
+          onSelect: onRowSelect(imageBuild),
+          isSelected: isRowSelected(imageBuild),
         }}
       />
       <Td dataLabel={t('Name')}>

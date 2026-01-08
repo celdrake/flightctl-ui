@@ -1,7 +1,9 @@
-import { ImageBuild } from '@flightctl/types/imagebuilder';
+import { TFunction } from 'react-i18next';
+import { ExportFormatType, ImageBuild, ImageBuildDestination, ImageBuildSource } from '@flightctl/types/imagebuilder';
+import { Repository } from '@flightctl/types';
+import { isOciRepoSpec } from '../components/Repository/CreateRepository/utils';
 
 // CELIA-WIP: DO we need to show the repository URL?
-
 export const getImageBuildSourceImage = (imageBuild: ImageBuild | undefined) => {
   if (!imageBuild) {
     return '-';
@@ -16,4 +18,60 @@ export const getImageBuildDestinationImage = (imageBuild: ImageBuild | undefined
   }
   const { destination } = imageBuild.spec;
   return `${destination.imageName}:${destination.tag}`;
+};
+
+export const getExportFormatTitle = (t: TFunction, format: ExportFormatType) => {
+  switch (format) {
+    case ExportFormatType.ExportFormatTypeVMDK:
+      return t('Virtualization');
+    case ExportFormatType.ExportFormatTypeQCOW2:
+      return t('Openstack/KVM');
+    case ExportFormatType.ExportFormatTypeISO:
+      return t('Metal installer');
+    default:
+      return t('Unknown format ({format})', { format });
+  }
+};
+
+export const getExportFormatLabel = (t: TFunction, format: ExportFormatType) => {
+  switch (format) {
+    case ExportFormatType.ExportFormatTypeVMDK:
+      return t('Virtualization (VMDK)');
+    case ExportFormatType.ExportFormatTypeQCOW2:
+      return t('Openstack/KVM (QCOW2)');
+    case ExportFormatType.ExportFormatTypeISO:
+      return t('Bare metal installer (ISO)');
+    default:
+      return t('Unknown format ({format})', { format });
+  }
+};
+
+export const getRegistryUrl = (registries: Repository[], registryName: string): string | null => {
+  const repo = registries.find((r) => r.metadata.name === registryName);
+  if (!repo || !isOciRepoSpec(repo.spec)) {
+    return null;
+  }
+  return repo.spec.registry;
+};
+
+export const getImageReference = (
+  imageTarget: ImageBuildSource | ImageBuildDestination,
+  repositories: Repository[],
+) => {
+  if (!imageTarget) {
+    return '-';
+  }
+
+  const registryUrl = getRegistryUrl(repositories, imageTarget.repository);
+  // CELIA-WIP: Asked for the API to unify these two fields, but it's not yet implemented.
+  let tag: string;
+  if ('imageTag' in imageTarget) {
+    tag = imageTarget.imageTag;
+  } else {
+    tag = imageTarget.tag;
+  }
+  if (!registryUrl) {
+    return `${imageTarget.imageName}:${tag}`;
+  }
+  return `${registryUrl}/${imageTarget.imageName}:${tag}`;
 };

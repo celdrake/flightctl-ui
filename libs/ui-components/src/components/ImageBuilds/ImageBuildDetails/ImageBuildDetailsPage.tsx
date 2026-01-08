@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { DropdownItem, DropdownList, Nav, NavList } from '@patternfly/react-core';
 
-import { ImagePipelineResponse } from '@flightctl/types/imagebuilder';
+import { ImageBuild } from '@flightctl/types/imagebuilder';
 import { RESOURCE, VERB } from '../../../types/rbac';
 import PageWithPermissions from '../../common/PageWithPermissions';
 import { useFetchPeriodically } from '../../../hooks/useFetchPeriodically';
@@ -15,6 +15,7 @@ import DetailsPageActions from '../../DetailsPage/DetailsPageActions';
 import DeleteImageBuildModal from '../DeleteImageBuildModal/DeleteImageBuildModal';
 import YamlEditor from '../../common/CodeEditor/YamlEditor';
 import ImageBuildDetailsContent from './ImageBuildDetailsContent';
+import ImageExportsDetailsContent from '../ImageExportDetails/ImageExportDetailsContent';
 
 // Image pipelines have the same permissions as image builds
 const imageBuildDetailsPermissions = [{ kind: RESOURCE.IMAGE_BUILD, verb: VERB.DELETE }];
@@ -27,9 +28,8 @@ const ImageBuildDetailsPage = () => {
   } = useAppContext();
 
   const { imageBuildId } = useParams() as { imageBuildId: string };
-  // By fetching "imagePipelines", we fetch the combined entity of the image build and its associated image exports.
-  const [imagePipeline, isLoading, error, refetch] = useFetchPeriodically<Required<ImagePipelineResponse>>({
-    endpoint: `imagepipelines/${imageBuildId}`,
+  const [imageBuild, isLoading, error, refetch] = useFetchPeriodically<Required<ImageBuild>>({
+    endpoint: `imagebuilds/${imageBuildId}`,
   });
   const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState<boolean>();
   const { checkPermissions } = usePermissionsContext();
@@ -46,8 +46,10 @@ const ImageBuildDetailsPage = () => {
       nav={
         <Nav variant="tertiary">
           <NavList>
-            <NavItem to="details">{t('Details')}</NavItem>
+            <NavItem to="details">{t('Image details')}</NavItem>
+            <NavItem to="exports">{t('Export images')}</NavItem>
             <NavItem to="yaml">{t('YAML')}</NavItem>
+            <NavItem to="logs">{t('Logs')}</NavItem>
           </NavList>
         </Nav>
       }
@@ -61,15 +63,14 @@ const ImageBuildDetailsPage = () => {
         )
       }
     >
-      {imagePipeline && (
+      {imageBuild && (
         <>
           <Routes>
             <Route index element={<Navigate to="details" replace />} />
-            <Route path="details" element={<ImageBuildDetailsContent imagePipeline={imagePipeline} />} />
-            <Route
-              path="yaml"
-              element={<YamlEditor apiObj={imagePipeline.imageBuild} refetch={refetch} canEdit={false} />}
-            />
+            <Route path="details" element={<ImageBuildDetailsContent imageBuild={imageBuild} />} />
+            <Route path="exports" element={<ImageExportsDetailsContent />} />
+            <Route path="yaml" element={<YamlEditor apiObj={imageBuild} refetch={refetch} canEdit={false} />} />
+            <Route path="logs" element={<div>TODO Logs</div>} />
           </Routes>
           {isDeleteModalOpen && (
             <DeleteImageBuildModal
