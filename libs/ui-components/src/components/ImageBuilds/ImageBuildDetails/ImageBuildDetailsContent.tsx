@@ -17,7 +17,6 @@ import { BindingType, ExportFormatType, ImagePipelineResponse } from '@flightctl
 import FlightControlDescriptionList from '../../common/FlightCtlDescriptionList';
 import { getDateTimeDisplay } from '../../../utils/dates';
 import { useTranslation } from '../../../hooks/useTranslation';
-import { getImageBuildDestinationImage, getImageBuildSourceImage } from '../../../utils/imageBuilds';
 import DetailsPageCard, { DetailsPageCardBody } from '../../DetailsPage/DetailsPageCard';
 
 // CELIA-WIP: DEtermine if there will be events for image builds
@@ -38,12 +37,6 @@ const getExportFormatLabel = (t: TFunction, format: ExportFormatType) => {
 const ImageBuildDetailsContent = ({ imagePipeline }: { imagePipeline: ImagePipelineResponse }) => {
   const { t } = useTranslation();
   const imageBuild = imagePipeline.imageBuild;
-  const sourceImage = getImageBuildSourceImage(imageBuild);
-  const destinationImage = getImageBuildDestinationImage(imageBuild);
-  const exportImagesCount = imagePipeline.imageExports?.length || 0;
-  const imageReference = imageBuild.status?.imageReference;
-  const architecture = imageBuild.status?.architecture;
-  const manifestDigest = imageBuild.status?.manifestDigest;
 
   // CELIA-WIP: Get the repository URL from the repository name
   const srcRepositoryUrl = imageBuild.spec.source.repository;

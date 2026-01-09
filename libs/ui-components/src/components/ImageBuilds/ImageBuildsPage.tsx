@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { TFunction } from 'i18next';
 import {
-  Alert,
   Button,
   EmptyStateActions,
   EmptyStateBody,
@@ -15,18 +14,10 @@ import { Tbody } from '@patternfly/react-table';
 import PlusCircleIcon from '@patternfly/react-icons/dist/js/icons/plus-circle-icon';
 import PlusIcon from '@patternfly/react-icons/dist/js/icons/plus-icon';
 
-import {
-  BindingType,
-  ExportFormatType,
-  ImageBuild,
-  ImageExport,
-  ImagePipelineRequest,
-} from '@flightctl/types/imagebuilder';
 import { RESOURCE, VERB } from '../../types/rbac';
-import { getErrorMessage } from '../../utils/error';
 import { useTableSelect } from '../../hooks/useTableSelect';
 import { useTranslation } from '../../hooks/useTranslation';
-import { useFetch } from '../../hooks/useFetch';
+import { ROUTE, useNavigate } from '../../hooks/useNavigate';
 import ResourceListEmptyState from '../common/ResourceListEmptyState';
 import PageWithPermissions from '../common/PageWithPermissions';
 import { usePermissionsContext } from '../common/PermissionsContext';
@@ -77,7 +68,7 @@ const ImageBuildsEmptyState = ({ onCreateClick }: { onCreateClick: () => void })
       <EmptyStateFooter>
         <EmptyStateActions>
           <Button variant="primary" onClick={onCreateClick} icon={<PlusIcon />}>
-            {t('Build a new image')}
+            {t('Build new image')}
           </Button>
         </EmptyStateActions>
       </EmptyStateFooter>
@@ -85,53 +76,9 @@ const ImageBuildsEmptyState = ({ onCreateClick }: { onCreateClick: () => void })
   );
 };
 
-const getFakeImageBuild = (): ImageBuild => ({
-  apiVersion: 'imagebuilder.flightctl.io/v1beta1',
-  kind: 'ImageBuild',
-  metadata: {
-    name: `test-image-build-${Date.now()}`,
-  },
-  spec: {
-    source: {
-      repository: 'test-source-repo',
-      imageName: 'test-source-image',
-      imageTag: 'latest',
-    },
-    destination: {
-      repository: 'test-dest-repo',
-      imageName: 'test-dest-image',
-      tag: 'latest',
-    },
-    binding: {
-      type: BindingType.BindingTypeLate,
-    },
-  },
-});
-
-const getFakeImageExport = (): ImageExport => ({
-  apiVersion: 'imagebuilder.flightctl.io/v1beta1',
-  kind: 'ImageExport',
-  metadata: {
-    name: `test-image-export-${Date.now()}`,
-  },
-  spec: {
-    source: {
-      type: 'imageReference',
-      repository: 'test-source-repo',
-      imageName: 'test-source-image',
-      imageTag: 'latest',
-    },
-    destination: {
-      repository: 'test-export-repo',
-      imageName: 'test-export-image',
-      tag: 'latest',
-    },
-    format: ExportFormatType.ExportFormatTypeISO,
-  },
-});
-
 const ImageBuildTable = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   const imageBuildColumns = React.useMemo(() => getColumns(t), [t]);
   const { name, setName, hasFiltersEnabled } = useImagePipelinesBackendFilters();
@@ -140,35 +87,15 @@ const ImageBuildTable = () => {
 
   const [imageBuildToDeleteId, setImageBuildToDeleteId] = React.useState<string>();
   const [isMassDeleteModalOpen, setIsMassDeleteModalOpen] = React.useState(false);
-  const [isCreating, setIsCreating] = React.useState(false);
-  const [createError, setCreateError] = React.useState<string | undefined>();
 
   const { onRowSelect, isAllSelected, hasSelectedRows, isRowSelected, setAllSelected } = useTableSelect();
 
   const { checkPermissions } = usePermissionsContext();
   const [canCreate, canDelete] = checkPermissions(imageBuildTablePermissions);
 
-  const { post } = useFetch();
-
-  const handleCreateImagePipeline = React.useCallback(async () => {
-    setIsCreating(true);
-    setCreateError(undefined);
-
-    try {
-      // Hardcoded image build data for testing
-      const imagePipelineRequest: ImagePipelineRequest = {
-        imageBuild: getFakeImageBuild(),
-        imageExports: [getFakeImageExport()],
-      };
-
-      await post<ImagePipelineRequest>('imagepipelines', imagePipelineRequest);
-      refetch();
-    } catch (e) {
-      setCreateError(getErrorMessage(e));
-    } finally {
-      setIsCreating(false);
-    }
-  }, [post, refetch]);
+  const handleCreateClick = React.useCallback(() => {
+    navigate(ROUTE.IMAGE_BUILD_CREATE);
+  }, [navigate]);
 
   return (
     <ListPageBody error={error} loading={isLoading}>
@@ -181,8 +108,8 @@ const ImageBuildTable = () => {
           </ToolbarGroup>
           {canCreate && (
             <ToolbarItem>
-              <Button variant="primary" onClick={handleCreateImagePipeline} isLoading={isCreating}>
-                {t('Create image build')}
+              <Button variant="primary" onClick={handleCreateClick}>
+                {t('Build new image')}
               </Button>
             </ToolbarItem>
           )}
@@ -227,12 +154,7 @@ const ImageBuildTable = () => {
       </Table>
       <TablePagination pagination={pagination} isUpdating={isUpdating} />
       {!isUpdating && imagePipelines.length === 0 && !name && (
-        <ImageBuildsEmptyState onCreateClick={handleCreateImagePipeline} />
-      )}
-      {createError && (
-        <Alert variant="danger" title={t('Error creating image build')} isInline>
-          {createError}
-        </Alert>
+        <ImageBuildsEmptyState onCreateClick={handleCreateClick} />
       )}
 
       {imageBuildToDeleteId && (
