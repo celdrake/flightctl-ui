@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Alert, FormGroup, FormSection, Gallery, Grid } from '@patternfly/react-core';
+import { Alert, Card, CardBody, CardTitle, FormGroup, FormSection, Gallery, Grid } from '@patternfly/react-core';
 import { FormikErrors, useFormikContext } from 'formik';
 
 import { RepoSpecType, Repository } from '@flightctl/types';
@@ -7,6 +7,7 @@ import { ExportFormatType } from '@flightctl/types/imagebuilder';
 import { ImageBuildFormValues } from '../types';
 import { useTranslation } from '../../../../hooks/useTranslation';
 import FlightCtlForm from '../../../form/FlightCtlForm';
+import TextField from '../../../form/TextField';
 import RepositorySelect from '../../../form/RepositorySelect';
 import { usePermissionsContext } from '../../../common/PermissionsContext';
 import { RESOURCE, VERB } from '../../../../types/rbac';
@@ -22,12 +23,12 @@ export const isOutputImageStepValid = (errors: FormikErrors<ImageBuildFormValues
   return !destination.repository && !destination.imageName && !destination.tag;
 };
 
-type ImageOutputStepProps = {
+type OutputImageStepProps = {
   repositories: Repository[];
   repoRefetch: VoidFunction;
 };
 
-const ImageOutputStep = ({ repositories, repoRefetch }: ImageOutputStepProps) => {
+const OutputImageStep = ({ repositories, repoRefetch }: OutputImageStepProps) => {
   const { t } = useTranslation();
   const { values, setFieldValue } = useFormikContext<ImageBuildFormValues>();
   const { checkPermissions } = usePermissionsContext();
@@ -45,6 +46,21 @@ const ImageOutputStep = ({ repositories, repoRefetch }: ImageOutputStepProps) =>
     }
   };
 
+  const getRepositoryUrl = (repoName: string): string | null => {
+    const repo = repositories.find((r) => r.metadata.name === repoName);
+    if (!repo) {
+      return null;
+    }
+    // CELIA-WIP use the registry URL
+    return 'quay.io';
+  };
+
+  const repoUrl = values.destination.repository ? getRepositoryUrl(values.destination.repository) : null;
+  const imageReference =
+    repoUrl && values.destination.imageName && values.destination.tag
+      ? `${repoUrl}/${values.destination.imageName}:${values.destination.tag}`
+      : null;
+
   return (
     <FlightCtlForm>
       <Grid lg={5} span={8}>
@@ -61,6 +77,28 @@ const ImageOutputStep = ({ repositories, repoRefetch }: ImageOutputStepProps) =>
             repoRefetch={repoRefetch}
             isRequired
           />
+          <FormGroup label={t('Image name')} fieldId="image-name" isRequired>
+            <TextField
+              name="destination.imageName"
+              aria-label={t('Image name')}
+              helperText={t('The image name that will be pushed the registry. For example: flightctl/rhel-bootc')}
+            />
+          </FormGroup>
+          <FormGroup label={t('Image tag')} fieldId="image-tag" isRequired>
+            <TextField
+              name="destination.tag"
+              aria-label={t('Image tag')}
+              helperText={t('Specify the veresion (e.g, latest or 9.6)')}
+            />
+          </FormGroup>
+          {imageReference && (
+            <FormSection>
+              <Card>
+                <CardTitle>{t('Destination image reference')}</CardTitle>
+                <CardBody>{imageReference}</CardBody>
+              </Card>
+            </FormSection>
+          )}
           <FormGroup label={t('Export formats')} fieldId="export-formats">
             <Gallery hasGutter>
               <ImageBuildExportFormatCard
@@ -86,4 +124,4 @@ const ImageOutputStep = ({ repositories, repoRefetch }: ImageOutputStepProps) =>
   );
 };
 
-export default ImageOutputStep;
+export default OutputImageStep;
