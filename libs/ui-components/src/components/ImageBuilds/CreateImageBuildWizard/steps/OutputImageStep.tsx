@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Grid } from '@patternfly/react-core';
 import { FormikErrors } from 'formik';
 
+import { Repository } from '@flightctl/types';
 import { ImageBuildFormValues } from '../types';
 import { useTranslation } from '../../../../hooks/useTranslation';
 
@@ -12,7 +13,12 @@ export const isOutputImageStepValid = (errors: FormikErrors<ImageBuildFormValues
   return !errors.name && (!destination || (!destination.repository && !destination.imageName && !destination.tag));
 };
 
-const ImageOutputStep = () => {
+type ImageOutputStepProps = {
+  repositories: Repository[];
+  hasLoaded: boolean;
+};
+
+const ImageOutputStep = ({ repositories, hasLoaded }: ImageOutputStepProps) => {
   const { t } = useTranslation();
 
   return (

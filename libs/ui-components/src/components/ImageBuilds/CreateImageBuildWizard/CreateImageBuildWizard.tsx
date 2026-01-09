@@ -1,9 +1,12 @@
 import * as React from 'react';
 import {
+  Alert,
   Breadcrumb,
   BreadcrumbItem,
+  Bullseye,
   PageSection,
   PageSectionVariants,
+  Spinner,
   Title,
   Wizard,
   WizardStep,
@@ -26,6 +29,9 @@ import { usePermissionsContext } from '../../common/PermissionsContext';
 import PageWithPermissions from '../../common/PageWithPermissions';
 import { ImagePipelineRequest } from '@flightctl/types/imagebuilder';
 import { ImageBuildFormValues } from './types';
+import { RepoSpecType, RepositoryList } from '@flightctl/types';
+import { useFetchPeriodically } from '../../../hooks/useFetchPeriodically';
+import { getErrorMessage } from '../../../utils/error';
 
 const orderedIds = [sourceImageStepId, outputImageStepId, registrationStepId, reviewStepId];
 
@@ -65,6 +71,11 @@ const CreateImageBuildWizard = () => {
   const [error, setError] = React.useState<unknown>();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = React.useState<WizardStepType>();
+  const [repoList, isLoading, repoError] = useFetchPeriodically<RepositoryList>({
+    endpoint: 'repositories',
+  });
+
+  const httpRepositories = (repoList?.items || []).filter((repo) => repo.spec.type === RepoSpecType.HTTP);
 
   return (
     <>
@@ -83,69 +94,85 @@ const CreateImageBuildWizard = () => {
       </PageSection>
       <PageSection variant={PageSectionVariants.light} type="wizard">
         <ErrorBoundary>
-          <Formik<ImageBuildFormValues>
-            initialValues={getInitialValues()}
-            validationSchema={getValidationSchema(t)}
-            validateOnMount
-            onSubmit={async (values) => {
-              setError(undefined);
-              try {
-                const imagePipelineRequest = getImagePipelineResource(values);
-                await post<ImagePipelineRequest>('imagepipelines', imagePipelineRequest);
-                navigate({ route: ROUTE.IMAGE_BUILD_DETAILS, postfix: values.name });
-              } catch (e) {
-                setError(e);
-              }
-            }}
-          >
-            {({ errors: formikErrors }) => {
-              const validStepIds = getValidStepIds(formikErrors);
+          {isLoading ? (
+            <Bullseye>
+              <Spinner />
+            </Bullseye>
+          ) : repoError ? (
+            <Alert isInline variant="danger" title={t('An error occurred')}>
+              {getErrorMessage(repoError)}
+            </Alert>
+          ) : (
+            <Formik<ImageBuildFormValues>
+              initialValues={getInitialValues()}
+              validationSchema={getValidationSchema(t)}
+              validateOnMount
+              onSubmit={async (values) => {
+                setError(undefined);
+                try {
+                  const imagePipelineRequest = getImagePipelineResource(values);
+                  await post<ImagePipelineRequest>('imagepipelines', imagePipelineRequest);
+                  navigate({ route: ROUTE.IMAGE_BUILD_DETAILS, postfix: values.name });
+                } catch (e) {
+                  setError(e);
+                }
+              }}
+            >
+              {({ errors: formikErrors }) => {
+                const validStepIds = getValidStepIds(formikErrors);
 
-              // CELIA-WIP: Remove "allStepIds" once the validation is implemented
-              // Temporarily allow all steps to be enabled for navigation
-              const allStepIds = formikErrors ? orderedIds : validStepIds;
+                // CELIA-WIP: Remove "allStepIds" once the validation is implemented
+                // Temporarily allow all steps to be enabled for navigation
+                const allStepIds = formikErrors ? orderedIds : validStepIds;
 
-              return (
-                <>
-                  <LeaveFormConfirmation />
-                  <Wizard
-                    footer={<CreateImageBuildWizardFooter />}
-                    onStepChange={(_, step) => {
-                      if (error) {
-                        setError(undefined);
-                      }
-                      setCurrentStep(step);
-                    }}
-                  >
-                    <WizardStep name={t('Image details')} id={sourceImageStepId}>
-                      {(!currentStep || currentStep?.id === sourceImageStepId) && <SourceImageStep />}
-                    </WizardStep>
-                    <WizardStep
-                      name={t('Image output')}
-                      id={outputImageStepId}
-                      isDisabled={isDisabledStep(outputImageStepId, allStepIds)}
+                return (
+                  <>
+                    <LeaveFormConfirmation />
+                    <Wizard
+                      footer={<CreateImageBuildWizardFooter />}
+                      onStepChange={(_, step) => {
+                        if (error) {
+                          setError(undefined);
+                        }
+                        setCurrentStep(step);
+                      }}
                     >
-                      {currentStep?.id === outputImageStepId && <ImageOutputStep />}
-                    </WizardStep>
-                    <WizardStep
-                      name={t('Registration')}
-                      id={registrationStepId}
-                      isDisabled={isDisabledStep(registrationStepId, allStepIds)}
-                    >
-                      {currentStep?.id === registrationStepId && <RegistrationStep />}
-                    </WizardStep>
-                    <WizardStep
-                      name={t('Review')}
-                      id={reviewStepId}
-                      isDisabled={isDisabledStep(reviewStepId, allStepIds)}
-                    >
-                      {currentStep?.id === reviewStepId && <ReviewStep error={error} />}
-                    </WizardStep>
-                  </Wizard>
-                </>
-              );
-            }}
-          </Formik>
+                      <WizardStep name={t('Image details')} id={sourceImageStepId}>
+                        {(!currentStep || currentStep?.id === sourceImageStepId) && (
+                          <SourceImageStep repositories={httpRepositories} hasLoaded={!!repoList} />
+                        )}
+                      </WizardStep>
+                      <WizardStep
+                        name={t('Image output')}
+                        id={outputImageStepId}
+                        isDisabled={isDisabledStep(outputImageStepId, allStepIds)}
+                      >
+                        {currentStep?.id === outputImageStepId && (
+                          <ImageOutputStep repositories={httpRepositories} hasLoaded={!!repoList} />
+                        )}
+                      </WizardStep>
+                      <WizardStep
+                        name={t('Registration')}
+                        id={registrationStepId}
+                        isDisabled={isDisabledStep(registrationStepId, allStepIds)}
+                      >
+                        {currentStep?.id === registrationStepId && <RegistrationStep />}
+                      </WizardStep>
+                      <WizardStep
+                        name={t('Review')}
+                        id={reviewStepId}
+                        isDisabled={isDisabledStep(reviewStepId, allStepIds)}
+                      >
+                        {currentStep?.id === reviewStepId && (
+                          <ReviewStep error={error} repositories={httpRepositories} />
+                        )}
+                      </WizardStep>
+                    </Wizard>
+                  </>
+                );
+              }}
+            </Formik>
+          )}
         </ErrorBoundary>
       </PageSection>
     </>

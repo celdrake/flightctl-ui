@@ -16,7 +16,11 @@ import { ImageBuildFormValues } from './types';
 export const getValidationSchema = (t: TFunction) => {
   return Yup.object<ImageBuildFormValues>({
     name: validKubernetesDnsSubdomain(t, { isRequired: true }),
-    source: Yup.object<ImageBuildSource>().required(t('Source is required')),
+    source: Yup.object<ImageBuildSource>({
+      repository: Yup.string().required(t('Repository is required')),
+      imageName: Yup.string().required(t('Image name is required')),
+      imageTag: Yup.string().required(t('Image tag is required')),
+    }).required(t('Source is required')),
     destination: Yup.object<ImageBuildDestination>().required(t('Destination is required')),
     binding: Yup.object<ImageBuildBinding>().required(t('Binding is required')),
   });
