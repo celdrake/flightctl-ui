@@ -14,8 +14,8 @@ import { RESOURCE, VERB } from '../../../types/rbac';
 import { useFetch } from '../../../hooks/useFetch';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { Link, ROUTE, useNavigate } from '../../../hooks/useNavigate';
-import ImageDetailsStep, { imageDetailsStepId, isImageDetailsStepValid } from './steps/ImageDetailsStep';
-import ImageOutputStep, { imageOutputStepId, isImageOutputStepValid } from './steps/ImageOutputStep';
+import SourceImageStep, { sourceImageStepId, isSourceImageStepValid } from './steps/SourceImageStep';
+import ImageOutputStep, { outputImageStepId, isOutputImageStepValid } from './steps/OutputImageStep';
 import RegistrationStep, { isRegistrationStepValid, registrationStepId } from './steps/RegistrationStep';
 import ReviewStep, { reviewStepId } from './steps/ReviewStep';
 import { getImagePipelineResource, getInitialValues, getValidationSchema } from './utils';
@@ -27,15 +27,15 @@ import PageWithPermissions from '../../common/PageWithPermissions';
 import { ImagePipelineRequest } from '@flightctl/types/imagebuilder';
 import { ImageBuildFormValues } from './types';
 
-const orderedIds = [imageDetailsStepId, imageOutputStepId, registrationStepId, reviewStepId];
+const orderedIds = [sourceImageStepId, outputImageStepId, registrationStepId, reviewStepId];
 
 const getValidStepIds = (formikErrors: FormikErrors<ImageBuildFormValues>): string[] => {
   const validStepIds: string[] = [];
-  if (isImageDetailsStepValid(formikErrors)) {
-    validStepIds.push(imageDetailsStepId);
+  if (isSourceImageStepValid(formikErrors)) {
+    validStepIds.push(sourceImageStepId);
   }
-  if (isImageOutputStepValid(formikErrors)) {
-    validStepIds.push(imageOutputStepId);
+  if (isOutputImageStepValid(formikErrors)) {
+    validStepIds.push(outputImageStepId);
   }
   if (isRegistrationStepValid(formikErrors)) {
     validStepIds.push(registrationStepId);
@@ -117,15 +117,15 @@ const CreateImageBuildWizard = () => {
                       setCurrentStep(step);
                     }}
                   >
-                    <WizardStep name={t('Image details')} id={imageDetailsStepId}>
-                      {(!currentStep || currentStep?.id === imageDetailsStepId) && <ImageDetailsStep />}
+                    <WizardStep name={t('Image details')} id={sourceImageStepId}>
+                      {(!currentStep || currentStep?.id === sourceImageStepId) && <SourceImageStep />}
                     </WizardStep>
                     <WizardStep
                       name={t('Image output')}
-                      id={imageOutputStepId}
-                      isDisabled={isDisabledStep(imageOutputStepId, allStepIds)}
+                      id={outputImageStepId}
+                      isDisabled={isDisabledStep(outputImageStepId, allStepIds)}
                     >
-                      {currentStep?.id === imageOutputStepId && <ImageOutputStep />}
+                      {currentStep?.id === outputImageStepId && <ImageOutputStep />}
                     </WizardStep>
                     <WizardStep
                       name={t('Registration')}

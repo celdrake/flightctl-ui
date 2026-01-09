@@ -1,12 +1,13 @@
 import * as React from 'react';
-import { useTranslation } from '../../../hooks/useTranslation';
 import { Button, WizardFooterWrapper, useWizardContext } from '@patternfly/react-core';
 import { useFormikContext } from 'formik';
+
 import { ImageBuildFormValues } from './types';
+import { useTranslation } from '../../../hooks/useTranslation';
 import { useNavigate } from '../../../hooks/useNavigate';
 import { reviewStepId } from './steps/ReviewStep';
-import { imageDetailsStepId, isImageDetailsStepValid } from './steps/ImageDetailsStep';
-import { imageOutputStepId, isImageOutputStepValid } from './steps/ImageOutputStep';
+import { sourceImageStepId, isSourceImageStepValid } from './steps/SourceImageStep';
+import { outputImageStepId, isOutputImageStepValid } from './steps/OutputImageStep';
 import { isRegistrationStepValid, registrationStepId } from './steps/RegistrationStep';
 
 const CreateImageBuildWizardFooter = () => {
@@ -18,10 +19,10 @@ const CreateImageBuildWizardFooter = () => {
 
   const isReviewStep = activeStep.id === reviewStepId;
   let isStepValid = true;
-  if (activeStep.id === imageDetailsStepId) {
-    isStepValid = isImageDetailsStepValid(errors);
-  } else if (activeStep.id === imageOutputStepId) {
-    isStepValid = isImageOutputStepValid(errors);
+  if (activeStep.id === sourceImageStepId) {
+    isStepValid = isSourceImageStepValid(errors);
+  } else if (activeStep.id === outputImageStepId) {
+    isStepValid = isOutputImageStepValid(errors);
   } else if (activeStep.id === registrationStepId) {
     isStepValid = isRegistrationStepValid(errors);
   }
@@ -56,7 +57,7 @@ const CreateImageBuildWizardFooter = () => {
   return (
     <WizardFooterWrapper>
       {primaryBtn}
-      {activeStep.id !== imageDetailsStepId && (
+      {activeStep.id !== sourceImageStepId && (
         <Button variant="secondary" onClick={goToPrevStep} isDisabled={isSubmitting}>
           {t('Back')}
         </Button>

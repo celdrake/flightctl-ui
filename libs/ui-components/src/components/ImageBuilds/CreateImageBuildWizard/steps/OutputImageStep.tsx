@@ -1,13 +1,15 @@
 import * as React from 'react';
 import { Grid } from '@patternfly/react-core';
 import { FormikErrors } from 'formik';
+
 import { ImageBuildFormValues } from '../types';
 import { useTranslation } from '../../../../hooks/useTranslation';
 
-export const imageOutputStepId = 'image-output';
+export const outputImageStepId = 'output-image';
 
-export const isImageOutputStepValid = (errors: FormikErrors<ImageBuildFormValues>) => {
-  return !errors.destinationRepository && !errors.destinationImageName && !errors.destinationTag;
+export const isOutputImageStepValid = (errors: FormikErrors<ImageBuildFormValues>) => {
+  const { destination } = errors;
+  return !errors.name && (!destination || (!destination.repository && !destination.imageName && !destination.tag));
 };
 
 const ImageOutputStep = () => {
