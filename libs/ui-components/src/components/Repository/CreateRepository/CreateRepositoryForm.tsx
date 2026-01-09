@@ -460,8 +460,8 @@ const CreateRepositoryForm: React.FC<CreateRepositoryFormProps> = ({
   const [errors, setErrors] = React.useState<string[]>();
   const { patch, remove, post } = useFetch();
   const { t } = useTranslation();
-  // CELIA-WIP use OCI to show the correct schema
-  const isRegistryType = options?.allowedRepoTypes?.includes(RepoSpecType.HTTP) || false;
+  const isRegistryType = options?.allowedRepoTypes?.includes(RepoSpecType.OCI) || false;
+
   return (
     <Formik<RepositoryFormValues>
       initialValues={getInitValues({

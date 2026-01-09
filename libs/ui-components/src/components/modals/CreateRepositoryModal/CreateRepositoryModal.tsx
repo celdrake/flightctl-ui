@@ -13,10 +13,9 @@ type CreateRepositoryModalProps = {
 
 const CreateRepositoryModal = ({ type, onClose, onSuccess }: CreateRepositoryModalProps) => {
   const { t } = useTranslation();
-  // CELIA-WIP use OCI to show the correct title
   return (
     <Modal variant="medium" isOpen>
-      <ModalHeader title={type === RepoSpecType.HTTP ? t('Create registry') : t('Create repository')} />
+      <ModalHeader title={type === RepoSpecType.OCI ? t('Create registry') : t('Create repository')} />
       <ModalBody>
         <CreateRepositoryForm
           onClose={onClose}

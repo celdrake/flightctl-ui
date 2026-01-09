@@ -1,5 +1,7 @@
 import { TFunction } from 'react-i18next';
 import { ExportFormatType, ImageBuild } from '@flightctl/types/imagebuilder';
+import { Repository } from '@flightctl/types';
+import { isOciRepoSpec } from '../components/Repository/CreateRepository/utils';
 
 // CELIA-WIP: DO we need to show the repository URL?
 
@@ -43,4 +45,12 @@ export const getExportFormatLabel = (t: TFunction, format: ExportFormatType) => 
     default:
       return t('Unknown format ({format})', { format });
   }
+};
+
+export const getRegistryUrl = (registries: Repository[], registryName: string): string | null => {
+  const repo = registries.find((r) => r.metadata.name === registryName);
+  if (!repo || !isOciRepoSpec(repo.spec)) {
+    return null;
+  }
+  return repo.spec.registry;
 };

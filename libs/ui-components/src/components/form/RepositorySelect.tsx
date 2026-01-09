@@ -7,8 +7,9 @@ import { TFunction } from 'react-i18next';
 
 import { RepoSpecType, Repository } from '@flightctl/types';
 import { useTranslation } from '../../hooks/useTranslation';
-import FormSelect from './FormSelect';
 import CreateRepositoryModal from '../modals/CreateRepositoryModal/CreateRepositoryModal';
+import { getRepoUrlOrRegistry } from '../Repository/CreateRepository/utils';
+import FormSelect from './FormSelect';
 
 export const getRepositoryItems = (
   t: TFunction,
@@ -22,7 +23,7 @@ export const getRepositoryItems = (
       const repoName = curr.metadata.name as string;
       acc[repoName] = {
         label: repoName,
-        description: curr.spec.url,
+        description: getRepoUrlOrRegistry(curr.spec),
       };
       return acc;
     }, {});
@@ -69,11 +70,10 @@ const RepositorySelect = ({
   const { t } = useTranslation();
   const { setFieldValue } = useFormikContext();
   const [createRepoModalOpen, setCreateRepoModalOpen] = React.useState(false);
-  // CELIA-WIP use OCI to show the correct label and placeholder text
 
-  const isRegistryType = repoType === RepoSpecType.HTTP;
+  const isRegistryType = repoType === RepoSpecType.OCI;
 
-  // TODO If it's read only can we still select or is it blocked?
+  // CELIA-WIP If it's read only can we still select or is it blocked?
   const repositoryItems = getRepositoryItems(t, repositories, repoType, selectedRepoName);
 
   const handleCreateRepository = (repo: Repository) => {

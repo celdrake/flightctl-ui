@@ -77,8 +77,7 @@ const CreateImageBuildWizard = () => {
     endpoint: 'repositories',
   });
 
-  // CELIA-WIP: Use RepoSpecType.OCI when OCI repositories are available
-  const ociRegistries = (repoList?.items || []).filter((repo) => repo.spec.type === RepoSpecType.HTTP);
+  const ociRegistries = (repoList?.items || []).filter((repo) => repo.spec.type === RepoSpecType.OCI);
 
   return (
     <>
@@ -143,7 +142,7 @@ const CreateImageBuildWizard = () => {
                     >
                       <WizardStep name={t('Image details')} id={sourceImageStepId}>
                         {(!currentStep || currentStep?.id === sourceImageStepId) && (
-                          <SourceImageStep repositories={ociRegistries} repoRefetch={refetchRepositories} />
+                          <SourceImageStep registries={ociRegistries} repoRefetch={refetchRepositories} />
                         )}
                       </WizardStep>
                       <WizardStep

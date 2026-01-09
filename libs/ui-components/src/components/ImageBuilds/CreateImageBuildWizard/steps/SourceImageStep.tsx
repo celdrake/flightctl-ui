@@ -10,6 +10,7 @@ import TextField from '../../../form/TextField';
 import RepositorySelect from '../../../form/RepositorySelect';
 import { usePermissionsContext } from '../../../common/PermissionsContext';
 import { RESOURCE, VERB } from '../../../../types/rbac';
+import { getRegistryUrl } from '../../../../utils/imageBuilds';
 
 export const sourceImageStepId = 'source-image';
 
@@ -22,30 +23,23 @@ export const isSourceImageStepValid = (errors: FormikErrors<ImageBuildFormValues
 };
 
 type SourceImageStepProps = {
-  repositories: Repository[];
+  registries: Repository[];
   repoRefetch: VoidFunction;
 };
 
-const SourceImageStep = ({ repositories, repoRefetch }: SourceImageStepProps) => {
+const SourceImageStep = ({ registries, repoRefetch }: SourceImageStepProps) => {
   const { t } = useTranslation();
   const { values } = useFormikContext<ImageBuildFormValues>();
   const { checkPermissions } = usePermissionsContext();
   const [canCreateRepo] = checkPermissions([{ kind: RESOURCE.REPOSITORY, verb: VERB.CREATE }]);
 
-  const getRepositoryUrl = (repoName: string): string | null => {
-    const repo = repositories.find((r) => r.metadata.name === repoName);
-    if (!repo) {
+  const imageReference = React.useMemo(() => {
+    const registryUrl = getRegistryUrl(registries, values.source.repository);
+    if (!registryUrl) {
       return null;
     }
-    // CELIA-WIP use the registry URL
-    return 'quay.io';
-  };
-
-  const repoUrl = values.source.repository ? getRepositoryUrl(values.source.repository) : null;
-  const imageReference =
-    repoUrl && values.source.imageName && values.source.imageTag
-      ? `${repoUrl}/${values.source.imageName}:${values.source.imageTag}`
-      : null;
+    return `${registryUrl}/${values.source.imageName}:${values.source.imageTag}`;
+  }, [registries, values.source]);
 
   return (
     <FlightCtlForm>
@@ -53,8 +47,8 @@ const SourceImageStep = ({ repositories, repoRefetch }: SourceImageStepProps) =>
         <FormSection>
           <RepositorySelect
             name="source.repository"
-            repositories={repositories}
-            repoType={RepoSpecType.HTTP}
+            repositories={registries}
+            repoType={RepoSpecType.OCI}
             selectedRepoName={values.source.repository}
             canCreateRepo={canCreateRepo}
             repoRefetch={repoRefetch}

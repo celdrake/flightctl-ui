@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Alert, Card, CardBody, CardTitle, FormGroup, FormSection, Gallery, Grid } from '@patternfly/react-core';
 import { FormikErrors, useFormikContext } from 'formik';
 
-import { RepoSpecType, Repository } from '@flightctl/types';
+import { OciRepoSpec, RepoSpecType, Repository } from '@flightctl/types';
 import { ExportFormatType } from '@flightctl/types/imagebuilder';
 import { ImageBuildFormValues } from '../types';
 import { useTranslation } from '../../../../hooks/useTranslation';
@@ -12,6 +12,8 @@ import RepositorySelect from '../../../form/RepositorySelect';
 import { usePermissionsContext } from '../../../common/PermissionsContext';
 import { RESOURCE, VERB } from '../../../../types/rbac';
 import ImageBuildExportFormatCard from '../../ImageBuildExportFormatCard';
+import { getRegistryUrl } from '../../../../utils/imageBuilds';
+import { isOciRepoSpec } from '../../../Repository/CreateRepository/utils';
 
 export const outputImageStepId = 'output-image';
 
@@ -46,25 +48,22 @@ const OutputImageStep = ({ registries, repoRefetch }: OutputImageStepProps) => {
     }
   };
 
-  // CELIA-WIP: Filter only writable registries
   const outputRegistries = React.useMemo(() => {
-    return registries;
+    return registries.filter((repo) => {
+      if (isOciRepoSpec(repo.spec)) {
+        return repo.spec.accessMode !== OciRepoSpec.accessMode.READ;
+      }
+      return false;
+    });
   }, [registries]);
 
-  const getRepositoryUrl = (repoName: string): string | null => {
-    const repo = registries.find((r) => r.metadata.name === repoName);
-    if (!repo) {
+  const imageReference = React.useMemo(() => {
+    const registryUrl = getRegistryUrl(registries, values.destination.repository);
+    if (!registryUrl) {
       return null;
     }
-    // CELIA-WIP use the registry URL
-    return 'quay.io';
-  };
-
-  const repoUrl = values.destination.repository ? getRepositoryUrl(values.destination.repository) : null;
-  const imageReference =
-    repoUrl && values.destination.imageName && values.destination.tag
-      ? `${repoUrl}/${values.destination.imageName}:${values.destination.tag}`
-      : null;
+    return `${registryUrl}/${values.destination.imageName}:${values.destination.tag}`;
+  }, [registries, values.destination]);
 
   return (
     <FlightCtlForm>
@@ -78,7 +77,7 @@ const OutputImageStep = ({ registries, repoRefetch }: OutputImageStepProps) => {
           <RepositorySelect
             name="destination.repository"
             repositories={outputRegistries}
-            repoType={RepoSpecType.HTTP}
+            repoType={RepoSpecType.OCI}
             selectedRepoName={values.destination.repository}
             canCreateRepo={canCreateRepo}
             repoRefetch={repoRefetch}
