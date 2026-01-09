@@ -12,7 +12,7 @@ import RepositorySelect from '../../../form/RepositorySelect';
 import { usePermissionsContext } from '../../../common/PermissionsContext';
 import { RESOURCE, VERB } from '../../../../types/rbac';
 import ImageBuildExportFormatCard from '../../ImageBuildExportFormatCard';
-import { getRegistryUrl } from '../../../../utils/imageBuilds';
+import { getImageReference } from '../../../../utils/imageBuilds';
 import { isOciRepoSpec } from '../../../Repository/CreateRepository/utils';
 
 export const outputImageStepId = 'output-image';
@@ -59,12 +59,7 @@ const OutputImageStep = ({ registries, repoRefetch }: OutputImageStepProps) => {
   };
 
   const imageReference = React.useMemo(() => {
-    const { repository, imageName, tag } = values.destination;
-    if (!repository || !imageName || !tag) {
-      return null;
-    }
-    const registryUrl = getRegistryUrl(registries, repository);
-    return `${registryUrl}/${imageName}:${tag}`;
+    return getImageReference(values.destination, registries);
   }, [registries, values.destination]);
 
   return (

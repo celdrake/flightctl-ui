@@ -1,10 +1,9 @@
 import { TFunction } from 'react-i18next';
-import { ExportFormatType, ImageBuild } from '@flightctl/types/imagebuilder';
+import { ExportFormatType, ImageBuild, ImageBuildDestination, ImageBuildSource } from '@flightctl/types/imagebuilder';
 import { Repository } from '@flightctl/types';
 import { isOciRepoSpec } from '../components/Repository/CreateRepository/utils';
 
 // CELIA-WIP: DO we need to show the repository URL?
-
 export const getImageBuildSourceImage = (imageBuild: ImageBuild | undefined) => {
   if (!imageBuild) {
     return '-';
@@ -53,4 +52,26 @@ export const getRegistryUrl = (registries: Repository[], registryName: string): 
     return null;
   }
   return repo.spec.registry;
+};
+
+export const getImageReference = (
+  imageTarget: ImageBuildSource | ImageBuildDestination,
+  repositories: Repository[],
+) => {
+  if (!imageTarget) {
+    return '-';
+  }
+
+  const registryUrl = getRegistryUrl(repositories, imageTarget.repository);
+  // CELIA-WIP: Asked for the API to unify these two fields, but it's not yet implemented.
+  let tag: string;
+  if ('imageTag' in imageTarget) {
+    tag = imageTarget.imageTag;
+  } else {
+    tag = imageTarget.tag;
+  }
+  if (!registryUrl) {
+    return `${imageTarget.imageName}:${tag}`;
+  }
+  return `${registryUrl}/${imageTarget.imageName}:${tag}`;
 };

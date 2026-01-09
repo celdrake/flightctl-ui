@@ -125,7 +125,7 @@ const RepositorySelect = ({
 
   const { validRepoItems, invalidRepoItems } = React.useMemo(() => {
     return getRepositoryItems(t, repositories, repoType, field.value, validateRepoSelection);
-  }, [repositories, repoType, field.value, validateRepoSelection]);
+  }, [t, repositories, repoType, field.value, validateRepoSelection]);
 
   const handleCreateRepository = (repo: Repository) => {
     setCreateRepoModalOpen(false);

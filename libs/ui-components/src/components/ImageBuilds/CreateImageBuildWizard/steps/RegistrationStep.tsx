@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+  Alert,
   Card,
   CardBody,
   CardHeader,
@@ -8,8 +9,6 @@ import {
   FlexItem,
   FormGroup,
   FormSection,
-  Gallery,
-  Grid,
   Icon,
   Radio,
   Stack,
@@ -51,15 +50,15 @@ const RegistrationStep = () => {
 
   const isEarlyBindingSelected = values.binding.type === BindingType.BindingTypeEarly;
 
-  const [certificateOption, setCertificateOption] = React.useState<CertificateMode>(CertificateMode.AUTO_CREATE);
+  const [certMode, setCertMode] = React.useState<CertificateMode>(CertificateMode.AUTO_CREATE);
 
   // Update certificate option when binding changes
   React.useEffect(() => {
     const earlyBinding = values.binding as EarlyBinding;
     if (earlyBinding.certName) {
-      setCertificateOption(CertificateMode.EXISTING);
+      setCertMode(CertificateMode.EXISTING);
     } else if (isEarlyBindingSelected) {
-      setCertificateOption(CertificateMode.AUTO_CREATE);
+      setCertMode(CertificateMode.AUTO_CREATE);
     }
   }, [values.binding, isEarlyBindingSelected]);
 
@@ -69,7 +68,7 @@ const RegistrationStep = () => {
         type: BindingType.BindingTypeEarly,
         certName: '',
       } as EarlyBinding);
-      setCertificateOption(CertificateMode.AUTO_CREATE);
+      setCertMode(CertificateMode.AUTO_CREATE);
     }
   };
 
@@ -82,7 +81,7 @@ const RegistrationStep = () => {
   };
 
   const handleCertModeChange = (certMode: CertificateMode) => {
-    setCertificateOption(certMode);
+    setCertMode(certMode);
     if (certMode === CertificateMode.AUTO_CREATE) {
       setFieldValue('binding.certName', '');
     }
@@ -91,106 +90,109 @@ const RegistrationStep = () => {
   // CELIA-WIP: MOdify for PF6
   return (
     <FlightCtlForm>
-      <Grid lg={5} span={8}>
-        <FormSection>
-          <Gallery hasGutter minWidths={{ default: '300px' }}>
-            <Card id="early-binding-card" isSelectable isSelected={isEarlyBindingSelected}>
-              <CardHeader
-                selectableActions={{
-                  selectableActionId: 'early-binding',
-                  selectableActionAriaLabelledby: 'early-binding-card',
-                  name: 'early-binding',
-                  onChange: handleEarlyBindingSelect,
-                }}
-              >
-                <CardTitle>
-                  <Flex alignItems={{ default: 'alignItemsCenter' }} gap={{ default: 'gapMd' }}>
-                    {isEarlyBindingSelected && (
-                      <FlexItem>
-                        <Icon status="success" size="sm">
-                          <CheckCircleIcon />
-                        </Icon>
-                      </FlexItem>
-                    )}
-                    <FlexItem style={{ fontWeight: 'bold' }}>{t('Early binding')}</FlexItem>
-                  </Flex>
-                </CardTitle>
-              </CardHeader>
-              <CardBody>
-                <TextContent>
-                  <Text>{t('Configure enrollment certificate settings during image build')}</Text>
-                </TextContent>
+      <FormSection>
+        <Card id="early-binding-card" isSelectable isSelected={isEarlyBindingSelected}>
+          <CardHeader
+            selectableActions={{
+              selectableActionId: 'early-binding',
+              selectableActionAriaLabelledby: 'early-binding-card',
+              name: 'early-binding',
+              onChange: handleEarlyBindingSelect,
+            }}
+          >
+            <CardTitle>
+              <Flex alignItems={{ default: 'alignItemsCenter' }} gap={{ default: 'gapMd' }}>
+                {isEarlyBindingSelected && (
+                  <FlexItem>
+                    <Icon status="success" size="sm">
+                      <CheckCircleIcon />
+                    </Icon>
+                  </FlexItem>
+                )}
+                <FlexItem style={{ fontWeight: 'bold' }}>{t('Early binding')}</FlexItem>
+              </Flex>
+            </CardTitle>
+          </CardHeader>
+          <CardBody>
+            <TextContent>
+              <Text>{t('Configure enrollment certificate settings during image build')}</Text>
+            </TextContent>
 
-                <FormSection>
-                  <FormGroup label={t('Certificate option')} fieldId="certificate-option">
-                    <Stack hasGutter>
-                      <StackItem>
-                        <Radio
-                          id="choose-existing-cert"
-                          name="certificateOption"
-                          label={t('Choose from existing certificates')}
-                          isChecked={certificateOption === 'existing'}
-                          onChange={() => handleCertModeChange(CertificateMode.EXISTING)}
-                        />
-                      </StackItem>
-                      <StackItem>
-                        <Radio
-                          id="auto-create-cert"
-                          name="certificateOption"
-                          label={t('Auto-create certificate')}
-                          isChecked={certificateOption === 'auto-create'}
-                          onChange={() => handleCertModeChange(CertificateMode.AUTO_CREATE)}
-                        />
-                      </StackItem>
-                    </Stack>
-                  </FormGroup>
+            <FormSection>
+              <FormGroup label={t('Enrollment certificate')} fieldId="certificate-option" isRequired>
+                <Stack hasGutter>
+                  <StackItem>
+                    <Radio
+                      id="choose-existing-cert"
+                      name="certMode"
+                      label={t('Choose from existing certificates')}
+                      isChecked={certMode === CertificateMode.EXISTING}
+                      onChange={() => handleCertModeChange(CertificateMode.EXISTING)}
+                    />
+                  </StackItem>
+                  <StackItem>
+                    <Radio
+                      id="auto-create-cert"
+                      name="certMode"
+                      label={t('Auto-create certificate')}
+                      isChecked={certMode === CertificateMode.AUTO_CREATE}
+                      onChange={() => handleCertModeChange(CertificateMode.AUTO_CREATE)}
+                    />
+                  </StackItem>
+                </Stack>
+              </FormGroup>
 
-                  {certificateOption === 'existing' && (
-                    <FormGroup label={t('Certificate name')} fieldId="cert-name" isRequired>
-                      <TextField
-                        name="binding.certName"
-                        aria-label={t('Certificate name')}
-                        helperText={t('Name of the enrollment certificate resource to embed in the image')}
-                      />
-                    </FormGroup>
+              {certMode === CertificateMode.EXISTING && (
+                <FormGroup label={t('Certificate name')} fieldId="cert-name" isRequired>
+                  <TextField
+                    name="binding.certName"
+                    aria-label={t('Certificate name')}
+                    helperText={t('Name of the enrollment certificate resource to embed in the image')}
+                  />
+                </FormGroup>
+              )}
+              {certMode === CertificateMode.AUTO_CREATE && (
+                <Alert
+                  isInline
+                  variant="info"
+                  title={t(
+                    'Secures your image for early binding. The device must connect to the management service before this registration window expires.',
                   )}
-                </FormSection>
-              </CardBody>
-            </Card>
+                />
+              )}
+            </FormSection>
+          </CardBody>
+        </Card>
 
-            <Card id="late-binding-card" isSelectable isSelected={!isEarlyBindingSelected}>
-              <CardHeader
-                selectableActions={{
-                  selectableActionId: 'late-binding',
-                  selectableActionAriaLabelledby: 'late-binding-card',
-                  name: 'late-binding',
-                  onChange: handleLateBindingSelect,
-                }}
-              >
-                <CardTitle>
-                  <Flex alignItems={{ default: 'alignItemsCenter' }} gap={{ default: 'gapMd' }}>
-                    {!isEarlyBindingSelected && (
-                      <FlexItem>
-                        <Icon status="success" size="sm">
-                          <CheckCircleIcon />
-                        </Icon>
-                      </FlexItem>
-                    )}
-                    <FlexItem style={{ fontWeight: 'bold' }}>{t('Late binding')}</FlexItem>
-                  </Flex>
-                </CardTitle>
-              </CardHeader>
-              <CardBody>
-                <TextContent>
-                  <Text>
-                    {t('No additional user input required (cloud-int and ignition are enabled automatically).')}
-                  </Text>
-                </TextContent>
-              </CardBody>
-            </Card>
-          </Gallery>
-        </FormSection>
-      </Grid>
+        <Card id="late-binding-card" isSelectable isSelected={!isEarlyBindingSelected}>
+          <CardHeader
+            selectableActions={{
+              selectableActionId: 'late-binding',
+              selectableActionAriaLabelledby: 'late-binding-card',
+              name: 'late-binding',
+              onChange: handleLateBindingSelect,
+            }}
+          >
+            <CardTitle>
+              <Flex alignItems={{ default: 'alignItemsCenter' }} gap={{ default: 'gapMd' }}>
+                {!isEarlyBindingSelected && (
+                  <FlexItem>
+                    <Icon status="success" size="sm">
+                      <CheckCircleIcon />
+                    </Icon>
+                  </FlexItem>
+                )}
+                <FlexItem style={{ fontWeight: 'bold' }}>{t('Late binding')}</FlexItem>
+              </Flex>
+            </CardTitle>
+          </CardHeader>
+          <CardBody>
+            <TextContent>
+              <Text>{t('No additional user input required (cloud-int and ignition are enabled automatically).')}</Text>
+            </TextContent>
+          </CardBody>
+        </Card>
+      </FormSection>
     </FlightCtlForm>
   );
 };

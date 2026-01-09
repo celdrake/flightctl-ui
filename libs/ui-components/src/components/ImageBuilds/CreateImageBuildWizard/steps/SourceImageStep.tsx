@@ -10,7 +10,7 @@ import TextField from '../../../form/TextField';
 import RepositorySelect from '../../../form/RepositorySelect';
 import { usePermissionsContext } from '../../../common/PermissionsContext';
 import { RESOURCE, VERB } from '../../../../types/rbac';
-import { getRegistryUrl } from '../../../../utils/imageBuilds';
+import { getImageReference } from '../../../../utils/imageBuilds';
 
 export const sourceImageStepId = 'source-image';
 
@@ -34,12 +34,7 @@ const SourceImageStep = ({ registries, repoRefetch }: SourceImageStepProps) => {
   const [canCreateRepo] = checkPermissions([{ kind: RESOURCE.REPOSITORY, verb: VERB.CREATE }]);
 
   const imageReference = React.useMemo(() => {
-    const { repository, imageName, imageTag } = values.source;
-    if (!repository || !imageName || !imageTag) {
-      return null;
-    }
-    const registryUrl = getRegistryUrl(registries, values.source.repository);
-    return `${registryUrl}/${values.source.imageName}:${values.source.imageTag}`;
+    return getImageReference(values.source, registries);
   }, [registries, values.source]);
 
   return (
