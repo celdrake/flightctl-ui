@@ -6,7 +6,7 @@ import { CloudSecurityIcon } from '@patternfly/react-icons/dist/js/icons/cloud-s
 import { ServerGroupIcon } from '@patternfly/react-icons/dist/js/icons/server-group-icon';
 
 import { ExportFormatType } from '@flightctl/types/imagebuilder';
-import { getExportFormatLabel, getExportFormatTitle } from '../../utils/imageBuilds';
+import { getExportFormatTitle } from '../../utils/imageBuilds';
 import { useTranslation } from '../../hooks/useTranslation';
 
 const iconMap: Record<string, React.ReactElement> = {

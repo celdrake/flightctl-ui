@@ -71,7 +71,7 @@ const SourceImageStep = ({ repositories, repoRefetch }: SourceImageStepProps) =>
             <TextField
               name="source.imageTag"
               aria-label={t('Image tag')}
-              helperText={t('Specify the veresion (e.g, latest or 9.6)')}
+              helperText={t('Specify the version (e.g, latest or 9.6)')}
             />
           </FormGroup>
           {imageReference && (

@@ -152,7 +152,7 @@ const CreateImageBuildWizard = () => {
                         isDisabled={isDisabledStep(outputImageStepId, validStepIds)}
                       >
                         {currentStep?.id === outputImageStepId && (
-                          <ImageOutputStep repositories={ociRegistries} repoRefetch={refetchRepositories} />
+                          <ImageOutputStep registries={ociRegistries} repoRefetch={refetchRepositories} />
                         )}
                       </WizardStep>
                       <WizardStep

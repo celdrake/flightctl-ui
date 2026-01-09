@@ -52,6 +52,7 @@ type RepositorySelectProps = {
   isReadOnly?: boolean;
   repoRefetch?: VoidFunction;
   isRequired?: boolean;
+  label?: string;
 };
 
 const RepositorySelect = ({
@@ -62,6 +63,7 @@ const RepositorySelect = ({
   canCreateRepo,
   isReadOnly,
   repoRefetch,
+  label,
   isRequired,
 }: RepositorySelectProps) => {
   const { t } = useTranslation();
@@ -84,7 +86,7 @@ const RepositorySelect = ({
 
   return (
     <>
-      <FormGroup label={isRegistryType ? t('Registry') : t('Repository')} isRequired={isRequired}>
+      <FormGroup label={label || (isRegistryType ? t('Registry') : t('Repository'))} isRequired={isRequired}>
         <FormSelect
           name={name}
           items={repositoryItems}

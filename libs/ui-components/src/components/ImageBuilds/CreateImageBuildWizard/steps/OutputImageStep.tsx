@@ -24,11 +24,11 @@ export const isOutputImageStepValid = (errors: FormikErrors<ImageBuildFormValues
 };
 
 type OutputImageStepProps = {
-  repositories: Repository[];
+  registries: Repository[];
   repoRefetch: VoidFunction;
 };
 
-const OutputImageStep = ({ repositories, repoRefetch }: OutputImageStepProps) => {
+const OutputImageStep = ({ registries, repoRefetch }: OutputImageStepProps) => {
   const { t } = useTranslation();
   const { values, setFieldValue } = useFormikContext<ImageBuildFormValues>();
   const { checkPermissions } = usePermissionsContext();
@@ -46,8 +46,13 @@ const OutputImageStep = ({ repositories, repoRefetch }: OutputImageStepProps) =>
     }
   };
 
+  // CELIA-WIP: Filter only writable registries
+  const outputRegistries = React.useMemo(() => {
+    return registries;
+  }, [registries]);
+
   const getRepositoryUrl = (repoName: string): string | null => {
-    const repo = repositories.find((r) => r.metadata.name === repoName);
+    const repo = registries.find((r) => r.metadata.name === repoName);
     if (!repo) {
       return null;
     }
@@ -65,16 +70,19 @@ const OutputImageStep = ({ repositories, repoRefetch }: OutputImageStepProps) =>
     <FlightCtlForm>
       <Grid lg={5} span={8}>
         <FormSection>
-          <Alert isInline variant="info" title={t('Image output configuration')}>
-            {t('TBD - Image output configuration details')}
+          <Alert isInline variant="info" title={t('Management-ready by default')}>
+            {t(
+              'The agent is automatically included in this image. This ensures your devices are ready to be managed immediately after they are deployed.',
+            )}
           </Alert>
           <RepositorySelect
             name="destination.repository"
-            repositories={repositories}
+            repositories={outputRegistries}
             repoType={RepoSpecType.HTTP}
             selectedRepoName={values.destination.repository}
             canCreateRepo={canCreateRepo}
             repoRefetch={repoRefetch}
+            label={t('Target registry')}
             isRequired
           />
           <FormGroup label={t('Image name')} fieldId="image-name" isRequired>
@@ -88,7 +96,7 @@ const OutputImageStep = ({ repositories, repoRefetch }: OutputImageStepProps) =>
             <TextField
               name="destination.tag"
               aria-label={t('Image tag')}
-              helperText={t('Specify the veresion (e.g, latest or 9.6)')}
+              helperText={t('Specify the version (e.g, latest or 9.6)')}
             />
           </FormGroup>
           {imageReference && (
