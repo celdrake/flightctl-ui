@@ -1,7 +1,7 @@
 import { ImageBuildBinding, ImageBuildDestination, ImageBuildSource } from '@flightctl/types/imagebuilder';
 
 export type ImageBuildFormValues = {
-  name: string;
+  // name is autogenereated by us
   source: ImageBuildSource;
   destination: ImageBuildDestination;
   binding: ImageBuildBinding;

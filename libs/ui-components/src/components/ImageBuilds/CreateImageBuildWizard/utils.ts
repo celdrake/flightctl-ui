@@ -17,7 +17,7 @@ export const getValidationSchema = (t: TFunction) => {
   return Yup.object<ImageBuildFormValues>({
     name: validKubernetesDnsSubdomain(t, { isRequired: true }),
     source: Yup.object<ImageBuildSource>({
-      repository: Yup.string().required(t('Repository is required')),
+      repository: Yup.string().required(t('Souorce registry is required')),
       imageName: Yup.string().required(t('Image name is required')),
       imageTag: Yup.string().required(t('Image tag is required')),
     }).required(t('Source is required')),
@@ -28,7 +28,6 @@ export const getValidationSchema = (t: TFunction) => {
 
 export const getInitialValues = (): ImageBuildFormValues => {
   return {
-    name: '',
     source: {
       repository: '',
       imageName: '',
@@ -45,13 +44,16 @@ export const getInitialValues = (): ImageBuildFormValues => {
   };
 };
 
+const generateBuildName = () => `image-build-${Date.now()}`;
+
 export const getImagePipelineResource = (values: ImageBuildFormValues): ImagePipelineRequest => {
+  const name = generateBuildName();
   return {
     imageBuild: {
       apiVersion: API_VERSION,
       kind: ResourceKind.IMAGE_BUILD,
       metadata: {
-        name: values.name,
+        name,
       },
       spec: {
         source: values.source,

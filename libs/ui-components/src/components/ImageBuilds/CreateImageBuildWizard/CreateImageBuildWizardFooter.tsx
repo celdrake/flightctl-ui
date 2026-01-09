@@ -6,8 +6,8 @@ import { ImageBuildFormValues } from './types';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useNavigate } from '../../../hooks/useNavigate';
 import { reviewStepId } from './steps/ReviewStep';
-import { sourceImageStepId, isSourceImageStepValid } from './steps/SourceImageStep';
-import { outputImageStepId, isOutputImageStepValid } from './steps/OutputImageStep';
+import { isSourceImageStepValid, sourceImageStepId } from './steps/SourceImageStep';
+import { isOutputImageStepValid, outputImageStepId } from './steps/OutputImageStep';
 import { isRegistrationStepValid, registrationStepId } from './steps/RegistrationStep';
 
 const CreateImageBuildWizardFooter = () => {

@@ -293,7 +293,7 @@ const RepositoryType = ({ isEdit }: { isEdit?: boolean }) => {
   );
 };
 
-export const RepositoryForm = ({ isEdit }: { isEdit?: boolean }) => {
+export const RepositoryForm = ({ isEdit, isRegistryType }: { isEdit?: boolean; isRegistryType?: boolean }) => {
   const { t } = useTranslation();
   const { values } = useFormikContext<RepositoryFormValues>();
   const isOciRepo = values.repoType === RepoSpecType.OCI;
@@ -302,7 +302,7 @@ export const RepositoryForm = ({ isEdit }: { isEdit?: boolean }) => {
     <>
       <NameField
         name="name"
-        aria-label={t('Repository name')}
+        aria-label={isRegistryType ? t('Registry name') : t('Repository name')}
         isRequired
         isDisabled={isEdit}
         resourceType="repositories"
@@ -380,9 +380,16 @@ type CreateRepositoryFormContentProps = React.PropsWithChildren &
   Pick<CreateRepositoryFormProps, 'onClose'> & {
     isEdit: boolean;
     isReadOnly: boolean;
+    isRegistryType: boolean;
   };
 
-const CreateRepositoryFormContent = ({ isEdit, isReadOnly, onClose, children }: CreateRepositoryFormContentProps) => {
+const CreateRepositoryFormContent = ({
+  isEdit,
+  isReadOnly,
+  isRegistryType,
+  onClose,
+  children,
+}: CreateRepositoryFormContentProps) => {
   const { t } = useTranslation();
   const { values, setFieldValue, isValid, dirty, submitForm, isSubmitting } = useFormikContext<RepositoryFormValues>();
   const isSubmitDisabled = isSubmitting || !dirty || !isValid;
@@ -395,7 +402,7 @@ const CreateRepositoryFormContent = ({ isEdit, isReadOnly, onClose, children }: 
     <FlightCtlForm className="fctl-create-repo">
       <fieldset disabled={isReadOnly}>
         <Grid hasGutter span={8}>
-          <RepositoryForm isEdit={isEdit} />
+          <RepositoryForm isEdit={isEdit} isRegistryType={isRegistryType} />
           {showResourceSyncs && canCreateRS && (
             <Checkbox
               id="use-resource-syncs"
@@ -420,7 +427,7 @@ const CreateRepositoryFormContent = ({ isEdit, isReadOnly, onClose, children }: 
       {children}
       <FlightCtlActionGroup>
         <Button variant="primary" onClick={submitForm} isLoading={isSubmitting} isDisabled={isSubmitDisabled}>
-          {isEdit ? t('Save') : t('Create repository')}
+          {isEdit ? t('Save') : isRegistryType ? t('Create registry') : t('Create repository')}
         </Button>
         <Button variant="link" isDisabled={isSubmitting} onClick={onClose}>
           {t('Cancel')}
@@ -453,6 +460,8 @@ const CreateRepositoryForm: React.FC<CreateRepositoryFormProps> = ({
   const [errors, setErrors] = React.useState<string[]>();
   const { patch, remove, post } = useFetch();
   const { t } = useTranslation();
+  // CELIA-WIP use OCI to show the correct schema
+  const isRegistryType = options?.allowedRepoTypes?.includes(RepoSpecType.HTTP) || false;
   return (
     <Formik<RepositoryFormValues>
       initialValues={getInitValues({
@@ -528,7 +537,12 @@ const CreateRepositoryForm: React.FC<CreateRepositoryFormProps> = ({
         }
       }}
     >
-      <CreateRepositoryFormContent isEdit={!!repository} onClose={onClose} isReadOnly={!!options?.isReadOnly}>
+      <CreateRepositoryFormContent
+        isEdit={!!repository}
+        onClose={onClose}
+        isReadOnly={!!options?.isReadOnly}
+        isRegistryType={isRegistryType}
+      >
         {errors?.length && (
           <Alert isInline variant="danger" title={t('An error occurred')}>
             {errors.map((e, index) => (

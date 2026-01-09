@@ -1,25 +1,31 @@
 import * as React from 'react';
 import { Modal, ModalBody, ModalHeader } from '@patternfly/react-core/next';
 
-import { Repository } from '@flightctl/types';
+import { RepoSpecType, Repository } from '@flightctl/types';
 import { useTranslation } from '../../../hooks/useTranslation';
-import CreateRepositoryForm, {
-  CreateRepositoryFormProps,
-} from '../../Repository/CreateRepository/CreateRepositoryForm';
+import CreateRepositoryForm from '../../Repository/CreateRepository/CreateRepositoryForm';
 
 type CreateRepositoryModalProps = {
+  type: RepoSpecType;
   onClose: VoidFunction;
   onSuccess: (repository: Repository) => void;
-  options?: CreateRepositoryFormProps['options'];
 };
 
-const CreateRepositoryModal = ({ options, onClose, onSuccess }: CreateRepositoryModalProps) => {
+const CreateRepositoryModal = ({ type, onClose, onSuccess }: CreateRepositoryModalProps) => {
   const { t } = useTranslation();
+  // CELIA-WIP use OCI to show the correct title
   return (
     <Modal variant="medium" isOpen>
-      <ModalHeader title={t('Create repository')} />
+      <ModalHeader title={type === RepoSpecType.HTTP ? t('Create registry') : t('Create repository')} />
       <ModalBody>
-        <CreateRepositoryForm onClose={onClose} onSuccess={onSuccess} options={options} />
+        <CreateRepositoryForm
+          onClose={onClose}
+          onSuccess={onSuccess}
+          options={{
+            canUseResourceSyncs: false,
+            allowedRepoTypes: [type],
+          }}
+        />
       </ModalBody>
     </Modal>
   );

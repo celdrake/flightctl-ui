@@ -10,15 +10,18 @@ export const outputImageStepId = 'output-image';
 
 export const isOutputImageStepValid = (errors: FormikErrors<ImageBuildFormValues>) => {
   const { destination } = errors;
-  return !errors.name && (!destination || (!destination.repository && !destination.imageName && !destination.tag));
+  if (!destination) {
+    return true;
+  }
+  return !destination.repository && !destination.imageName && !destination.tag;
 };
 
 type ImageOutputStepProps = {
   repositories: Repository[];
-  hasLoaded: boolean;
+  repoRefetch: VoidFunction;
 };
 
-const ImageOutputStep = ({ repositories, hasLoaded }: ImageOutputStepProps) => {
+const ImageOutputStep = ({ repositories, repoRefetch }: ImageOutputStepProps) => {
   const { t } = useTranslation();
 
   return (

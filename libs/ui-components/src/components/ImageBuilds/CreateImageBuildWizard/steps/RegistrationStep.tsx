@@ -9,9 +9,6 @@ import { useTranslation } from '../../../../hooks/useTranslation';
 export const registrationStepId = 'registration';
 
 export const isRegistrationStepValid = (errors: FormikErrors<ImageBuildFormValues>) => {
-  if (errors.name) {
-    return false;
-  }
   const { binding } = errors;
   if (!binding) {
     return true;
