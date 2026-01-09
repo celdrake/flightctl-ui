@@ -28,6 +28,11 @@ import TextField from '../../../form/TextField';
 
 export const registrationStepId = 'registration';
 
+enum CertificateMode {
+  EXISTING = 'existing',
+  AUTO_CREATE = 'auto-create',
+}
+
 export const isRegistrationStepValid = (errors: FormikErrors<ImageBuildFormValues>) => {
   const { binding } = errors;
   if (!binding) {
@@ -46,26 +51,15 @@ const RegistrationStep = () => {
 
   const isEarlyBindingSelected = values.binding.type === BindingType.BindingTypeEarly;
 
-  // Determine certificate option based on whether certName is set
-  const initialCertificateOption = React.useMemo(() => {
-    const earlyBinding = values.binding as EarlyBinding | undefined;
-    if (earlyBinding?.certName) {
-      return 'existing' as const;
-    }
-    return 'auto-create' as const;
-  }, []);
-
-  const [certificateOption, setCertificateOption] = React.useState<'existing' | 'auto-create'>(
-    initialCertificateOption,
-  );
+  const [certificateOption, setCertificateOption] = React.useState<CertificateMode>(CertificateMode.AUTO_CREATE);
 
   // Update certificate option when binding changes
   React.useEffect(() => {
     const earlyBinding = values.binding as EarlyBinding;
     if (earlyBinding.certName) {
-      setCertificateOption('existing');
+      setCertificateOption(CertificateMode.EXISTING);
     } else if (isEarlyBindingSelected) {
-      setCertificateOption('auto-create');
+      setCertificateOption(CertificateMode.AUTO_CREATE);
     }
   }, [values.binding, isEarlyBindingSelected]);
 
@@ -75,7 +69,7 @@ const RegistrationStep = () => {
         type: BindingType.BindingTypeEarly,
         certName: '',
       } as EarlyBinding);
-      setCertificateOption('auto-create');
+      setCertificateOption(CertificateMode.AUTO_CREATE);
     }
   };
 
@@ -87,12 +81,11 @@ const RegistrationStep = () => {
     }
   };
 
-  const handleCertificateOptionChange = (option: 'existing' | 'auto-create') => {
-    setCertificateOption(option);
-    if (option === 'auto-create') {
+  const handleCertModeChange = (certMode: CertificateMode) => {
+    setCertificateOption(certMode);
+    if (certMode === CertificateMode.AUTO_CREATE) {
       setFieldValue('binding.certName', '');
     }
-    // For 'existing', we'll let the user fill in the certName field
   };
 
   // CELIA-WIP: MOdify for PF6
@@ -137,7 +130,7 @@ const RegistrationStep = () => {
                           name="certificateOption"
                           label={t('Choose from existing certificates')}
                           isChecked={certificateOption === 'existing'}
-                          onChange={() => handleCertificateOptionChange('existing')}
+                          onChange={() => handleCertModeChange(CertificateMode.EXISTING)}
                         />
                       </StackItem>
                       <StackItem>
@@ -146,7 +139,7 @@ const RegistrationStep = () => {
                           name="certificateOption"
                           label={t('Auto-create certificate')}
                           isChecked={certificateOption === 'auto-create'}
-                          onChange={() => handleCertificateOptionChange('auto-create')}
+                          onChange={() => handleCertModeChange(CertificateMode.AUTO_CREATE)}
                         />
                       </StackItem>
                     </Stack>
