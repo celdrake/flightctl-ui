@@ -36,6 +36,16 @@ const OutputImageStep = ({ registries, repoRefetch }: OutputImageStepProps) => {
   const { checkPermissions } = usePermissionsContext();
   const [canCreateRepo] = checkPermissions([{ kind: RESOURCE.REPOSITORY, verb: VERB.CREATE }]);
 
+  const isWritableRegistry = React.useCallback(
+    (repo: Repository) => {
+      if (isOciRepoSpec(repo.spec) && repo.spec.accessMode === OciRepoSpec.accessMode.READ) {
+        return t('Repository is read-only and cannot be used as the target registry.');
+      }
+      return undefined;
+    },
+    [t],
+  );
+
   const handleFormatToggle = (format: ExportFormatType, isChecked: boolean) => {
     const currentFormats = values.exportFormats;
     if (isChecked) {
@@ -48,21 +58,13 @@ const OutputImageStep = ({ registries, repoRefetch }: OutputImageStepProps) => {
     }
   };
 
-  const outputRegistries = React.useMemo(() => {
-    return registries.filter((repo) => {
-      if (isOciRepoSpec(repo.spec)) {
-        return repo.spec.accessMode !== OciRepoSpec.accessMode.READ;
-      }
-      return false;
-    });
-  }, [registries]);
-
   const imageReference = React.useMemo(() => {
-    const registryUrl = getRegistryUrl(registries, values.destination.repository);
-    if (!registryUrl) {
+    const { repository, imageName, tag } = values.destination;
+    if (!repository || !imageName || !tag) {
       return null;
     }
-    return `${registryUrl}/${values.destination.imageName}:${values.destination.tag}`;
+    const registryUrl = getRegistryUrl(registries, repository);
+    return `${registryUrl}/${imageName}:${tag}`;
   }, [registries, values.destination]);
 
   return (
@@ -76,13 +78,13 @@ const OutputImageStep = ({ registries, repoRefetch }: OutputImageStepProps) => {
           </Alert>
           <RepositorySelect
             name="destination.repository"
-            repositories={outputRegistries}
+            repositories={registries}
             repoType={RepoSpecType.OCI}
-            selectedRepoName={values.destination.repository}
             canCreateRepo={canCreateRepo}
             repoRefetch={repoRefetch}
             label={t('Target registry')}
             isRequired
+            validateRepoSelection={isWritableRegistry}
           />
           <FormGroup label={t('Image name')} fieldId="image-name" isRequired>
             <TextField

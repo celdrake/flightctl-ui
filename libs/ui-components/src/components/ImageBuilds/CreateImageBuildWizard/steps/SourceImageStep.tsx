@@ -34,10 +34,11 @@ const SourceImageStep = ({ registries, repoRefetch }: SourceImageStepProps) => {
   const [canCreateRepo] = checkPermissions([{ kind: RESOURCE.REPOSITORY, verb: VERB.CREATE }]);
 
   const imageReference = React.useMemo(() => {
-    const registryUrl = getRegistryUrl(registries, values.source.repository);
-    if (!registryUrl) {
+    const { repository, imageName, imageTag } = values.source;
+    if (!repository || !imageName || !imageTag) {
       return null;
     }
+    const registryUrl = getRegistryUrl(registries, values.source.repository);
     return `${registryUrl}/${values.source.imageName}:${values.source.imageTag}`;
   }, [registries, values.source]);
 
@@ -49,7 +50,6 @@ const SourceImageStep = ({ registries, repoRefetch }: SourceImageStepProps) => {
             name="source.repository"
             repositories={registries}
             repoType={RepoSpecType.OCI}
-            selectedRepoName={values.source.repository}
             canCreateRepo={canCreateRepo}
             repoRefetch={repoRefetch}
             isRequired

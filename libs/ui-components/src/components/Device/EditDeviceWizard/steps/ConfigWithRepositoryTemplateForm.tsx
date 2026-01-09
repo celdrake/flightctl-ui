@@ -126,8 +126,7 @@ const ConfigWithRepositoryTemplateForm = ({
   const { values } = useFormikContext<DeviceSpecConfigFormValues>();
 
   const ct = values.configTemplates[index] as HttpConfigTemplate | GitConfigTemplate;
-  const selectedRepoName = ct.repository;
-  const selectedRepo = repositories.find((repo) => repo.metadata.name === selectedRepoName);
+  const selectedRepo = repositories.find((repo) => repo.metadata.name === ct.repository);
   const repoSpec = selectedRepo?.spec as GenericRepoSpec | HttpRepoSpec | undefined;
 
   return (
@@ -136,7 +135,6 @@ const ConfigWithRepositoryTemplateForm = ({
         name={`configTemplates[${index}].repository`}
         repositories={repositories}
         repoType={repoType}
-        selectedRepoName={selectedRepoName}
         canCreateRepo={canCreateRepo}
         isReadOnly={isReadOnly}
         repoRefetch={repoRefetch}
