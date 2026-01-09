@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { TFunction } from 'react-i18next';
 import {
   Alert,
   CardTitle,
@@ -13,26 +12,14 @@ import {
   StackItem,
 } from '@patternfly/react-core';
 
-import { BindingType, ExportFormatType, ImagePipelineResponse } from '@flightctl/types/imagebuilder';
+import { BindingType, ImagePipelineResponse } from '@flightctl/types/imagebuilder';
 import FlightControlDescriptionList from '../../common/FlightCtlDescriptionList';
 import { getDateTimeDisplay } from '../../../utils/dates';
+import { getExportFormatLabel } from '../../../utils/imageBuilds';
 import { useTranslation } from '../../../hooks/useTranslation';
 import DetailsPageCard, { DetailsPageCardBody } from '../../DetailsPage/DetailsPageCard';
 
 // CELIA-WIP: DEtermine if there will be events for image builds
-
-const getExportFormatLabel = (t: TFunction, format: ExportFormatType) => {
-  switch (format) {
-    case ExportFormatType.ExportFormatTypeVMDK:
-      return t('Virtualization (VMDK)');
-    case ExportFormatType.ExportFormatTypeQCOW2:
-      return t('Openstack/KVM (QCOW2)');
-    case ExportFormatType.ExportFormatTypeISO:
-      return t('Bare metal installer (ISO)');
-    default:
-      return t('Unknown format ({format})', { format });
-  }
-};
 
 const ImageBuildDetailsContent = ({ imagePipeline }: { imagePipeline: ImagePipelineResponse }) => {
   const { t } = useTranslation();

@@ -1,4 +1,5 @@
-import { ImageBuild } from '@flightctl/types/imagebuilder';
+import { TFunction } from 'react-i18next';
+import { ExportFormatType, ImageBuild } from '@flightctl/types/imagebuilder';
 
 // CELIA-WIP: DO we need to show the repository URL?
 
@@ -16,4 +17,17 @@ export const getImageBuildDestinationImage = (imageBuild: ImageBuild | undefined
   }
   const { destination } = imageBuild.spec;
   return `${destination.imageName}:${destination.tag}`;
+};
+
+export const getExportFormatLabel = (t: TFunction, format: ExportFormatType) => {
+  switch (format) {
+    case ExportFormatType.ExportFormatTypeVMDK:
+      return t('Virtualization (VMDK)');
+    case ExportFormatType.ExportFormatTypeQCOW2:
+      return t('Openstack/KVM (QCOW2)');
+    case ExportFormatType.ExportFormatTypeISO:
+      return t('Bare metal installer (ISO)');
+    default:
+      return t('Unknown format ({format})', { format });
+  }
 };

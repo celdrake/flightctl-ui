@@ -41,6 +41,7 @@ export const getInitialValues = (): ImageBuildFormValues => {
     binding: {
       type: BindingType.BindingTypeLate,
     },
+    exportFormats: [],
   };
 };
 

@@ -37,15 +37,15 @@ import CreateImageBuildWizardFooter from './CreateImageBuildWizardFooter';
 
 const orderedIds = [sourceImageStepId, outputImageStepId, registrationStepId, reviewStepId];
 
-const getValidStepIds = (formikErrors: FormikErrors<ImageBuildFormValues>): string[] => {
+const getValidStepIds = (formikErrors: FormikErrors<ImageBuildFormValues>, skipAfter: boolean): string[] => {
   const validStepIds: string[] = [];
   if (isSourceImageStepValid(formikErrors)) {
     validStepIds.push(sourceImageStepId);
   }
-  if (isOutputImageStepValid(formikErrors)) {
+  if (skipAfter || isOutputImageStepValid(formikErrors)) {
     validStepIds.push(outputImageStepId);
   }
-  if (isRegistrationStepValid(formikErrors)) {
+  if (skipAfter || isRegistrationStepValid(formikErrors)) {
     validStepIds.push(registrationStepId);
   }
   // Review step is always valid. We disable it if some of the previous steps are invalid
@@ -126,11 +126,8 @@ const CreateImageBuildWizard = () => {
               }}
             >
               {({ errors: formikErrors }) => {
-                const validStepIds = getValidStepIds(formikErrors);
-
-                // CELIA-WIP: Remove "allStepIds" once the validation is implemented
-                // Temporarily allow all steps to be enabled for navigation
-                const allStepIds = formikErrors ? orderedIds : validStepIds;
+                // CELIA-WIP: Remove "skipAfter" once the validation is implemented
+                const validStepIds = getValidStepIds(formikErrors, true);
 
                 return (
                   <>
@@ -152,7 +149,7 @@ const CreateImageBuildWizard = () => {
                       <WizardStep
                         name={t('Image output')}
                         id={outputImageStepId}
-                        isDisabled={isDisabledStep(outputImageStepId, allStepIds)}
+                        isDisabled={isDisabledStep(outputImageStepId, validStepIds)}
                       >
                         {currentStep?.id === outputImageStepId && (
                           <ImageOutputStep repositories={ociRegistries} repoRefetch={refetchRepositories} />
@@ -161,14 +158,14 @@ const CreateImageBuildWizard = () => {
                       <WizardStep
                         name={t('Registration')}
                         id={registrationStepId}
-                        isDisabled={isDisabledStep(registrationStepId, allStepIds)}
+                        isDisabled={isDisabledStep(registrationStepId, validStepIds)}
                       >
                         {currentStep?.id === registrationStepId && <RegistrationStep />}
                       </WizardStep>
                       <WizardStep
                         name={t('Review')}
                         id={reviewStepId}
-                        isDisabled={isDisabledStep(reviewStepId, allStepIds)}
+                        isDisabled={isDisabledStep(reviewStepId, validStepIds)}
                       >
                         {currentStep?.id === reviewStepId && <ReviewStep error={error} repositories={ociRegistries} />}
                       </WizardStep>

@@ -27,11 +27,6 @@ const CreateImageBuildWizardFooter = () => {
     isStepValid = isRegistrationStepValid(errors);
   }
 
-  // CELIA-WIP: Remove this once the validation is implemented
-  if (!isStepValid) {
-    isStepValid = true;
-  }
-
   const onMoveNext = () => {
     goToNextStep();
     // Blur the button, otherwise it keeps the focus from the previous click
