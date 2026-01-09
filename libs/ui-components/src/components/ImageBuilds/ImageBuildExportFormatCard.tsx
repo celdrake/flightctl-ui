@@ -1,11 +1,12 @@
 import * as React from 'react';
-import { Card, CardBody, Checkbox } from '@patternfly/react-core';
+import { TFunction } from 'react-i18next';
+import { Card, CardBody, CardHeader, CardTitle, Icon, Stack, StackItem } from '@patternfly/react-core';
 import { VirtualMachineIcon } from '@patternfly/react-icons/dist/js/icons/virtual-machine-icon';
 import { CloudSecurityIcon } from '@patternfly/react-icons/dist/js/icons/cloud-security-icon';
 import { ServerGroupIcon } from '@patternfly/react-icons/dist/js/icons/server-group-icon';
 
 import { ExportFormatType } from '@flightctl/types/imagebuilder';
-import { getExportFormatLabel } from '../../utils/imageBuilds';
+import { getExportFormatLabel, getExportFormatTitle } from '../../utils/imageBuilds';
 import { useTranslation } from '../../hooks/useTranslation';
 
 const iconMap: Record<string, React.ReactElement> = {
@@ -20,30 +21,50 @@ type ExportFormatCardProps = {
   onToggle: (format: ExportFormatType, isChecked: boolean) => void;
 };
 
+const getDescription = (t: TFunction, format: ExportFormatType) => {
+  switch (format) {
+    case ExportFormatType.ExportFormatTypeVMDK:
+      return t('For VMware vSphere and enterprise hypervisors');
+    case ExportFormatType.ExportFormatTypeQCOW2:
+      return t('For OpenStack and KVM-based cloud environments');
+    case ExportFormatType.ExportFormatTypeISO:
+      return t('Bootable image for physical hardware installation');
+  }
+};
+
+// CELIA-WIP: REvisit for PF6
+
 const ImageBuildExportFormatCard = ({ format, isChecked, onToggle }: ExportFormatCardProps) => {
   const { t } = useTranslation();
-  const icon = iconMap[format];
-  const label = getExportFormatLabel(t, format);
 
+  const texts = React.useMemo(
+    () => ({
+      title: getExportFormatTitle(t, format),
+      description: getDescription(t, format),
+    }),
+    [t, format],
+  );
+
+  const id = `export-format-${format}`;
   return (
-    <Card
-      isSelectable
-      isSelected={isChecked}
-      style={{ minWidth: '120px', cursor: 'pointer' }}
-      onClick={() => onToggle(format, !isChecked)}
-    >
+    <Card id={id} isSelectable isSelected={isChecked}>
+      <CardHeader
+        selectableActions={{
+          selectableActionId: format,
+          selectableActionAriaLabelledby: id,
+          name: format,
+          onChange: () => onToggle(format, !isChecked),
+        }}
+      >
+        <CardTitle>
+          <Icon size="lg">{iconMap[format]}</Icon>
+        </CardTitle>
+      </CardHeader>
       <CardBody>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Checkbox
-            id={`export-format-${format}`}
-            isChecked={isChecked}
-            onChange={(_, checked) => onToggle(format, checked)}
-            onClick={(e) => e.stopPropagation()}
-            aria-label={label}
-          />
-          {icon}
-          <span>{label}</span>
-        </div>
+        <Stack hasGutter>
+          <StackItem style={{ fontWeight: 'bold' }}>{texts.title}</StackItem>
+          <StackItem style={{ color: 'var(--pf-global--Color--200)' }}>{texts.description}</StackItem>
+        </Stack>
       </CardBody>
     </Card>
   );

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Alert, FormGroup, FormSection, Grid } from '@patternfly/react-core';
+import { Alert, FormGroup, FormSection, Gallery, Grid } from '@patternfly/react-core';
 import { FormikErrors, useFormikContext } from 'formik';
 
 import { RepoSpecType, Repository } from '@flightctl/types';
@@ -62,21 +62,23 @@ const ImageOutputStep = ({ repositories, repoRefetch }: ImageOutputStepProps) =>
             isRequired
           />
           <FormGroup label={t('Export formats')} fieldId="export-formats">
-            <ImageBuildExportFormatCard
-              format={ExportFormatType.ExportFormatTypeVMDK}
-              isChecked={values.exportFormats.includes(ExportFormatType.ExportFormatTypeVMDK)}
-              onToggle={handleFormatToggle}
-            />
-            <ImageBuildExportFormatCard
-              format={ExportFormatType.ExportFormatTypeQCOW2}
-              isChecked={values.exportFormats.includes(ExportFormatType.ExportFormatTypeQCOW2)}
-              onToggle={handleFormatToggle}
-            />
-            <ImageBuildExportFormatCard
-              format={ExportFormatType.ExportFormatTypeISO}
-              isChecked={values.exportFormats.includes(ExportFormatType.ExportFormatTypeISO)}
-              onToggle={handleFormatToggle}
-            />
+            <Gallery hasGutter>
+              <ImageBuildExportFormatCard
+                format={ExportFormatType.ExportFormatTypeVMDK}
+                isChecked={values.exportFormats.includes(ExportFormatType.ExportFormatTypeVMDK)}
+                onToggle={handleFormatToggle}
+              />
+              <ImageBuildExportFormatCard
+                format={ExportFormatType.ExportFormatTypeQCOW2}
+                isChecked={values.exportFormats.includes(ExportFormatType.ExportFormatTypeQCOW2)}
+                onToggle={handleFormatToggle}
+              />
+              <ImageBuildExportFormatCard
+                format={ExportFormatType.ExportFormatTypeISO}
+                isChecked={values.exportFormats.includes(ExportFormatType.ExportFormatTypeISO)}
+                onToggle={handleFormatToggle}
+              />
+            </Gallery>
           </FormGroup>
         </FormSection>
       </Grid>
