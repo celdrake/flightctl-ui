@@ -40,6 +40,7 @@ export const appRoutes = {
   [ROUTE.IMAGE_BUILDS]: '/devicemanagement/imagebuilds',
   [ROUTE.IMAGE_BUILD_CREATE]: '/devicemanagement/imagebuilds/create',
   [ROUTE.IMAGE_BUILD_DETAILS]: '/devicemanagement/imagebuilds',
+  [ROUTE.IMAGE_BUILD_EDIT]: '/devicemanagement/imagebuilds/edit',
 };
 
 export type NavLinkFC = React.FC<{ to: string; children: (props: { isActive: boolean }) => React.ReactNode }>;

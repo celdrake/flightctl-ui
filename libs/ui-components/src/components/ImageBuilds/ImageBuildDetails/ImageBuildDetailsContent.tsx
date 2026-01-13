@@ -1,6 +1,7 @@
 import * as React from 'react';
 import {
   Alert,
+  Button,
   CardTitle,
   DescriptionListDescription,
   DescriptionListGroup,
@@ -19,6 +20,8 @@ import { getExportFormatLabel } from '../../../utils/imageBuilds';
 import { useTranslation } from '../../../hooks/useTranslation';
 import DetailsPageCard, { DetailsPageCardBody } from '../../DetailsPage/DetailsPageCard';
 import ImageBuildStatus from '../ImageBuildStatus';
+import { CopyIcon } from '@patternfly/react-icons/dist/js/icons/copy-icon';
+import CopyButton from '../../common/CopyButton';
 
 // CELIA-WIP: DEtermine if there will be events for image builds
 
@@ -167,19 +170,10 @@ const ImageBuildDetailsContent = ({ imageBuild }: { imageBuild: ImageBuild }) =>
                   {imageBuild.status?.imageReference && (
                     <DescriptionListGroup>
                       <DescriptionListTerm>{t('Image reference')}</DescriptionListTerm>
-                      <DescriptionListDescription>{imageBuild.status.imageReference}</DescriptionListDescription>
-                    </DescriptionListGroup>
-                  )}
-                  {imageBuild.status?.manifestDigest && (
-                    <DescriptionListGroup>
-                      <DescriptionListTerm>{t('Manifest digest')}</DescriptionListTerm>
-                      <DescriptionListDescription>{imageBuild.status.manifestDigest}</DescriptionListDescription>
-                    </DescriptionListGroup>
-                  )}
-                  {imageBuild.status?.architecture && (
-                    <DescriptionListGroup>
-                      <DescriptionListTerm>{t('Architecture')}</DescriptionListTerm>
-                      <DescriptionListDescription>{imageBuild.status.architecture}</DescriptionListDescription>
+                      <DescriptionListDescription>
+                        {imageBuild.status.imageReference}
+                        <CopyButton text={imageBuild.status.imageReference} ariaLabel={t('Copy image reference')} />
+                      </DescriptionListDescription>
                     </DescriptionListGroup>
                   )}
                   {imageBuild.status?.lastSeen && (

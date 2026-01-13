@@ -6,8 +6,7 @@ import { compare } from 'fast-json-patch';
 import type * as monacoEditor from 'monaco-editor/esm/vs/editor/editor.api';
 
 import { AuthProvider, Device, Fleet, PatchRequest, Repository, ResourceKind } from '@flightctl/types';
-import { ImageBuild, ResourceKind as ImageBuilderResourceKind } from '@flightctl/types/imagebuilder';
-import { FlightctlKind } from '../../../types/extraTypes';
+import { ImageBuild } from '@flightctl/types/imagebuilder';
 import { fromAPILabel } from '../../../utils/labels';
 import { getLabelPatches } from '../../../utils/patch';
 import { getErrorMessage, isResourceVersionTestFailure } from '../../../utils/error';
@@ -44,7 +43,7 @@ const convertObjToYAMLString = (obj: FlightCtlYamlResource) => {
 };
 
 const getResourceEndpoint = (obj: FlightCtlYamlResource) => {
-  const kind = obj.kind as FlightctlKind;
+  const kind = obj.kind as ResourceKind;
   const resourceName = obj.metadata.name || '';
   switch (kind) {
     case ResourceKind.FLEET:
@@ -55,10 +54,6 @@ const getResourceEndpoint = (obj: FlightCtlYamlResource) => {
       return `repositories/${resourceName}`;
     case ResourceKind.AUTH_PROVIDER:
       return `authproviders/${resourceName}`;
-    case ImageBuilderResourceKind.IMAGE_BUILD:
-      return `imagebuilds/${resourceName}`;
-    case ImageBuilderResourceKind.IMAGE_EXPORT:
-      return `imageexports/${resourceName}`;
     default:
       throw new Error(`Unsupported resource kind: ${kind}`);
   }
@@ -135,7 +130,7 @@ const YamlEditor = <R extends FlightCtlYamlResource>({
   const { patch } = useFetch();
 
   const resourceName = getFilename(apiObj);
-  const needsReload = yamlResourceVersion !== apiObj.metadata.resourceVersion || '0';
+  const needsReload = yamlResourceVersion !== apiObj.metadata.resourceVersion;
 
   React.useEffect(() => {
     if (doUpdate) {

@@ -4,7 +4,7 @@ import { ActionsColumn, IAction, OnSelect, Td, Tr } from '@patternfly/react-tabl
 import { ImageBuild } from '@flightctl/types/imagebuilder';
 import { useTranslation } from '../../hooks/useTranslation';
 import { ROUTE, useNavigate } from '../../hooks/useNavigate';
-import { getImageBuildDestinationImage, getImageBuildSourceImage } from '../../utils/imageBuilds';
+import { getImageBuildDestinationImage, getImageBuildSourceImage, isImageBuildFailed } from '../../utils/imageBuilds';
 import { getDateDisplay } from '../../utils/dates';
 import ResourceLink from '../common/ResourceLink';
 import ImageBuildStatus from './ImageBuildStatus';
@@ -40,6 +40,15 @@ const ImageBuildRow = ({
     },
   ];
 
+  if (isImageBuildFailed(imageBuild)) {
+    actions.push({
+      title: t('Retry'),
+      onClick: () => {
+        navigate({ route: ROUTE.IMAGE_BUILD_EDIT, postfix: imageBuildName });
+      },
+    });
+  }
+
   if (canDelete) {
     actions.push({
       title: t('Delete image build'),
@@ -49,7 +58,7 @@ const ImageBuildRow = ({
 
   const sourceImage = getImageBuildSourceImage(imageBuild);
   const destinationImage = getImageBuildDestinationImage(imageBuild);
-  // CELIA-WIP_ ASK UX designsers to remove the column
+  // CELIA-WIP_ ASK UX designers to remove the column
   const exportImagesCount = 0;
 
   return (

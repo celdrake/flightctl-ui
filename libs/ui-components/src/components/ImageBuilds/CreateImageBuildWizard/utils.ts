@@ -13,6 +13,7 @@ import {
   ImageBuildRefSource,
   ImageExportDestination,
   ExportFormatType,
+  EarlyBinding,
 } from '@flightctl/types/imagebuilder';
 import { API_VERSION } from '../../../constants';
 import { ImageBuildFormValues } from './types';
@@ -29,7 +30,25 @@ export const getValidationSchema = (t: TFunction) => {
   });
 };
 
-export const getInitialValues = (): ImageBuildFormValues => {
+export const getInitialValues = (imageBuild?: ImageBuild): ImageBuildFormValues => {
+  if (imageBuild) {
+    let binding: ImageBuildFormValues['binding'];
+    if (imageBuild.spec.binding.type === BindingType.BindingTypeEarly) {
+      binding = { type: BindingType.BindingTypeEarly, certName: imageBuild.spec.binding.certName || '' };
+    } else {
+      binding = { type: BindingType.BindingTypeLate, certName: '' };
+    }
+
+    return {
+      source: imageBuild.spec.source,
+      destination: imageBuild.spec.destination,
+      binding,
+      // We allow the user to choose the export formats, since they're not stored in ImageBuild
+      exportFormats: [],
+    };
+  }
+
+  // Return default values (existing implementation)
   return {
     source: {
       repository: '',

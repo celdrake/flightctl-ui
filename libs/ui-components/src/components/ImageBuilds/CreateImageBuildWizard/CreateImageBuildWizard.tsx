@@ -35,6 +35,7 @@ import ImageOutputStep, { isOutputImageStepValid, outputImageStepId } from './st
 import RegistrationStep, { isRegistrationStepValid, registrationStepId } from './steps/RegistrationStep';
 import CreateImageBuildWizardFooter from './CreateImageBuildWizardFooter';
 import { useFetch } from '../../../hooks/useFetch';
+import { useEditImageBuild } from './useEditImageBuild';
 
 const orderedIds = [sourceImageStepId, outputImageStepId, registrationStepId, reviewStepId];
 
@@ -74,10 +75,12 @@ const CreateImageBuildWizard = () => {
   const navigate = useNavigate();
   const [error, setError] = React.useState<ImageBuildWizardError>();
   const [currentStep, setCurrentStep] = React.useState<WizardStepType>();
+  const [imageBuildId, imageBuild, imageBuildLoading, editError] = useEditImageBuild();
   const [repoList, isLoading, repoError, refetchRepositories] = useFetchPeriodically<RepositoryList>({
     endpoint: 'repositories',
   });
 
+  const isEdit = !!imageBuildId;
   const ociRegistries = (repoList?.items || []).filter((repo) => repo.spec.type === RepoSpecType.OCI);
 
   return (
@@ -87,27 +90,32 @@ const CreateImageBuildWizard = () => {
           <BreadcrumbItem>
             <Link to={ROUTE.IMAGE_BUILDS}>{t('Image builds')}</Link>
           </BreadcrumbItem>
-          <BreadcrumbItem isActive>{t('Build new image')}</BreadcrumbItem>
+          {imageBuildId && (
+            <BreadcrumbItem>
+              <Link to={{ route: ROUTE.IMAGE_BUILD_DETAILS, postfix: imageBuildId }}>{imageBuildId}</Link>
+            </BreadcrumbItem>
+          )}
+          <BreadcrumbItem isActive>{isEdit ? t('Retry image build') : t('Build new image')}</BreadcrumbItem>
         </Breadcrumb>
       </PageSection>
       <PageSection variant={PageSectionVariants.light}>
         <Title headingLevel="h1" size="3xl">
-          {t('Build new image')}
+          {isEdit ? t('Retry image build') : t('Build new image')}
         </Title>
       </PageSection>
       <PageSection variant={PageSectionVariants.light} type="wizard">
         <ErrorBoundary>
-          {isLoading ? (
+          {isLoading || imageBuildLoading ? (
             <Bullseye>
               <Spinner />
             </Bullseye>
-          ) : repoError ? (
+          ) : repoError || editError ? (
             <Alert isInline variant="danger" title={t('An error occurred')}>
-              {getErrorMessage(repoError)}
+              {getErrorMessage(repoError || editError)}
             </Alert>
           ) : (
             <Formik<ImageBuildFormValues>
-              initialValues={getInitialValues()}
+              initialValues={getInitialValues(imageBuild)}
               validationSchema={getValidationSchema(t)}
               validateOnMount
               onSubmit={async (values) => {

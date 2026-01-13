@@ -1,5 +1,12 @@
 import { TFunction } from 'react-i18next';
-import { ExportFormatType, ImageBuild, ImageBuildDestination, ImageBuildSource } from '@flightctl/types/imagebuilder';
+import {
+  ExportFormatType,
+  ImageBuild,
+  ImageBuildConditionReason,
+  ImageBuildConditionType,
+  ImageBuildDestination,
+  ImageBuildSource,
+} from '@flightctl/types/imagebuilder';
 import { Repository } from '@flightctl/types';
 import { isOciRepoSpec } from '../components/Repository/CreateRepository/utils';
 
@@ -74,4 +81,11 @@ export const getImageReference = (
     return `${imageTarget.imageName}:${tag}`;
   }
   return `${registryUrl}/${imageTarget.imageName}:${tag}`;
+};
+
+export const isImageBuildFailed = (imageBuild: ImageBuild): boolean => {
+  const readyCondition = imageBuild.status?.conditions?.find(
+    (c) => c.type === ImageBuildConditionType.ImageBuildConditionTypeReady,
+  );
+  return readyCondition?.reason === ImageBuildConditionReason.ImageBuildConditionReasonFailed;
 };

@@ -290,6 +290,15 @@ const getAppRoutes = (t: TFunction): ExtendedRouteObject[] => [
         ),
       },
       {
+        path: 'edit/:imageBuildId',
+        title: t('Retry image build'),
+        element: (
+          <TitledRoute title={t('Retry image build')}>
+            <CreateImageBuildWizard />
+          </TitledRoute>
+        ),
+      },
+      {
         path: ':imageBuildId/*',
         title: t('Image build'),
         element: (

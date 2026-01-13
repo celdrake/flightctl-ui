@@ -4,13 +4,25 @@ import { ImageBuildConditionReason, ImageBuildConditionType, ImageBuildStatus } 
 import { useTranslation } from '../../hooks/useTranslation';
 import { StatusDisplayContent } from '../Status/StatusDisplay';
 import { StatusLevel } from '../../utils/status/common';
+import LearnMoreLink from '../common/LearnMoreLink';
+import { Stack, StackItem } from '@patternfly/react-core';
+
+const ensureHttpsProtocol = (url: string): string => {
+  if (!url) return url;
+  // Check if the URL already has a protocol (http:// or https://)
+  if (/^https?:\/\//i.test(url)) {
+    return url;
+  }
+  // Add https:// if no protocol is present
+  return `https://${url}`;
+};
 
 const ImageBuildStatus = ({ buildStatus }: { buildStatus?: ImageBuildStatus }) => {
   const { t } = useTranslation();
 
   let level: StatusLevel;
   let label: string;
-  let message: string | undefined;
+  let message: React.ReactNode | undefined;
 
   if (!buildStatus) {
     return <StatusDisplayContent label={t('Unknown')} level="unknown" message={t('No status information available')} />;
@@ -31,9 +43,14 @@ const ImageBuildStatus = ({ buildStatus }: { buildStatus?: ImageBuildStatus }) =
     level = 'success';
     label = t('Complete');
     if (buildStatus.imageReference) {
-      message = t('Image built successfully {{ link }}', { link: buildStatus.imageReference });
-    } else {
-      message = readyCondition.message;
+      message = (
+        <Stack hasGutter>
+          <StackItem>{t('Image built successfully')}</StackItem>
+          <StackItem>
+            <LearnMoreLink link={ensureHttpsProtocol(buildStatus.imageReference)} text={t('Check output image')} />
+          </StackItem>
+        </Stack>
+      );
     }
   } else {
     // The build is in progress, we need to differentiate the correct phase
