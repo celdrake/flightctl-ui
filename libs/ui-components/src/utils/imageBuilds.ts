@@ -27,19 +27,6 @@ export const getImageBuildDestinationImage = (imageBuild: ImageBuild | undefined
   return `${destination.imageName}:${destination.tag}`;
 };
 
-export const getExportFormatTitle = (t: TFunction, format: ExportFormatType) => {
-  switch (format) {
-    case ExportFormatType.ExportFormatTypeVMDK:
-      return t('Virtualization');
-    case ExportFormatType.ExportFormatTypeQCOW2:
-      return t('Openstack/KVM');
-    case ExportFormatType.ExportFormatTypeISO:
-      return t('Metal installer');
-    default:
-      return t('Unknown format ({format})', { format });
-  }
-};
-
 export const getExportFormatLabel = (t: TFunction, format: ExportFormatType) => {
   switch (format) {
     case ExportFormatType.ExportFormatTypeVMDK:

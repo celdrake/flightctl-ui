@@ -16,18 +16,22 @@ import { getDateTimeDisplay } from '../../../utils/dates';
 import { getExportFormatLabel } from '../../../utils/imageBuilds';
 import { useTranslation } from '../../../hooks/useTranslation';
 import DetailsPageCard, { DetailsPageCardBody } from '../../DetailsPage/DetailsPageCard';
-import { mockImageExportWithImageBuildSource } from './mockImageExport';
+import { ExportFormatType, ImageExport } from '@flightctl/types/imagebuilder';
 
-const ImageExportDetailsContent = () => {
+const ImageExportDetailsContent = ({ imageExports }: { imageExports: Record<ExportFormatType, ImageExport> }) => {
   const { t } = useTranslation();
 
-  const imageExport = mockImageExportWithImageBuildSource;
+  // Get the first available export (or handle multiple formats as needed)
+  const imageExport = Object.values(imageExports)[0];
+
+  if (!imageExport) {
+    return <div>{t('No image exports available')}</div>;
+  }
 
   const { destination, format, tagSuffix } = imageExport.spec;
 
   return (
     <Stack hasGutter>
-      {/* Row 1: Source Information | Export Information */}
       <StackItem>
         <Grid hasGutter>
           <GridItem span={12}>
@@ -59,8 +63,6 @@ const ImageExportDetailsContent = () => {
           </GridItem>
         </Grid>
       </StackItem>
-
-      {/* Row 2: Destination Information | Status */}
       <StackItem>
         <Grid hasGutter>
           <GridItem span={6}>

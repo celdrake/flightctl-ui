@@ -6,8 +6,8 @@ import { CloudSecurityIcon } from '@patternfly/react-icons/dist/js/icons/cloud-s
 import { ServerGroupIcon } from '@patternfly/react-icons/dist/js/icons/server-group-icon';
 
 import { ExportFormatType } from '@flightctl/types/imagebuilder';
-import { getExportFormatTitle } from '../../utils/imageBuilds';
 import { useTranslation } from '../../hooks/useTranslation';
+import { getExportFormatLabel } from '../../utils/imageBuilds';
 
 const iconMap: Record<string, React.ReactElement> = {
   vmdk: <VirtualMachineIcon />,
@@ -39,7 +39,7 @@ const ImageBuildExportFormatCard = ({ format, isChecked, onToggle }: ExportForma
 
   const texts = React.useMemo(
     () => ({
-      title: getExportFormatTitle(t, format),
+      title: getExportFormatLabel(t, format),
       description: getDescription(t, format),
     }),
     [t, format],

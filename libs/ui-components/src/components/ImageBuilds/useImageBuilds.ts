@@ -7,29 +7,27 @@ import { useFetchPeriodically } from '../../hooks/useFetchPeriodically';
 import { PaginationDetails, useTablePagination } from '../../hooks/useTablePagination';
 import { PAGE_SIZE } from '../../constants';
 
-// CELIA-WIP: rename everything to ImageBuilds
-
-export enum ImagePipelinesSearchParams {
+export enum ImageBuildsSearchParams {
   Name = 'name',
 }
 
-type ImagePipelinesEndpointArgs = {
+type ImageBuildsEndpointArgs = {
   name?: string;
   nextContinue?: string;
 };
 
-export const useImagePipelinesBackendFilters = () => {
+export const useImageBuildsBackendFilters = () => {
   const {
     router: { useSearchParams },
   } = useAppContext();
   const [searchParams, setSearchParams] = useSearchParams();
   const paramsRef = React.useRef(searchParams);
-  const name = searchParams.get(ImagePipelinesSearchParams.Name) || undefined;
+  const name = searchParams.get(ImageBuildsSearchParams.Name) || undefined;
 
   const setName = React.useCallback(
     (nameVal: string) => {
       const newParams = new URLSearchParams({
-        [ImagePipelinesSearchParams.Name]: nameVal,
+        [ImageBuildsSearchParams.Name]: nameVal,
       });
       paramsRef.current = newParams;
       setSearchParams(newParams);
@@ -46,7 +44,7 @@ export const useImagePipelinesBackendFilters = () => {
   };
 };
 
-const getImagePipelinesEndpoint = ({ name, nextContinue }: { name?: string; nextContinue?: string }) => {
+const getImageBuildsEndpoint = ({ name, nextContinue }: { name?: string; nextContinue?: string }) => {
   const params = new URLSearchParams({
     limit: `${PAGE_SIZE}`,
   });
@@ -59,13 +57,13 @@ const getImagePipelinesEndpoint = ({ name, nextContinue }: { name?: string; next
   return `imagebuilds?${params.toString()}`;
 };
 
-const useImagePipelinesEndpoint = (args: ImagePipelinesEndpointArgs): [string, boolean] => {
-  const endpoint = getImagePipelinesEndpoint(args);
-  const [pipelinesEndpointDebounced] = useDebounce(endpoint, 1000);
-  return [pipelinesEndpointDebounced, endpoint !== pipelinesEndpointDebounced];
+const useImageBuildsEndpoint = (args: ImageBuildsEndpointArgs): [string, boolean] => {
+  const endpoint = getImageBuildsEndpoint(args);
+  const [ibEndpointDebounced] = useDebounce(endpoint, 1000);
+  return [ibEndpointDebounced, endpoint !== ibEndpointDebounced];
 };
 
-export type ImagePipelinesLoad = {
+export type ImageBuildsLoad = {
   imageBuilds: ImageBuild[];
   isLoading: boolean;
   error: unknown;
@@ -73,24 +71,15 @@ export type ImagePipelinesLoad = {
   refetch: VoidFunction;
   pagination: PaginationDetails<ImageBuildList>;
 };
-
-/**
- * Image pipelines allow us to operation on an image build and its associated image exports via a single endpoint.
- * An image pipeline doesn't have an entity on its own, and it is defined by its underlying image build.
- * This means that we can query and delete an imagePipeline using its build ID, and that will also get or delete both the image build and associated image exports).
- *
- * @param args query parameters
- * @returns information about the image pipelines
- */
-export const useImagePipelines = (args: ImagePipelinesEndpointArgs): ImagePipelinesLoad => {
+export const useImageBuilds = (args: ImageBuildsEndpointArgs): ImageBuildsLoad => {
   const pagination = useTablePagination<ImageBuildList>();
-  const [pipelinesEndpoint, pipelinesDebouncing] = useImagePipelinesEndpoint({
+  const [imageBuildsEndpoint, imageBuildsDebouncing] = useImageBuildsEndpoint({
     ...args,
     nextContinue: pagination.nextContinue,
   });
   const [imageBuildsList, isLoading, error, refetch, updating] = useFetchPeriodically<ImageBuildList>(
     {
-      endpoint: pipelinesEndpoint,
+      endpoint: imageBuildsEndpoint,
     },
     pagination.onPageFetched,
   );
@@ -99,7 +88,7 @@ export const useImagePipelines = (args: ImagePipelinesEndpointArgs): ImagePipeli
     imageBuilds: imageBuildsList?.items || [],
     isLoading,
     error,
-    isUpdating: updating || pipelinesDebouncing,
+    isUpdating: updating || imageBuildsDebouncing,
     refetch,
     pagination,
   };

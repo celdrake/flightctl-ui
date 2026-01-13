@@ -29,7 +29,7 @@ import Table, { ApiSortTableColumn } from '../Table/Table';
 
 import MassDeleteImageBuildModal from '../modals/massModals/MassDeleteImageBuildModal/MassDeleteImageBuildModal';
 import DeleteImageBuildModal from './DeleteImageBuildModal/DeleteImageBuildModal';
-import { useImagePipelines, useImagePipelinesBackendFilters } from './useImagePipelines';
+import { useImageBuilds, useImageBuildsBackendFilters } from './useImageBuilds';
 import ImageBuildRow from './ImageBuildRow';
 
 const getColumns = (t: TFunction): ApiSortTableColumn[] => [
@@ -81,9 +81,9 @@ const ImageBuildTable = () => {
   const navigate = useNavigate();
 
   const imageBuildColumns = React.useMemo(() => getColumns(t), [t]);
-  const { name, setName, hasFiltersEnabled } = useImagePipelinesBackendFilters();
+  const { name, setName, hasFiltersEnabled } = useImageBuildsBackendFilters();
 
-  const { imageBuilds, isLoading, error, isUpdating, refetch, pagination } = useImagePipelines({ name });
+  const { imageBuilds, isLoading, error, isUpdating, refetch, pagination } = useImageBuilds({ name });
 
   const [imageBuildToDeleteId, setImageBuildToDeleteId] = React.useState<string>();
   const [isMassDeleteModalOpen, setIsMassDeleteModalOpen] = React.useState(false);

@@ -13,32 +13,31 @@ import {
   StackItem,
 } from '@patternfly/react-core';
 
-import { BindingType, ExportFormatType, ImageBuild } from '@flightctl/types/imagebuilder';
+import { BindingType, ExportFormatType, ImageBuild, ImageExport } from '@flightctl/types/imagebuilder';
 import FlightControlDescriptionList from '../../common/FlightCtlDescriptionList';
 import { getDateTimeDisplay } from '../../../utils/dates';
 import { getExportFormatLabel } from '../../../utils/imageBuilds';
 import { useTranslation } from '../../../hooks/useTranslation';
 import DetailsPageCard, { DetailsPageCardBody } from '../../DetailsPage/DetailsPageCard';
 import ImageBuildStatus from '../ImageBuildStatus';
-import { CopyIcon } from '@patternfly/react-icons/dist/js/icons/copy-icon';
 import CopyButton from '../../common/CopyButton';
 
 // CELIA-WIP: DEtermine if there will be events for image builds
 
-const ImageBuildDetailsContent = ({ imageBuild }: { imageBuild: ImageBuild }) => {
+const ImageBuildDetailsContent = ({
+  imageBuild,
+  imageExports,
+}: {
+  imageBuild: ImageBuild;
+  imageExports: Record<ExportFormatType, ImageExport>;
+}) => {
   const { t } = useTranslation();
 
   // CELIA-WIP: Get the repository URL from the repository name
   const srcRepositoryUrl = imageBuild.spec.source.repository;
   const dstRepositoryUrl = imageBuild.spec.destination.repository;
   const { binding } = imageBuild.spec;
-
-  // CELIA-WIP: Get the export formats associated with the image build
-  const exportFormats = [
-    ExportFormatType.ExportFormatTypeVMDK,
-    ExportFormatType.ExportFormatTypeQCOW2,
-    ExportFormatType.ExportFormatTypeISO,
-  ];
+  const hasExports = Object.keys(imageExports).length > 0;
 
   return (
     <Stack hasGutter>
@@ -104,10 +103,10 @@ const ImageBuildDetailsContent = ({ imageBuild }: { imageBuild: ImageBuild }) =>
                   <DescriptionListGroup>
                     <DescriptionListTerm>{t('Image export formats')}</DescriptionListTerm>
                     <DescriptionListDescription>
-                      {exportFormats.length > 0
-                        ? exportFormats.map((format, idx) => (
-                            <Label key={idx} color="blue" className="pf-v5-u-mr-sm">
-                              {getExportFormatLabel(t, format)}
+                      {hasExports
+                        ? Object.values(imageExports).map((imageExport) => (
+                            <Label key={imageExport.spec.format} color="blue" className="pf-v5-u-mr-sm">
+                              {getExportFormatLabel(t, imageExport.spec.format)}
                             </Label>
                           ))
                         : t('None')}
