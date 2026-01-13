@@ -1,11 +1,9 @@
 import * as React from 'react';
 
-import { ConditionStatus } from '@flightctl/types';
-import { ImageBuildConditionType, ImageBuildStatus } from '@flightctl/types/imagebuilder';
+import { ImageBuildConditionReason, ImageBuildConditionType, ImageBuildStatus } from '@flightctl/types/imagebuilder';
 import { useTranslation } from '../../hooks/useTranslation';
 import { StatusDisplayContent } from '../Status/StatusDisplay';
 import { StatusLevel } from '../../utils/status/common';
-import { getCondition } from '../../utils/api';
 
 const ImageBuildStatus = ({ buildStatus }: { buildStatus?: ImageBuildStatus }) => {
   const { t } = useTranslation();
@@ -18,27 +16,43 @@ const ImageBuildStatus = ({ buildStatus }: { buildStatus?: ImageBuildStatus }) =
     return <StatusDisplayContent label={t('Unknown')} level="unknown" message={t('No status information available')} />;
   }
 
-  if (buildStatus.imageReference) {
-    level = 'success';
-    label = t('Built');
-    message = buildStatus.imageReference;
-  } else {
-    // Check conditions for status
-    const conditions = buildStatus.conditions || [];
+  // Check conditions for status
+  const conditions = buildStatus.conditions || [];
+  const readyCondition = conditions.find((c) => c.type === ImageBuildConditionType.ImageBuildConditionTypeReady);
 
-    const readyCondition = getCondition(conditions, ImageBuildConditionType.ImageBuildConditionTypeReady);
-    if (readyCondition === undefined) {
-      level = 'unknown';
-      label = t('Unknown');
-    } else if (readyCondition.status === ConditionStatus.ConditionStatusTrue) {
-      level = 'success';
-      label = t('Ready');
-      message = readyCondition.message;
+  if (readyCondition === undefined) {
+    // The build has not been processed yet, marking it as Queued
+    level = 'unknown';
+    label = t('Queued');
+  } else if (
+    buildStatus.imageReference ||
+    readyCondition.reason === ImageBuildConditionReason.ImageBuildConditionReasonCompleted
+  ) {
+    level = 'success';
+    label = t('Complete');
+    if (buildStatus.imageReference) {
+      message = t('Image built successfully {{ link }}', { link: buildStatus.imageReference });
     } else {
-      level = 'info';
-      label = t('In progress');
       message = readyCondition.message;
     }
+  } else {
+    // The build is in progress, we need to differentiate the correct phase
+    const reason = readyCondition.reason;
+    if (reason === ImageBuildConditionReason.ImageBuildConditionReasonBuilding) {
+      level = 'info';
+      label = t('Building');
+    } else if (reason === ImageBuildConditionReason.ImageBuildConditionReasonPushing) {
+      level = 'info';
+      label = t('Pushing');
+    } else if (reason === ImageBuildConditionReason.ImageBuildConditionReasonFailed) {
+      level = 'danger';
+      label = t('Failed');
+    } else {
+      // Pending or other unknown reason
+      level = 'unknown';
+      label = t('Unknown');
+    }
+    message = readyCondition.message;
   }
 
   return <StatusDisplayContent label={label} level={level} message={message} />;

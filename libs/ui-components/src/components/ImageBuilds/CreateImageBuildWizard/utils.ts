@@ -62,7 +62,15 @@ export const getImageBuildResource = (values: ImageBuildFormValues): ImageBuild 
     spec: {
       source: values.source,
       destination: values.destination,
-      binding: values.binding,
+      binding:
+        values.binding.type === BindingType.BindingTypeEarly
+          ? {
+              type: BindingType.BindingTypeEarly,
+              certName: values.binding.certName,
+            }
+          : {
+              type: BindingType.BindingTypeLate,
+            },
     },
   };
 };

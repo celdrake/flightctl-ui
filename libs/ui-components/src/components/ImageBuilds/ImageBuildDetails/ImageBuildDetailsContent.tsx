@@ -18,6 +18,7 @@ import { getDateTimeDisplay } from '../../../utils/dates';
 import { getExportFormatLabel } from '../../../utils/imageBuilds';
 import { useTranslation } from '../../../hooks/useTranslation';
 import DetailsPageCard, { DetailsPageCardBody } from '../../DetailsPage/DetailsPageCard';
+import ImageBuildStatus from '../ImageBuildStatus';
 
 // CELIA-WIP: DEtermine if there will be events for image builds
 
@@ -102,7 +103,7 @@ const ImageBuildDetailsContent = ({ imageBuild }: { imageBuild: ImageBuild }) =>
                     <DescriptionListDescription>
                       {exportFormats.length > 0
                         ? exportFormats.map((format, idx) => (
-                            <Label key={idx} color="blue">
+                            <Label key={idx} color="blue" className="pf-v5-u-mr-sm">
                               {getExportFormatLabel(t, format)}
                             </Label>
                           ))
@@ -142,6 +143,57 @@ const ImageBuildDetailsContent = ({ imageBuild }: { imageBuild: ImageBuild }) =>
                           {t('Cloud-init and Ignition are automatically enabled for late binding.')}
                         </Alert>
                       </DescriptionListDescription>
+                    </DescriptionListGroup>
+                  )}
+                </FlightControlDescriptionList>
+              </DetailsPageCardBody>
+            </DetailsPageCard>
+          </GridItem>
+        </Grid>
+      </StackItem>
+      <StackItem>
+        <Grid hasGutter>
+          <GridItem span={12}>
+            <DetailsPageCard>
+              <CardTitle>{t('Status')}</CardTitle>
+              <DetailsPageCardBody>
+                <FlightControlDescriptionList isCompact isHorizontal isFluid>
+                  <DescriptionListGroup>
+                    <DescriptionListTerm>{t('Build status')}</DescriptionListTerm>
+                    <DescriptionListDescription>
+                      <ImageBuildStatus buildStatus={imageBuild.status} />
+                    </DescriptionListDescription>
+                  </DescriptionListGroup>
+                  {imageBuild.status?.imageReference && (
+                    <DescriptionListGroup>
+                      <DescriptionListTerm>{t('Image reference')}</DescriptionListTerm>
+                      <DescriptionListDescription>{imageBuild.status.imageReference}</DescriptionListDescription>
+                    </DescriptionListGroup>
+                  )}
+                  {imageBuild.status?.manifestDigest && (
+                    <DescriptionListGroup>
+                      <DescriptionListTerm>{t('Manifest digest')}</DescriptionListTerm>
+                      <DescriptionListDescription>{imageBuild.status.manifestDigest}</DescriptionListDescription>
+                    </DescriptionListGroup>
+                  )}
+                  {imageBuild.status?.architecture && (
+                    <DescriptionListGroup>
+                      <DescriptionListTerm>{t('Architecture')}</DescriptionListTerm>
+                      <DescriptionListDescription>{imageBuild.status.architecture}</DescriptionListDescription>
+                    </DescriptionListGroup>
+                  )}
+                  {imageBuild.status?.lastSeen && (
+                    <DescriptionListGroup>
+                      <DescriptionListTerm>{t('Last seen')}</DescriptionListTerm>
+                      <DescriptionListDescription>
+                        {getDateTimeDisplay(imageBuild.status.lastSeen)}
+                      </DescriptionListDescription>
+                    </DescriptionListGroup>
+                  )}
+                  {!imageBuild.status && (
+                    <DescriptionListGroup>
+                      <DescriptionListTerm>&nbsp;</DescriptionListTerm>
+                      <DescriptionListDescription>{t('No status information available')}</DescriptionListDescription>
                     </DescriptionListGroup>
                   )}
                 </FlightControlDescriptionList>
