@@ -130,12 +130,16 @@ const ImageBuildDetailsTab = ({
                     </DescriptionListDescription>
                   </DescriptionListGroup>
                   {binding.type === BindingType.BindingTypeEarly && (
-                    <>
-                      <DescriptionListGroup>
-                        <DescriptionListTerm>{t('Certificate name')}</DescriptionListTerm>
-                        <DescriptionListDescription>{binding.certName}</DescriptionListDescription>
-                      </DescriptionListGroup>
-                    </>
+                    <DescriptionListGroup>
+                      <DescriptionListTerm>&nbsp;</DescriptionListTerm>
+                      <DescriptionListDescription>
+                        <Alert variant="info" isInline title={t('Certificate auto-created')}>
+                          {t(
+                            'A certificate with 1 year validity is automatically created and embedded in the image for early binding.',
+                          )}
+                        </Alert>
+                      </DescriptionListDescription>
+                    </DescriptionListGroup>
                   )}
                   {binding.type === BindingType.BindingTypeLate && (
                     <DescriptionListGroup>

@@ -14,15 +14,13 @@ import {
 import { useFormikContext } from 'formik';
 
 import { Repository } from '@flightctl/types';
-import { BindingType, EarlyBinding } from '@flightctl/types/imagebuilder';
+import { BindingType } from '@flightctl/types/imagebuilder';
 import { useTranslation } from '../../../../hooks/useTranslation';
 import { getErrorMessage } from '../../../../utils/error';
 import FlightCtlDescriptionList from '../../../common/FlightCtlDescriptionList';
 import { ImageBuildFormValues, ImageBuildWizardError } from '../types';
 import { getImageReference } from '../../../../utils/imageBuilds';
 import { getExportFormatLabel } from '../../../../utils/imageBuilds';
-import { getDateDisplay } from '../../../../utils/dates';
-import { timeUntilText } from '../../../../utils/dates';
 
 export const reviewStepId = 'review';
 
@@ -45,9 +43,7 @@ const ReviewStep = ({ error, repositories }: ReviewStepProps) => {
     [repositories, values.destination],
   );
 
-  const isEarlyBinding = values.binding.type === BindingType.BindingTypeEarly;
-  const earlyBinding = values.binding as EarlyBinding;
-  const fakeExpirationDate = '2026-01-27';
+  const isEarlyBinding = values.bindingType === BindingType.BindingTypeEarly;
 
   return (
     <Stack hasGutter>
@@ -135,26 +131,16 @@ const ReviewStep = ({ error, repositories }: ReviewStepProps) => {
                   {isEarlyBinding ? t('Early binding') : t('Late binding')}
                 </DescriptionListDescription>
               </DescriptionListGroup>
-              {earlyBinding.certName && (
-                <>
-                  <DescriptionListGroup>
-                    <DescriptionListTerm>{t('Certificate')}</DescriptionListTerm>
-                    <DescriptionListDescription>{earlyBinding.certName}</DescriptionListDescription>
-                  </DescriptionListGroup>
-                </>
-              )}
-              {isEarlyBinding && !earlyBinding.certName && (
-                <DescriptionListGroup>
-                  <DescriptionListTerm>{t('Auto-create certificate')}</DescriptionListTerm>
-                  <DescriptionListDescription>{t('Yes')}</DescriptionListDescription>
-                </DescriptionListGroup>
-              )}
               {isEarlyBinding && (
                 <>
                   <DescriptionListGroup>
+                    <DescriptionListTerm>{t('Auto-create certificate')}</DescriptionListTerm>
+                    <DescriptionListDescription>{t('Yes (1 year validity)')}</DescriptionListDescription>
+                  </DescriptionListGroup>
+                  <DescriptionListGroup>
                     <DescriptionListTerm>{t('Certificate expiration date')}</DescriptionListTerm>
                     <DescriptionListDescription>
-                      {getDateDisplay(fakeExpirationDate)} ({timeUntilText(t, fakeExpirationDate)})
+                      {t('Automatically set to 1 year from creation')}
                     </DescriptionListDescription>
                   </DescriptionListGroup>
                 </>

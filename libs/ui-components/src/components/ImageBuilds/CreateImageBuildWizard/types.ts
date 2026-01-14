@@ -5,11 +5,7 @@ export type ImageBuildFormValues = {
   // name is autogenereated by us
   source: ImageBuildSource;
   destination: ImageBuildDestination;
-  binding: {
-    type: BindingType;
-    // Cert name must only be set for early binding
-    certName: string;
-  };
+  bindingType: BindingType;
   exportFormats: ExportFormatType[];
 };
 

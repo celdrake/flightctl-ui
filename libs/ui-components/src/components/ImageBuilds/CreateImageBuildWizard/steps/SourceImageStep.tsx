@@ -63,14 +63,12 @@ const SourceImageStep = ({ registries, repoRefetch }: SourceImageStepProps) => {
               helperText={t('Specify the version (e.g, latest or 9.6)')}
             />
           </FormGroup>
-          {imageReference && (
-            <FormSection>
-              <Card>
-                <CardTitle>{t('Source image reference')}</CardTitle>
-                <CardBody>{imageReference}</CardBody>
-              </Card>
-            </FormSection>
-          )}
+          <FormSection>
+            <Card>
+              <CardTitle>{t('Source image URL')}</CardTitle>
+              <CardBody>{imageReference || t('Enter the image details to view the full URL')}</CardBody>
+            </Card>
+          </FormSection>
         </FormSection>
       </Grid>
     </FlightCtlForm>

@@ -1,5 +1,12 @@
 import * as React from 'react';
-import { Button, WizardFooterWrapper, useWizardContext } from '@patternfly/react-core';
+import {
+  ActionList,
+  ActionListGroup,
+  ActionListItem,
+  Button,
+  WizardFooterWrapper,
+  useWizardContext,
+} from '@patternfly/react-core';
 import { useFormikContext } from 'formik';
 
 import { ImageBuildFormValues } from './types';
@@ -10,6 +17,7 @@ import { isSourceImageStepValid, sourceImageStepId } from './steps/SourceImageSt
 import { isOutputImageStepValid, outputImageStepId } from './steps/OutputImageStep';
 import { isRegistrationStepValid, registrationStepId } from './steps/RegistrationStep';
 
+// CELIA-WIP: reuse the new FlightctlWizardFooter component when it gets merged.
 const CreateImageBuildWizardFooter = () => {
   const { t } = useTranslation();
   const { goToNextStep, goToPrevStep, activeStep } = useWizardContext();
@@ -51,15 +59,23 @@ const CreateImageBuildWizardFooter = () => {
 
   return (
     <WizardFooterWrapper>
-      {primaryBtn}
-      {activeStep.id !== sourceImageStepId && (
-        <Button variant="secondary" onClick={goToPrevStep} isDisabled={isSubmitting}>
-          {t('Back')}
-        </Button>
-      )}
-      <Button variant="link" onClick={() => navigate(-1)} isDisabled={isSubmitting}>
-        {t('Cancel')}
-      </Button>
+      <ActionList>
+        <ActionListGroup>
+          <ActionListItem>{primaryBtn}</ActionListItem>
+          <ActionListItem>
+            <Button variant="secondary" onClick={goToPrevStep} isDisabled={isSubmitting}>
+              {t('Back')}
+            </Button>
+          </ActionListItem>
+        </ActionListGroup>
+        <ActionListGroup>
+          <ActionListItem>
+            <Button variant="link" onClick={() => navigate(-1)} isDisabled={isSubmitting}>
+              {t('Cancel')}
+            </Button>
+          </ActionListItem>
+        </ActionListGroup>
+      </ActionList>
     </WizardFooterWrapper>
   );
 };

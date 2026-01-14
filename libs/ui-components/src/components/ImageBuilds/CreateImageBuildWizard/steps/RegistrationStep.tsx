@@ -8,81 +8,36 @@ import {
   Content,
   Flex,
   FlexItem,
-  FormGroup,
   FormSection,
   Icon,
-  Radio,
-  Stack,
-  StackItem,
 } from '@patternfly/react-core';
 import { CheckCircleIcon } from '@patternfly/react-icons/dist/js/icons/check-circle-icon';
 import { FormikErrors, useFormikContext } from 'formik';
 
-import { BindingType, EarlyBinding, LateBinding } from '@flightctl/types/imagebuilder';
+import { BindingType } from '@flightctl/types/imagebuilder';
 import { ImageBuildFormValues } from '../types';
 import { useTranslation } from '../../../../hooks/useTranslation';
 import FlightCtlForm from '../../../form/FlightCtlForm';
-import TextField from '../../../form/TextField';
 
 export const registrationStepId = 'registration';
 
-enum CertificateMode {
-  EXISTING = 'existing',
-  AUTO_CREATE = 'auto-create',
-}
-
-export const isRegistrationStepValid = (errors: FormikErrors<ImageBuildFormValues>) => {
-  const { binding } = errors;
-  if (!binding) {
-    return true;
-  }
-  if (binding.type === BindingType.BindingTypeEarly) {
-    const earlyBinding = binding as EarlyBinding;
-    return !earlyBinding.certName;
-  }
-  return true;
-};
+export const isRegistrationStepValid = (errors: FormikErrors<ImageBuildFormValues>) => !errors.bindingType;
 
 const RegistrationStep = () => {
   const { t } = useTranslation();
   const { values, setFieldValue } = useFormikContext<ImageBuildFormValues>();
 
-  const isEarlyBindingSelected = values.binding.type === BindingType.BindingTypeEarly;
-
-  const [certMode, setCertMode] = React.useState<CertificateMode>(CertificateMode.AUTO_CREATE);
-
-  // Update certificate option when binding changes
-  React.useEffect(() => {
-    const earlyBinding = values.binding as EarlyBinding;
-    if (earlyBinding.certName) {
-      setCertMode(CertificateMode.EXISTING);
-    } else if (isEarlyBindingSelected) {
-      setCertMode(CertificateMode.AUTO_CREATE);
-    }
-  }, [values.binding, isEarlyBindingSelected]);
+  const isEarlyBindingSelected = values.bindingType === BindingType.BindingTypeEarly;
 
   const handleEarlyBindingSelect = () => {
-    if (values.binding.type !== BindingType.BindingTypeEarly) {
-      setFieldValue('binding', {
-        type: BindingType.BindingTypeEarly,
-        certName: '',
-      } as EarlyBinding);
-      setCertMode(CertificateMode.AUTO_CREATE);
+    if (values.bindingType !== BindingType.BindingTypeEarly) {
+      setFieldValue('bindingType', BindingType.BindingTypeEarly);
     }
   };
 
   const handleLateBindingSelect = () => {
-    if (values.binding.type !== BindingType.BindingTypeLate) {
-      setFieldValue('binding', {
-        type: BindingType.BindingTypeLate,
-      } as LateBinding);
-    }
-  };
-
-  const handleCertModeChange = (certMode: CertificateMode) => {
-    setCertMode(certMode);
-    if (certMode === CertificateMode.AUTO_CREATE) {
-      setFieldValue('binding.certName', '');
+    if (values.bindingType !== BindingType.BindingTypeLate) {
+      setFieldValue('bindingType', BindingType.BindingTypeLate);
     }
   };
 
@@ -116,47 +71,11 @@ const RegistrationStep = () => {
             <Content component="p">{t('Configure enrollment certificate settings during image build')}</Content>
 
             <FormSection>
-              <FormGroup label={t('Enrollment certificate')} fieldId="certificate-option" isRequired>
-                <Stack hasGutter>
-                  <StackItem>
-                    <Radio
-                      id="choose-existing-cert"
-                      name="certMode"
-                      label={t('Choose from existing certificates')}
-                      isChecked={certMode === CertificateMode.EXISTING}
-                      onChange={() => handleCertModeChange(CertificateMode.EXISTING)}
-                    />
-                  </StackItem>
-                  <StackItem>
-                    <Radio
-                      id="auto-create-cert"
-                      name="certMode"
-                      label={t('Auto-create certificate')}
-                      isChecked={certMode === CertificateMode.AUTO_CREATE}
-                      onChange={() => handleCertModeChange(CertificateMode.AUTO_CREATE)}
-                    />
-                  </StackItem>
-                </Stack>
-              </FormGroup>
-
-              {certMode === CertificateMode.EXISTING && (
-                <FormGroup label={t('Certificate name')} fieldId="cert-name" isRequired>
-                  <TextField
-                    name="binding.certName"
-                    aria-label={t('Certificate name')}
-                    helperText={t('Name of the enrollment certificate resource to embed in the image')}
-                  />
-                </FormGroup>
-              )}
-              {certMode === CertificateMode.AUTO_CREATE && (
-                <Alert
-                  isInline
-                  variant="info"
-                  title={t(
-                    'Secures your image for early binding. The device must connect to the management service before this registration window expires.',
-                  )}
-                />
-              )}
+              <Alert isInline variant="info" title={t('Certificate will be automatically created')}>
+                {t(
+                  'A certificate with 1 year validity will be automatically created and embedded in the image. The device must connect to the management service before this registration window expires.',
+                )}
+              </Alert>
             </FormSection>
           </CardBody>
         </Card>

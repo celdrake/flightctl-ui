@@ -5,7 +5,6 @@ import {
   BindingType,
   ExportFormatType,
   ImageBuild,
-  ImageBuildBinding,
   ImageBuildDestination,
   ImageBuildSource,
   ImageExport,
@@ -19,28 +18,25 @@ import { ImageBuildFormValues } from './types';
 export const getValidationSchema = (t: TFunction) => {
   return Yup.object<ImageBuildFormValues>({
     source: Yup.object<ImageBuildSource>({
-      repository: Yup.string().required(t('Souorce registry is required')),
+      repository: Yup.string().required(t('Source registry is required')),
       imageName: Yup.string().required(t('Image name is required')),
       imageTag: Yup.string().required(t('Image tag is required')),
     }).required(t('Source is required')),
-    destination: Yup.object<ImageBuildDestination>().required(t('Destination is required')),
-    binding: Yup.object<ImageBuildBinding>().required(t('Binding is required')),
+    destination: Yup.object<ImageBuildDestination>({
+      repository: Yup.string().required(t('Source registry is required')),
+      imageName: Yup.string().required(t('Image name is required')),
+      tag: Yup.string().required(t('Image tag is required')),
+    }).required(t('Source is required')),
+    bindingType: Yup.string<BindingType>().required(t('Binding type is required')),
   });
 };
 
 export const getInitialValues = (imageBuild?: ImageBuild): ImageBuildFormValues => {
   if (imageBuild) {
-    let binding: ImageBuildFormValues['binding'];
-    if (imageBuild.spec.binding.type === BindingType.BindingTypeEarly) {
-      binding = { type: BindingType.BindingTypeEarly, certName: imageBuild.spec.binding.certName || '' };
-    } else {
-      binding = { type: BindingType.BindingTypeLate, certName: '' };
-    }
-
     return {
       source: imageBuild.spec.source,
       destination: imageBuild.spec.destination,
-      binding,
+      bindingType: imageBuild.spec.binding.type as BindingType,
       // We allow the user to choose the export formats, since they're not stored in ImageBuild
       exportFormats: [],
     };
@@ -58,10 +54,7 @@ export const getInitialValues = (imageBuild?: ImageBuild): ImageBuildFormValues 
       imageName: '',
       tag: '',
     },
-    binding: {
-      type: BindingType.BindingTypeLate,
-      certName: '',
-    },
+    bindingType: BindingType.BindingTypeLate,
     exportFormats: [],
   };
 };
@@ -81,15 +74,9 @@ export const getImageBuildResource = (values: ImageBuildFormValues): ImageBuild 
     spec: {
       source: values.source,
       destination: values.destination,
-      binding:
-        values.binding.type === BindingType.BindingTypeEarly
-          ? {
-              type: BindingType.BindingTypeEarly,
-              certName: values.binding.certName,
-            }
-          : {
-              type: BindingType.BindingTypeLate,
-            },
+      binding: {
+        type: values.bindingType,
+      },
     },
   };
 };
