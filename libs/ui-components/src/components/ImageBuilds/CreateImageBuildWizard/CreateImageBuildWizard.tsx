@@ -5,7 +5,6 @@ import {
   BreadcrumbItem,
   Bullseye,
   PageSection,
-  PageSectionVariants,
   Spinner,
   Title,
   Wizard,
@@ -23,7 +22,7 @@ import { Link, ROUTE, useNavigate } from '../../../hooks/useNavigate';
 
 import ReviewStep, { reviewStepId } from './steps/ReviewStep';
 import { getErrorMessage } from '../../../utils/error';
-import { getInitialValues, getValidationSchema, getImageBuildResource, getImageExportResources } from './utils';
+import { getImageBuildResource, getImageExportResources, getInitialValues, getValidationSchema } from './utils';
 import { isPromiseRejected } from '../../../types/typeUtils';
 import { ImageBuildFormValues, ImageBuildWizardError } from './types';
 import LeaveFormConfirmation from '../../common/LeaveFormConfirmation';
@@ -85,7 +84,7 @@ const CreateImageBuildWizard = () => {
 
   return (
     <>
-      <PageSection variant="light" type="breadcrumb">
+      <PageSection hasBodyWrapper={false} type="breadcrumb">
         <Breadcrumb>
           <BreadcrumbItem>
             <Link to={ROUTE.IMAGE_BUILDS}>{t('Image builds')}</Link>
@@ -98,12 +97,12 @@ const CreateImageBuildWizard = () => {
           <BreadcrumbItem isActive>{isEdit ? t('Retry image build') : t('Build new image')}</BreadcrumbItem>
         </Breadcrumb>
       </PageSection>
-      <PageSection variant={PageSectionVariants.light}>
+      <PageSection hasBodyWrapper={false}>
         <Title headingLevel="h1" size="3xl">
           {isEdit ? t('Retry image build') : t('Build new image')}
         </Title>
       </PageSection>
-      <PageSection variant={PageSectionVariants.light} type="wizard">
+      <PageSection hasBodyWrapper={false} type="wizard">
         <ErrorBoundary>
           {isLoading || imageBuildLoading ? (
             <Bullseye>

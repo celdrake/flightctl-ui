@@ -11,7 +11,7 @@ export type UseImageExportsResult = {
   refetch: VoidFunction;
 };
 
-const getImageExportsEndpoint = (_imageBuildId: string) => {
+const getImageExportsEndpoint = (/*_imageBuildId: string*/) => {
   const params = new URLSearchParams();
   // Filter image exports by the image build reference
   // The field selector filters by spec.source.imageBuildRef when source type is imageBuild
@@ -27,7 +27,7 @@ const getImageExportsEndpoint = (_imageBuildId: string) => {
  * @returns Object containing image exports list, loading state, error, updating state, and refetch function
  */
 export const useImageExports = (imageBuildId?: string): UseImageExportsResult => {
-  const endpoint = React.useMemo(() => (imageBuildId ? getImageExportsEndpoint(imageBuildId) : ''), [imageBuildId]);
+  const endpoint = React.useMemo(() => (imageBuildId ? getImageExportsEndpoint() : ''), [imageBuildId]);
 
   const [imageExportsList, isLoading, error, refetch, isUpdating] = useFetchPeriodically<ImageExportList>({
     endpoint,
@@ -36,9 +36,10 @@ export const useImageExports = (imageBuildId?: string): UseImageExportsResult =>
   // CELIA-WIP: Filter image exports by the image build reference done via the API
   // Group by format and keep only the last (most recent) export for each format
   const imageExportsByFormat = React.useMemo(() => {
-    const filtered = (imageExportsList?.items.filter(
-      (item) => item.spec.source.type === 'imageBuild' && item.spec.source.imageBuildRef === imageBuildId,
-    ) || []) as ImageExport[];
+    const filtered =
+      imageExportsList?.items.filter(
+        (item) => item.spec.source.type === 'imageBuild' && item.spec.source.imageBuildRef === imageBuildId,
+      ) || [];
 
     // Group by format and keep the most recent one (by creation timestamp)
     const formatMap: Partial<Record<ExportFormatType, ImageExport>> = {};

@@ -3,19 +3,15 @@ import * as Yup from 'yup';
 
 import {
   BindingType,
+  ExportFormatType,
   ImageBuild,
   ImageBuildBinding,
   ImageBuildDestination,
   ImageBuildSource,
-  ResourceKind,
   ImageExport,
-  ImageExportSpec,
-  ImageBuildRefSource,
-  ImageExportDestination,
-  ExportFormatType,
-  EarlyBinding,
-  ImageExportConditionType,
   ImageExportConditionReason,
+  ImageExportConditionType,
+  ResourceKind,
 } from '@flightctl/types/imagebuilder';
 import { API_VERSION } from '../../../constants';
 import { ImageBuildFormValues } from './types';

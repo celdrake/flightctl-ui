@@ -14,11 +14,11 @@ import { PlusCircleIcon } from '@patternfly/react-icons/dist/js/icons/plus-circl
 import { ExclamationCircleIcon } from '@patternfly/react-icons/dist/js/icons/exclamation-circle-icon';
 import { TFunction } from 'react-i18next';
 
-import { ConditionType, RepoSpecType, Repository } from '@flightctl/types';
+import { RepoSpecType, Repository } from '@flightctl/types';
 import { useTranslation } from '../../hooks/useTranslation';
 import CreateRepositoryModal from '../modals/CreateRepositoryModal/CreateRepositoryModal';
 import { getRepoUrlOrRegistry } from '../Repository/CreateRepository/utils';
-import { getRepositorySyncStatus, isAccessibleRepository, repositoryStatusLabels } from '../../utils/status/repository';
+import { isAccessibleRepository } from '../../utils/status/repository';
 import FormSelect, { SelectItem } from './FormSelect';
 import { StatusDisplayContent } from '../Status/StatusDisplay';
 

@@ -45,7 +45,7 @@ const ImageBuildDetailsPage = () => {
       resourceType="Image builds"
       resourceTypeLabel={t('Image builds')}
       nav={
-        <Nav variant="tertiary">
+        <Nav variant="horizontal-subnav">
           <NavList>
             <NavItem to="details">{t('Image details')}</NavItem>
             <NavItem to="exports">{t('Export images')}</NavItem>

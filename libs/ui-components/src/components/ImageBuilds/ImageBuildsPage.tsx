@@ -102,7 +102,7 @@ const ImageBuildTable = () => {
       <Toolbar inset={{ default: 'insetNone' }}>
         <ToolbarContent>
           <ToolbarGroup>
-            <ToolbarItem variant="search-filter">
+            <ToolbarItem>
               <TableTextSearch value={name || ''} setValue={setName} placeholder={t('Search by name')} />
             </ToolbarItem>
           </ToolbarGroup>

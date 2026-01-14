@@ -16,7 +16,7 @@ import { TFunction } from 'i18next';
 import { RepoSpecType, Repository } from '@flightctl/types';
 import ListPageBody from '../ListPage/ListPageBody';
 import ListPage from '../ListPage/ListPage';
-import { getLastTransitionTimeText, getRepositorySyncStatus } from '../../utils/status/repository';
+import { getLastTransitionTimeText } from '../../utils/status/repository';
 import { useTableTextSearch } from '../../hooks/useTableTextSearch';
 import DeleteRepositoryModal from './RepositoryDetails/DeleteRepositoryModal';
 import TableTextSearch from '../Table/TableTextSearch';

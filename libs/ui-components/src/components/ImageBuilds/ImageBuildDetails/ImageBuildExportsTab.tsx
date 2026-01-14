@@ -1,13 +1,7 @@
 import * as React from 'react';
 import { Gallery } from '@patternfly/react-core';
 
-import {
-  ExportFormatType,
-  ImageExport,
-  ImageBuild,
-  ImageExportConditionType,
-  ImageExportConditionReason,
-} from '@flightctl/types/imagebuilder';
+import { ExportFormatType, ImageBuild, ImageExport } from '@flightctl/types/imagebuilder';
 import { useFetch } from '../../../hooks/useFetch';
 import { getErrorMessage } from '../../../utils/error';
 import { getImageExportResource } from '../CreateImageBuildWizard/utils';
@@ -27,7 +21,7 @@ const allFormats = [
 
 const ImageBuildExportsContent = ({ imageExports, imageBuild, refetch }: ImageBuildExportsContentProps) => {
   const { post } = useFetch();
-  const [_error, setError] = React.useState<string | null>(null);
+  const [, setError] = React.useState<string | null>(null);
   const [isCreating, setIsCreating] = React.useState<Record<ExportFormatType, boolean>>({
     [ExportFormatType.ExportFormatTypeVMDK]: false,
     [ExportFormatType.ExportFormatTypeQCOW2]: false,

@@ -1,27 +1,12 @@
 import * as React from 'react';
-import {
-  Button,
-  Card,
-  CardBody,
-  CardHeader,
-  CardTitle,
-  DescriptionListDescription,
-  DescriptionListGroup,
-  DescriptionListTerm,
-  Icon,
-  Stack,
-  StackItem,
-} from '@patternfly/react-core';
+import { Button, Card, CardBody, CardHeader, CardTitle, Icon, Stack, StackItem } from '@patternfly/react-core';
 import { VirtualMachineIcon } from '@patternfly/react-icons/dist/js/icons/virtual-machine-icon';
 import { CloudSecurityIcon } from '@patternfly/react-icons/dist/js/icons/cloud-security-icon';
 import { ServerGroupIcon } from '@patternfly/react-icons/dist/js/icons/server-group-icon';
 import { TFunction } from 'react-i18next';
 
-import FlightControlDescriptionList from '../../common/FlightCtlDescriptionList';
-import { getDateTimeDisplay } from '../../../utils/dates';
 import { getExportFormatLabel } from '../../../utils/imageBuilds';
 import { useTranslation } from '../../../hooks/useTranslation';
-import DetailsPageCard, { DetailsPageCardBody } from '../../DetailsPage/DetailsPageCard';
 import { ExportFormatType, ImageExport } from '@flightctl/types/imagebuilder';
 import { isImageExportFailed } from '../CreateImageBuildWizard/utils';
 

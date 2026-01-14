@@ -5,6 +5,7 @@ import {
   CardBody,
   CardHeader,
   CardTitle,
+  Content,
   Flex,
   FlexItem,
   FormGroup,
@@ -13,8 +14,6 @@ import {
   Radio,
   Stack,
   StackItem,
-  Text,
-  TextContent,
 } from '@patternfly/react-core';
 import { CheckCircleIcon } from '@patternfly/react-icons/dist/js/icons/check-circle-icon';
 import { FormikErrors, useFormikContext } from 'formik';
@@ -114,9 +113,7 @@ const RegistrationStep = () => {
             </CardTitle>
           </CardHeader>
           <CardBody>
-            <TextContent>
-              <Text>{t('Configure enrollment certificate settings during image build')}</Text>
-            </TextContent>
+            <Content component="p">{t('Configure enrollment certificate settings during image build')}</Content>
 
             <FormSection>
               <FormGroup label={t('Enrollment certificate')} fieldId="certificate-option" isRequired>
@@ -187,9 +184,9 @@ const RegistrationStep = () => {
             </CardTitle>
           </CardHeader>
           <CardBody>
-            <TextContent>
-              <Text>{t('No additional user input required (cloud-int and ignition are enabled automatically).')}</Text>
-            </TextContent>
+            <Content component="p">
+              {t('No additional user input required (cloud-int and ignition are enabled automatically).')}
+            </Content>
           </CardBody>
         </Card>
       </FormSection>

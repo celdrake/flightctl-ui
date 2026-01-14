@@ -1,6 +1,7 @@
 import * as React from 'react';
 import {
   Alert,
+  CardBody,
   CardTitle,
   DescriptionListDescription,
   DescriptionListGroup,
@@ -17,7 +18,7 @@ import FlightControlDescriptionList from '../../common/FlightCtlDescriptionList'
 import { getDateTimeDisplay } from '../../../utils/dates';
 import { getExportFormatLabel } from '../../../utils/imageBuilds';
 import { useTranslation } from '../../../hooks/useTranslation';
-import DetailsPageCard, { DetailsPageCardBody } from '../../DetailsPage/DetailsPageCard';
+import DetailsPageCard from '../../DetailsPage/DetailsPageCard';
 import ImageBuildStatus from '../ImageBuildStatus';
 import CopyButton from '../../common/CopyButton';
 
@@ -45,7 +46,7 @@ const ImageBuildDetailsTab = ({
           <GridItem span={6}>
             <DetailsPageCard>
               <CardTitle>{t('Base image')}</CardTitle>
-              <DetailsPageCardBody>
+              <CardBody>
                 <FlightControlDescriptionList isCompact isHorizontal isFluid>
                   <DescriptionListGroup>
                     <DescriptionListTerm>{t('Registry')}</DescriptionListTerm>
@@ -60,13 +61,13 @@ const ImageBuildDetailsTab = ({
                     <DescriptionListDescription>{imageBuild.spec.source.imageTag}</DescriptionListDescription>
                   </DescriptionListGroup>
                 </FlightControlDescriptionList>
-              </DetailsPageCardBody>
+              </CardBody>
             </DetailsPageCard>
           </GridItem>
           <GridItem span={6}>
             <DetailsPageCard>
               <CardTitle>{t('Build information')}</CardTitle>
-              <DetailsPageCardBody>
+              <CardBody>
                 <FlightControlDescriptionList isCompact isHorizontal isFluid>
                   <DescriptionListGroup>
                     <DescriptionListTerm>{t('Created')}</DescriptionListTerm>
@@ -75,7 +76,7 @@ const ImageBuildDetailsTab = ({
                     </DescriptionListDescription>
                   </DescriptionListGroup>
                 </FlightControlDescriptionList>
-              </DetailsPageCardBody>
+              </CardBody>
             </DetailsPageCard>
           </GridItem>
         </Grid>
@@ -85,7 +86,7 @@ const ImageBuildDetailsTab = ({
           <GridItem span={6}>
             <DetailsPageCard>
               <CardTitle>{t('Image output')}</CardTitle>
-              <DetailsPageCardBody>
+              <CardBody>
                 <FlightControlDescriptionList isCompact isHorizontal isFluid>
                   <DescriptionListGroup>
                     <DescriptionListTerm>{t('Registry')}</DescriptionListTerm>
@@ -112,13 +113,13 @@ const ImageBuildDetailsTab = ({
                     </DescriptionListDescription>
                   </DescriptionListGroup>
                 </FlightControlDescriptionList>
-              </DetailsPageCardBody>
+              </CardBody>
             </DetailsPageCard>
           </GridItem>
           <GridItem span={6}>
             <DetailsPageCard>
               <CardTitle>{t('Registration')}</CardTitle>
-              <DetailsPageCardBody>
+              <CardBody>
                 <FlightControlDescriptionList isCompact isHorizontal isFluid>
                   <DescriptionListGroup>
                     <DescriptionListTerm>{t('Binding')}</DescriptionListTerm>
@@ -147,7 +148,7 @@ const ImageBuildDetailsTab = ({
                     </DescriptionListGroup>
                   )}
                 </FlightControlDescriptionList>
-              </DetailsPageCardBody>
+              </CardBody>
             </DetailsPageCard>
           </GridItem>
         </Grid>
@@ -157,7 +158,7 @@ const ImageBuildDetailsTab = ({
           <GridItem span={12}>
             <DetailsPageCard>
               <CardTitle>{t('Status')}</CardTitle>
-              <DetailsPageCardBody>
+              <CardBody>
                 <FlightControlDescriptionList isCompact isHorizontal isFluid>
                   <DescriptionListGroup>
                     <DescriptionListTerm>{t('Build status')}</DescriptionListTerm>
@@ -189,7 +190,7 @@ const ImageBuildDetailsTab = ({
                     </DescriptionListGroup>
                   )}
                 </FlightControlDescriptionList>
-              </DetailsPageCardBody>
+              </CardBody>
             </DetailsPageCard>
           </GridItem>
         </Grid>
