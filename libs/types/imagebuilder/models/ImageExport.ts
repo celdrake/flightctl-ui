@@ -2,9 +2,9 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { ObjectMeta } from '../../models/ObjectMeta';
 import type { ImageExportSpec } from './ImageExportSpec';
 import type { ImageExportStatus } from './ImageExportStatus';
-import type { ObjectMeta } from '../../models/ObjectMeta';
 /**
  * ImageExport represents an export request to convert and push images to different formats.
  */

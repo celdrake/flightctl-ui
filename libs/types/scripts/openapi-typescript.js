@@ -5,7 +5,7 @@ const path = require('path');
 const OpenAPI = require('openapi-typescript-codegen');
 const YAML = require('js-yaml');
 
-const { rimraf, copyDir, fixImagebuilderImports } = require('./openapi-utils');
+const { rimraf, copyDir, fixImagebuilderCoreReferences } = require('./openapi-utils');
 
 const CORE_API = 'core';
 const IMAGEBUILDER_API = 'imagebuilder';
@@ -73,8 +73,8 @@ async function generateTypes(mode) {
     if (fs.existsSync(modelsDir)) {
       await copyDir(modelsDir, finalDir);
     }
-    console.log(`Fixing ${mode} imports...`);
-    await fixImagebuilderImports(finalDir);
+    console.log(`Fixing references to core API types...`);
+    await fixImagebuilderCoreReferences(finalDir);
 
     // Copy the generated index.ts to imagebuilder/index.ts
     const indexPath = path.join(output, 'index.ts');

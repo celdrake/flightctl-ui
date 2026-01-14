@@ -2,9 +2,9 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { ObjectMeta } from '../../models/ObjectMeta';
 import type { ImageBuildSpec } from './ImageBuildSpec';
 import type { ImageBuildStatus } from './ImageBuildStatus';
-import type { ObjectMeta } from '../../models/ObjectMeta';
 /**
  * ImageBuild represents a build request for a container image.
  */

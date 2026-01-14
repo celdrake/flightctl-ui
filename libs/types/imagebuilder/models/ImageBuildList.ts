@@ -2,8 +2,8 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { ImageBuild } from './ImageBuild';
 import type { ListMeta } from '../../models/ListMeta';
+import type { ImageBuild } from './ImageBuild';
 /**
  * ImageBuildList is a list of ImageBuild resources.
  */

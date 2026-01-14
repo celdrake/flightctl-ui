@@ -67,17 +67,24 @@ function findTsFiles(dir) {
 }
 
 /**
- * Fixes imports to main flightctl API types in imagebuilder TypeScript files.
- * The imports are in the form of:
- * import type { openapi_yaml_components_schemas_ObjectMeta } from './openapi_yaml_components_schemas_ObjectMeta';
+ * Fixes references from the auto-generated imagebuilder types so they point to the correct types of the "core" API module.
+ * The generated types are in the form of:
+ * import type { core_v1beta1_openapi_yaml_components_schemas_ObjectMeta } from './core_v1beta1_openapi_yaml_components_schemas_ObjectMeta';
+ * type SomeType = {
+ *  ...
+ *  someField: core_v1beta1_openapi_yaml_components_schemas_ObjectMeta;
+ * }
  *
- * The fixes make the file valid by appliying the following changes:
- * 1. Removing the "openapi_yaml_components_schemas_" prefix from all type names
- * 2. Updating import paths from './openapi_yaml_components_schemas_X' to '../../models/X'
+ * The fixed types will be like this:
+ * import type { ObjectMeta } from '../../models/ObjectMeta';
+ * type SomeType = {
+ *  ...
+ *  someField: ObjectMeta;
+ * }
  *
  * @param {string} modelsDir - Directory containing TypeScript files to fix
  */
-async function fixImagebuilderImports(modelsDir) {
+async function fixImagebuilderCoreReferences(modelsDir) {
   const files = findTsFiles(modelsDir);
 
   await Promise.all(
@@ -85,14 +92,14 @@ async function fixImagebuilderImports(modelsDir) {
       let content = await fsPromises.readFile(filePath, 'utf8');
       const originalContent = content;
 
-      // Replace import paths: './openapi_yaml_components_schemas_X' -> '../../models/X'
+      // Modify the path to properly point to the type from the "core" module
       content = content.replace(
-        /from\s+['"]\.\/openapi_yaml_components_schemas_([A-Za-z][A-Za-z0-9]*)['"]/g,
+        /from\s+['"]\.\/core_v1beta1_openapi_yaml_components_schemas_([A-Za-z][A-Za-z0-9]*)['"]/g,
         "from '../../models/$1'",
       );
 
-      // Remove the prefix from all type names: 'openapi_yaml_components_schemas_X' -> 'X'
-      content = content.replace(/\bopenapi_yaml_components_schemas_([A-Za-z][A-Za-z0-9]*)\b/g, '$1');
+      // Correct the import name and the references to this type by removing the prefix
+      content = content.replace(/\bcore_v1beta1_openapi_yaml_components_schemas_([A-Za-z][A-Za-z0-9]*)\b/g, '$1');
 
       // Only write if content changed
       if (content !== originalContent) {
@@ -105,5 +112,5 @@ async function fixImagebuilderImports(modelsDir) {
 module.exports = {
   rimraf,
   copyDir,
-  fixImagebuilderImports,
+  fixImagebuilderCoreReferences,
 };
