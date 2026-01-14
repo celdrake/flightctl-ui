@@ -105,8 +105,8 @@ const ImageBuildDetailsTab = ({
                     <DescriptionListDescription>
                       {hasExports
                         ? Object.values(imageExports).map((imageExport) => (
-                            <Label key={imageExport.spec.format} color="blue" className="pf-v5-u-mr-sm">
-                              {getExportFormatLabel(t, imageExport.spec.format)}
+                            <Label key={imageExport.spec.format} color="blue" className="pf-v6-u-mr-sm">
+                              {getExportFormatLabel(imageExport.spec.format)}
                             </Label>
                           ))
                         : t('None')}

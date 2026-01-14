@@ -5,7 +5,7 @@ import { ExportFormatType, ImageBuild, ImageExport } from '@flightctl/types/imag
 import { useFetch } from '../../../hooks/useFetch';
 import { getErrorMessage } from '../../../utils/error';
 import { getImageExportResource } from '../CreateImageBuildWizard/utils';
-import ViewImageBuildExportCard from '../ImageExportCards/ViewImageBuildExportCard';
+import { ImageExportCardsGallery, ViewImageBuildExportCard } from '../ImageExportCards';
 
 type ImageBuildExportsContentProps = {
   imageBuild: ImageBuild;
@@ -50,7 +50,7 @@ const ImageBuildExportsContent = ({ imageExports, imageBuild, refetch }: ImageBu
   };
 
   return (
-    <Gallery hasGutter>
+    <ImageExportCardsGallery>
       {allFormats.map((format) => {
         return (
           <ViewImageBuildExportCard
@@ -63,7 +63,7 @@ const ImageBuildExportsContent = ({ imageExports, imageBuild, refetch }: ImageBu
           />
         );
       })}
-    </Gallery>
+    </ImageExportCardsGallery>
   );
 };
 

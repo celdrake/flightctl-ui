@@ -109,8 +109,8 @@ const ReviewStep = ({ error, repositories }: ReviewStepProps) => {
                   <DescriptionListTerm>{t('Export formats')}</DescriptionListTerm>
                   <DescriptionListDescription>
                     {values.exportFormats.map((format) => (
-                      <Label key={format} color="blue" className="pf-v5-u-mr-sm">
-                        {getExportFormatLabel(t, format)}
+                      <Label key={format} color="blue" className="pf-v6-u-mr-sm">
+                        {getExportFormatLabel(format)}
                       </Label>
                     ))}
                   </DescriptionListDescription>
@@ -166,7 +166,7 @@ const ReviewStep = ({ error, repositories }: ReviewStepProps) => {
                 <ul>
                   {error.errors.map(({ format, error: exportError }, index) => (
                     <li key={index}>
-                      <strong>{getExportFormatLabel(t, format)}:</strong> {getErrorMessage(exportError)}
+                      <strong>{getExportFormatLabel(format)}:</strong> {getErrorMessage(exportError)}
                     </li>
                   ))}
                 </ul>

@@ -23,6 +23,7 @@ import CreateRepositoryModal from '../modals/CreateRepositoryModal/CreateReposit
 import { StatusDisplayContent } from '../Status/StatusDisplay';
 import { getRepoUrlOrRegistry } from '../Repository/CreateRepository/utils';
 import FormSelect, { SelectItem } from './FormSelect';
+import { DefaultHelperText } from './FieldHelperText';
 
 export const getRepositoryItems = (
   t: TFunction,
@@ -106,6 +107,7 @@ export const getRepositoryItems = (
 type RepositorySelectProps = {
   name: string;
   label?: string;
+  helperText?: string;
   repositories: Repository[];
   repoType: RepoSpecType;
   canCreateRepo: boolean;
@@ -142,6 +144,7 @@ const RepositorySelect = ({
   isReadOnly,
   repoRefetch,
   label,
+  helperText,
   isRequired,
   validateRepoSelection,
 }: RepositorySelectProps) => {
@@ -201,6 +204,8 @@ const RepositorySelect = ({
             </MenuFooter>
           )}
         </FormSelect>
+
+        {helperText && <DefaultHelperText helperText={helperText} />}
       </FormGroup>
       {createRepoModalOpen && (
         <CreateRepositoryModal

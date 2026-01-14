@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Alert, Card, CardBody, CardTitle, FormGroup, FormSection, Gallery, Grid } from '@patternfly/react-core';
+import { Alert, Content, FormGroup, FormSection, Gallery, Grid } from '@patternfly/react-core';
 import { FormikErrors, useFormikContext } from 'formik';
 
 import { OciRepoSpec, RepoSpecType, Repository } from '@flightctl/types';
@@ -11,7 +11,7 @@ import TextField from '../../../form/TextField';
 import RepositorySelect from '../../../form/RepositorySelect';
 import { usePermissionsContext } from '../../../common/PermissionsContext';
 import { RESOURCE, VERB } from '../../../../types/rbac';
-import SelectImageBuildExportCard from '../../ImageExportCards/SelectImageBuildExportCard';
+import { ImageExportCardsGallery, SelectImageBuildExportCard } from '../../ImageExportCards';
 import { getImageReference } from '../../../../utils/imageBuilds';
 import { isOciRepoSpec } from '../../../Repository/CreateRepository/utils';
 import ImageUrlCard from '../../ImageUrlCard';
@@ -81,6 +81,7 @@ const OutputImageStep = ({ registries, repoRefetch }: OutputImageStepProps) => {
             label={t('Target registry')}
             isRequired
             validateRepoSelection={isWritableRegistry}
+            helperText={t('Choose a writable registry for your completed image.')}
           />
           <FormGroup label={t('Image name')} fieldId="image-name" isRequired>
             <TextField
@@ -97,8 +98,11 @@ const OutputImageStep = ({ registries, repoRefetch }: OutputImageStepProps) => {
             />
           </FormGroup>
           <ImageUrlCard title={t('Destination image URL')} imageReference={imageReference} />
-          <FormGroup label={t('Export formats')} fieldId="export-formats">
-            <Gallery hasGutter>
+          <FormGroup label={t('Image export formats')} fieldId="export-formats">
+            <Content component="p">
+              {t('These are optional, additional tasks. Each selection creates a separate image export task.')}
+            </Content>
+            <ImageExportCardsGallery>
               <SelectImageBuildExportCard
                 format={ExportFormatType.ExportFormatTypeVMDK}
                 isChecked={values.exportFormats.includes(ExportFormatType.ExportFormatTypeVMDK)}
@@ -114,7 +118,7 @@ const OutputImageStep = ({ registries, repoRefetch }: OutputImageStepProps) => {
                 isChecked={values.exportFormats.includes(ExportFormatType.ExportFormatTypeISO)}
                 onToggle={handleFormatToggle}
               />
-            </Gallery>
+            </ImageExportCardsGallery>
           </FormGroup>
         </FormSection>
       </Grid>

@@ -27,18 +27,18 @@ export const getImageBuildDestinationImage = (imageBuild: ImageBuild | undefined
   return `${destination.imageName}:${destination.tag}`;
 };
 
-export const getExportFormatLabel = (t: TFunction, format: ExportFormatType) => {
+export const getExportFormatDescription = (t: TFunction, format: ExportFormatType) => {
   switch (format) {
     case ExportFormatType.ExportFormatTypeVMDK:
-      return t('Virtualization (VMDK)');
+      return t('For VMware vSphere and enterprise hypervisors');
     case ExportFormatType.ExportFormatTypeQCOW2:
-      return t('Openstack/KVM (QCOW2)');
+      return t('For OpenStack and KVM-based cloud environments');
     case ExportFormatType.ExportFormatTypeISO:
-      return t('Bare metal installer (ISO)');
-    default:
-      return t('Unknown format ({format})', { format });
+      return t('Bootable image for physical hardware installation');
   }
 };
+
+export const getExportFormatLabel = (format: ExportFormatType) => `.${format.toUpperCase()}`;
 
 export const getImageUrl = (url: string): string => {
   if (!url || /^https?:\/\//i.test(url)) {
