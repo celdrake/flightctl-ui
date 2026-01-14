@@ -14,6 +14,7 @@ import { RESOURCE, VERB } from '../../../../types/rbac';
 import SelectImageBuildExportCard from '../../ImageExportCards/SelectImageBuildExportCard';
 import { getImageReference } from '../../../../utils/imageBuilds';
 import { isOciRepoSpec } from '../../../Repository/CreateRepository/utils';
+import ImageUrlCard from '../../ImageUrlCard';
 
 export const outputImageStepId = 'output-image';
 
@@ -95,14 +96,7 @@ const OutputImageStep = ({ registries, repoRefetch }: OutputImageStepProps) => {
               helperText={t('Specify the version (e.g, latest or 9.6)')}
             />
           </FormGroup>
-          {imageReference && (
-            <FormSection>
-              <Card>
-                <CardTitle>{t('Destination image reference')}</CardTitle>
-                <CardBody>{imageReference}</CardBody>
-              </Card>
-            </FormSection>
-          )}
+          <ImageUrlCard title={t('Destination image URL')} imageReference={imageReference} />
           <FormGroup label={t('Export formats')} fieldId="export-formats">
             <Gallery hasGutter>
               <SelectImageBuildExportCard

@@ -2,6 +2,8 @@ import * as React from 'react';
 import { useField, useFormikContext } from 'formik';
 import {
   Button,
+  Flex,
+  FlexItem,
   FormGroup,
   Icon,
   MenuFooter,
@@ -14,13 +16,13 @@ import { PlusCircleIcon } from '@patternfly/react-icons/dist/js/icons/plus-circl
 import { ExclamationCircleIcon } from '@patternfly/react-icons/dist/js/icons/exclamation-circle-icon';
 import { TFunction } from 'react-i18next';
 
-import { RepoSpecType, Repository } from '@flightctl/types';
+import { ConditionStatus, ConditionType, RepoSpecType, Repository } from '@flightctl/types';
 import { useTranslation } from '../../hooks/useTranslation';
+import { StatusLevel } from '../../utils/status/common';
 import CreateRepositoryModal from '../modals/CreateRepositoryModal/CreateRepositoryModal';
-import { getRepoUrlOrRegistry } from '../Repository/CreateRepository/utils';
-import { isAccessibleRepository } from '../../utils/status/repository';
-import FormSelect, { SelectItem } from './FormSelect';
 import { StatusDisplayContent } from '../Status/StatusDisplay';
+import { getRepoUrlOrRegistry } from '../Repository/CreateRepository/utils';
+import FormSelect, { SelectItem } from './FormSelect';
 
 export const getRepositoryItems = (
   t: TFunction,
@@ -51,21 +53,31 @@ export const getRepositoryItems = (
           ),
         };
       } else {
-        const isAccessible = isAccessibleRepository(repo);
+        const accessibleCondition = repo.status?.conditions?.find((c) => c.type === ConditionType.RepositoryAccessible);
+        const isAccessible = accessibleCondition && accessibleCondition.status === ConditionStatus.ConditionStatusTrue;
+        const isInaccessible =
+          accessibleCondition && accessibleCondition.status === ConditionStatus.ConditionStatusFalse;
         const urlOrRegistry = getRepoUrlOrRegistry(repo.spec);
+
+        let accessText = t('Unknown');
+        let level: StatusLevel = 'unknown';
+        if (isAccessible) {
+          accessText = t('Accessible');
+          level = 'success';
+        } else if (isInaccessible) {
+          accessText = t('Not accessible');
+          level = 'danger';
+        }
 
         validRepoItems[repoName] = {
           label: repoName,
           description: (
-            <Stack>
-              <StackItem>{urlOrRegistry}</StackItem>
-              <StackItem>
-                <StatusDisplayContent
-                  label={isAccessible ? t('Accessible') : t('Not marked as accessible yet')}
-                  level={isAccessible ? 'success' : 'warning'}
-                />
-              </StackItem>
-            </Stack>
+            <Flex justifyContent={{ default: 'justifyContentSpaceBetween' }}>
+              <FlexItem>{urlOrRegistry}</FlexItem>
+              <FlexItem>
+                <StatusDisplayContent label={accessText} level={level} />
+              </FlexItem>
+            </Flex>
           ),
         };
       }

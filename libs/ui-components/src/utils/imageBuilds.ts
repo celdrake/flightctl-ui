@@ -44,7 +44,6 @@ export const getImageUrl = (url: string): string => {
   if (!url || /^https?:\/\//i.test(url)) {
     return url;
   }
-  // Add https:// if no protocol is present
   return `https://${url}`;
 };
 
