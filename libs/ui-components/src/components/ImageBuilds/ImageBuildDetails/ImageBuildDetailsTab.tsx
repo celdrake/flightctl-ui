@@ -1,7 +1,6 @@
 import * as React from 'react';
 import {
   Alert,
-  Button,
   CardTitle,
   DescriptionListDescription,
   DescriptionListGroup,
@@ -24,7 +23,7 @@ import CopyButton from '../../common/CopyButton';
 
 // CELIA-WIP: DEtermine if there will be events for image builds
 
-const ImageBuildDetailsContent = ({
+const ImageBuildDetailsTab = ({
   imageBuild,
   imageExports,
 }: {
@@ -199,4 +198,4 @@ const ImageBuildDetailsContent = ({
   );
 };
 
-export default ImageBuildDetailsContent;
+export default ImageBuildDetailsTab;

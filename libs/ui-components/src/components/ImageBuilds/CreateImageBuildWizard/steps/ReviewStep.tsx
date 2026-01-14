@@ -7,6 +7,7 @@ import {
   DescriptionListDescription,
   DescriptionListGroup,
   DescriptionListTerm,
+  Label,
   Stack,
   StackItem,
 } from '@patternfly/react-core';
@@ -111,7 +112,11 @@ const ReviewStep = ({ error, repositories }: ReviewStepProps) => {
                 <DescriptionListGroup>
                   <DescriptionListTerm>{t('Export formats')}</DescriptionListTerm>
                   <DescriptionListDescription>
-                    {values.exportFormats.map((format) => getExportFormatLabel(t, format)).join(', ')}
+                    {values.exportFormats.map((format) => (
+                      <Label key={format} color="blue" className="pf-v5-u-mr-sm">
+                        {getExportFormatLabel(t, format)}
+                      </Label>
+                    ))}
                   </DescriptionListDescription>
                 </DescriptionListGroup>
               )}

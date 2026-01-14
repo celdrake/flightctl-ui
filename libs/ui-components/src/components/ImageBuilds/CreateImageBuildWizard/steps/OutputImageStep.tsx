@@ -11,7 +11,7 @@ import TextField from '../../../form/TextField';
 import RepositorySelect from '../../../form/RepositorySelect';
 import { usePermissionsContext } from '../../../common/PermissionsContext';
 import { RESOURCE, VERB } from '../../../../types/rbac';
-import ImageBuildExportFormatCard from '../../ImageBuildExportFormatCard';
+import SelectImageBuildExportCard from '../../ImageExportCards/SelectImageBuildExportCard';
 import { getImageReference } from '../../../../utils/imageBuilds';
 import { isOciRepoSpec } from '../../../Repository/CreateRepository/utils';
 
@@ -105,17 +105,17 @@ const OutputImageStep = ({ registries, repoRefetch }: OutputImageStepProps) => {
           )}
           <FormGroup label={t('Export formats')} fieldId="export-formats">
             <Gallery hasGutter>
-              <ImageBuildExportFormatCard
+              <SelectImageBuildExportCard
                 format={ExportFormatType.ExportFormatTypeVMDK}
                 isChecked={values.exportFormats.includes(ExportFormatType.ExportFormatTypeVMDK)}
                 onToggle={handleFormatToggle}
               />
-              <ImageBuildExportFormatCard
+              <SelectImageBuildExportCard
                 format={ExportFormatType.ExportFormatTypeQCOW2}
                 isChecked={values.exportFormats.includes(ExportFormatType.ExportFormatTypeQCOW2)}
                 onToggle={handleFormatToggle}
               />
-              <ImageBuildExportFormatCard
+              <SelectImageBuildExportCard
                 format={ExportFormatType.ExportFormatTypeISO}
                 isChecked={values.exportFormats.includes(ExportFormatType.ExportFormatTypeISO)}
                 onToggle={handleFormatToggle}

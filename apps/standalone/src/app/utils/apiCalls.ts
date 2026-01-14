@@ -14,7 +14,7 @@ const apiServer = `${window.location.hostname}${apiPort ? `:${apiPort}` : ''}`;
 const flightCtlAPI = `${window.location.protocol}//${apiServer}/api/flightctl`;
 const uiProxyAPI = `${window.location.protocol}//${apiServer}/api`;
 
-const imageBuilderPathRegex = /^image(builds|pipelines|exports)/;
+const imageBuilderPathRegex = /^image(builds|exports)/;
 
 export const loginAPI = `${window.location.protocol}//${apiServer}/api/login`;
 export const wsEndpoint = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${apiServer}`;

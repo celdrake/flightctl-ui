@@ -14,11 +14,10 @@ import DetailsPage from '../../DetailsPage/DetailsPage';
 import DetailsPageActions from '../../DetailsPage/DetailsPageActions';
 import DeleteImageBuildModal from '../DeleteImageBuildModal/DeleteImageBuildModal';
 import YamlEditor from '../../common/CodeEditor/YamlEditor';
-import ImageBuildDetailsContent from './ImageBuildDetailsContent';
-import ImageExportsDetailsContent from '../ImageExportDetails/ImageExportDetailsContent';
+import ImageBuildDetailsTab from './ImageBuildDetailsTab';
+import ImageBuildExportsTab from './ImageBuildExportsTab';
 import { useImageExports } from '../useImageExports';
 
-// Image pipelines have the same permissions as image builds
 const imageBuildDetailsPermissions = [{ kind: RESOURCE.IMAGE_BUILD, verb: VERB.DELETE }];
 
 const ImageBuildDetailsPage = () => {
@@ -32,7 +31,7 @@ const ImageBuildDetailsPage = () => {
   const [imageBuild, isLoading, error, refetch] = useFetchPeriodically<Required<ImageBuild>>({
     endpoint: `imagebuilds/${imageBuildId}`,
   });
-  const { imageExports, isLoading: isLoadingExports } = useImageExports(imageBuildId);
+  const { imageExports, isLoading: isLoadingExports, refetch: refetchExports } = useImageExports(imageBuildId);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState<boolean>();
   const { checkPermissions } = usePermissionsContext();
   const [canDelete] = checkPermissions(imageBuildDetailsPermissions);
@@ -71,9 +70,14 @@ const ImageBuildDetailsPage = () => {
             <Route index element={<Navigate to="details" replace />} />
             <Route
               path="details"
-              element={<ImageBuildDetailsContent imageBuild={imageBuild} imageExports={imageExports} />}
+              element={<ImageBuildDetailsTab imageBuild={imageBuild} imageExports={imageExports} />}
             />
-            <Route path="exports" element={<ImageExportsDetailsContent imageExports={imageExports} />} />
+            <Route
+              path="exports"
+              element={
+                <ImageBuildExportsTab imageExports={imageExports} imageBuild={imageBuild} refetch={refetchExports} />
+              }
+            />
             <Route path="yaml" element={<YamlEditor apiObj={imageBuild} refetch={refetch} canEdit={false} />} />
             <Route path="logs" element={<div>TODO Logs</div>} />
           </Routes>

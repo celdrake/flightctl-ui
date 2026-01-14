@@ -96,7 +96,7 @@ const DetailsTab = ({ repoDetails }: { repoDetails: Repository }) => {
             <DescriptionListTerm>{t('Status')}</DescriptionListTerm>
             <DescriptionListDescription>
               {' '}
-              {repoDetails ? <RepositoryStatus statusInfo={getRepositorySyncStatus(repoDetails)} /> : '-'}
+              {repoDetails ? <RepositoryStatus repository={repoDetails} /> : '-'}
             </DescriptionListDescription>
           </DescriptionListGroup>
           <DescriptionListGroup>

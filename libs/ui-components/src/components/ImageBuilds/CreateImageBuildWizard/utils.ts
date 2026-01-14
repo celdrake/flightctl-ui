@@ -14,6 +14,8 @@ import {
   ImageExportDestination,
   ExportFormatType,
   EarlyBinding,
+  ImageExportConditionType,
+  ImageExportConditionReason,
 } from '@flightctl/types/imagebuilder';
 import { API_VERSION } from '../../../constants';
 import { ImageBuildFormValues } from './types';
@@ -69,6 +71,8 @@ export const getInitialValues = (imageBuild?: ImageBuild): ImageBuildFormValues 
 };
 
 const generateBuildName = () => `image-build-${Date.now()}`;
+const generateExportName = (imageBuildName: string, format: ExportFormatType) =>
+  `${imageBuildName}-export-${format}-${Date.now()}`;
 
 export const getImageBuildResource = (values: ImageBuildFormValues): ImageBuild => {
   const name = generateBuildName();
@@ -94,38 +98,41 @@ export const getImageBuildResource = (values: ImageBuildFormValues): ImageBuild 
   };
 };
 
-const generateExportName = (imageBuildName: string, format: ExportFormatType) =>
-  `${imageBuildName}-export-${format}-${Date.now()}`;
+export const getImageExportResource = (
+  imageBuildName: string,
+  destination: ImageBuildDestination,
+  format: ExportFormatType,
+): ImageExport => {
+  const exportName = generateExportName(imageBuildName, format);
+
+  return {
+    apiVersion: API_VERSION,
+    kind: ResourceKind.IMAGE_EXPORT,
+    metadata: {
+      name: exportName,
+    },
+    spec: {
+      source: {
+        type: 'imageBuild',
+        imageBuildRef: imageBuildName,
+      },
+      destination,
+      format,
+    },
+  };
+};
 
 export const getImageExportResources = (values: ImageBuildFormValues, imageBuildName: string): ImageExport[] => {
   if (!values.exportFormats || values.exportFormats.length === 0) {
     return [];
   }
 
-  return values.exportFormats.map((format) => {
-    const exportName = generateExportName(imageBuildName, format);
-    const source: ImageBuildRefSource = {
-      type: 'imageBuild',
-      imageBuildRef: imageBuildName,
-    };
-    const destination: ImageExportDestination = {
-      repository: values.destination.repository,
-      imageName: values.destination.imageName,
-      tag: values.destination.tag,
-    };
-    const spec: ImageExportSpec = {
-      source,
-      destination,
-      format,
-    };
+  return values.exportFormats.map((format) => getImageExportResource(imageBuildName, values.destination, format));
+};
 
-    return {
-      apiVersion: API_VERSION,
-      kind: ResourceKind.IMAGE_EXPORT,
-      metadata: {
-        name: exportName,
-      },
-      spec,
-    };
-  });
+export const isImageExportFailed = (imageExport: ImageExport): boolean => {
+  const readyCondition = imageExport.status?.conditions?.find(
+    (c) => c.type === ImageExportConditionType.ImageExportConditionTypeReady,
+  );
+  return readyCondition?.reason === ImageExportConditionReason.ImageExportConditionReasonFailed;
 };

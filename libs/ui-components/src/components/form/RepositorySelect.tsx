@@ -14,11 +14,13 @@ import { PlusCircleIcon } from '@patternfly/react-icons/dist/js/icons/plus-circl
 import { ExclamationCircleIcon } from '@patternfly/react-icons/dist/js/icons/exclamation-circle-icon';
 import { TFunction } from 'react-i18next';
 
-import { RepoSpecType, Repository } from '@flightctl/types';
+import { ConditionType, RepoSpecType, Repository } from '@flightctl/types';
 import { useTranslation } from '../../hooks/useTranslation';
 import CreateRepositoryModal from '../modals/CreateRepositoryModal/CreateRepositoryModal';
 import { getRepoUrlOrRegistry } from '../Repository/CreateRepository/utils';
+import { getRepositorySyncStatus, isAccessibleRepository, repositoryStatusLabels } from '../../utils/status/repository';
 import FormSelect, { SelectItem } from './FormSelect';
+import { StatusDisplayContent } from '../Status/StatusDisplay';
 
 export const getRepositoryItems = (
   t: TFunction,
@@ -49,9 +51,22 @@ export const getRepositoryItems = (
           ),
         };
       } else {
+        const isAccessible = isAccessibleRepository(repo);
+        const urlOrRegistry = getRepoUrlOrRegistry(repo.spec);
+
         validRepoItems[repoName] = {
           label: repoName,
-          description: getRepoUrlOrRegistry(repo.spec),
+          description: (
+            <Stack>
+              <StackItem>{urlOrRegistry}</StackItem>
+              <StackItem>
+                <StatusDisplayContent
+                  label={isAccessible ? t('Accessible') : t('Not marked as accessible yet')}
+                  level={isAccessible ? 'success' : 'warning'}
+                />
+              </StackItem>
+            </Stack>
+          ),
         };
       }
     });

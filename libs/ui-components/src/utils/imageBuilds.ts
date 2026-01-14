@@ -57,15 +57,15 @@ export const getImageReference = (
   }
 
   const registryUrl = getRegistryUrl(repositories, imageTarget.repository);
+  if (!registryUrl) {
+    return '-';
+  }
   // CELIA-WIP: Asked for the API to unify these two fields, but it's not yet implemented.
   let tag: string;
   if ('imageTag' in imageTarget) {
     tag = imageTarget.imageTag;
   } else {
     tag = imageTarget.tag;
-  }
-  if (!registryUrl) {
-    return `${imageTarget.imageName}:${tag}`;
   }
   return `${registryUrl}/${imageTarget.imageName}:${tag}`;
 };

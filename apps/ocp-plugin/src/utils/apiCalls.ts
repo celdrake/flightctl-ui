@@ -38,7 +38,7 @@ const apiServer = `${window.location.hostname}${
 export const uiProxy = `${window.location.protocol}//${apiServer}`;
 const flightCtlAPI = `${uiProxy}/api/flightctl`;
 const alertsAPI = `${uiProxy}/api/alerts`;
-const imageBuilderPathRegex = /^image(builds|pipelines|exports)/;
+const imageBuilderPathRegex = /^image(builds|exports)/;
 export const wsEndpoint = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${apiServer}`;
 
 export const fetchUiProxy = async (endpoint: string, requestInit: RequestInit): Promise<Response> => {

@@ -138,7 +138,7 @@ const RepositoryTableRow = ({
         {getRepoUrlOrRegistry(repository.spec) || '-'}
       </Td>
       <Td dataLabel={t('Sync status')}>
-        <RepositoryStatus statusInfo={getRepositorySyncStatus(repository)} />
+        <RepositoryStatus repository={repository} />
       </Td>
       <Td dataLabel={t('Last transition')}>{getLastTransitionTimeText(repository, t).text}</Td>
       {!!actions.length && (

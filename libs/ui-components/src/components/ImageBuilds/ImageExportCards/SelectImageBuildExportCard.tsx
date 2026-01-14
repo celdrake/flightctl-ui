@@ -6,8 +6,8 @@ import { CloudSecurityIcon } from '@patternfly/react-icons/dist/js/icons/cloud-s
 import { ServerGroupIcon } from '@patternfly/react-icons/dist/js/icons/server-group-icon';
 
 import { ExportFormatType } from '@flightctl/types/imagebuilder';
-import { useTranslation } from '../../hooks/useTranslation';
-import { getExportFormatLabel } from '../../utils/imageBuilds';
+import { useTranslation } from '../../../hooks/useTranslation';
+import { getExportFormatLabel } from '../../../utils/imageBuilds';
 
 const iconMap: Record<string, React.ReactElement> = {
   vmdk: <VirtualMachineIcon />,
@@ -15,7 +15,7 @@ const iconMap: Record<string, React.ReactElement> = {
   iso: <ServerGroupIcon />,
 };
 
-type ExportFormatCardProps = {
+type SelectImageBuildExportCardProps = {
   format: ExportFormatType;
   isChecked: boolean;
   onToggle: (format: ExportFormatType, isChecked: boolean) => void;
@@ -34,7 +34,7 @@ const getDescription = (t: TFunction, format: ExportFormatType) => {
 
 // CELIA-WIP: REvisit for PF6
 
-const ImageBuildExportFormatCard = ({ format, isChecked, onToggle }: ExportFormatCardProps) => {
+const SelectImageBuildExportCard = ({ format, isChecked, onToggle }: SelectImageBuildExportCardProps) => {
   const { t } = useTranslation();
 
   const texts = React.useMemo(
@@ -70,4 +70,4 @@ const ImageBuildExportFormatCard = ({ format, isChecked, onToggle }: ExportForma
   );
 };
 
-export default ImageBuildExportFormatCard;
+export default SelectImageBuildExportCard;
