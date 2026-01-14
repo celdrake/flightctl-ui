@@ -21,6 +21,7 @@ import FlightCtlDescriptionList from '../../../common/FlightCtlDescriptionList';
 import { ImageBuildFormValues, ImageBuildWizardError } from '../types';
 import { getImageReference } from '../../../../utils/imageBuilds';
 import { getExportFormatLabel } from '../../../../utils/imageBuilds';
+import { CERTIFICATE_VALIDITY_IN_DAYS } from '../../../../constants';
 
 export const reviewStepId = 'review';
 
@@ -134,13 +135,9 @@ const ReviewStep = ({ error, repositories }: ReviewStepProps) => {
               {isEarlyBinding && (
                 <>
                   <DescriptionListGroup>
-                    <DescriptionListTerm>{t('Auto-create certificate')}</DescriptionListTerm>
-                    <DescriptionListDescription>{t('Yes (1 year validity)')}</DescriptionListDescription>
-                  </DescriptionListGroup>
-                  <DescriptionListGroup>
-                    <DescriptionListTerm>{t('Certificate expiration date')}</DescriptionListTerm>
+                    <DescriptionListTerm>{t('Certificate automatically created')}</DescriptionListTerm>
                     <DescriptionListDescription>
-                      {t('Automatically set to 1 year from creation')}
+                      {t('Expires within {{ validity }} days of creation', { validity: CERTIFICATE_VALIDITY_IN_DAYS })}
                     </DescriptionListDescription>
                   </DescriptionListGroup>
                 </>

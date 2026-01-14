@@ -18,6 +18,7 @@ import { BindingType } from '@flightctl/types/imagebuilder';
 import { ImageBuildFormValues } from '../types';
 import { useTranslation } from '../../../../hooks/useTranslation';
 import FlightCtlForm from '../../../form/FlightCtlForm';
+import { CERTIFICATE_VALIDITY_IN_DAYS } from '../../../../constants';
 
 export const registrationStepId = 'registration';
 
@@ -73,7 +74,8 @@ const RegistrationStep = () => {
             <FormSection>
               <Alert isInline variant="info" title={t('Certificate will be automatically created')}>
                 {t(
-                  'A certificate with 1 year validity will be automatically created and embedded in the image. The device must connect to the management service before this registration window expires.',
+                  'A certificate with {{ validity }} days of validity will be automatically created and embedded in the image. The device must connect to the management service before this registration window expires.',
+                  { validity: CERTIFICATE_VALIDITY_IN_DAYS },
                 )}
               </Alert>
             </FormSection>

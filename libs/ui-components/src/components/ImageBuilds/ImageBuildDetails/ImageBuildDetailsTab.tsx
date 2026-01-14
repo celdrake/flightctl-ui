@@ -21,6 +21,7 @@ import { useTranslation } from '../../../hooks/useTranslation';
 import DetailsPageCard from '../../DetailsPage/DetailsPageCard';
 import ImageBuildStatus from '../ImageBuildStatus';
 import CopyButton from '../../common/CopyButton';
+import { CERTIFICATE_VALIDITY_IN_DAYS } from '../../../constants';
 
 // CELIA-WIP: DEtermine if there will be events for image builds
 
@@ -135,7 +136,8 @@ const ImageBuildDetailsTab = ({
                       <DescriptionListDescription>
                         <Alert variant="info" isInline title={t('Certificate auto-created')}>
                           {t(
-                            'A certificate with 1 year validity is automatically created and embedded in the image for early binding.',
+                            'A certificate with {{ validity }} days of validity is automatically created and embedded in the image for early binding.',
+                            { validity: CERTIFICATE_VALIDITY_IN_DAYS },
                           )}
                         </Alert>
                       </DescriptionListDescription>
