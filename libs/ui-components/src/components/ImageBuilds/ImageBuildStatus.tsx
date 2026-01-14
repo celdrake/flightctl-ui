@@ -1,21 +1,12 @@
 import * as React from 'react';
+import { Stack, StackItem } from '@patternfly/react-core';
 
 import { ImageBuildConditionReason, ImageBuildConditionType, ImageBuildStatus } from '@flightctl/types/imagebuilder';
 import { useTranslation } from '../../hooks/useTranslation';
 import { StatusDisplayContent } from '../Status/StatusDisplay';
 import { StatusLevel } from '../../utils/status/common';
 import LearnMoreLink from '../common/LearnMoreLink';
-import { Stack, StackItem } from '@patternfly/react-core';
-
-const ensureHttpsProtocol = (url: string): string => {
-  if (!url) return url;
-  // Check if the URL already has a protocol (http:// or https://)
-  if (/^https?:\/\//i.test(url)) {
-    return url;
-  }
-  // Add https:// if no protocol is present
-  return `https://${url}`;
-};
+import { getImageUrl } from '../../utils/imageBuilds';
 
 const ImageBuildStatus = ({ buildStatus }: { buildStatus?: ImageBuildStatus }) => {
   const { t } = useTranslation();
@@ -47,7 +38,7 @@ const ImageBuildStatus = ({ buildStatus }: { buildStatus?: ImageBuildStatus }) =
         <Stack hasGutter>
           <StackItem>{t('Image built successfully')}</StackItem>
           <StackItem>
-            <LearnMoreLink link={ensureHttpsProtocol(buildStatus.imageReference)} text={t('Check output image')} />
+            <LearnMoreLink link={getImageUrl(buildStatus.imageReference)} text={t('Check output image')} />
           </StackItem>
         </Stack>
       );

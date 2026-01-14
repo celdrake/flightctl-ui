@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Card, CardBody, CardTitle, FormGroup, FormSection, Grid } from '@patternfly/react-core';
+import { FormGroup, FormSection, Grid } from '@patternfly/react-core';
 import { FormikErrors, useFormikContext } from 'formik';
 
 import { RepoSpecType, Repository } from '@flightctl/types';
@@ -11,6 +11,7 @@ import RepositorySelect from '../../../form/RepositorySelect';
 import { usePermissionsContext } from '../../../common/PermissionsContext';
 import { RESOURCE, VERB } from '../../../../types/rbac';
 import { getImageReference } from '../../../../utils/imageBuilds';
+import ImageUrlCard from '../../ImageUrlCard';
 
 export const sourceImageStepId = 'source-image';
 
@@ -64,10 +65,7 @@ const SourceImageStep = ({ registries, repoRefetch }: SourceImageStepProps) => {
             />
           </FormGroup>
           <FormSection>
-            <Card>
-              <CardTitle>{t('Source image URL')}</CardTitle>
-              <CardBody>{imageReference || t('Enter the image details to view the full URL')}</CardBody>
-            </Card>
+            <ImageUrlCard title={t('Source image URL')} imageReference={imageReference} />
           </FormSection>
         </FormSection>
       </Grid>

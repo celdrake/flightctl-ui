@@ -40,6 +40,14 @@ export const getExportFormatLabel = (t: TFunction, format: ExportFormatType) => 
   }
 };
 
+export const getImageUrl = (url: string): string => {
+  if (!url || /^https?:\/\//i.test(url)) {
+    return url;
+  }
+  // Add https:// if no protocol is present
+  return `https://${url}`;
+};
+
 export const getRegistryUrl = (registries: Repository[], registryName: string): string | null => {
   const repo = registries.find((r) => r.metadata.name === registryName);
   if (!repo || !isOciRepoSpec(repo.spec)) {

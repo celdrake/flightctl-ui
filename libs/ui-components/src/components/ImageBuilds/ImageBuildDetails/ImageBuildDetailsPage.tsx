@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { DropdownItem, DropdownList, Nav, NavList } from '@patternfly/react-core';
+import { DropdownItem, DropdownList, Tab } from '@patternfly/react-core';
 
 import { ImageBuild } from '@flightctl/types/imagebuilder';
 import { RESOURCE, VERB } from '../../../types/rbac';
@@ -9,7 +9,6 @@ import { useTranslation } from '../../../hooks/useTranslation';
 import { ROUTE, useNavigate } from '../../../hooks/useNavigate';
 import { usePermissionsContext } from '../../common/PermissionsContext';
 import { useAppContext } from '../../../hooks/useAppContext';
-import NavItem from '../../NavItem/NavItem';
 import DetailsPage from '../../DetailsPage/DetailsPage';
 import DetailsPageActions from '../../DetailsPage/DetailsPageActions';
 import DeleteImageBuildModal from '../DeleteImageBuildModal/DeleteImageBuildModal';
@@ -17,6 +16,7 @@ import YamlEditor from '../../common/CodeEditor/YamlEditor';
 import ImageBuildDetailsTab from './ImageBuildDetailsTab';
 import ImageBuildExportsTab from './ImageBuildExportsTab';
 import { useImageExports } from '../useImageExports';
+import TabsNav from '../../TabsNav/TabsNav';
 
 const imageBuildDetailsPermissions = [{ kind: RESOURCE.IMAGE_BUILD, verb: VERB.DELETE }];
 
@@ -45,14 +45,12 @@ const ImageBuildDetailsPage = () => {
       resourceType="Image builds"
       resourceTypeLabel={t('Image builds')}
       nav={
-        <Nav variant="horizontal-subnav">
-          <NavList>
-            <NavItem to="details">{t('Image details')}</NavItem>
-            <NavItem to="exports">{t('Export images')}</NavItem>
-            <NavItem to="yaml">{t('YAML')}</NavItem>
-            <NavItem to="logs">{t('Logs')}</NavItem>
-          </NavList>
-        </Nav>
+        <TabsNav aria-label="Image build details tabs" tabKeys={['details', 'exports', 'yaml', 'logs']}>
+          <Tab eventKey="details" title={t('Image details')} />
+          <Tab eventKey="exports" title={t('Export images')} />
+          <Tab eventKey="yaml" title={t('YAML')} />
+          <Tab eventKey="logs" title={t('Logs')} />
+        </TabsNav>
       }
       actions={
         canDelete && (
