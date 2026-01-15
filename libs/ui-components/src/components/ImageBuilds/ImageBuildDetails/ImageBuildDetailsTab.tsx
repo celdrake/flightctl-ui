@@ -19,7 +19,7 @@ import { getDateTimeDisplay } from '../../../utils/dates';
 import { getExportFormatLabel } from '../../../utils/imageBuilds';
 import { useTranslation } from '../../../hooks/useTranslation';
 import DetailsPageCard from '../../DetailsPage/DetailsPageCard';
-import ImageBuildStatus from '../ImageBuildStatus';
+import ImageBuildAndExportStatus from '../ImageBuildAndExportStatus';
 import CopyButton from '../../common/CopyButton';
 import { CERTIFICATE_VALIDITY_IN_DAYS } from '../../../constants';
 
@@ -169,7 +169,7 @@ const ImageBuildDetailsTab = ({
                   <DescriptionListGroup>
                     <DescriptionListTerm>{t('Build status')}</DescriptionListTerm>
                     <DescriptionListDescription>
-                      <ImageBuildStatus buildStatus={imageBuild.status} />
+                      <ImageBuildAndExportStatus imageStatus={imageBuild.status} />
                     </DescriptionListDescription>
                   </DescriptionListGroup>
                   {imageBuild.status?.imageReference && (

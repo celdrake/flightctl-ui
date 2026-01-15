@@ -1,16 +1,17 @@
 import * as React from 'react';
-import { Gallery } from '@patternfly/react-core';
 
+import { Repository } from '@flightctl/types';
 import { ExportFormatType, ImageBuild, ImageExport } from '@flightctl/types/imagebuilder';
 import { useFetch } from '../../../hooks/useFetch';
 import { getErrorMessage } from '../../../utils/error';
 import { getImageExportResource } from '../CreateImageBuildWizard/utils';
 import { ImageExportCardsGallery, ViewImageBuildExportCard } from '../ImageExportCards';
 
-type ImageBuildExportsContentProps = {
+type ImageBuildExportsTabProps = {
   imageBuild: ImageBuild;
   imageExports: Record<ExportFormatType, ImageExport>;
   refetch: VoidFunction;
+  registries: Repository[];
 };
 
 const allFormats = [
@@ -19,7 +20,7 @@ const allFormats = [
   ExportFormatType.ExportFormatTypeISO,
 ];
 
-const ImageBuildExportsContent = ({ imageExports, imageBuild, refetch }: ImageBuildExportsContentProps) => {
+const ImageBuildExportsTab = ({ imageExports, imageBuild, registries, refetch }: ImageBuildExportsTabProps) => {
   const { post } = useFetch();
   const [, setError] = React.useState<string | null>(null);
   const [isCreating, setIsCreating] = React.useState<Record<ExportFormatType, boolean>>({
@@ -55,6 +56,7 @@ const ImageBuildExportsContent = ({ imageExports, imageBuild, refetch }: ImageBu
         return (
           <ViewImageBuildExportCard
             key={format}
+            repositories={registries}
             format={format}
             imageExport={imageExports[format]}
             isCreating={isCreating[format]}
@@ -67,4 +69,4 @@ const ImageBuildExportsContent = ({ imageExports, imageBuild, refetch }: ImageBu
   );
 };
 
-export default ImageBuildExportsContent;
+export default ImageBuildExportsTab;

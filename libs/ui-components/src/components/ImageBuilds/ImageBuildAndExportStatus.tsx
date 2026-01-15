@@ -1,44 +1,55 @@
 import * as React from 'react';
 import { Stack, StackItem } from '@patternfly/react-core';
 
-import { ImageBuildConditionReason, ImageBuildConditionType, ImageBuildStatus } from '@flightctl/types/imagebuilder';
+import {
+  ImageBuildConditionReason,
+  ImageBuildConditionType,
+  ImageBuildStatus,
+  ImageExportStatus,
+} from '@flightctl/types/imagebuilder';
 import { useTranslation } from '../../hooks/useTranslation';
 import { StatusDisplayContent } from '../Status/StatusDisplay';
 import { StatusLevel } from '../../utils/status/common';
 import LearnMoreLink from '../common/LearnMoreLink';
 import { getImageUrl } from '../../utils/imageBuilds';
 
-const ImageBuildStatus = ({ buildStatus }: { buildStatus?: ImageBuildStatus }) => {
+type ImageBuildAndExportStatusProps = {
+  imageStatus?: ImageBuildStatus | ImageExportStatus;
+  // For exports, we can pass an additional image reference from the spec
+  // It will only be shown when the image status is complete
+  imageReference?: string;
+};
+
+const ImageBuildAndExportStatus = ({ imageStatus, imageReference }: ImageBuildAndExportStatusProps) => {
   const { t } = useTranslation();
 
   let level: StatusLevel;
   let label: string;
   let message: React.ReactNode | undefined;
 
-  if (!buildStatus) {
+  if (!imageStatus) {
     return <StatusDisplayContent label={t('Unknown')} level="unknown" message={t('No status information available')} />;
   }
 
   // Check conditions for status
-  const conditions = buildStatus.conditions || [];
+  const conditions = imageStatus.conditions || [];
   const readyCondition = conditions.find((c) => c.type === ImageBuildConditionType.ImageBuildConditionTypeReady);
 
   if (readyCondition === undefined) {
     // The build has not been processed yet, marking it as Queued
     level = 'unknown';
     label = t('Queued');
-  } else if (
-    buildStatus.imageReference ||
-    readyCondition.reason === ImageBuildConditionReason.ImageBuildConditionReasonCompleted
-  ) {
+  } else if (readyCondition.reason === ImageBuildConditionReason.ImageBuildConditionReasonCompleted) {
     level = 'success';
     label = t('Complete');
-    if (buildStatus.imageReference) {
+
+    const imageRef = imageReference || (imageStatus as ImageBuildStatus).imageReference;
+    if (imageRef) {
       message = (
         <Stack hasGutter>
           <StackItem>{t('Image built successfully')}</StackItem>
           <StackItem>
-            <LearnMoreLink link={getImageUrl(buildStatus.imageReference)} text={t('Output image')} />
+            <LearnMoreLink link={getImageUrl(imageRef)} text={t('Output image')} />
           </StackItem>
         </Stack>
       );
@@ -66,4 +77,4 @@ const ImageBuildStatus = ({ buildStatus }: { buildStatus?: ImageBuildStatus }) =
   return <StatusDisplayContent label={label} level={level} message={message} />;
 };
 
-export default ImageBuildStatus;
+export default ImageBuildAndExportStatus;

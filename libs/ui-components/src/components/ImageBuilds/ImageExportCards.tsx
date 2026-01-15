@@ -16,11 +16,12 @@ import { VirtualMachineIcon } from '@patternfly/react-icons/dist/js/icons/virtua
 import { CloudSecurityIcon } from '@patternfly/react-icons/dist/js/icons/cloud-security-icon';
 import { ServerGroupIcon } from '@patternfly/react-icons/dist/js/icons/server-group-icon';
 
-import { getExportFormatDescription, getExportFormatLabel } from '../../utils/imageBuilds';
-import { useTranslation } from '../../hooks/useTranslation';
+import { Repository } from '@flightctl/types';
 import { ExportFormatType, ImageExport } from '@flightctl/types/imagebuilder';
+import { getExportFormatDescription, getExportFormatLabel, getImageReference } from '../../utils/imageBuilds';
+import { useTranslation } from '../../hooks/useTranslation';
 import { isImageExportFailed } from './CreateImageBuildWizard/utils';
-import { StatusDisplayContent } from '../Status/StatusDisplay';
+import ImageBuildAndExportStatus from './ImageBuildAndExportStatus';
 
 const iconMap: Record<string, React.ReactElement> = {
   vmdk: <VirtualMachineIcon />,
@@ -29,6 +30,7 @@ const iconMap: Record<string, React.ReactElement> = {
 };
 
 export type ImageExportFormatCardProps = {
+  repositories: Repository[];
   format: ExportFormatType;
   imageExport?: ImageExport;
   onExportImage: (format: ExportFormatType) => void;
@@ -80,6 +82,7 @@ export const SelectImageBuildExportCard = ({ format, isChecked, onToggle }: Sele
 };
 
 export const ViewImageBuildExportCard = ({
+  repositories,
   format,
   imageExport,
   onExportImage,
@@ -89,6 +92,11 @@ export const ViewImageBuildExportCard = ({
   const { t } = useTranslation();
   const exists = !!imageExport;
   const failedExport = exists && isImageExportFailed(imageExport);
+
+  const imageReference = React.useMemo(() => {
+    const ref = imageExport ? getImageReference(imageExport.spec.destination, repositories) : '';
+    return ref || '';
+  }, [imageExport, repositories]);
 
   return (
     <Card isLarge>
@@ -100,7 +108,9 @@ export const ViewImageBuildExportCard = ({
                 <FlexItem>
                   <Icon size="xl">{iconMap[format]}</Icon>
                 </FlexItem>
-                <FlexItem>Failed TBD</FlexItem>
+                <FlexItem>
+                  <ImageBuildAndExportStatus imageStatus={imageExport?.status} imageReference={imageReference} />
+                </FlexItem>
               </Flex>
             </StackItem>
             <StackItem>{getExportFormatLabel(format)}</StackItem>

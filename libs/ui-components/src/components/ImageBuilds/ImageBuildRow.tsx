@@ -7,7 +7,7 @@ import { ROUTE, useNavigate } from '../../hooks/useNavigate';
 import { getImageBuildDestinationImage, getImageBuildSourceImage, isImageBuildFailed } from '../../utils/imageBuilds';
 import { getDateDisplay } from '../../utils/dates';
 import ResourceLink from '../common/ResourceLink';
-import ImageBuildStatus from './ImageBuildStatus';
+import ImageBuildAndExportStatus from './ImageBuildAndExportStatus';
 
 type ImageBuildRowProps = {
   imageBuild: ImageBuild;
@@ -76,7 +76,7 @@ const ImageBuildRow = ({
       <Td dataLabel={t('Base image')}>{sourceImage}</Td>
       <Td dataLabel={t('Output image')}>{destinationImage}</Td>
       <Td dataLabel={t('Status')}>
-        <ImageBuildStatus buildStatus={imageBuild.status} />
+        <ImageBuildAndExportStatus imageStatus={imageBuild.status} />
       </Td>
       <Td dataLabel={t('Export images')}>{`${exportImagesCount}`}</Td>
       <Td dataLabel={t('Date')}>{getDateDisplay(imageBuild.metadata.creationTimestamp)}</Td>

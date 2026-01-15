@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { DropdownItem, DropdownList, Tab } from '@patternfly/react-core';
 
+import { Repository } from '@flightctl/types';
 import { ImageBuild } from '@flightctl/types/imagebuilder';
 import { RESOURCE, VERB } from '../../../types/rbac';
 import PageWithPermissions from '../../common/PageWithPermissions';
@@ -35,6 +36,8 @@ const ImageBuildDetailsPage = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState<boolean>();
   const { checkPermissions } = usePermissionsContext();
   const [canDelete] = checkPermissions(imageBuildDetailsPermissions);
+
+  const registries = [] as Repository[];
 
   return (
     <DetailsPage
@@ -73,7 +76,12 @@ const ImageBuildDetailsPage = () => {
             <Route
               path="exports"
               element={
-                <ImageBuildExportsTab imageExports={imageExports} imageBuild={imageBuild} refetch={refetchExports} />
+                <ImageBuildExportsTab
+                  imageExports={imageExports}
+                  imageBuild={imageBuild}
+                  registries={registries}
+                  refetch={refetchExports}
+                />
               }
             />
             <Route path="yaml" element={<YamlEditor apiObj={imageBuild} refetch={refetch} canEdit={false} />} />
