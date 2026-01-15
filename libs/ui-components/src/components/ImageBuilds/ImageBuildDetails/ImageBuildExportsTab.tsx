@@ -1,6 +1,7 @@
 import * as React from 'react';
 
-import { ExportFormatType, ImageBuild, ImageExport } from '@flightctl/types/imagebuilder';
+import { ExportFormatType, ImageExport } from '@flightctl/types/imagebuilder';
+import { ImageBuildWithExports } from '../../../types/extraTypes';
 import { useFetch } from '../../../hooks/useFetch';
 import { getErrorMessage } from '../../../utils/error';
 import { getImageExportResource } from '../CreateImageBuildWizard/utils';
@@ -8,8 +9,7 @@ import { ImageExportCardsGallery, ViewImageBuildExportCard } from '../ImageExpor
 import { useOciRegistriesContext } from '../OciRegistriesContext';
 
 type ImageBuildExportsTabProps = {
-  imageBuild: ImageBuild;
-  imageExports: Record<ExportFormatType, ImageExport>;
+  imageBuild: ImageBuildWithExports;
   refetch: VoidFunction;
 };
 
@@ -19,8 +19,9 @@ const allFormats = [
   ExportFormatType.ExportFormatTypeISO,
 ];
 
-const ImageBuildExportsTab = ({ imageExports, imageBuild, refetch }: ImageBuildExportsTabProps) => {
+const ImageBuildExportsTab = ({ imageBuild, refetch }: ImageBuildExportsTabProps) => {
   const { post } = useFetch();
+  // CELIA-WIP: SHOW ERROR
   const [, setError] = React.useState<string | null>(null);
   const { ociRegistries } = useOciRegistriesContext();
   const [isCreating, setIsCreating] = React.useState<Record<ExportFormatType, boolean>>({
@@ -53,12 +54,13 @@ const ImageBuildExportsTab = ({ imageExports, imageBuild, refetch }: ImageBuildE
   return (
     <ImageExportCardsGallery>
       {allFormats.map((format) => {
+        const formatIndex = imageBuild.imageExports.findIndex((imageExport) => imageExport?.spec.format === format);
         return (
           <ViewImageBuildExportCard
             key={format}
             repositories={ociRegistries}
             format={format}
-            imageExport={imageExports[format]}
+            imageExport={imageBuild.imageExports[formatIndex]}
             isCreating={isCreating[format]}
             onExportImage={handleExportImage}
             onRetry={handleRetry}

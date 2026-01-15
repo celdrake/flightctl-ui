@@ -13,7 +13,7 @@ import {
   StackItem,
 } from '@patternfly/react-core';
 
-import { BindingType, ExportFormatType, ImageBuild, ImageExport } from '@flightctl/types/imagebuilder';
+import { BindingType, ImageExport } from '@flightctl/types/imagebuilder';
 import FlightControlDescriptionList from '../../common/FlightCtlDescriptionList';
 import { getDateTimeDisplay } from '../../../utils/dates';
 import { getExportFormatLabel } from '../../../utils/imageBuilds';
@@ -22,23 +22,18 @@ import DetailsPageCard from '../../DetailsPage/DetailsPageCard';
 import ImageBuildAndExportStatus from '../ImageBuildAndExportStatus';
 import CopyButton from '../../common/CopyButton';
 import { CERTIFICATE_VALIDITY_IN_DAYS } from '../../../constants';
+import { ImageBuildWithExports } from '../../../types/extraTypes';
 
-// CELIA-WIP: DEtermine if there will be events for image builds
-
-const ImageBuildDetailsTab = ({
-  imageBuild,
-  imageExports,
-}: {
-  imageBuild: ImageBuild;
-  imageExports: Record<ExportFormatType, ImageExport>;
-}) => {
+const ImageBuildDetailsTab = ({ imageBuild }: { imageBuild: ImageBuildWithExports }) => {
   const { t } = useTranslation();
-
-  // CELIA-WIP: Get the repository URL from the repository name
   const srcRepositoryUrl = imageBuild.spec.source.repository;
   const dstRepositoryUrl = imageBuild.spec.destination.repository;
-  const { binding } = imageBuild.spec;
-  const hasExports = Object.keys(imageExports).length > 0;
+  const isEarlyBinding = imageBuild.spec.binding.type === BindingType.BindingTypeEarly;
+
+  const hasExports = imageBuild.exportsCount > 0;
+  const existingImageExports = imageBuild.imageExports.filter(
+    (imageExport) => imageExport !== undefined,
+  ) as ImageExport[];
 
   return (
     <Stack hasGutter>
@@ -105,7 +100,7 @@ const ImageBuildDetailsTab = ({
                     <DescriptionListTerm>{t('Image export formats')}</DescriptionListTerm>
                     <DescriptionListDescription>
                       {hasExports
-                        ? Object.values(imageExports).map((imageExport) => (
+                        ? existingImageExports.map((imageExport) => (
                             <Label key={imageExport.spec.format} color="blue" className="pf-v6-u-mr-sm">
                               {getExportFormatLabel(imageExport.spec.format)}
                             </Label>
@@ -125,12 +120,10 @@ const ImageBuildDetailsTab = ({
                   <DescriptionListGroup>
                     <DescriptionListTerm>{t('Binding')}</DescriptionListTerm>
                     <DescriptionListDescription>
-                      {imageBuild.spec.binding.type === BindingType.BindingTypeEarly
-                        ? t('Early binding')
-                        : t('Late binding')}
+                      {isEarlyBinding ? t('Early binding') : t('Late binding')}
                     </DescriptionListDescription>
                   </DescriptionListGroup>
-                  {binding.type === BindingType.BindingTypeEarly && (
+                  {isEarlyBinding && (
                     <DescriptionListGroup>
                       <DescriptionListTerm>&nbsp;</DescriptionListTerm>
                       <DescriptionListDescription>
@@ -143,7 +136,7 @@ const ImageBuildDetailsTab = ({
                       </DescriptionListDescription>
                     </DescriptionListGroup>
                   )}
-                  {binding.type === BindingType.BindingTypeLate && (
+                  {!isEarlyBinding && (
                     <DescriptionListGroup>
                       <DescriptionListTerm>&nbsp;</DescriptionListTerm>
                       <DescriptionListDescription>

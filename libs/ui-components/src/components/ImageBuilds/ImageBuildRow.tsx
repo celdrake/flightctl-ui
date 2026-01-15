@@ -2,6 +2,7 @@ import * as React from 'react';
 import { ActionsColumn, IAction, OnSelect, Td, Tr } from '@patternfly/react-table';
 
 import { ImageBuild } from '@flightctl/types/imagebuilder';
+import { ImageBuildWithExports } from '../../types/extraTypes';
 import { useTranslation } from '../../hooks/useTranslation';
 import { ROUTE, useNavigate } from '../../hooks/useNavigate';
 import { getImageBuildDestinationImage, getImageBuildSourceImage, isImageBuildFailed } from '../../utils/imageBuilds';
@@ -10,7 +11,7 @@ import ResourceLink from '../common/ResourceLink';
 import ImageBuildAndExportStatus from './ImageBuildAndExportStatus';
 
 type ImageBuildRowProps = {
-  imageBuild: ImageBuild;
+  imageBuild: ImageBuildWithExports;
   rowIndex: number;
   onRowSelect: (imageBuild: ImageBuild) => OnSelect;
   isRowSelected: (imageBuild: ImageBuild) => boolean;
@@ -58,9 +59,6 @@ const ImageBuildRow = ({
 
   const sourceImage = getImageBuildSourceImage(imageBuild);
   const destinationImage = getImageBuildDestinationImage(imageBuild);
-  // CELIA-WIP_ ASK UX designers to remove the column
-  const exportImagesCount = 0;
-
   return (
     <Tr>
       <Td
@@ -78,7 +76,7 @@ const ImageBuildRow = ({
       <Td dataLabel={t('Status')}>
         <ImageBuildAndExportStatus imageStatus={imageBuild.status} />
       </Td>
-      <Td dataLabel={t('Export images')}>{`${exportImagesCount}`}</Td>
+      <Td dataLabel={t('Export images')}>{`${imageBuild.exportsCount || 0}`}</Td>
       <Td dataLabel={t('Date')}>{getDateDisplay(imageBuild.metadata.creationTimestamp)}</Td>
       <Td isActionCell>
         <ActionsColumn items={actions} />

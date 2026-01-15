@@ -17,9 +17,11 @@ import {
   ResourceSync,
 } from '@flightctl/types';
 import {
+  ImageBuild,
   ImageBuildCondition,
   ImageBuildConditionType,
   ResourceKind as ImageBuilderResourceKind,
+  ImageExport,
   ImageExportCondition,
   ImageExportConditionType,
 } from '@flightctl/types/imagebuilder';
@@ -90,6 +92,12 @@ export type AlertManagerAlert = {
     silencedBy: string[];
   };
   receivers: Array<{ name: string }>;
+};
+
+// ImageBuild with the latest exports for each format
+export type ImageBuildWithExports = Omit<ImageBuild, 'imageexports'> & {
+  imageExports: (ImageExport | undefined)[];
+  exportsCount: number;
 };
 
 // AuthProviders that can be added dynamically to the system can only be OAuth2 or OIDC.

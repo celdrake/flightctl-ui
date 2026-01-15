@@ -17,7 +17,7 @@ export const useEditImageBuild = (): [string | undefined, ImageBuild | undefined
   React.useEffect(() => {
     const fetch = async () => {
       try {
-        const result = await get<ImageBuild>(`imagebuilds/${imageBuildId}`);
+        const result = await get<ImageBuild>(`imagebuilds/${imageBuildId}?withExports=true`);
         setImageBuild(result);
       } catch (err) {
         setError(err);

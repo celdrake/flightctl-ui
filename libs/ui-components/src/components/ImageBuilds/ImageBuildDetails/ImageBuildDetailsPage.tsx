@@ -1,10 +1,8 @@
 import * as React from 'react';
 import { DropdownItem, DropdownList, Tab } from '@patternfly/react-core';
 
-import { ImageBuild } from '@flightctl/types/imagebuilder';
 import { RESOURCE, VERB } from '../../../types/rbac';
 import PageWithPermissions from '../../common/PageWithPermissions';
-import { useFetchPeriodically } from '../../../hooks/useFetchPeriodically';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { ROUTE, useNavigate } from '../../../hooks/useNavigate';
 import { usePermissionsContext } from '../../common/PermissionsContext';
@@ -15,9 +13,9 @@ import DeleteImageBuildModal from '../DeleteImageBuildModal/DeleteImageBuildModa
 import YamlEditor from '../../common/CodeEditor/YamlEditor';
 import ImageBuildDetailsTab from './ImageBuildDetailsTab';
 import ImageBuildExportsTab from './ImageBuildExportsTab';
-import { useImageExports } from '../useImageExports';
 import TabsNav from '../../TabsNav/TabsNav';
 import { OciRegistriesContextProvider } from '../OciRegistriesContext';
+import { useImageBuild } from '../useImageBuilds';
 
 const imageBuildDetailsPermissions = [{ kind: RESOURCE.IMAGE_BUILD, verb: VERB.DELETE }];
 
@@ -29,17 +27,14 @@ const ImageBuildDetailsPageContent = () => {
   } = useAppContext();
 
   const { imageBuildId } = useParams() as { imageBuildId: string };
-  const [imageBuild, isLoading, error, refetch] = useFetchPeriodically<Required<ImageBuild>>({
-    endpoint: `imagebuilds/${imageBuildId}`,
-  });
-  const { imageExports, isLoading: isLoadingExports, refetch: refetchExports } = useImageExports(imageBuildId);
+  const [imageBuild, isLoading, error, refetch] = useImageBuild(imageBuildId);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState<boolean>();
   const { checkPermissions } = usePermissionsContext();
   const [canDelete] = checkPermissions(imageBuildDetailsPermissions);
 
   return (
     <DetailsPage
-      loading={isLoading || isLoadingExports}
+      loading={isLoading}
       error={error}
       id={imageBuildId}
       resourceLink={ROUTE.IMAGE_BUILDS}
@@ -67,17 +62,20 @@ const ImageBuildDetailsPageContent = () => {
         <>
           <Routes>
             <Route index element={<Navigate to="details" replace />} />
+            <Route path="details" element={<ImageBuildDetailsTab imageBuild={imageBuild} />} />
+            <Route path="exports" element={<ImageBuildExportsTab imageBuild={imageBuild} refetch={refetch} />} />
             <Route
-              path="details"
-              element={<ImageBuildDetailsTab imageBuild={imageBuild} imageExports={imageExports} />}
-            />
-            <Route
-              path="exports"
+              path="yaml"
               element={
-                <ImageBuildExportsTab imageExports={imageExports} imageBuild={imageBuild} refetch={refetchExports} />
+                <YamlEditor
+                  apiObj={imageBuild}
+                  refetch={refetch}
+                  disabledEditReason={t(
+                    'Image builds cannot be edited. Use retry to create a new image build based off this one.',
+                  )}
+                />
               }
             />
-            <Route path="yaml" element={<YamlEditor apiObj={imageBuild} refetch={refetch} canEdit={false} />} />
             <Route path="logs" element={<div>TODO Logs</div>} />
           </Routes>
           {isDeleteModalOpen && (

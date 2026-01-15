@@ -59,9 +59,14 @@ export const getInitialValues = (imageBuild?: ImageBuild): ImageBuildFormValues 
   };
 };
 
-const generateBuildName = () => `image-build-${Date.now()}`;
-const generateExportName = (imageBuildName: string, format: ExportFormatType) =>
-  `${imageBuildName}-export-${format}-${Date.now()}`;
+const generateBuildName = () => `imagebuild-${Date.now()}`;
+const generateExportName = (imageBuildName: string, format: ExportFormatType) => {
+  // Adds a random 6-digit hex suffix to the export name
+  const hash = Math.floor(Math.random() * 0x1000000)
+    .toString(16)
+    .padStart(6, '0');
+  return `${imageBuildName}-${format}-${hash}`;
+};
 
 export const getImageBuildResource = (values: ImageBuildFormValues): ImageBuild => {
   const name = generateBuildName();

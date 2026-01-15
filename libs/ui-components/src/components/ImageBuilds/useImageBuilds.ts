@@ -1,7 +1,8 @@
 import * as React from 'react';
 import { useDebounce } from 'use-debounce';
 
-import { ImageBuild, ImageBuildList } from '@flightctl/types/imagebuilder';
+import { ExportFormatType, ImageBuild, ImageBuildList, ImageExport } from '@flightctl/types/imagebuilder';
+import { ImageBuildWithExports } from '../../types/extraTypes';
 import { useAppContext } from '../../hooks/useAppContext';
 import { useFetchPeriodically } from '../../hooks/useFetchPeriodically';
 import { PaginationDetails, useTablePagination } from '../../hooks/useTablePagination';
@@ -14,6 +15,44 @@ export enum ImageBuildsSearchParams {
 type ImageBuildsEndpointArgs = {
   name?: string;
   nextContinue?: string;
+};
+
+// Returns an array with one item per format (VMDK, QCOW2, ISO), where each item is either
+// undefined or the latest ImageExport for that format.
+export const getImageExportsByFormat = (
+  imageExports?: ImageExport[],
+): { imageExports: (ImageExport | undefined)[]; exportsCount: number } => {
+  const formatMap: Partial<Record<ExportFormatType, ImageExport>> = {};
+
+  imageExports?.forEach((ie) => {
+    const format = ie.spec.format;
+    const existing = formatMap[format];
+
+    if (!existing) {
+      formatMap[format] = ie;
+    } else {
+      // Compare creation timestamps to keep the most recent
+      const existingTimestamp = existing.metadata.creationTimestamp || '';
+      const currentTimestamp = ie.metadata.creationTimestamp;
+
+      if (existingTimestamp && currentTimestamp) {
+        const existingTime = new Date(existingTimestamp).getTime();
+        const currentTime = new Date(currentTimestamp).getTime();
+        if (currentTime > existingTime) {
+          formatMap[format] = ie;
+        }
+      }
+    }
+  });
+
+  return {
+    imageExports: [
+      formatMap[ExportFormatType.ExportFormatTypeVMDK],
+      formatMap[ExportFormatType.ExportFormatTypeQCOW2],
+      formatMap[ExportFormatType.ExportFormatTypeISO],
+    ],
+    exportsCount: imageExports?.length || 0,
+  };
 };
 
 export const useImageBuildsBackendFilters = () => {
@@ -47,6 +86,7 @@ export const useImageBuildsBackendFilters = () => {
 const getImageBuildsEndpoint = ({ name, nextContinue }: { name?: string; nextContinue?: string }) => {
   const params = new URLSearchParams({
     limit: `${PAGE_SIZE}`,
+    withExports: 'true',
   });
   if (name) {
     params.set('fieldSelector', `metadata.name contains ${name}`);
@@ -63,14 +103,35 @@ const useImageBuildsEndpoint = (args: ImageBuildsEndpointArgs): [string, boolean
   return [ibEndpointDebounced, endpoint !== ibEndpointDebounced];
 };
 
-export type ImageBuildsLoad = {
-  imageBuilds: ImageBuild[];
+export type ImageBuildsLoadBase = {
   isLoading: boolean;
   error: unknown;
   isUpdating: boolean;
   refetch: VoidFunction;
+};
+
+export type ImageBuildsLoad = ImageBuildsLoadBase & {
+  imageBuilds: ImageBuildWithExports[];
   pagination: PaginationDetails<ImageBuildList>;
 };
+
+export type ImageBuildLoad = ImageBuildsLoadBase & {
+  imageBuild: ImageBuildWithExports;
+};
+
+const toImageBuildWithExports = (imageBuild: ImageBuild): ImageBuildWithExports => {
+  const allExports = imageBuild.imageexports || [];
+  const imageExportsByFormat = getImageExportsByFormat(allExports);
+  const latestExports = [...imageExportsByFormat.imageExports];
+
+  const { imageexports, ...imageBuildWithoutExports } = imageBuild;
+  return {
+    ...imageBuildWithoutExports,
+    imageExports: latestExports,
+    exportsCount: allExports.length,
+  };
+};
+
 export const useImageBuilds = (args: ImageBuildsEndpointArgs): ImageBuildsLoad => {
   const pagination = useTablePagination<ImageBuildList>();
   const [imageBuildsEndpoint, imageBuildsDebouncing] = useImageBuildsEndpoint({
@@ -85,11 +146,21 @@ export const useImageBuilds = (args: ImageBuildsEndpointArgs): ImageBuildsLoad =
   );
 
   return {
-    imageBuilds: imageBuildsList?.items || [],
+    imageBuilds: (imageBuildsList?.items || []).map(toImageBuildWithExports),
     isLoading,
     error,
     isUpdating: updating || imageBuildsDebouncing,
     refetch,
     pagination,
   };
+};
+
+export const useImageBuild = (
+  imageBuildId: string,
+): [ImageBuildWithExports | undefined, boolean, unknown, VoidFunction] => {
+  const [imageBuild, isLoading, error, refetch] = useFetchPeriodically<ImageBuild>({
+    endpoint: `imagebuilds/${imageBuildId}?withExports=true`,
+  });
+
+  return [imageBuild ? toImageBuildWithExports(imageBuild) : undefined, isLoading, error, refetch];
 };
