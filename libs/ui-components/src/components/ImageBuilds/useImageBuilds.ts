@@ -124,6 +124,8 @@ const toImageBuildWithExports = (imageBuild: ImageBuild): ImageBuildWithExports 
   const imageExportsByFormat = getImageExportsByFormat(allExports);
   const latestExports = [...imageExportsByFormat.imageExports];
 
+  // Disable the rule as we want to omit the "imageexports" field
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { imageexports, ...imageBuildWithoutExports } = imageBuild;
   return {
     ...imageBuildWithoutExports,

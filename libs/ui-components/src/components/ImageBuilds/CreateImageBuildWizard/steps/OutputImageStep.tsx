@@ -62,7 +62,7 @@ const OutputImageStep = () => {
 
   return (
     <FlightCtlForm>
-      <Grid lg={5} span={8}>
+      <Grid lg={6} span={8}>
         <FormSection>
           <Alert isInline variant="info" title={t('Management-ready by default')}>
             {t(
@@ -99,7 +99,7 @@ const OutputImageStep = () => {
             <Content component="p">
               {t('These are optional, additional tasks. Each selection creates a separate image export task.')}
             </Content>
-            <ImageExportCardsGallery>
+            <ImageExportCardsGallery inWizard>
               <SelectImageBuildExportCard
                 format={ExportFormatType.ExportFormatTypeVMDK}
                 isChecked={values.exportFormats.includes(ExportFormatType.ExportFormatTypeVMDK)}

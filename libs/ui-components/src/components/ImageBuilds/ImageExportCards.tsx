@@ -3,14 +3,14 @@ import {
   Button,
   Card,
   CardBody,
+  CardFooter,
   CardHeader,
-  CardTitle,
+  Content,
+  ContentVariants,
   Flex,
   FlexItem,
   Gallery,
   Icon,
-  Stack,
-  StackItem,
 } from '@patternfly/react-core';
 import { VirtualMachineIcon } from '@patternfly/react-icons/dist/js/icons/virtual-machine-icon';
 import { CloudSecurityIcon } from '@patternfly/react-icons/dist/js/icons/cloud-security-icon';
@@ -49,18 +49,12 @@ type SelectImageBuildExportCardProps = {
 export const SelectImageBuildExportCard = ({ format, isChecked, onToggle }: SelectImageBuildExportCardProps) => {
   const { t } = useTranslation();
 
-  const texts = React.useMemo(
-    () => ({
-      title: getExportFormatLabel(format),
-      description: getExportFormatDescription(t, format),
-    }),
-    [t, format],
-  );
+  const title = getExportFormatLabel(format);
+  const description = getExportFormatDescription(t, format);
 
   const id = `export-format-${format}`;
-  // CELIA-WIP: Review for PF6
   return (
-    <Card id={id} isSelectable isSelected={isChecked}>
+    <Card id={id} isSelectable isSelected={isChecked} className="fctl-imageexport-card">
       <CardHeader
         selectableActions={{
           selectableActionId: format,
@@ -69,16 +63,18 @@ export const SelectImageBuildExportCard = ({ format, isChecked, onToggle }: Sele
           onChange: () => onToggle(format, !isChecked),
         }}
       >
-        <CardTitle>
-          <Icon size="lg">{iconMap[format]}</Icon>
-        </CardTitle>
+        <Flex direction={{ default: 'column' }} alignItems={{ default: 'alignItemsFlexStart' }}>
+          <FlexItem>
+            <Icon size="xl">{iconMap[format]}</Icon>
+          </FlexItem>
+          <FlexItem>
+            <Content>
+              <Content component={ContentVariants.h2}>{title}</Content>
+            </Content>
+          </FlexItem>
+        </Flex>
       </CardHeader>
-      <CardBody>
-        <Stack hasGutter>
-          <StackItem>{texts.title}</StackItem>
-          <StackItem style={{ color: 'red' }}>{texts.description}</StackItem>
-        </Stack>
-      </CardBody>
+      <CardBody>{description}</CardBody>
     </Card>
   );
 };
@@ -100,72 +96,74 @@ export const ViewImageBuildExportCard = ({
     return ref || '';
   }, [imageExport, repositories]);
 
+  const title = getExportFormatLabel(format);
+  const description = getExportFormatDescription(t, format);
+
   return (
-    <Card isLarge>
-      <CardHeader style={{ '--pf-v6-c-card__title-text--FontWeight': 'normal' } as React.CSSProperties}>
-        <CardTitle>
-          <Stack hasGutter>
-            <StackItem>
-              <Flex justifyContent={{ default: 'justifyContentSpaceBetween' }}>
-                <FlexItem>
-                  <Icon size="xl">{iconMap[format]}</Icon>
-                </FlexItem>
-                <FlexItem>
-                  {exists && (
-                    <ImageBuildAndExportStatus imageStatus={imageExport?.status} imageReference={imageReference} />
-                  )}
-                </FlexItem>
-              </Flex>
-            </StackItem>
-            <StackItem>{getExportFormatLabel(format)}</StackItem>
-          </Stack>
-        </CardTitle>
-      </CardHeader>
-      <CardBody>
-        <Stack hasGutter>
-          <StackItem style={{ color: 'red' }}>{getExportFormatDescription(t, format)}</StackItem>
-          <StackItem>
-            <Flex>
-              {failedExport && (
-                <FlexItem>
-                  <Button
-                    variant="primary"
-                    onClick={() => onRetry(format)}
-                    isDisabled={isCreating}
-                    isLoading={isCreating}
-                  >
-                    {t('Retry')}
-                  </Button>
-                </FlexItem>
-              )}
+    <Card isLarge className="fctl-imageexport-card">
+      <CardHeader>
+        <Flex direction={{ default: 'column' }} alignItems={{ default: 'alignItemsFlexStart' }}>
+          <FlexItem style={{ width: '100%' }}>
+            <Flex
+              justifyContent={{ default: 'justifyContentSpaceBetween' }}
+              alignItems={{ default: 'alignItemsCenter' }}
+            >
+              <FlexItem>
+                <Icon size="xl">{iconMap[format]}</Icon>
+              </FlexItem>
               {exists && (
-                <FlexItem>
-                  <Button variant="secondary">{t('View logs')}</Button>
-                </FlexItem>
-              )}
-              {!exists && (
-                <FlexItem>
-                  <Button
-                    variant="secondary"
-                    onClick={() => onExportImage(format)}
-                    isDisabled={isCreating}
-                    isLoading={isCreating}
-                  >
-                    {t('Export image')}
-                  </Button>
+                <FlexItem className="fctl-imageexport-card__status">
+                  <ImageBuildAndExportStatus imageStatus={imageExport?.status} imageReference={imageReference} />
                 </FlexItem>
               )}
             </Flex>
-          </StackItem>
-        </Stack>
-      </CardBody>
+          </FlexItem>
+          <FlexItem>
+            <Content>
+              <Content component={ContentVariants.h2}>{title}</Content>
+            </Content>
+          </FlexItem>
+        </Flex>
+      </CardHeader>
+      <CardBody>{description}</CardBody>
+      <CardFooter>
+        <Flex>
+          {failedExport && (
+            <FlexItem>
+              <Button variant="primary" onClick={() => onRetry(format)} isDisabled={isCreating} isLoading={isCreating}>
+                {t('Retry')}
+              </Button>
+            </FlexItem>
+          )}
+          {exists && (
+            <FlexItem>
+              <Button variant="secondary">{t('View logs')}</Button>
+            </FlexItem>
+          )}
+          {!exists && (
+            <FlexItem>
+              <Button
+                variant="secondary"
+                onClick={() => onExportImage(format)}
+                isDisabled={isCreating}
+                isLoading={isCreating}
+              >
+                {t('Export image')}
+              </Button>
+            </FlexItem>
+          )}
+        </Flex>
+      </CardFooter>
     </Card>
   );
 };
 
-export const ImageExportCardsGallery = ({ children }: React.PropsWithChildren) => {
+export const ImageExportCardsGallery = ({
+  inWizard = false,
+  children,
+}: React.PropsWithChildren<{ inWizard?: boolean }>) => {
   return (
-    <Gallery hasGutter minWidths={{ default: '320px' }}>
+    <Gallery hasGutter minWidths={{ default: inWizard ? undefined : '320px' }}>
       {children}
     </Gallery>
   );
