@@ -54,13 +54,13 @@ const ImageBuildExportsTab = ({ imageBuild, refetch }: ImageBuildExportsTabProps
   return (
     <ImageExportCardsGallery>
       {allFormats.map((format) => {
-        const formatIndex = imageBuild.imageExports.findIndex((imageExport) => imageExport?.spec.format === format);
+        const imageExport = imageBuild.imageExports.find((imageExport) => imageExport?.spec.format === format);
         return (
           <ViewImageBuildExportCard
             key={format}
             repositories={ociRegistries}
             format={format}
-            imageExport={imageBuild.imageExports[formatIndex]}
+            imageExport={imageExport}
             isCreating={isCreating[format]}
             onExportImage={handleExportImage}
             onRetry={handleRetry}

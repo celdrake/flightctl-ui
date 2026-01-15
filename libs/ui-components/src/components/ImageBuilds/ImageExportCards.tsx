@@ -109,7 +109,9 @@ export const ViewImageBuildExportCard = ({
                   <Icon size="xl">{iconMap[format]}</Icon>
                 </FlexItem>
                 <FlexItem>
-                  <ImageBuildAndExportStatus imageStatus={imageExport?.status} imageReference={imageReference} />
+                  {exists && (
+                    <ImageBuildAndExportStatus imageStatus={imageExport?.status} imageReference={imageReference} />
+                  )}
                 </FlexItem>
               </Flex>
             </StackItem>
@@ -134,9 +136,11 @@ export const ViewImageBuildExportCard = ({
                   </Button>
                 </FlexItem>
               )}
-              <FlexItem>
-                <Button variant="secondary">{t('View logs')}</Button>
-              </FlexItem>
+              {exists && (
+                <FlexItem>
+                  <Button variant="secondary">{t('View logs')}</Button>
+                </FlexItem>
+              )}
               {!exists && (
                 <FlexItem>
                   <Button

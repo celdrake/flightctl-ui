@@ -10,12 +10,12 @@ import { useAppContext } from '../../../hooks/useAppContext';
 import DetailsPage from '../../DetailsPage/DetailsPage';
 import DetailsPageActions from '../../DetailsPage/DetailsPageActions';
 import DeleteImageBuildModal from '../DeleteImageBuildModal/DeleteImageBuildModal';
-import YamlEditor from '../../common/CodeEditor/YamlEditor';
-import ImageBuildDetailsTab from './ImageBuildDetailsTab';
-import ImageBuildExportsTab from './ImageBuildExportsTab';
+import { useImageBuild } from '../useImageBuilds';
 import TabsNav from '../../TabsNav/TabsNav';
 import { OciRegistriesContextProvider } from '../OciRegistriesContext';
-import { useImageBuild } from '../useImageBuilds';
+import ImageBuildYaml from './ImageBuildYaml';
+import ImageBuildDetailsTab from './ImageBuildDetailsTab';
+import ImageBuildExportsTab from './ImageBuildExportsTab';
 
 const imageBuildDetailsPermissions = [{ kind: RESOURCE.IMAGE_BUILD, verb: VERB.DELETE }];
 
@@ -64,18 +64,7 @@ const ImageBuildDetailsPageContent = () => {
             <Route index element={<Navigate to="details" replace />} />
             <Route path="details" element={<ImageBuildDetailsTab imageBuild={imageBuild} />} />
             <Route path="exports" element={<ImageBuildExportsTab imageBuild={imageBuild} refetch={refetch} />} />
-            <Route
-              path="yaml"
-              element={
-                <YamlEditor
-                  apiObj={imageBuild}
-                  refetch={refetch}
-                  disabledEditReason={t(
-                    'Image builds cannot be edited. Use retry to create a new image build based off this one.',
-                  )}
-                />
-              }
-            />
+            <Route path="yaml" element={<ImageBuildYaml imageBuild={imageBuild} refetch={refetch} />} />
             <Route path="logs" element={<div>TODO Logs</div>} />
           </Routes>
           {isDeleteModalOpen && (
