@@ -38,7 +38,7 @@ const ImageBuildStatus = ({ buildStatus }: { buildStatus?: ImageBuildStatus }) =
         <Stack hasGutter>
           <StackItem>{t('Image built successfully')}</StackItem>
           <StackItem>
-            <LearnMoreLink link={getImageUrl(buildStatus.imageReference)} text={t('Check output image')} />
+            <LearnMoreLink link={getImageUrl(buildStatus.imageReference)} text={t('Output image')} />
           </StackItem>
         </Stack>
       );

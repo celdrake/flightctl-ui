@@ -73,7 +73,11 @@ export const getRepositoryItems = (
         validRepoItems[repoName] = {
           label: repoName,
           description: (
-            <Flex justifyContent={{ default: 'justifyContentSpaceBetween' }}>
+            <Flex
+              justifyContent={{ default: 'justifyContentSpaceBetween' }}
+              alignItems={{ default: 'alignItemsCenter' }}
+              style={{ paddingInline: '1rem' }}
+            >
               <FlexItem>{urlOrRegistry}</FlexItem>
               <FlexItem>
                 <StatusDisplayContent label={accessText} level={level} />

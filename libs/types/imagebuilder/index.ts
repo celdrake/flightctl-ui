@@ -28,8 +28,6 @@ export type { ImageExportSource } from './models/ImageExportSource';
 export { ImageExportSourceType } from './models/ImageExportSourceType';
 export type { ImageExportSpec } from './models/ImageExportSpec';
 export type { ImageExportStatus } from './models/ImageExportStatus';
-export type { ImagePipelineRequest } from './models/ImagePipelineRequest';
-export type { ImagePipelineResponse } from './models/ImagePipelineResponse';
 export type { ImageReferenceSource } from './models/ImageReferenceSource';
 export type { LateBinding } from './models/LateBinding';
 export { ResourceKind } from './models/ResourceKind';

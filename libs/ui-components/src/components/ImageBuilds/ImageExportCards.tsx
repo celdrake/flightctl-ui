@@ -20,6 +20,7 @@ import { getExportFormatDescription, getExportFormatLabel } from '../../utils/im
 import { useTranslation } from '../../hooks/useTranslation';
 import { ExportFormatType, ImageExport } from '@flightctl/types/imagebuilder';
 import { isImageExportFailed } from './CreateImageBuildWizard/utils';
+import { StatusDisplayContent } from '../Status/StatusDisplay';
 
 const iconMap: Record<string, React.ReactElement> = {
   vmdk: <VirtualMachineIcon />,

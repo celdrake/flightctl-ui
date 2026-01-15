@@ -5,6 +5,7 @@
 import type { ObjectMeta } from '../../models/ObjectMeta';
 import type { ImageBuildSpec } from './ImageBuildSpec';
 import type { ImageBuildStatus } from './ImageBuildStatus';
+import type { ImageExport } from './ImageExport';
 /**
  * ImageBuild represents a build request for a container image.
  */
@@ -20,5 +21,9 @@ export type ImageBuild = {
   metadata: ObjectMeta;
   spec: ImageBuildSpec;
   status?: ImageBuildStatus;
+  /**
+   * Array of ImageExport resources that reference this ImageBuild. Only populated when withExports query parameter is true.
+   */
+  imageexports?: Array<ImageExport>;
 };
 
