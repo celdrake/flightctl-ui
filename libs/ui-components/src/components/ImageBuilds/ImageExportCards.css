@@ -1,0 +1,14 @@
+/* 
+The UX design for this ImageExportCards is using a lot of customization.
+In the UI, we use Patternfly Card components and need to override some defaults in the CardTitle
+
+*/
+
+.fctl-imageexport-card .pf-v6-c-card__title-text {
+  --pf-v6-c-card__title-text--FontWeight: normal;
+}
+
+.fctl-imageexport-card .fctl-imageexport-card__status {
+  /* Overriding --pf-v6-c-card__title-text--FontSize does not work, so we use font-size directly */
+  font-size: 1rem;
+}

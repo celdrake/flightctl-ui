@@ -23,6 +23,8 @@ import { useTranslation } from '../../hooks/useTranslation';
 import { isImageExportFailed } from './CreateImageBuildWizard/utils';
 import ImageBuildAndExportStatus from './ImageBuildAndExportStatus';
 
+import './ImageExportCards.css';
+
 const iconMap: Record<string, React.ReactElement> = {
   vmdk: <VirtualMachineIcon />,
   qcow2: <CloudSecurityIcon />,
