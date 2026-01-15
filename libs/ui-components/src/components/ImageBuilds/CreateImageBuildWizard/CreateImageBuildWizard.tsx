@@ -13,11 +13,9 @@ import {
 } from '@patternfly/react-core';
 import { Formik, FormikErrors } from 'formik';
 
-import { RepoSpecType, RepositoryList } from '@flightctl/types';
 import { ExportFormatType, ImageBuild } from '@flightctl/types/imagebuilder';
 import { RESOURCE, VERB } from '../../../types/rbac';
 import { useTranslation } from '../../../hooks/useTranslation';
-import { useFetchPeriodically } from '../../../hooks/useFetchPeriodically';
 import { Link, ROUTE, useNavigate } from '../../../hooks/useNavigate';
 
 import ReviewStep, { reviewStepId } from './steps/ReviewStep';
@@ -35,6 +33,7 @@ import RegistrationStep, { isRegistrationStepValid, registrationStepId } from '.
 import CreateImageBuildWizardFooter from './CreateImageBuildWizardFooter';
 import { useFetch } from '../../../hooks/useFetch';
 import { useEditImageBuild } from './useEditImageBuild';
+import { OciRegistriesContextProvider, useOciRegistriesContext } from '../OciRegistriesContext';
 
 const orderedIds = [sourceImageStepId, outputImageStepId, registrationStepId, reviewStepId];
 
@@ -75,12 +74,9 @@ const CreateImageBuildWizard = () => {
   const [error, setError] = React.useState<ImageBuildWizardError>();
   const [currentStep, setCurrentStep] = React.useState<WizardStepType>();
   const [imageBuildId, imageBuild, imageBuildLoading, editError] = useEditImageBuild();
-  const [repoList, isLoading, repoError, refetchRepositories] = useFetchPeriodically<RepositoryList>({
-    endpoint: 'repositories',
-  });
+  const { isLoading: registriesLoading, error: registriesError } = useOciRegistriesContext();
 
   const isEdit = !!imageBuildId;
-  const ociRegistries = (repoList?.items || []).filter((repo) => repo.spec.type === RepoSpecType.OCI);
 
   return (
     <>
@@ -104,13 +100,13 @@ const CreateImageBuildWizard = () => {
       </PageSection>
       <PageSection hasBodyWrapper={false} type="wizard">
         <ErrorBoundary>
-          {isLoading || imageBuildLoading ? (
+          {registriesLoading || imageBuildLoading ? (
             <Bullseye>
               <Spinner />
             </Bullseye>
-          ) : repoError || editError ? (
+          ) : registriesError || editError ? (
             <Alert isInline variant="danger" title={t('An error occurred')}>
-              {getErrorMessage(repoError || editError)}
+              {getErrorMessage(registriesError || editError)}
             </Alert>
           ) : (
             <Formik<ImageBuildFormValues>
@@ -184,18 +180,14 @@ const CreateImageBuildWizard = () => {
                       }}
                     >
                       <WizardStep name={t('Image details')} id={sourceImageStepId}>
-                        {(!currentStep || currentStep?.id === sourceImageStepId) && (
-                          <SourceImageStep registries={ociRegistries} repoRefetch={refetchRepositories} />
-                        )}
+                        {(!currentStep || currentStep?.id === sourceImageStepId) && <SourceImageStep />}
                       </WizardStep>
                       <WizardStep
                         name={t('Image output')}
                         id={outputImageStepId}
                         isDisabled={isDisabledStep(outputImageStepId, validStepIds)}
                       >
-                        {currentStep?.id === outputImageStepId && (
-                          <ImageOutputStep registries={ociRegistries} repoRefetch={refetchRepositories} />
-                        )}
+                        {currentStep?.id === outputImageStepId && <ImageOutputStep />}
                       </WizardStep>
                       <WizardStep
                         name={t('Registration')}
@@ -209,7 +201,7 @@ const CreateImageBuildWizard = () => {
                         id={reviewStepId}
                         isDisabled={isDisabledStep(reviewStepId, validStepIds)}
                       >
-                        {currentStep?.id === reviewStepId && <ReviewStep error={error} repositories={ociRegistries} />}
+                        {currentStep?.id === reviewStepId && <ReviewStep error={error} />}
                       </WizardStep>
                     </Wizard>
                   </>
@@ -230,7 +222,9 @@ const CreateImageBuildWizardWithPermissions = () => {
   const [createAllowed] = checkPermissions(createImageBuildWizardPermissions);
   return (
     <PageWithPermissions allowed={createAllowed} loading={loading}>
-      <CreateImageBuildWizard />
+      <OciRegistriesContextProvider>
+        <CreateImageBuildWizard />
+      </OciRegistriesContextProvider>
     </PageWithPermissions>
   );
 };

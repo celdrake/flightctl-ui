@@ -2,7 +2,7 @@ import * as React from 'react';
 import { FormGroup, FormSection, Grid } from '@patternfly/react-core';
 import { FormikErrors, useFormikContext } from 'formik';
 
-import { RepoSpecType, Repository } from '@flightctl/types';
+import { RepoSpecType } from '@flightctl/types';
 import { ImageBuildFormValues } from '../types';
 import { useTranslation } from '../../../../hooks/useTranslation';
 import FlightCtlForm from '../../../form/FlightCtlForm';
@@ -12,6 +12,7 @@ import { usePermissionsContext } from '../../../common/PermissionsContext';
 import { RESOURCE, VERB } from '../../../../types/rbac';
 import { getImageReference } from '../../../../utils/imageBuilds';
 import ImageUrlCard from '../../ImageUrlCard';
+import { useOciRegistriesContext } from '../../OciRegistriesContext';
 
 export const sourceImageStepId = 'source-image';
 
@@ -23,20 +24,16 @@ export const isSourceImageStepValid = (errors: FormikErrors<ImageBuildFormValues
   return !source.repository && !source.imageName && !source.imageTag;
 };
 
-type SourceImageStepProps = {
-  registries: Repository[];
-  repoRefetch: VoidFunction;
-};
-
-const SourceImageStep = ({ registries, repoRefetch }: SourceImageStepProps) => {
+const SourceImageStep = () => {
   const { t } = useTranslation();
   const { values } = useFormikContext<ImageBuildFormValues>();
   const { checkPermissions } = usePermissionsContext();
   const [canCreateRepo] = checkPermissions([{ kind: RESOURCE.REPOSITORY, verb: VERB.CREATE }]);
+  const { ociRegistries, refetch } = useOciRegistriesContext();
 
   const imageReference = React.useMemo(() => {
-    return getImageReference(values.source, registries);
-  }, [registries, values.source]);
+    return getImageReference(values.source, ociRegistries);
+  }, [ociRegistries, values.source]);
 
   return (
     <FlightCtlForm>
@@ -44,10 +41,10 @@ const SourceImageStep = ({ registries, repoRefetch }: SourceImageStepProps) => {
         <FormSection>
           <RepositorySelect
             name="source.repository"
-            repositories={registries}
+            repositories={ociRegistries}
             repoType={RepoSpecType.OCI}
             canCreateRepo={canCreateRepo}
-            repoRefetch={repoRefetch}
+            repoRefetch={refetch}
             isRequired
           />
           <FormGroup label={t('Image name')} fieldId="image-name" isRequired>

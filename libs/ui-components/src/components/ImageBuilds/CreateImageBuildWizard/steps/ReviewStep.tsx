@@ -13,7 +13,6 @@ import {
 } from '@patternfly/react-core';
 import { useFormikContext } from 'formik';
 
-import { Repository } from '@flightctl/types';
 import { BindingType } from '@flightctl/types/imagebuilder';
 import { useTranslation } from '../../../../hooks/useTranslation';
 import { getErrorMessage } from '../../../../utils/error';
@@ -22,26 +21,27 @@ import { ImageBuildFormValues, ImageBuildWizardError } from '../types';
 import { getImageReference } from '../../../../utils/imageBuilds';
 import { getExportFormatLabel } from '../../../../utils/imageBuilds';
 import { CERTIFICATE_VALIDITY_IN_DAYS } from '../../../../constants';
+import { useOciRegistriesContext } from '../../OciRegistriesContext';
 
 export const reviewStepId = 'review';
 
 type ReviewStepProps = {
   error?: ImageBuildWizardError;
-  repositories: Repository[];
 };
 
-const ReviewStep = ({ error, repositories }: ReviewStepProps) => {
+const ReviewStep = ({ error }: ReviewStepProps) => {
   const { t } = useTranslation();
   const { values } = useFormikContext<ImageBuildFormValues>();
+  const { ociRegistries } = useOciRegistriesContext();
 
   const srcImageReference = React.useMemo(
-    () => getImageReference(values.source, repositories),
-    [repositories, values.source],
+    () => getImageReference(values.source, ociRegistries),
+    [ociRegistries, values.source],
   );
 
   const dstImageReference = React.useMemo(
-    () => getImageReference(values.destination, repositories),
-    [repositories, values.destination],
+    () => getImageReference(values.destination, ociRegistries),
+    [ociRegistries, values.destination],
   );
 
   const isEarlyBinding = values.bindingType === BindingType.BindingTypeEarly;

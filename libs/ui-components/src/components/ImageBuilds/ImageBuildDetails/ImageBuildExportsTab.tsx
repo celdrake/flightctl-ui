@@ -1,17 +1,16 @@
 import * as React from 'react';
 
-import { Repository } from '@flightctl/types';
 import { ExportFormatType, ImageBuild, ImageExport } from '@flightctl/types/imagebuilder';
 import { useFetch } from '../../../hooks/useFetch';
 import { getErrorMessage } from '../../../utils/error';
 import { getImageExportResource } from '../CreateImageBuildWizard/utils';
 import { ImageExportCardsGallery, ViewImageBuildExportCard } from '../ImageExportCards';
+import { useOciRegistriesContext } from '../OciRegistriesContext';
 
 type ImageBuildExportsTabProps = {
   imageBuild: ImageBuild;
   imageExports: Record<ExportFormatType, ImageExport>;
   refetch: VoidFunction;
-  registries: Repository[];
 };
 
 const allFormats = [
@@ -20,9 +19,10 @@ const allFormats = [
   ExportFormatType.ExportFormatTypeISO,
 ];
 
-const ImageBuildExportsTab = ({ imageExports, imageBuild, registries, refetch }: ImageBuildExportsTabProps) => {
+const ImageBuildExportsTab = ({ imageExports, imageBuild, refetch }: ImageBuildExportsTabProps) => {
   const { post } = useFetch();
   const [, setError] = React.useState<string | null>(null);
+  const { ociRegistries } = useOciRegistriesContext();
   const [isCreating, setIsCreating] = React.useState<Record<ExportFormatType, boolean>>({
     [ExportFormatType.ExportFormatTypeVMDK]: false,
     [ExportFormatType.ExportFormatTypeQCOW2]: false,
@@ -56,7 +56,7 @@ const ImageBuildExportsTab = ({ imageExports, imageBuild, registries, refetch }:
         return (
           <ViewImageBuildExportCard
             key={format}
-            repositories={registries}
+            repositories={ociRegistries}
             format={format}
             imageExport={imageExports[format]}
             isCreating={isCreating[format]}

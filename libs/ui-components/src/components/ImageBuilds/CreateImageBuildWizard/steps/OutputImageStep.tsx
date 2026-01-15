@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Alert, Content, FormGroup, FormSection, Gallery, Grid } from '@patternfly/react-core';
+import { Alert, Content, FormGroup, FormSection, Grid } from '@patternfly/react-core';
 import { FormikErrors, useFormikContext } from 'formik';
 
 import { OciRepoSpec, RepoSpecType, Repository } from '@flightctl/types';
@@ -15,6 +15,7 @@ import { ImageExportCardsGallery, SelectImageBuildExportCard } from '../../Image
 import { getImageReference } from '../../../../utils/imageBuilds';
 import { isOciRepoSpec } from '../../../Repository/CreateRepository/utils';
 import ImageUrlCard from '../../ImageUrlCard';
+import { useOciRegistriesContext } from '../../OciRegistriesContext';
 
 export const outputImageStepId = 'output-image';
 
@@ -26,15 +27,11 @@ export const isOutputImageStepValid = (errors: FormikErrors<ImageBuildFormValues
   return !destination.repository && !destination.imageName && !destination.tag;
 };
 
-type OutputImageStepProps = {
-  registries: Repository[];
-  repoRefetch: VoidFunction;
-};
-
-const OutputImageStep = ({ registries, repoRefetch }: OutputImageStepProps) => {
+const OutputImageStep = () => {
   const { t } = useTranslation();
   const { values, setFieldValue } = useFormikContext<ImageBuildFormValues>();
   const { checkPermissions } = usePermissionsContext();
+  const { ociRegistries, refetch } = useOciRegistriesContext();
   const [canCreateRepo] = checkPermissions([{ kind: RESOURCE.REPOSITORY, verb: VERB.CREATE }]);
 
   const isWritableRegistry = React.useCallback(
@@ -60,8 +57,8 @@ const OutputImageStep = ({ registries, repoRefetch }: OutputImageStepProps) => {
   };
 
   const imageReference = React.useMemo(() => {
-    return getImageReference(values.destination, registries);
-  }, [registries, values.destination]);
+    return getImageReference(values.destination, ociRegistries);
+  }, [ociRegistries, values.destination]);
 
   return (
     <FlightCtlForm>
@@ -74,10 +71,10 @@ const OutputImageStep = ({ registries, repoRefetch }: OutputImageStepProps) => {
           </Alert>
           <RepositorySelect
             name="destination.repository"
-            repositories={registries}
+            repositories={ociRegistries}
             repoType={RepoSpecType.OCI}
             canCreateRepo={canCreateRepo}
-            repoRefetch={repoRefetch}
+            repoRefetch={refetch}
             label={t('Target registry')}
             isRequired
             validateRepoSelection={isWritableRegistry}

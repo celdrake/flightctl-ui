@@ -6,7 +6,6 @@ import {
   ImageBuildConditionType,
   ImageBuildDestination,
   ImageBuildSource,
-  ImageExport,
 } from '@flightctl/types/imagebuilder';
 import { Repository } from '@flightctl/types';
 import { isOciRepoSpec } from '../components/Repository/CreateRepository/utils';

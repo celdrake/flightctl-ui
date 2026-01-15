@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { DropdownItem, DropdownList, Tab } from '@patternfly/react-core';
 
-import { Repository } from '@flightctl/types';
 import { ImageBuild } from '@flightctl/types/imagebuilder';
 import { RESOURCE, VERB } from '../../../types/rbac';
 import PageWithPermissions from '../../common/PageWithPermissions';
@@ -18,10 +17,11 @@ import ImageBuildDetailsTab from './ImageBuildDetailsTab';
 import ImageBuildExportsTab from './ImageBuildExportsTab';
 import { useImageExports } from '../useImageExports';
 import TabsNav from '../../TabsNav/TabsNav';
+import { OciRegistriesContextProvider } from '../OciRegistriesContext';
 
 const imageBuildDetailsPermissions = [{ kind: RESOURCE.IMAGE_BUILD, verb: VERB.DELETE }];
 
-const ImageBuildDetailsPage = () => {
+const ImageBuildDetailsPageContent = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const {
@@ -36,8 +36,6 @@ const ImageBuildDetailsPage = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState<boolean>();
   const { checkPermissions } = usePermissionsContext();
   const [canDelete] = checkPermissions(imageBuildDetailsPermissions);
-
-  const registries = [] as Repository[];
 
   return (
     <DetailsPage
@@ -76,12 +74,7 @@ const ImageBuildDetailsPage = () => {
             <Route
               path="exports"
               element={
-                <ImageBuildExportsTab
-                  imageExports={imageExports}
-                  imageBuild={imageBuild}
-                  registries={registries}
-                  refetch={refetchExports}
-                />
+                <ImageBuildExportsTab imageExports={imageExports} imageBuild={imageBuild} refetch={refetchExports} />
               }
             />
             <Route path="yaml" element={<YamlEditor apiObj={imageBuild} refetch={refetch} canEdit={false} />} />
@@ -102,6 +95,14 @@ const ImageBuildDetailsPage = () => {
         </>
       )}
     </DetailsPage>
+  );
+};
+
+const ImageBuildDetailsPage = () => {
+  return (
+    <OciRegistriesContextProvider>
+      <ImageBuildDetailsPageContent />
+    </OciRegistriesContextProvider>
   );
 };
 
