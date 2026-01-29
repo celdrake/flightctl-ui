@@ -6,6 +6,7 @@ import {
   FormGroup,
   FormSection,
   Grid,
+  GridItem,
   Radio,
   Split,
   SplitItem,
@@ -17,16 +18,7 @@ import { MinusCircleIcon } from '@patternfly/react-icons/dist/js/icons/minus-cir
 import { PlusCircleIcon } from '@patternfly/react-icons/dist/js/icons/plus-circle-icon';
 
 import { AppType } from '@flightctl/types';
-import {
-  AppForm,
-  AppSpecType,
-  DeviceSpecConfigFormValues,
-  VariablesForm,
-  isComposeAppForm,
-  isHelmAppForm,
-  isQuadletApplication,
-  isSingleContainerAppForm,
-} from '../../../../types/deviceSpec';
+import { AppForm, AppSpecType, DeviceSpecConfigFormValues, VariablesForm } from '../../../../types/deviceSpec';
 import { createInitialAppForm } from '../deviceSpecUtils';
 import { useTranslation } from '../../../../hooks/useTranslation';
 import TextField from '../../../form/TextField';
@@ -58,7 +50,7 @@ const ApplicationVariablesForm = ({ appFieldName, variables, isReadOnly, error }
       <FieldArray name={`${appFieldName}.variables`}>
         {({ push, remove }) => (
           <>
-            {variables.map((variable, variableIndex) => {
+            {variables.map((_variable, variableIndex) => {
               const variableFieldName = `${appFieldName}.variables[${variableIndex}]`;
               return (
                 <FormSection key={variableIndex}>
@@ -123,11 +115,10 @@ const ApplicationSection = ({ index, isReadOnly }: { index: number; isReadOnly?:
   const [{ value: app }, { error }, { setValue }] = useField<AppForm>(appFieldName);
   const { appType, specType, name: appName } = app;
 
-  // TODO CELIA: REVIEW "ISXCOMPLETE"
-  const isContainer = isSingleContainerAppForm(app);
-  const isHelm = isHelmAppForm(app);
-  const isQuadlet = isQuadletApplication(app);
-  const isCompose = isComposeAppForm(app);
+  // CELIA-WIP: REVIEW "ISXCOMPLETE"
+  const isContainer = app.appType === AppType.AppTypeContainer;
+  const isHelm = app.appType === AppType.AppTypeHelm;
+  const isQuadlet = app.appType === AppType.AppTypeQuadlet;
   const isImageIncomplete = !isContainer && specType === AppSpecType.OCI_IMAGE && !('image' in app);
   const isInlineIncomplete = !isContainer && specType === AppSpecType.INLINE && !('files' in app);
   const isContainerIncomplete = isContainer && (!('ports' in app) || !('volumes' in app));
@@ -135,6 +126,7 @@ const ApplicationSection = ({ index, isReadOnly }: { index: number; isReadOnly?:
 
   const shouldResetApp = isInlineIncomplete || isImageIncomplete || isContainerIncomplete || isHelmIncomplete;
 
+  // CELIA-WIP: HANDLE THE PART OFR ERRORS
   const errObj = error as unknown;
   const appVarsError =
     errObj && typeof errObj === 'object' && typeof (errObj as { variables?: unknown }).variables === 'string'
@@ -146,10 +138,10 @@ const ApplicationSection = ({ index, isReadOnly }: { index: number; isReadOnly?:
   React.useEffect(() => {
     // When switching types we must ensure all mandatory fields are initialized for the new type
     if (shouldResetApp) {
-      const initialApp = createInitialAppForm(appType, specType, appName || '');
+      const initialApp = createInitialAppForm(appType, appName || '');
       setValue(initialApp, false);
     }
-  }, [shouldResetApp, specType, appType, appName, setValue]);
+  }, [shouldResetApp, appType, appName, setValue]);
 
   return (
     <ExpandableFormSection
@@ -205,7 +197,7 @@ const ApplicationSection = ({ index, isReadOnly }: { index: number; isReadOnly?:
                     isDisabled={isReadOnly}
                     onChange={() => {
                       if (specType !== AppSpecType.OCI_IMAGE) {
-                        setFieldValue(appFieldName, createInitialAppForm(appType, AppSpecType.OCI_IMAGE, app.name));
+                        setFieldValue(`${appFieldName}.specType`, AppSpecType.OCI_IMAGE);
                       }
                     }}
                   />
@@ -219,7 +211,7 @@ const ApplicationSection = ({ index, isReadOnly }: { index: number; isReadOnly?:
                     isDisabled={isReadOnly}
                     onChange={() => {
                       if (specType !== AppSpecType.INLINE) {
-                        setFieldValue(appFieldName, createInitialAppForm(appType, AppSpecType.INLINE, app.name));
+                        setFieldValue(`${appFieldName}.specType`, AppSpecType.INLINE);
                       }
                     }}
                   />
@@ -239,21 +231,21 @@ const ApplicationSection = ({ index, isReadOnly }: { index: number; isReadOnly?:
               <TextField aria-label={t('Application name')} name={`${appFieldName}.name`} isDisabled={isReadOnly} />
             </FormGroupWithHelperText>
 
-            {(isQuadlet || isCompose) && 'image' in app && (
-              <ApplicationImageForm app={app} index={index} isReadOnly={isReadOnly} />
-            )}
-            {(isQuadlet || isCompose) && specType === AppSpecType.INLINE && (
-              <ApplicationInlineForm app={app} index={index} isReadOnly={isReadOnly} />
+            {specType === AppSpecType.OCI_IMAGE && <ApplicationImageForm index={index} isReadOnly={isReadOnly} />}
+            {specType === AppSpecType.INLINE && (
+              <ApplicationInlineForm files={app.files || []} index={index} isReadOnly={isReadOnly} />
             )}
             {isQuadlet && <ApplicationIntegritySettings index={index} isReadOnly={isReadOnly} />}
           </>
         )}
 
+        {/* CELIA-WIP: HANDLE THE PART OFR VOLUMES AND VARIABLES */}
+
         {!isHelm && (
           <>
             <ApplicationVolumeForm
               appFieldName={appFieldName}
-              volumes={app.volumes || []}
+              volumes={[]}
               isReadOnly={isReadOnly}
               isSingleContainerApp={isContainer}
             />
@@ -320,7 +312,7 @@ const ApplicationTemplates = ({ isReadOnly }: { isReadOnly?: boolean }) => {
                       icon={<PlusCircleIcon />}
                       iconPosition="start"
                       onClick={() => {
-                        push(createInitialAppForm(AppType.AppTypeContainer, AppSpecType.OCI_IMAGE));
+                        push(createInitialAppForm(AppType.AppTypeContainer, ''));
                       }}
                     >
                       {t('Add application')}

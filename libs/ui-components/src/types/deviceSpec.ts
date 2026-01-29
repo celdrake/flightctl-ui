@@ -64,16 +64,6 @@ export type RepoConfig = GitConfigProviderSpec | HttpConfigProviderSpec;
 export const isRepoConfig = (config: ConfigSourceProvider): config is RepoConfig =>
   isGitProviderSpec(config) || isHttpProviderSpec(config);
 
-// Type guards for ApplicationProviderSpec (API types used directly in form)
-export const isContainerApplication = (app: ApplicationProviderSpec): app is ContainerApplication =>
-  app.appType === AppType.AppTypeContainer;
-export const isHelmApplication = (app: ApplicationProviderSpec): app is HelmApplication =>
-  app.appType === AppType.AppTypeHelm;
-export const isQuadletApplication = (app: ApplicationProviderSpec): app is QuadletApplication =>
-  app.appType === AppType.AppTypeQuadlet;
-export const isComposeApplication = (app: ApplicationProviderSpec): app is ComposeApplication =>
-  app.appType === AppType.AppTypeCompose;
-
 export const isImageVariantApp = (
   app: ApplicationProviderSpec,
 ): app is ApplicationProviderSpec & ImageApplicationProviderSpec => 'image' in app;
