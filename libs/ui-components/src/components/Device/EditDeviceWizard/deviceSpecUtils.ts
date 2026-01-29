@@ -44,7 +44,6 @@ import {
   SystemdUnitFormValue,
   hasImageSource,
   isComposeApplication,
-  isComposeImageAppForm,
   isContainerApplication,
   isGitConfigTemplate,
   isGitProviderSpec,
@@ -56,8 +55,6 @@ import {
   isKubeProviderSpec,
   isKubeSecretTemplate,
   isQuadletApplication,
-  isQuadletImageAppForm,
-  isQuadletInlineAppForm,
   isSingleContainerAppForm,
 } from '../../../types/deviceSpec';
 
@@ -477,7 +474,7 @@ export const toAPIApplication = (app: AppForm): ApplicationProviderSpec => {
     return data;
   }
 
-  if (isQuadletImageAppForm(app) || isComposeImageAppForm(app)) {
+  if (app.specType === AppSpecType.OCI_IMAGE) {
     const data: ApplicationProviderSpec = {
       image: app.image ?? '',
       appType: app.appType,
@@ -485,19 +482,22 @@ export const toAPIApplication = (app: AppForm): ApplicationProviderSpec => {
       volumes: volumes.length ? volumes : undefined,
     };
     if (app.name) data.name = app.name;
-    if (isQuadletImageAppForm(app) && app.runAs) (data as QuadletApplication).runAs = app.runAs;
+    if (isQuadletApplication(app)) {
+      (data as QuadletApplication).runAs = app.runAs || RUN_AS_DEFAULT_USER;
+    }
     return data;
   }
 
-  const inlineApp = app as QuadletAppForm | ComposeAppForm;
   const inlineData: ApplicationProviderSpec = {
-    name: inlineApp.name,
-    appType: inlineApp.appType,
-    inline: formFilesToInline(inlineApp.files ?? []),
+    name: app.name,
+    appType: app.appType,
+    inline: formFilesToInline(app.files ?? []),
     envVars: Object.keys(envVars).length ? envVars : undefined,
     volumes: volumes.length ? volumes : undefined,
   };
-  if (isQuadletInlineAppForm(app) && inlineApp.runAs) (inlineData as QuadletApplication).runAs = inlineApp.runAs;
+  if (app.specType === AppSpecType.INLINE) {
+    (inlineData as QuadletApplication).runAs = app.runAs || RUN_AS_DEFAULT_USER;
+  }
   return inlineData;
 };
 

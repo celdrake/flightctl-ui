@@ -24,8 +24,7 @@ import {
   VariablesForm,
   isComposeAppForm,
   isHelmImageAppForm,
-  isQuadletImageAppForm,
-  isQuadletInlineAppForm,
+  isQuadletApplication,
   isSingleContainerAppForm,
 } from '../../../../types/deviceSpec';
 import { createInitialAppForm } from '../deviceSpecUtils';
@@ -124,9 +123,10 @@ const ApplicationSection = ({ index, isReadOnly }: { index: number; isReadOnly?:
   const [{ value: app }, { error }, { setValue }] = useField<AppForm>(appFieldName);
   const { appType, specType, name: appName } = app;
 
+  // TODO CELIA: REVIEW "ISXCOMPLETE"
   const isContainer = isSingleContainerAppForm(app);
   const isHelm = isHelmImageAppForm(app);
-  const isQuadlet = isQuadletImageAppForm(app) || isQuadletInlineAppForm(app);
+  const isQuadlet = isQuadletApplication(app);
   const isCompose = isComposeAppForm(app);
   const isImageIncomplete = !isContainer && specType === AppSpecType.OCI_IMAGE && !('image' in app);
   const isInlineIncomplete = !isContainer && specType === AppSpecType.INLINE && !('files' in app);

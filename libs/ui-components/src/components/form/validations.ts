@@ -25,14 +25,11 @@ import {
   SystemdUnitFormValue,
   UpdatePolicyForm,
   getAppIdentifier,
-  isComposeImageAppForm,
   isGitConfigTemplate,
   isHelmImageAppForm,
   isHttpConfigTemplate,
   isInlineConfigTemplate,
   isKubeSecretTemplate,
-  isQuadletImageAppForm,
-  isQuadletInlineAppForm,
   isSingleContainerAppForm,
 } from '../../types/deviceSpec';
 import { labelToString } from '../../utils/labels';
@@ -732,7 +729,7 @@ export const validApplicationsSchema = (t: TFunction) => {
         }
 
         // Image applications (Quadlet or Compose)
-        if (isQuadletImageAppForm(value) || isComposeImageAppForm(value)) {
+        if (value.specType === AppSpecType.OCI_IMAGE) {
           return Yup.object<QuadletAppForm | ComposeAppForm>().shape({
             specType: Yup.string()
               .oneOf([AppSpecType.OCI_IMAGE])
@@ -750,7 +747,7 @@ export const validApplicationsSchema = (t: TFunction) => {
         }
 
         // Inline quadlet applications
-        if (isQuadletInlineAppForm(value)) {
+        if (value.appType === AppType.AppTypeQuadlet && value.specType === AppSpecType.INLINE) {
           return Yup.object<QuadletAppForm>().shape({
             specType: appSpecTypeSchema(t),
             appType: Yup.string().oneOf([AppType.AppTypeQuadlet]).required(t('Application type is required')),
