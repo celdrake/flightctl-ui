@@ -1,6 +1,7 @@
 import {
   AppType,
   ApplicationProviderSpec,
+  ApplicationResourceLimits,
   ComposeApplication,
   ConfigProviderSpec,
   ContainerApplication,
@@ -110,9 +111,10 @@ type InlineOrImageVariantForm = {
   files: InlineFileForm[];
 };
 
-export type SingleContainerAppForm = Omit<ContainerApplication, 'ports' | 'envVars' | 'volumes'> & {
+export type SingleContainerAppForm = Omit<ContainerApplication, 'ports' | 'resources' | 'envVars' | 'volumes'> & {
   specType: AppSpecType.OCI_IMAGE;
   ports: PortMapping[];
+  limits: ApplicationResourceLimits;
   variables: VariablesForm;
   volumes: ApplicationVolumeForm[];
 };

@@ -2,6 +2,7 @@ import yaml from 'js-yaml';
 import {
   AppType,
   ApplicationProviderSpec,
+  ApplicationResourceLimits,
   ApplicationVolume,
   ApplicationVolumeReclaimPolicy,
   ComposeApplication,
@@ -57,6 +58,8 @@ import {
   isKubeSecretTemplate,
   isQuadletApplication,
   isSingleContainerAppForm,
+  isQuadletAppForm,
+  isComposeAppForm,
 } from '../../../types/deviceSpec';
 
 const DEFAULT_INLINE_FILE_MODE = 420; // In Octal: 0644
@@ -406,15 +409,18 @@ const hasApplicationChanged = (current: ApplicationProviderSpec, updated: Applic
 
 // --- AppForm ↔ API conversion ---
 
-const variablesToEnvVars = (variables: { name: string; value: string }[]): Record<string, string> =>
-  variables.reduce(
+const variablesToEnvVars = (variables: { name: string; value: string }[]) => {
+  if (variables.length === 0) {
+    return undefined;
+  }
+  return variables.reduce(
     (acc, v) => {
       if (v.name !== undefined && v.name !== '') acc[v.name] = v.value ?? '';
       return acc;
     },
     {} as Record<string, string>,
   );
-
+};
 const formVolumesToApi = (volumes: ApplicationVolumeForm[]): ApplicationVolume[] =>
   volumes.map((v) => {
     const vol: Partial<ApplicationVolume & ImageMountVolumeProviderSpec> = { name: v.name || '' };
@@ -436,71 +442,92 @@ const formFilesToInline = (files: InlineFileForm[]) =>
   }));
 
 export const toAPIApplication = (app: AppForm): ApplicationProviderSpec => {
-  const variables = 'variables' in app ? app.variables ?? [] : [];
-  const volumesForm = 'volumes' in app ? app.volumes ?? [] : [];
-  const envVars = variablesToEnvVars(variables);
-  const volumes = formVolumesToApi(volumesForm);
-
-  if (isHelmImageAppForm(app)) {
-    const data: HelmApplication = {
+  if (isHelmAppForm(app)) {
+    const helmApp: HelmApplication = {
       name: app.name,
       image: app.image,
       appType: app.appType,
     };
-    if (app.namespace) data.namespace = app.namespace;
+    if (app.namespace) {
+      helmApp.namespace = app.namespace;
+    }
     if (app.valuesYaml) {
       try {
         const values = yaml.load(app.valuesYaml) as Record<string, unknown>;
-        if (values && Object.keys(values).length > 0) data.values = values;
+        if (values && Object.keys(values).length > 0) helmApp.values = values;
       } catch {
         // leave values unset on invalid YAML
       }
     }
-    const fileNames = (app.valuesFiles ?? []).filter((f) => f?.trim() !== '');
-    if (fileNames.length > 0) data.valuesFiles = fileNames;
-    return data;
+    const fileNames = (app.valuesFiles || []).filter((f) => f.trim() !== '');
+    if (fileNames.length > 0) {
+      helmApp.valuesFiles = fileNames;
+    }
+    return helmApp;
   }
+
+  const envVars = variablesToEnvVars(app.variables || []);
+  const volumes = formVolumesToApi(app.volumes || []);
 
   if (isSingleContainerAppForm(app)) {
-    const data: ContainerApplication = {
+    const containerApp: ContainerApplication = {
+      name: app.name, // name is mandatory for ContainerApplication
       image: app.image,
       appType: app.appType,
-      envVars: Object.keys(envVars).length ? envVars : undefined,
-      volumes: volumes.length ? volumes : undefined,
+      envVars,
+      volumes,
       runAs: app.runAs ?? RUN_AS_DEFAULT_USER,
     };
-    if (app.name) data.name = app.name;
-    if (app.ports?.length) data.ports = app.ports.map((p) => `${p.hostPort}:${p.containerPort}`);
-    if (app.resources?.limits && Object.keys(app.resources.limits).length > 0)
-      data.resources = { limits: app.resources.limits };
-    return data;
-  }
-
-  if (app.specType === AppSpecType.OCI_IMAGE) {
-    const data: ApplicationProviderSpec = {
-      image: app.image ?? '',
-      appType: app.appType,
-      envVars: Object.keys(envVars).length ? envVars : undefined,
-      volumes: volumes.length ? volumes : undefined,
-    };
-    if (app.name) data.name = app.name;
-    if (isQuadletApplication(app)) {
-      (data as QuadletApplication).runAs = app.runAs || RUN_AS_DEFAULT_USER;
+    if (app.ports.length > 0) {
+      containerApp.ports = app.ports.map((p) => `${p.hostPort}:${p.containerPort}`);
     }
-    return data;
+
+    const cpu = app.limits.cpu;
+    const memory = app.limits.memory;
+    if (cpu || memory) {
+      const limits: ApplicationResourceLimits = {};
+      if (cpu) {
+        limits.cpu = cpu;
+      }
+      if (memory) {
+        limits.memory = memory;
+      }
+
+      containerApp.resources = { limits };
+    }
+    return containerApp;
   }
 
-  const inlineData: ApplicationProviderSpec = {
-    name: app.name,
-    appType: app.appType,
-    inline: formFilesToInline(app.files ?? []),
-    envVars: Object.keys(envVars).length ? envVars : undefined,
-    volumes: volumes.length ? volumes : undefined,
-  };
-  if (app.specType === AppSpecType.INLINE) {
-    (inlineData as QuadletApplication).runAs = app.runAs || RUN_AS_DEFAULT_USER;
+  if (isQuadletAppForm(app)) {
+    const quadletApp: Partial<QuadletApplication> = {
+      name: app.name,
+      appType: app.appType,
+      envVars,
+      volumes,
+      runAs: app.runAs || RUN_AS_DEFAULT_USER,
+    };
+    if (app.specType === AppSpecType.OCI_IMAGE) {
+      (quadletApp as ImageApplicationProviderSpec).image = app.image;
+    } else {
+      (quadletApp as InlineApplicationProviderSpec).inline = formFilesToInline(app.files);
+    }
+    return quadletApp as QuadletApplication;
   }
-  return inlineData;
+
+  const formApp = app as ComposeAppForm; // Typescript does not resolve the type correctly here
+  const composeApp: Partial<ComposeApplication> = {
+    name: formApp.name,
+    appType: formApp.appType,
+    envVars,
+    volumes,
+  };
+
+  if (formApp.specType === AppSpecType.OCI_IMAGE) {
+    (composeApp as ImageApplicationProviderSpec).image = formApp.image;
+  } else {
+    (composeApp as InlineApplicationProviderSpec).inline = formFilesToInline(formApp.files);
+  }
+  return composeApp as ComposeApplication;
 };
 
 const envVarsToVariables = (envVars: Record<string, string> | undefined): { name: string; value: string }[] =>
