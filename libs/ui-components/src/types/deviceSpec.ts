@@ -123,9 +123,9 @@ export type QuadletAppForm = Omit<QuadletApplication, 'envVars' | 'volumes' | 'i
   variables: VariablesForm;
   volumes: ApplicationVolumeForm[];
   /** Used when specType === OCI_IMAGE; ignored otherwise. */
-  image?: string;
+  image: string;
   /** Used when specType === INLINE; ignored otherwise. */
-  files?: InlineFileForm[];
+  files: InlineFileForm[];
 };
 
 /** Compose app form: specType chooses image vs inline; the other variant's fields are ignored. */
@@ -134,9 +134,9 @@ export type ComposeAppForm = Omit<ComposeApplication, 'envVars' | 'volumes' | 'i
   variables: VariablesForm;
   volumes: ApplicationVolumeForm[];
   /** Used when specType === OCI_IMAGE; ignored otherwise. */
-  image?: string;
+  image: string;
   /** Used when specType === INLINE; ignored otherwise. */
-  files?: InlineFileForm[];
+  files: InlineFileForm[];
 };
 
 export type AppForm = SingleContainerAppForm | HelmImageAppForm | QuadletAppForm | ComposeAppForm;

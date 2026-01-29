@@ -8,16 +8,20 @@ import {
   ContainerApplication,
   DeviceSpec,
   EncodingType,
+  FileContent,
   FileSpec,
   GitConfigProviderSpec,
   HelmApplication,
   HttpConfigProviderSpec,
+  ImageApplicationProviderSpec,
   ImageMountVolumeProviderSpec,
   ImagePullPolicy,
+  InlineApplicationProviderSpec,
   InlineConfigProviderSpec,
   KubernetesSecretProviderSpec,
   PatchRequest,
   QuadletApplication,
+  RelativePath,
 } from '@flightctl/types';
 import {
   AppForm,
@@ -223,99 +227,73 @@ export const getDeviceSpecConfigPatches = (
 };
 
 /** API inline file shape (ApplicationContent). */
-type InlineFileApi = { path?: string; content?: string; contentEncoding?: string };
+type InlineFileApi = FileContent & RelativePath;
 
-const areInlineFilesEqual = (a: InlineFileApi[], b: InlineFileApi[]): boolean => {
-  if (a.length !== b.length) return false;
-  return a.every((file, index) => {
-    const other = b[index];
+const haveInlineFilesChanged = (current: InlineFileApi[], updated: InlineFileApi[]): boolean => {
+  if (current.length !== updated.length) return true;
+  return current.some((file, index) => {
+    const other = updated[index];
     const aBase64 = file.contentEncoding === EncodingType.EncodingBase64;
     const bBase64 = other.contentEncoding === EncodingType.EncodingBase64;
     return (
-      aBase64 === bBase64 && (file.path ?? '') === (other.path ?? '') && (file.content ?? '') === (other.content ?? '')
+      aBase64 !== bBase64 || (file.path ?? '') !== (other.path ?? '') || (file.content ?? '') !== (other.content ?? '')
     );
   });
 };
 
-const areVolumesEqual = (a: ApplicationVolume[], b: ApplicationVolume[]): boolean => {
-  if (a.length !== b.length) return false;
-  return a.every((currentVol, index) => {
-    const updatedVol = b[index];
-    const currentFull = currentVol as ApplicationVolume & ImageMountVolumeProviderSpec;
-    const updatedFull = updatedVol as ApplicationVolume & ImageMountVolumeProviderSpec;
-    if (currentFull.name !== updatedFull.name) return false;
-    const currentImageRef = currentFull.image?.reference || '';
-    const updatedImageRef = updatedFull.image?.reference || '';
-    if (currentImageRef !== updatedImageRef) return false;
-    if (currentImageRef || updatedImageRef) {
-      const currentPull = currentFull.image?.pullPolicy || ImagePullPolicy.PullIfNotPresent;
-      const updatedPull = updatedFull.image?.pullPolicy || ImagePullPolicy.PullIfNotPresent;
-      if (currentPull !== updatedPull) return false;
-    }
-    const currentMount = currentFull.mount?.path || '';
-    const updatedMount = updatedFull.mount?.path || '';
-    return currentMount === updatedMount;
-  });
-};
-
-const arePortsEqual = (a: string[], b: string[]): boolean => {
-  if (a.length !== b.length) return false;
-  return a.every((port, index) => port === b[index]);
-};
-
-const areResourceLimitsEqual = (
-  currentLimits: { cpu?: string; memory?: string } | undefined,
-  updatedLimits: { cpu?: string; memory?: string } | undefined,
-): boolean => {
-  const currentCpu = currentLimits?.cpu || '';
-  const updatedCpu = updatedLimits?.cpu || '';
-  const currentMemory = currentLimits?.memory || '';
-  const updatedMemory = updatedLimits?.memory || '';
-
-  return currentCpu === updatedCpu && currentMemory === updatedMemory;
-};
-
-const areEnvVariablesEqual = (
-  a: Record<string, string> | undefined,
-  b: Record<string, string> | undefined,
-): boolean => {
-  const aKeys = Object.keys(a ?? {});
-  const bKeys = Object.keys(b ?? {});
-  if (aKeys.length !== bKeys.length) return false;
-  return aKeys.every((key) => (a ?? {})[key] === (b ?? {})[key]);
-};
-
-// --- Property-level change detection (have*Changed = true when values differ) ---
-
-const haveInlineFilesChanged = (current: InlineFileApi[], updated: InlineFileApi[]): boolean =>
-  !areInlineFilesEqual(current, updated);
-
 const haveEnvVarsChanged = (
   current: Record<string, string> | undefined,
   updated: Record<string, string> | undefined,
-): boolean => !areEnvVariablesEqual(current, updated);
+): boolean => {
+  const aKeys = Object.keys(current ?? {});
+  const bKeys = Object.keys(updated ?? {});
+  if (aKeys.length !== bKeys.length) return true;
+  return aKeys.some((key) => (current ?? {})[key] !== (updated ?? {})[key]);
+};
 
 const haveVolumesChanged = (
   current: ApplicationVolume[] | undefined,
   updated: ApplicationVolume[] | undefined,
-): boolean => !areVolumesEqual(current ?? [], updated ?? []);
+): boolean => {
+  const a = current ?? [];
+  const b = updated ?? [];
+  if (a.length !== b.length) return true;
+  return a.some((currentVol, index) => {
+    const updatedVol = b[index];
+    const currentFull = currentVol as ApplicationVolume & ImageMountVolumeProviderSpec;
+    const updatedFull = updatedVol as ApplicationVolume & ImageMountVolumeProviderSpec;
+    if (currentFull.name !== updatedFull.name) return true;
+    const currentImageRef = currentFull.image?.reference || '';
+    const updatedImageRef = updatedFull.image?.reference || '';
+    if (currentImageRef !== updatedImageRef) return true;
+    if (currentImageRef || updatedImageRef) {
+      const currentPull = currentFull.image?.pullPolicy || ImagePullPolicy.PullIfNotPresent;
+      const updatedPull = updatedFull.image?.pullPolicy || ImagePullPolicy.PullIfNotPresent;
+      if (currentPull !== updatedPull) return true;
+    }
+    const currentMount = currentFull.mount?.path || '';
+    const updatedMount = updatedFull.mount?.path || '';
+    return currentMount !== updatedMount;
+  });
+};
 
-const haveImageChanged = (current: string, updated: string): boolean => current !== updated;
+const hasNameChanged = (current: string | undefined, updated: string | undefined): boolean => current !== updated;
+const hasImageChanged = (current: string, updated: string): boolean => current !== updated;
+const hasNamespaceChanged = (current: string | undefined, updated: string | undefined): boolean => current !== updated;
+const hasRunAsChanged = (current: string | undefined, updated: string | undefined): boolean =>
+  (current || RUN_AS_DEFAULT_USER) !== (updated || RUN_AS_DEFAULT_USER);
 
-const haveRunAsChanged = (current: string | undefined, updated: string | undefined): boolean =>
-  (current ?? RUN_AS_DEFAULT_USER) !== (updated ?? RUN_AS_DEFAULT_USER);
-
-const haveNameChanged = (current: string | undefined, updated: string | undefined): boolean => current !== updated;
-
-const havePortsChanged = (current: string[] | undefined, updated: string[] | undefined): boolean =>
-  !arePortsEqual(current ?? [], updated ?? []);
+const havePortsChanged = (current: string[], updated: string[]): boolean => {
+  if (current.length !== updated.length) return true;
+  return current.some((port, index) => port !== updated[index]);
+};
 
 const haveResourceLimitsChanged = (
   current: { cpu?: string; memory?: string } | undefined,
   updated: { cpu?: string; memory?: string } | undefined,
-): boolean => !areResourceLimitsEqual(current, updated);
-
-const haveNamespaceChanged = (current: string | undefined, updated: string | undefined): boolean => current !== updated;
+): boolean => {
+  return (current?.cpu || '') !== (updated?.cpu || '') || (current?.memory || '') !== (updated?.memory || '');
+};
 
 const haveValuesFilesChanged = (current: string[], updated: string[]): boolean => {
   const a = current.filter((f) => f.trim() !== '');
@@ -329,85 +307,90 @@ const haveHelmValuesChanged = (
   updated: Record<string, unknown> | undefined,
 ): boolean => JSON.stringify(current ?? {}) !== JSON.stringify(updated ?? {});
 
-// --- App-type change detection (API vs API) ---
+// Common function to check if the image/inline part of the application has changed
+const hasImageOrInlineAppPortionChanged = (
+  current: ApplicationProviderSpec,
+  updated: ApplicationProviderSpec,
+  specType: AppSpecType,
+): boolean => {
+  if (specType === AppSpecType.OCI_IMAGE) {
+    return hasImageChanged(
+      (current as ImageApplicationProviderSpec).image,
+      (updated as ImageApplicationProviderSpec).image,
+    );
+  }
+  return haveInlineFilesChanged(
+    (current as InlineApplicationProviderSpec).inline,
+    (updated as InlineApplicationProviderSpec).inline,
+  );
+};
 
+// Single container apps always have an image, and it doesn't have an inline variant
 const hasContainerAppChanged = (current: ContainerApplication, updated: ContainerApplication): boolean =>
-  haveNameChanged(current.name, updated.name) ||
-  haveImageChanged(current.image, updated.image) ||
-  havePortsChanged(current.ports, updated.ports) ||
+  hasNameChanged(current.name, updated.name) ||
+  hasImageChanged(current.image, updated.image) ||
+  havePortsChanged(current.ports || [], updated.ports || []) ||
   haveResourceLimitsChanged(current.resources?.limits, updated.resources?.limits) ||
   haveEnvVarsChanged(current.envVars, updated.envVars) ||
-  haveRunAsChanged(current.runAs, updated.runAs) ||
+  hasRunAsChanged(current.runAs, updated.runAs) ||
   haveVolumesChanged(current.volumes, updated.volumes);
 
+// Helm apps always have an image (chart), and it doesn't have an inline variant
 const hasHelmAppChanged = (current: HelmApplication, updated: HelmApplication): boolean =>
-  haveImageChanged(current.image, updated.image) ||
-  haveNamespaceChanged(current.namespace, updated.namespace) ||
+  hasNameChanged(current.name, updated.name) ||
+  hasImageChanged(current.image, updated.image) ||
+  hasNamespaceChanged(current.namespace, updated.namespace) ||
   haveValuesFilesChanged(current.valuesFiles ?? [], updated.valuesFiles ?? []) ||
   haveHelmValuesChanged(current.values, updated.values);
 
-const hasComposeAppChanged = (current: ComposeApplication, updated: ComposeApplication): boolean => {
-  const currentEnv = (current as { envVars?: Record<string, string> }).envVars;
-  const updatedEnv = (updated as { envVars?: Record<string, string> }).envVars;
-  const currentVol = (current as { volumes?: ApplicationVolume[] }).volumes;
-  const updatedVol = (updated as { volumes?: ApplicationVolume[] }).volumes;
-  if (hasImageSource(current)) {
-    if (!hasImageSource(updated)) return true;
-    const curImg = (current as ComposeApplication & { image: string }).image;
-    const updImg = (updated as ComposeApplication & { image: string }).image;
-    return (
-      haveImageChanged(curImg, updImg) ||
-      haveEnvVarsChanged(currentEnv, updatedEnv) ||
-      haveVolumesChanged(currentVol, updatedVol)
-    );
+// Compose apps can have image and inline variants.
+// In this function, we are guaranteed to have the same specType for both "current" and "updated".
+const hasComposeAppChanged = (
+  current: ComposeApplication,
+  updated: ComposeApplication,
+  specType: AppSpecType,
+): boolean => {
+  const baseChanged =
+    hasNameChanged(current.name, updated.name) ||
+    hasRunAsChanged(current.runAs, updated.runAs) ||
+    haveEnvVarsChanged(current.envVars, updated.envVars) ||
+    haveVolumesChanged(current.volumes, updated.volumes);
+
+  if (baseChanged) {
+    return true;
   }
-  if (hasImageSource(updated)) return true;
-  return (
-    haveInlineFilesChanged(
-      (current as { inline: InlineFileApi[] }).inline,
-      (updated as { inline: InlineFileApi[] }).inline,
-    ) ||
-    haveEnvVarsChanged(currentEnv, updatedEnv) ||
-    haveVolumesChanged(currentVol, updatedVol)
-  );
+
+  return hasImageOrInlineAppPortionChanged(current, updated, specType);
 };
 
-const hasQuadletAppChanged = (current: QuadletApplication, updated: QuadletApplication): boolean => {
-  const currentEnv = (current as { envVars?: Record<string, string> }).envVars;
-  const updatedEnv = (updated as { envVars?: Record<string, string> }).envVars;
-  const currentVol = (current as { volumes?: ApplicationVolume[] }).volumes;
-  const updatedVol = (updated as { volumes?: ApplicationVolume[] }).volumes;
-  const currentRunAs = (current as { runAs?: string }).runAs;
-  const updatedRunAs = (updated as { runAs?: string }).runAs;
-  if (hasImageSource(current)) {
-    if (!hasImageSource(updated)) return true;
-    const curImg = (current as QuadletApplication & { image: string }).image;
-    const updImg = (updated as QuadletApplication & { image: string }).image;
-    return (
-      haveImageChanged(curImg, updImg) ||
-      haveRunAsChanged(currentRunAs, updatedRunAs) ||
-      haveEnvVarsChanged(currentEnv, updatedEnv) ||
-      haveVolumesChanged(currentVol, updatedVol)
-    );
+// Quadlet apps can have image and inline variants.
+// In this function, we are guaranteed to have the same specType for both "current" and "updated".
+const hasQuadletAppChanged = (
+  current: QuadletApplication,
+  updated: QuadletApplication,
+  specType: AppSpecType,
+): boolean => {
+  // CELIA-WIP: Is the common part always the same??
+  const baseChanged =
+    hasNameChanged(current.name, updated.name) ||
+    hasRunAsChanged(current.runAs, updated.runAs) ||
+    haveEnvVarsChanged(current.envVars, updated.envVars) ||
+    haveVolumesChanged(current.volumes, updated.volumes);
+  if (baseChanged) {
+    return true;
   }
-  if (hasImageSource(updated)) return true;
-  return (
-    haveInlineFilesChanged(
-      (current as { inline: InlineFileApi[] }).inline,
-      (updated as { inline: InlineFileApi[] }).inline,
-    ) ||
-    haveRunAsChanged(currentRunAs, updatedRunAs) ||
-    haveEnvVarsChanged(currentEnv, updatedEnv) ||
-    haveVolumesChanged(currentVol, updatedVol)
-  );
+
+  return hasImageOrInlineAppPortionChanged(current, updated, specType);
 };
 
 const hasApplicationChanged = (current: ApplicationProviderSpec, updated: ApplicationProviderSpec): boolean => {
-  if (current.appType !== updated.appType || current.name !== updated.name) return true;
-  if (
-    (current.appType === AppType.AppTypeQuadlet || current.appType === AppType.AppTypeCompose) &&
-    hasImageSource(current) !== hasImageSource(updated)
-  ) {
+  if (current.appType !== updated.appType) {
+    return true;
+  }
+
+  const currentSpectType = hasImageSource(current) ? AppSpecType.OCI_IMAGE : AppSpecType.INLINE;
+  const updatedSpectType = hasImageSource(updated) ? AppSpecType.OCI_IMAGE : AppSpecType.INLINE;
+  if (currentSpectType !== updatedSpectType) {
     return true;
   }
   switch (current.appType) {
@@ -416,11 +399,10 @@ const hasApplicationChanged = (current: ApplicationProviderSpec, updated: Applic
     case AppType.AppTypeHelm:
       return hasHelmAppChanged(current as HelmApplication, updated as HelmApplication);
     case AppType.AppTypeQuadlet:
-      return hasQuadletAppChanged(current as QuadletApplication, updated as QuadletApplication);
+      return hasQuadletAppChanged(current as QuadletApplication, updated as QuadletApplication, currentSpectType);
     case AppType.AppTypeCompose:
-      return hasComposeAppChanged(current as ComposeApplication, updated as ComposeApplication);
+      return hasComposeAppChanged(current as ComposeApplication, updated as ComposeApplication, currentSpectType);
   }
-  return false;
 };
 
 // --- AppForm ↔ API conversion ---
