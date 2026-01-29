@@ -10,17 +10,16 @@ import {
   AppSpecType,
   BatchForm,
   BatchLimitType,
-  ComposeImageAppForm,
-  ComposeInlineAppForm,
+  ComposeAppForm,
   DisruptionBudgetForm,
   GitConfigTemplate,
   HelmImageAppForm,
   HttpConfigTemplate,
   InlineConfigTemplate,
+  InlineFileForm,
   KubeSecretTemplate,
   PortMapping,
-  QuadletImageAppForm,
-  QuadletInlineAppForm,
+  QuadletAppForm,
   RolloutPolicyForm,
   SpecConfigTemplate,
   SystemdUnitFormValue,
@@ -370,11 +369,7 @@ const inlineAppFileSchema = (t: TFunction) =>
 
 // Common test for unique file paths in inline applications
 const uniqueFilePathsTest =
-  (t: TFunction) =>
-  (
-    files: (QuadletInlineAppForm | ComposeInlineAppForm)['files'] | undefined,
-    testContext: Yup.TestContext<Yup.AnyObject>,
-  ) => {
+  (t: TFunction) => (files: InlineFileForm[] | undefined, testContext: Yup.TestContext<Yup.AnyObject>) => {
     if (!files || files.length === 0) {
       return true;
     }
@@ -412,34 +407,33 @@ const uniqueFilePathsTest =
     });
   };
 
-const composeFileName =
-  (t: TFunction) => (files: ComposeInlineAppForm['files'], testContext: Yup.TestContext<Yup.AnyObject>) => {
-    const invalidFiles = files
-      .map((file, index) => {
-        if (!file.path) {
-          return null;
-        }
-        // Extract filename from relative path (get last part after slash, or use whole path if no slash)
-        const fileName = file.path.includes('/') ? file.path.split('/').pop() || file.path : file.path;
-        if (!validComposeFileNames.includes(fileName)) {
-          return index;
-        }
+const composeFileName = (t: TFunction) => (files: InlineFileForm[], testContext: Yup.TestContext<Yup.AnyObject>) => {
+  const invalidFiles = files
+    .map((file, index) => {
+      if (!file.path) {
         return null;
-      })
-      .filter((index): index is number => index !== null);
+      }
+      // Extract filename from relative path (get last part after slash, or use whole path if no slash)
+      const fileName = file.path.includes('/') ? file.path.split('/').pop() || file.path : file.path;
+      if (!validComposeFileNames.includes(fileName)) {
+        return index;
+      }
+      return null;
+    })
+    .filter((index): index is number => index !== null);
 
-    if (invalidFiles.length > 0) {
-      const firstInvalidIndex = invalidFiles[0];
-      return testContext.createError({
-        path: `${testContext.path}[${firstInvalidIndex}].path`,
-        message: () =>
-          t('File name must be one of: {{ allowedFileNames }}', {
-            allowedFileNames: validComposeFileNameDisplay,
-          }),
-      });
-    }
-    return true;
-  };
+  if (invalidFiles.length > 0) {
+    const firstInvalidIndex = invalidFiles[0];
+    return testContext.createError({
+      path: `${testContext.path}[${firstInvalidIndex}].path`,
+      message: () =>
+        t('File name must be one of: {{ allowedFileNames }}', {
+          allowedFileNames: validComposeFileNameDisplay,
+        }),
+    });
+  }
+  return true;
+};
 
 // Helper to extract file extension from a path
 const getFileExtension = (path: string): string => {
@@ -454,7 +448,7 @@ const isAtRoot = (path: string): boolean => {
 
 // Validation for quadlet applications: checks for unsupported types first, then requires at least one supported type
 const quadletFileTypesValidation =
-  (t: TFunction) => (files: QuadletInlineAppForm['files'], testContext: Yup.TestContext<Yup.AnyObject>) => {
+  (t: TFunction) => (files: InlineFileForm[], testContext: Yup.TestContext<Yup.AnyObject>) => {
     if (!files || files.length === 0) {
       return true; // This is handled by the min(1) requirement
     }
@@ -512,36 +506,35 @@ const quadletFileTypesValidation =
   };
 
 // Validation for quadlet applications: quadlet files must be at root level
-const quadletFilesAtRoot =
-  (t: TFunction) => (files: QuadletInlineAppForm['files'], testContext: Yup.TestContext<Yup.AnyObject>) => {
-    if (!files || files.length === 0) {
-      return true;
-    }
-
-    const invalidFiles = files
-      .map((file, index) => {
-        if (!file.path) {
-          return null;
-        }
-        const ext = getFileExtension(file.path);
-        // Only check files with supported quadlet extensions
-        if (supportedQuadletExtensions.includes(ext) && !isAtRoot(file.path)) {
-          return index;
-        }
-        return null;
-      })
-      .filter((index): index is number => index !== null);
-
-    if (invalidFiles.length > 0) {
-      const firstInvalidIndex = invalidFiles[0];
-      return testContext.createError({
-        path: `${testContext.path}[${firstInvalidIndex}].path`,
-        message: () => t('Quadlet files must be at root level (no subdirectories)'),
-      });
-    }
-
+const quadletFilesAtRoot = (t: TFunction) => (files: InlineFileForm[], testContext: Yup.TestContext<Yup.AnyObject>) => {
+  if (!files || files.length === 0) {
     return true;
-  };
+  }
+
+  const invalidFiles = files
+    .map((file, index) => {
+      if (!file.path) {
+        return null;
+      }
+      const ext = getFileExtension(file.path);
+      // Only check files with supported quadlet extensions
+      if (supportedQuadletExtensions.includes(ext) && !isAtRoot(file.path)) {
+        return index;
+      }
+      return null;
+    })
+    .filter((index): index is number => index !== null);
+
+  if (invalidFiles.length > 0) {
+    const firstInvalidIndex = invalidFiles[0];
+    return testContext.createError({
+      path: `${testContext.path}[${firstInvalidIndex}].path`,
+      message: () => t('Quadlet files must be at root level (no subdirectories)'),
+    });
+  }
+
+  return true;
+};
 
 const PORT_NUMBER_REGEXP = /^\d+$/;
 const MAX_PORT = 65535;
@@ -740,7 +733,7 @@ export const validApplicationsSchema = (t: TFunction) => {
 
         // Image applications (Quadlet or Compose)
         if (isQuadletImageAppForm(value) || isComposeImageAppForm(value)) {
-          return Yup.object<QuadletImageAppForm | ComposeImageAppForm>().shape({
+          return Yup.object<QuadletAppForm | ComposeAppForm>().shape({
             specType: Yup.string()
               .oneOf([AppSpecType.OCI_IMAGE])
               .required(t('Definition source must be image for this type of applications')),
@@ -758,7 +751,7 @@ export const validApplicationsSchema = (t: TFunction) => {
 
         // Inline quadlet applications
         if (isQuadletInlineAppForm(value)) {
-          return Yup.object<QuadletInlineAppForm>().shape({
+          return Yup.object<QuadletAppForm>().shape({
             specType: appSpecTypeSchema(t),
             appType: Yup.string().oneOf([AppType.AppTypeQuadlet]).required(t('Application type is required')),
             name: validApplicationAndVolumeName(t).required(t('Name is required for quadlet applications.')),
@@ -772,7 +765,7 @@ export const validApplicationsSchema = (t: TFunction) => {
         }
 
         // Inline compose applications
-        return Yup.object<ComposeInlineAppForm>().shape({
+        return Yup.object<ComposeAppForm>().shape({
           specType: appSpecTypeSchema(t),
           appType: Yup.string().oneOf([AppType.AppTypeCompose]).required(t('Application type is required')),
           name: validApplicationAndVolumeName(t).required(t('Name is required for compose applications.')),

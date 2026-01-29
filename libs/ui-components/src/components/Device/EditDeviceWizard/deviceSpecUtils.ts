@@ -1,59 +1,61 @@
 import yaml from 'js-yaml';
 import {
   AppType,
-  // eslint-disable-next-line no-restricted-imports
   ApplicationProviderSpec,
-  ApplicationResourceLimits,
   ApplicationVolume,
+  ComposeApplication,
   ConfigProviderSpec,
+  ContainerApplication,
   DeviceSpec,
   EncodingType,
   FileSpec,
   GitConfigProviderSpec,
+  HelmApplication,
   HttpConfigProviderSpec,
-  ImageApplicationProviderSpec,
   ImageMountVolumeProviderSpec,
   ImagePullPolicy,
-  InlineApplicationProviderSpec,
   InlineConfigProviderSpec,
   KubernetesSecretProviderSpec,
   PatchRequest,
+  QuadletApplication,
 } from '@flightctl/types';
 import {
   AppForm,
   AppSpecType,
   ApplicationVolumeForm,
-  ComposeImageAppForm,
-  ComposeInlineAppForm,
+  ComposeAppForm,
   ConfigSourceProvider,
   ConfigType,
   GitConfigTemplate,
   HelmImageAppForm,
   HttpConfigTemplate,
   InlineConfigTemplate,
+  InlineFileForm,
   KubeSecretTemplate,
   PortMapping,
-  QuadletImageAppForm,
-  QuadletInlineAppForm,
+  QuadletAppForm,
   RUN_AS_DEFAULT_USER,
   SingleContainerAppForm,
   SpecConfigTemplate,
   SystemdUnitFormValue,
+  hasImageSource,
+  isComposeApplication,
   isComposeImageAppForm,
+  isContainerApplication,
   isGitConfigTemplate,
   isGitProviderSpec,
+  isHelmApplication,
   isHelmImageAppForm,
   isHttpConfigTemplate,
   isHttpProviderSpec,
-  isImageAppProvider,
   isInlineProviderSpec,
   isKubeProviderSpec,
   isKubeSecretTemplate,
+  isQuadletApplication,
   isQuadletImageAppForm,
   isQuadletInlineAppForm,
   isSingleContainerAppForm,
 } from '../../../types/deviceSpec';
-import { InlineApplicationFileFixed } from '../../../types/extraTypes';
 
 const DEFAULT_INLINE_FILE_MODE = 420; // In Octal: 0644
 const DEFAULT_INLINE_FILE_USER = 'root';
@@ -220,195 +222,45 @@ export const getDeviceSpecConfigPatches = (
   return allPatches;
 };
 
-export const toAPIApplication = (app: AppForm): ApplicationProviderSpec => {
-  if (isHelmImageAppForm(app)) {
-    const data: ImageApplicationProviderSpec & ApplicationProviderSpec = {
-      name: app.name,
-      image: app.image,
-      appType: app.appType,
-    };
-    if (app.namespace) {
-      data.namespace = app.namespace;
-    }
-    if (app.valuesYaml) {
-      try {
-        const values = yaml.load(app.valuesYaml) as Record<string, unknown>;
-        if (values && Object.keys(values).length > 0) {
-          data.values = values;
-        }
-      } catch (error) {
-        throw new Error('Values content is not valid YAML.');
-      }
-    }
-    const fileNames = app.valuesFiles.filter((file) => file && file.trim() !== '');
-    if (fileNames.length > 0) {
-      data.valuesFiles = fileNames;
-    }
-    return data;
-  }
+/** API inline file shape (ApplicationContent). */
+type InlineFileApi = { path?: string; content?: string; contentEncoding?: string };
 
-  const envVars = app.variables.reduce((acc, variable) => {
-    acc[variable.name] = variable.value;
-    return acc;
-  }, {});
-
-  const volumes = app.volumes?.map((v) => {
-    const volume: Partial<ApplicationVolume & ImageMountVolumeProviderSpec> = {
-      name: v.name || '',
-    };
-
-    if (v.imageRef) {
-      volume.image = {
-        reference: v.imageRef,
-        pullPolicy: v.imagePullPolicy || ImagePullPolicy.PullIfNotPresent,
-      };
-    }
-    if (v.mountPath) {
-      volume.mount = {
-        path: v.mountPath,
-      };
-    }
-    return volume as ApplicationVolume;
-  });
-
-  if (isSingleContainerAppForm(app)) {
-    const data: ImageApplicationProviderSpec & ApplicationProviderSpec = {
-      image: app.image,
-      appType: app.appType,
-      envVars,
-      volumes,
-    };
-    if (app.name) {
-      data.name = app.name;
-    }
-    if (app.ports) {
-      data.ports = app.ports.map((p) => `${p.hostPort}:${p.containerPort}`);
-    }
-    // Removed fields must not appear in the resources object
-    const appLimits: ApplicationResourceLimits = {};
-    if (app.limits?.cpu) {
-      appLimits.cpu = app.limits.cpu;
-    }
-    if (app.limits?.memory) {
-      appLimits.memory = app.limits.memory;
-    }
-    if (Object.keys(appLimits).length > 0) {
-      data.resources = {
-        limits: appLimits,
-      };
-    }
-    data.runAs = app.runAs || RUN_AS_DEFAULT_USER;
-    return data;
-  }
-
-  if (isQuadletImageAppForm(app) || isComposeImageAppForm(app)) {
-    const data: ApplicationProviderSpec = {
-      image: app.image,
-      appType: app.appType,
-      envVars,
-      volumes,
-    };
-    if (app.name) {
-      data.name = app.name;
-    }
-    if (isQuadletImageAppForm(app) && app.runAs) {
-      data.runAs = app.runAs;
-    }
-    return data;
-  }
-
-  // Inline applications (Quadlet or Compose)
-  const inlineData: ApplicationProviderSpec = {
-    name: app.name,
-    appType: app.appType,
-    inline: toAPIFiles(app.files),
-    envVars,
-    volumes,
-  };
-  if (isQuadletInlineAppForm(app) && app.runAs) {
-    inlineData.runAs = app.runAs;
-  }
-  return inlineData;
-};
-
-const hasInlineApplicationChanged = (
-  currentApp: InlineApplicationProviderSpec,
-  updatedApp: QuadletInlineAppForm | ComposeInlineAppForm,
-) => {
-  if (currentApp.inline.length !== updatedApp.files.length) {
-    return true;
-  }
-  const filesChanged = currentApp.inline.some((file, index) => {
-    const updatedFile = updatedApp.files[index];
-    const isCurrentBase64 = file.contentEncoding === EncodingType.EncodingBase64;
+const areInlineFilesEqual = (a: InlineFileApi[], b: InlineFileApi[]): boolean => {
+  if (a.length !== b.length) return false;
+  return a.every((file, index) => {
+    const other = b[index];
+    const aBase64 = file.contentEncoding === EncodingType.EncodingBase64;
+    const bBase64 = other.contentEncoding === EncodingType.EncodingBase64;
     return (
-      (updatedFile.base64 || false) !== isCurrentBase64 ||
-      updatedFile.path !== file.path ||
-      updatedFile.content !== file.content
+      aBase64 === bBase64 && (file.path ?? '') === (other.path ?? '') && (file.content ?? '') === (other.content ?? '')
     );
   });
-  if (filesChanged) {
-    return true;
-  }
-
-  // Check runAs for Quadlet inline apps
-  if (isQuadletInlineAppForm(updatedApp)) {
-    const currentAppWithRunAs = currentApp as InlineApplicationProviderSpec & { runAs?: string };
-    if ((currentAppWithRunAs.runAs || RUN_AS_DEFAULT_USER) !== (updatedApp.runAs || RUN_AS_DEFAULT_USER)) {
-      return true;
-    }
-  }
-
-  return !areVolumesEqual(currentApp.volumes || [], updatedApp.volumes || []);
 };
 
-const areVolumesEqual = (currentVolumes: ApplicationVolume[], updatedFormVolumes: ApplicationVolumeForm[]): boolean => {
-  if (currentVolumes.length !== updatedFormVolumes.length) {
-    return false;
-  }
-
-  return currentVolumes.every((currentVol, index) => {
-    const updatedFormVol = updatedFormVolumes[index];
-    const currentFullVol = currentVol as ApplicationVolume & ImageMountVolumeProviderSpec;
-
-    if (currentFullVol.name !== updatedFormVol.name) {
-      return false;
-    }
-
-    const currentImageRef = currentFullVol.image?.reference || '';
-    const updatedImageRef = updatedFormVol?.imageRef || '';
-    if (currentImageRef !== updatedImageRef) {
-      return false;
-    }
-
+const areVolumesEqual = (a: ApplicationVolume[], b: ApplicationVolume[]): boolean => {
+  if (a.length !== b.length) return false;
+  return a.every((currentVol, index) => {
+    const updatedVol = b[index];
+    const currentFull = currentVol as ApplicationVolume & ImageMountVolumeProviderSpec;
+    const updatedFull = updatedVol as ApplicationVolume & ImageMountVolumeProviderSpec;
+    if (currentFull.name !== updatedFull.name) return false;
+    const currentImageRef = currentFull.image?.reference || '';
+    const updatedImageRef = updatedFull.image?.reference || '';
+    if (currentImageRef !== updatedImageRef) return false;
     if (currentImageRef || updatedImageRef) {
-      const currentPullPolicy = currentFullVol.image?.pullPolicy || ImagePullPolicy.PullIfNotPresent;
-      const updatedPullPolicy = updatedFormVol?.imagePullPolicy || ImagePullPolicy.PullIfNotPresent;
-      if (currentPullPolicy !== updatedPullPolicy) {
-        return false;
-      }
+      const currentPull = currentFull.image?.pullPolicy || ImagePullPolicy.PullIfNotPresent;
+      const updatedPull = updatedFull.image?.pullPolicy || ImagePullPolicy.PullIfNotPresent;
+      if (currentPull !== updatedPull) return false;
     }
-
-    const currentMountPath = currentFullVol.mount?.path || '';
-    const updatedMountPath = updatedFormVol?.mountPath || '';
-    if (currentMountPath !== updatedMountPath) {
-      return false;
-    }
-
-    return true;
+    const currentMount = currentFull.mount?.path || '';
+    const updatedMount = updatedFull.mount?.path || '';
+    return currentMount === updatedMount;
   });
 };
 
-const arePortsEqual = (currentPorts: string[], updatedPorts: PortMapping[]): boolean => {
-  if (currentPorts.length !== updatedPorts.length) {
-    return false;
-  }
-
-  // Reordered ports will be considered as changed
-  return currentPorts.every((currentPort, index) => {
-    const updatedPort = updatedPorts[index];
-    return currentPort === `${updatedPort.hostPort}:${updatedPort.containerPort}`;
-  });
+const arePortsEqual = (a: string[], b: string[]): boolean => {
+  if (a.length !== b.length) return false;
+  return a.every((port, index) => port === b[index]);
 };
 
 const areResourceLimitsEqual = (
@@ -424,162 +276,371 @@ const areResourceLimitsEqual = (
 };
 
 const areEnvVariablesEqual = (
-  currentVars: Record<string, string> | undefined,
-  updatedFormVars: { name: string; value: string }[],
+  a: Record<string, string> | undefined,
+  b: Record<string, string> | undefined,
 ): boolean => {
-  const envVars = currentVars || {};
-  if (Object.keys(envVars).length !== updatedFormVars.length) {
-    return false;
-  }
-
-  return updatedFormVars.every((variable) => {
-    // Envvars may have "falsy" values (eg. number 0) when they are defined
-    return variable.name in envVars && envVars[variable.name] === variable.value;
-  });
+  const aKeys = Object.keys(a ?? {});
+  const bKeys = Object.keys(b ?? {});
+  if (aKeys.length !== bKeys.length) return false;
+  return aKeys.every((key) => (a ?? {})[key] === (b ?? {})[key]);
 };
 
-const hasSingleContainerAppChanged = (currentApp: ApplicationProviderSpec, updatedApp: AppForm): boolean => {
-  if (!isSingleContainerAppForm(updatedApp)) {
-    return true;
-  }
+// --- Property-level change detection (have*Changed = true when values differ) ---
 
-  const imageApp = currentApp as ImageApplicationProviderSpec & ApplicationProviderSpec;
-  if (imageApp.name !== updatedApp.name || imageApp.image !== updatedApp.image) {
-    return true;
-  }
+const haveInlineFilesChanged = (current: InlineFileApi[], updated: InlineFileApi[]): boolean =>
+  !areInlineFilesEqual(current, updated);
 
-  if (!arePortsEqual(imageApp.ports || [], updatedApp.ports || [])) {
-    return true;
-  }
+const haveEnvVarsChanged = (
+  current: Record<string, string> | undefined,
+  updated: Record<string, string> | undefined,
+): boolean => !areEnvVariablesEqual(current, updated);
 
-  if (!areResourceLimitsEqual(imageApp.resources?.limits, updatedApp.limits)) {
-    return true;
-  }
+const haveVolumesChanged = (
+  current: ApplicationVolume[] | undefined,
+  updated: ApplicationVolume[] | undefined,
+): boolean => !areVolumesEqual(current ?? [], updated ?? []);
 
-  if (!areEnvVariablesEqual(imageApp.envVars, updatedApp.variables)) {
-    return true;
-  }
+const haveImageChanged = (current: string, updated: string): boolean => current !== updated;
 
-  if ((imageApp.runAs || RUN_AS_DEFAULT_USER) !== (updatedApp.runAs || RUN_AS_DEFAULT_USER)) {
-    return true;
-  }
-  return !areVolumesEqual(imageApp.volumes || [], updatedApp.volumes || []);
+const haveRunAsChanged = (current: string | undefined, updated: string | undefined): boolean =>
+  (current ?? RUN_AS_DEFAULT_USER) !== (updated ?? RUN_AS_DEFAULT_USER);
+
+const haveNameChanged = (current: string | undefined, updated: string | undefined): boolean => current !== updated;
+
+const havePortsChanged = (current: string[] | undefined, updated: string[] | undefined): boolean =>
+  !arePortsEqual(current ?? [], updated ?? []);
+
+const haveResourceLimitsChanged = (
+  current: { cpu?: string; memory?: string } | undefined,
+  updated: { cpu?: string; memory?: string } | undefined,
+): boolean => !areResourceLimitsEqual(current, updated);
+
+const haveNamespaceChanged = (current: string | undefined, updated: string | undefined): boolean => current !== updated;
+
+const haveValuesFilesChanged = (current: string[], updated: string[]): boolean => {
+  const a = current.filter((f) => f.trim() !== '');
+  const b = updated.filter((f) => f.trim() !== '');
+  if (a.length !== b.length) return true;
+  return a.some((file, i) => file !== b[i]);
 };
 
-const hasApplicationChanged = (currentApp: ApplicationProviderSpec, updatedApp: AppForm): boolean => {
-  const isCurrentImageApp = isImageAppProvider(currentApp);
-  const currentAppSpecType = isCurrentImageApp ? AppSpecType.OCI_IMAGE : AppSpecType.INLINE;
+const haveHelmValuesChanged = (
+  current: Record<string, unknown> | undefined,
+  updated: Record<string, unknown> | undefined,
+): boolean => JSON.stringify(current ?? {}) !== JSON.stringify(updated ?? {});
 
-  // Check if application name changed, or it's a different type of application (either specType or appType)
+// --- App-type change detection (API vs API) ---
+
+const hasContainerAppChanged = (current: ContainerApplication, updated: ContainerApplication): boolean =>
+  haveNameChanged(current.name, updated.name) ||
+  haveImageChanged(current.image, updated.image) ||
+  havePortsChanged(current.ports, updated.ports) ||
+  haveResourceLimitsChanged(current.resources?.limits, updated.resources?.limits) ||
+  haveEnvVarsChanged(current.envVars, updated.envVars) ||
+  haveRunAsChanged(current.runAs, updated.runAs) ||
+  haveVolumesChanged(current.volumes, updated.volumes);
+
+const hasHelmAppChanged = (current: HelmApplication, updated: HelmApplication): boolean =>
+  haveImageChanged(current.image, updated.image) ||
+  haveNamespaceChanged(current.namespace, updated.namespace) ||
+  haveValuesFilesChanged(current.valuesFiles ?? [], updated.valuesFiles ?? []) ||
+  haveHelmValuesChanged(current.values, updated.values);
+
+const hasComposeAppChanged = (current: ComposeApplication, updated: ComposeApplication): boolean => {
+  const currentEnv = (current as { envVars?: Record<string, string> }).envVars;
+  const updatedEnv = (updated as { envVars?: Record<string, string> }).envVars;
+  const currentVol = (current as { volumes?: ApplicationVolume[] }).volumes;
+  const updatedVol = (updated as { volumes?: ApplicationVolume[] }).volumes;
+  if (hasImageSource(current)) {
+    if (!hasImageSource(updated)) return true;
+    const curImg = (current as ComposeApplication & { image: string }).image;
+    const updImg = (updated as ComposeApplication & { image: string }).image;
+    return (
+      haveImageChanged(curImg, updImg) ||
+      haveEnvVarsChanged(currentEnv, updatedEnv) ||
+      haveVolumesChanged(currentVol, updatedVol)
+    );
+  }
+  if (hasImageSource(updated)) return true;
+  return (
+    haveInlineFilesChanged(
+      (current as { inline: InlineFileApi[] }).inline,
+      (updated as { inline: InlineFileApi[] }).inline,
+    ) ||
+    haveEnvVarsChanged(currentEnv, updatedEnv) ||
+    haveVolumesChanged(currentVol, updatedVol)
+  );
+};
+
+const hasQuadletAppChanged = (current: QuadletApplication, updated: QuadletApplication): boolean => {
+  const currentEnv = (current as { envVars?: Record<string, string> }).envVars;
+  const updatedEnv = (updated as { envVars?: Record<string, string> }).envVars;
+  const currentVol = (current as { volumes?: ApplicationVolume[] }).volumes;
+  const updatedVol = (updated as { volumes?: ApplicationVolume[] }).volumes;
+  const currentRunAs = (current as { runAs?: string }).runAs;
+  const updatedRunAs = (updated as { runAs?: string }).runAs;
+  if (hasImageSource(current)) {
+    if (!hasImageSource(updated)) return true;
+    const curImg = (current as QuadletApplication & { image: string }).image;
+    const updImg = (updated as QuadletApplication & { image: string }).image;
+    return (
+      haveImageChanged(curImg, updImg) ||
+      haveRunAsChanged(currentRunAs, updatedRunAs) ||
+      haveEnvVarsChanged(currentEnv, updatedEnv) ||
+      haveVolumesChanged(currentVol, updatedVol)
+    );
+  }
+  if (hasImageSource(updated)) return true;
+  return (
+    haveInlineFilesChanged(
+      (current as { inline: InlineFileApi[] }).inline,
+      (updated as { inline: InlineFileApi[] }).inline,
+    ) ||
+    haveRunAsChanged(currentRunAs, updatedRunAs) ||
+    haveEnvVarsChanged(currentEnv, updatedEnv) ||
+    haveVolumesChanged(currentVol, updatedVol)
+  );
+};
+
+const hasApplicationChanged = (current: ApplicationProviderSpec, updated: ApplicationProviderSpec): boolean => {
+  if (current.appType !== updated.appType || current.name !== updated.name) return true;
   if (
-    currentAppSpecType !== updatedApp.specType ||
-    currentApp.appType !== updatedApp.appType ||
-    currentApp.name !== updatedApp.name
+    (current.appType === AppType.AppTypeQuadlet || current.appType === AppType.AppTypeCompose) &&
+    hasImageSource(current) !== hasImageSource(updated)
   ) {
     return true;
   }
-
-  // The app is a single container application
-  if (isSingleContainerAppForm(updatedApp)) {
-    return hasSingleContainerAppChanged(currentApp, updatedApp);
+  switch (current.appType) {
+    case AppType.AppTypeContainer:
+      return hasContainerAppChanged(current as ContainerApplication, updated as ContainerApplication);
+    case AppType.AppTypeHelm:
+      return hasHelmAppChanged(current as HelmApplication, updated as HelmApplication);
+    case AppType.AppTypeQuadlet:
+      return hasQuadletAppChanged(current as QuadletApplication, updated as QuadletApplication);
+    case AppType.AppTypeCompose:
+      return hasComposeAppChanged(current as ComposeApplication, updated as ComposeApplication);
   }
+  return false;
+};
 
-  // The app is a Helm application
-  if (isHelmImageAppForm(updatedApp)) {
-    const imageApp = currentApp as ImageApplicationProviderSpec;
-    if (imageApp.image !== updatedApp.image || imageApp.namespace !== updatedApp.namespace) {
-      return true;
-    }
+// --- AppForm ↔ API conversion ---
 
-    // Compare valuesFiles arrays
-    const currentValuesFiles = (imageApp.valuesFiles || []).filter((file) => file !== '');
-    const updatedValuesFiles = updatedApp.valuesFiles.filter((file) => file !== '');
-    if (currentValuesFiles.length !== updatedValuesFiles.length) {
-      return true;
-    }
-    if (!currentValuesFiles.every((file, index) => file === updatedValuesFiles[index])) {
-      return true;
-    }
-    const updatedValues = yaml.load(updatedApp.valuesYaml || '  ') as Record<string, unknown>;
-    if (JSON.stringify(imageApp.values || {}) !== JSON.stringify(updatedValues)) {
-      return true;
-    }
-    return false;
-  }
+const variablesToEnvVars = (variables: { name: string; value: string }[]): Record<string, string> =>
+  variables.reduce(
+    (acc, v) => {
+      if (v.name !== undefined && v.name !== '') acc[v.name] = v.value ?? '';
+      return acc;
+    },
+    {} as Record<string, string>,
+  );
 
-  if (!areEnvVariablesEqual(currentApp.envVars, updatedApp.variables)) {
-    return true;
-  }
-
-  // The app is an image application (Quadlet/Compose image apps)
-  if (isCurrentImageApp) {
-    const imageApp = currentApp as ImageApplicationProviderSpec;
-    const updatedImageApp = updatedApp as QuadletImageAppForm | ComposeImageAppForm;
-    if (imageApp.image !== updatedImageApp.image) {
-      return true;
+const formVolumesToApi = (volumes: ApplicationVolumeForm[]): ApplicationVolume[] =>
+  volumes.map((v) => {
+    const vol: Partial<ApplicationVolume & ImageMountVolumeProviderSpec> = { name: v.name || '' };
+    if (v.imageRef) {
+      vol.image = {
+        reference: v.imageRef,
+        pullPolicy: v.imagePullPolicy ?? ImagePullPolicy.PullIfNotPresent,
+      };
     }
+    if (v.mountPath) vol.mount = { path: v.mountPath };
+    return vol as ApplicationVolume;
+  });
 
-    // Check runAs for Quadlet image apps
-    if (isQuadletImageAppForm(updatedApp)) {
-      if ((currentApp.runAs || RUN_AS_DEFAULT_USER) !== (updatedApp.runAs || RUN_AS_DEFAULT_USER)) {
-        return true;
+const formFilesToInline = (files: InlineFileForm[]) =>
+  files.map((f) => ({
+    path: f.path,
+    content: f.content ?? '',
+    contentEncoding: f.base64 ? EncodingType.EncodingBase64 : EncodingType.EncodingPlain,
+  }));
+
+export const toAPIApplication = (app: AppForm): ApplicationProviderSpec => {
+  const variables = 'variables' in app ? app.variables ?? [] : [];
+  const volumesForm = 'volumes' in app ? app.volumes ?? [] : [];
+  const envVars = variablesToEnvVars(variables);
+  const volumes = formVolumesToApi(volumesForm);
+
+  if (isHelmImageAppForm(app)) {
+    const data: HelmApplication = {
+      name: app.name,
+      image: app.image,
+      appType: app.appType,
+    };
+    if (app.namespace) data.namespace = app.namespace;
+    if (app.valuesYaml) {
+      try {
+        const values = yaml.load(app.valuesYaml) as Record<string, unknown>;
+        if (values && Object.keys(values).length > 0) data.values = values;
+      } catch {
+        // leave values unset on invalid YAML
       }
     }
-
-    return !areVolumesEqual(imageApp.volumes || [], updatedApp.volumes || []);
+    const fileNames = (app.valuesFiles ?? []).filter((f) => f?.trim() !== '');
+    if (fileNames.length > 0) data.valuesFiles = fileNames;
+    return data;
   }
 
-  // The app must be an inline application
-  return hasInlineApplicationChanged(
-    currentApp as InlineApplicationProviderSpec,
-    updatedApp as QuadletInlineAppForm | ComposeInlineAppForm,
-  );
+  if (isSingleContainerAppForm(app)) {
+    const data: ContainerApplication = {
+      image: app.image,
+      appType: app.appType,
+      envVars: Object.keys(envVars).length ? envVars : undefined,
+      volumes: volumes.length ? volumes : undefined,
+      runAs: app.runAs ?? RUN_AS_DEFAULT_USER,
+    };
+    if (app.name) data.name = app.name;
+    if (app.ports?.length) data.ports = app.ports.map((p) => `${p.hostPort}:${p.containerPort}`);
+    if (app.resources?.limits && Object.keys(app.resources.limits).length > 0)
+      data.resources = { limits: app.resources.limits };
+    return data;
+  }
+
+  if (isQuadletImageAppForm(app) || isComposeImageAppForm(app)) {
+    const data: ApplicationProviderSpec = {
+      image: app.image ?? '',
+      appType: app.appType,
+      envVars: Object.keys(envVars).length ? envVars : undefined,
+      volumes: volumes.length ? volumes : undefined,
+    };
+    if (app.name) data.name = app.name;
+    if (isQuadletImageAppForm(app) && app.runAs) (data as QuadletApplication).runAs = app.runAs;
+    return data;
+  }
+
+  const inlineApp = app as QuadletAppForm | ComposeAppForm;
+  const inlineData: ApplicationProviderSpec = {
+    name: inlineApp.name,
+    appType: inlineApp.appType,
+    inline: formFilesToInline(inlineApp.files ?? []),
+    envVars: Object.keys(envVars).length ? envVars : undefined,
+    volumes: volumes.length ? volumes : undefined,
+  };
+  if (isQuadletInlineAppForm(app) && inlineApp.runAs) (inlineData as QuadletApplication).runAs = inlineApp.runAs;
+  return inlineData;
+};
+
+const envVarsToVariables = (envVars: Record<string, string> | undefined): { name: string; value: string }[] =>
+  Object.entries(envVars ?? {}).map(([name, value]) => ({ name, value }));
+
+const apiVolumesToForm = (volumes?: ApplicationVolume[]): ApplicationVolumeForm[] => {
+  if (!volumes) return [];
+  return volumes.map((vol) => {
+    const full = vol as ApplicationVolume & ImageMountVolumeProviderSpec;
+    const form: ApplicationVolumeForm = {
+      name: full.name,
+      imageRef: full.image?.reference ?? '',
+      mountPath: full.mount?.path ?? '',
+    };
+    if (full.image) form.imagePullPolicy = full.image.pullPolicy ?? ImagePullPolicy.PullIfNotPresent;
+    return form;
+  });
+};
+
+const apiToAppForm = (app: ApplicationProviderSpec): AppForm => {
+  const variables = envVarsToVariables((app as { envVars?: Record<string, string> }).envVars);
+  const volumes = apiVolumesToForm((app as { volumes?: ApplicationVolume[] }).volumes);
+
+  if (isContainerApplication(app)) {
+    const ports: PortMapping[] =
+      app.ports?.map((p) => {
+        const [host, container] = String(p).split(':');
+        return { hostPort: host ?? '', containerPort: container ?? '' };
+      }) ?? [];
+    return {
+      ...app,
+      specType: AppSpecType.OCI_IMAGE,
+      variables,
+      ports,
+      volumes,
+    } as SingleContainerAppForm;
+  }
+
+  if (isHelmApplication(app)) {
+    return {
+      ...app,
+      specType: AppSpecType.OCI_IMAGE,
+      valuesYaml: app.values && Object.keys(app.values).length > 0 ? yaml.dump(app.values) : undefined,
+      valuesFiles: app.valuesFiles ?? [''],
+    } as HelmImageAppForm;
+  }
+
+  if (isQuadletApplication(app)) {
+    const base: Omit<QuadletAppForm, 'image' | 'files'> = {
+      appType: app.appType,
+      name: app.name,
+      specType: hasImageSource(app) ? AppSpecType.OCI_IMAGE : AppSpecType.INLINE,
+      variables,
+      volumes,
+      runAs: (app as { runAs?: string }).runAs,
+    };
+    if (hasImageSource(app)) {
+      return { ...base, image: (app as { image: string }).image } as QuadletAppForm;
+    }
+    const inline = (app as { inline: { path?: string; content?: string; contentEncoding?: string }[] }).inline ?? [];
+    return {
+      ...base,
+      files: inline.map((f) => ({
+        path: f.path ?? '',
+        content: f.content,
+        base64: f.contentEncoding === EncodingType.EncodingBase64,
+      })),
+    } as QuadletAppForm;
+  }
+
+  if (isComposeApplication(app)) {
+    const a = app as ComposeApplication;
+    const base: Omit<ComposeAppForm, 'image' | 'files'> = {
+      appType: a.appType,
+      name: a.name,
+      specType: hasImageSource(a) ? AppSpecType.OCI_IMAGE : AppSpecType.INLINE,
+      variables,
+      volumes,
+    };
+    if (hasImageSource(a)) {
+      return { ...base, image: (a as { image: string }).image } as ComposeAppForm;
+    }
+    const inline = (a as { inline: { path?: string; content?: string; contentEncoding?: string }[] }).inline ?? [];
+    return {
+      ...base,
+      files: inline.map((f) => ({
+        path: f.path ?? '',
+        content: f.content,
+        base64: f.contentEncoding === EncodingType.EncodingBase64,
+      })),
+    } as ComposeAppForm;
+  }
+
+  throw new Error('Unknown application type');
 };
 
 export const getApplicationPatches = (
   basePath: string,
   currentApps: ApplicationProviderSpec[],
   updatedApps: AppForm[],
-) => {
+): PatchRequest => {
   const patches: PatchRequest = [];
-
   const currentLen = currentApps.length;
   const newLen = updatedApps.length;
 
   if (currentLen === 0 && newLen > 0) {
-    // First apps(s) have been added
-    patches.push({
-      path: `${basePath}/applications`,
-      op: 'add',
-      value: updatedApps.map(toAPIApplication),
-    });
+    patches.push({ path: `${basePath}/applications`, op: 'add', value: updatedApps.map(toAPIApplication) });
   } else if (currentLen > 0 && newLen === 0) {
-    // Last app(s) have been removed
-    patches.push({
-      path: `${basePath}/applications`,
-      op: 'remove',
-    });
+    patches.push({ path: `${basePath}/applications`, op: 'remove' });
   } else if (currentLen !== newLen) {
-    // Array length changed, need to replace entire array
-    patches.push({
-      path: `${basePath}/applications`,
-      op: 'replace',
-      value: updatedApps.map(toAPIApplication),
-    });
+    patches.push({ path: `${basePath}/applications`, op: 'replace', value: updatedApps.map(toAPIApplication) });
   } else {
-    // Apps length has not changed. We only PATCH the applications that have actually changed
     currentApps.forEach((currentApp, index) => {
       const updatedApp = updatedApps[index];
-      if (hasApplicationChanged(currentApp, updatedApp)) {
+      const updatedApi = toAPIApplication(updatedApp);
+      if (hasApplicationChanged(currentApp, updatedApi)) {
         patches.push({
           path: `${basePath}/applications/${index}`,
           op: 'replace',
-          value: toAPIApplication(updatedApp),
+          value: updatedApi,
         });
       }
     });
   }
-
   return patches;
 };
 
@@ -635,182 +696,66 @@ export const getApiConfig = (ct: SpecConfigTemplate): ConfigSourceProvider => {
   };
 };
 
-const getAppFormVariables = (envVars: Record<string, string> | undefined) =>
-  Object.entries(envVars || {}).map(([varName, varValue]) => ({ name: varName, value: varValue }));
+/** Creates a minimal AppForm for the "Add application" flow. */
+export const createInitialAppForm = (
+  appType: AppType,
+  specType: AppSpecType = AppSpecType.OCI_IMAGE,
+  name: string = '',
+): AppForm => {
+  const base = { appType, name: name || undefined };
+  const emptyVars: { name: string; value: string }[] = [];
+  const emptyVolumes: ApplicationVolumeForm[] = [];
+  const emptyFiles: InlineFileForm[] = [];
 
-const toFormFiles = (files: InlineApplicationFileFixed[]) => {
-  return files.map((file) => ({
-    path: file.path || '',
-    content: file.content || '',
-    base64: file.contentEncoding === EncodingType.EncodingBase64,
-  }));
-};
-
-const toAPIFiles = (files: ComposeInlineAppForm['files']) => {
-  return files.map((file) => ({
-    path: file.path,
-    content: file.content || '',
-    contentEncoding: file.base64 ? EncodingType.EncodingBase64 : EncodingType.EncodingPlain,
-  }));
-};
-
-const convertVolumesToForm = (volumes?: ApplicationVolume[]) => {
-  if (!volumes) return [];
-  return volumes.map((vol) => {
-    const fullVolume = vol as ApplicationVolume & ImageMountVolumeProviderSpec;
-    const volForm: ApplicationVolumeForm = {
-      name: fullVolume.name,
-      imageRef: fullVolume.image?.reference || '',
-      mountPath: fullVolume.mount?.path || '',
-    };
-    // Only set imagePullPolicy if there's an image
-    if (fullVolume.image) {
-      volForm.imagePullPolicy = fullVolume.image.pullPolicy || ImagePullPolicy.PullIfNotPresent;
-    }
-    return volForm;
-  });
-};
-
-const createContainerApp = (
-  containerApp: (ApplicationProviderSpec & ImageApplicationProviderSpec) | undefined,
-): SingleContainerAppForm => {
-  const ports =
-    containerApp?.ports?.map((portString) => {
-      const [hostPort, containerPort] = portString.split(':');
-      return { hostPort: hostPort || '', containerPort: containerPort || '' };
-    }) || [];
-
-  const limits = containerApp?.resources?.limits;
-  return {
-    appType: AppType.AppTypeContainer,
-    specType: AppSpecType.OCI_IMAGE,
-    name: containerApp?.name || '',
-    image: containerApp?.image || '',
-    variables: getAppFormVariables(containerApp?.envVars),
-    volumes: convertVolumesToForm(containerApp?.volumes),
-    ports,
-    limits: limits
-      ? {
-          cpu: limits.cpu || '',
-          memory: limits.memory || '',
-        }
-      : undefined,
-    runAs: containerApp?.runAs || RUN_AS_DEFAULT_USER,
-  };
-};
-
-const createHelmApp = (
-  helmApp: (ApplicationProviderSpec & ImageApplicationProviderSpec) | undefined,
-): HelmImageAppForm => {
-  const values = helmApp?.values || {};
-  return {
-    appType: AppType.AppTypeHelm,
-    specType: AppSpecType.OCI_IMAGE,
-    name: helmApp?.name || '',
-    image: helmApp?.image || '',
-    namespace: helmApp?.namespace,
-    valuesYaml: Object.keys(values).length > 0 ? yaml.dump(values) : '',
-    valuesFiles: helmApp?.valuesFiles || [''],
-  };
-};
-
-const createQuadletImageApp = (
-  quadletApp: (ApplicationProviderSpec & ImageApplicationProviderSpec) | undefined,
-): QuadletImageAppForm => {
-  return {
-    appType: AppType.AppTypeQuadlet,
-    specType: AppSpecType.OCI_IMAGE,
-    name: quadletApp?.name || '',
-    image: quadletApp?.image || '',
-    variables: getAppFormVariables(quadletApp?.envVars),
-    volumes: convertVolumesToForm(quadletApp?.volumes),
-    runAs: quadletApp?.runAs || RUN_AS_DEFAULT_USER,
-  };
-};
-
-const createQuadletInlineApp = (
-  quadletApp: (ApplicationProviderSpec & InlineApplicationProviderSpec) | undefined,
-): QuadletInlineAppForm => {
-  return {
-    appType: AppType.AppTypeQuadlet,
-    specType: AppSpecType.INLINE,
-    name: quadletApp?.name || '',
-    files: toFormFiles(quadletApp?.inline || []),
-    variables: getAppFormVariables(quadletApp?.envVars),
-    volumes: convertVolumesToForm(quadletApp?.volumes),
-    runAs: quadletApp?.runAs || RUN_AS_DEFAULT_USER,
-  };
-};
-
-const createComposeImageApp = (
-  composeApp: (ApplicationProviderSpec & ImageApplicationProviderSpec) | undefined,
-): ComposeImageAppForm => {
-  return {
-    appType: AppType.AppTypeCompose,
-    specType: AppSpecType.OCI_IMAGE,
-    name: composeApp?.name || '',
-    image: composeApp?.image || '',
-    variables: getAppFormVariables(composeApp?.envVars),
-    volumes: convertVolumesToForm(composeApp?.volumes),
-  };
-};
-
-const createComposeInlineApp = (
-  composeApp: (ApplicationProviderSpec & InlineApplicationProviderSpec) | undefined,
-): ComposeInlineAppForm => {
-  return {
-    appType: AppType.AppTypeCompose,
-    specType: AppSpecType.INLINE,
-    name: composeApp?.name || '',
-    files: toFormFiles(composeApp?.inline || []),
-    variables: getAppFormVariables(composeApp?.envVars),
-    volumes: convertVolumesToForm(composeApp?.volumes),
-  };
-};
-
-export const createInitialAppForm = (appType: AppType, specType: AppSpecType, name: string = ''): AppForm => {
-  let app: AppForm;
   switch (appType) {
     case AppType.AppTypeContainer:
-      app = createContainerApp(undefined);
-      break;
+      return {
+        ...base,
+        specType: AppSpecType.OCI_IMAGE,
+        image: '',
+        variables: emptyVars,
+        ports: [],
+        volumes: emptyVolumes,
+        runAs: RUN_AS_DEFAULT_USER,
+      } as SingleContainerAppForm;
     case AppType.AppTypeHelm:
-      app = createHelmApp(undefined);
-      break;
+      return {
+        ...base,
+        specType: AppSpecType.OCI_IMAGE,
+        image: '',
+        valuesFiles: [''],
+      } as HelmImageAppForm;
     case AppType.AppTypeQuadlet:
-      app = specType === AppSpecType.OCI_IMAGE ? createQuadletImageApp(undefined) : createQuadletInlineApp(undefined);
-      break;
+      return (
+        specType === AppSpecType.OCI_IMAGE
+          ? {
+              ...base,
+              specType: AppSpecType.OCI_IMAGE,
+              image: '',
+              variables: emptyVars,
+              volumes: emptyVolumes,
+              runAs: RUN_AS_DEFAULT_USER,
+            }
+          : {
+              ...base,
+              specType: AppSpecType.INLINE,
+              variables: emptyVars,
+              volumes: emptyVolumes,
+              files: emptyFiles,
+              runAs: RUN_AS_DEFAULT_USER,
+            }
+      ) as QuadletAppForm;
     case AppType.AppTypeCompose:
-      app = specType === AppSpecType.OCI_IMAGE ? createComposeImageApp(undefined) : createComposeInlineApp(undefined);
-      break;
+      return (
+        specType === AppSpecType.OCI_IMAGE
+          ? { ...base, specType: AppSpecType.OCI_IMAGE, image: '', variables: emptyVars, volumes: emptyVolumes }
+          : { ...base, specType: AppSpecType.INLINE, variables: emptyVars, volumes: emptyVolumes, files: emptyFiles }
+      ) as ComposeAppForm;
   }
-  app.name = name;
-  return app;
 };
 
-export const getApplicationValues = (deviceSpec?: DeviceSpec): AppForm[] => {
-  const apps = deviceSpec?.applications || [];
-  return apps.map((app) => {
-    if (!app.appType) {
-      throw new Error('Application appType is required');
-    }
-
-    switch (app.appType) {
-      case AppType.AppTypeContainer:
-        return createContainerApp(app as ApplicationProviderSpec & ImageApplicationProviderSpec);
-      case AppType.AppTypeHelm:
-        return createHelmApp(app as ApplicationProviderSpec & ImageApplicationProviderSpec);
-      case AppType.AppTypeQuadlet:
-        return isImageAppProvider(app)
-          ? createQuadletImageApp(app)
-          : createQuadletInlineApp(app as ApplicationProviderSpec & InlineApplicationProviderSpec & { runAs?: string });
-      case AppType.AppTypeCompose:
-        return isImageAppProvider(app)
-          ? createComposeImageApp(app)
-          : createComposeInlineApp(app as ApplicationProviderSpec & InlineApplicationProviderSpec);
-    }
-  });
-};
+export const getApplicationValues = (deviceSpec?: DeviceSpec): AppForm[] =>
+  (deviceSpec?.applications ?? []).map(apiToAppForm);
 
 export const getSystemdUnitsValues = (deviceSpec?: DeviceSpec): SystemdUnitFormValue[] => {
   return (

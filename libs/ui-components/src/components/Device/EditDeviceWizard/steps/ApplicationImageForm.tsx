@@ -6,14 +6,14 @@ import TextField from '../../../form/TextField';
 import LearnMoreLink from '../../../common/LearnMoreLink';
 import { useTranslation } from '../../../../hooks/useTranslation';
 import { useAppLinks } from '../../../../hooks/useAppLinks';
-import { ComposeImageAppForm, QuadletImageAppForm } from '../../../../types/deviceSpec';
+import { ComposeAppForm, QuadletAppForm } from '../../../../types/deviceSpec';
 
 const ApplicationImageForm = ({
   app,
   index,
   isReadOnly,
 }: {
-  app: QuadletImageAppForm | ComposeImageAppForm;
+  app: QuadletAppForm | ComposeAppForm;
   index: number;
   isReadOnly?: boolean;
 }) => {

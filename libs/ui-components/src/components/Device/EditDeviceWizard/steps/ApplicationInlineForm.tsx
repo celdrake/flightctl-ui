@@ -9,12 +9,12 @@ import CheckboxField from '../../../form/CheckboxField';
 import UploadField from '../../../form/UploadField';
 import TextField from '../../../form/TextField';
 import ExpandableFormSection from '../../../form/ExpandableFormSection';
-import { ComposeInlineAppForm, QuadletInlineAppForm } from '../../../../types/deviceSpec';
+import { ComposeAppForm, InlineFileForm, QuadletAppForm } from '../../../../types/deviceSpec';
 
 const MAX_INLINE_FILE_SIZE_BYTES = 1024 * 1024;
 
 type InlineApplicationFileFormProps = {
-  file: (QuadletInlineAppForm | ComposeInlineAppForm)['files'][0];
+  file: InlineFileForm;
   fileFieldName: string;
   fileIndex: number;
   isReadOnly?: boolean;
@@ -59,7 +59,7 @@ const ApplicationInlineForm = ({
   index,
   isReadOnly,
 }: {
-  app: QuadletInlineAppForm | ComposeInlineAppForm;
+  app: QuadletAppForm | ComposeAppForm;
   index: number;
   isReadOnly?: boolean;
 }) => {
@@ -86,7 +86,7 @@ const ApplicationInlineForm = ({
                       isReadOnly={isReadOnly}
                     />
                   </SplitItem>
-                  {!isReadOnly && app.files.length > 1 && (
+                  {!isReadOnly && (app.files?.length ?? 0) > 1 && (
                     <SplitItem>
                       <Button
                         aria-label={t('Delete file')}

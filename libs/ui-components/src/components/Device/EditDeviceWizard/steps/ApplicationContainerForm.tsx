@@ -272,7 +272,7 @@ const ApplicationContainerForm = ({
             <TextField
               aria-label={t('CPU limit')}
               name={`${appFieldName}.limits.cpu`}
-              value={app.limits?.cpu || ''}
+              value={app.resources?.limits?.cpu || ''}
               placeholder={t('Enter numeric value')}
               isDisabled={isReadOnly}
               helperText={t('Provide a valid CPU value (e.g., "0.4" or "2").')}
@@ -287,7 +287,7 @@ const ApplicationContainerForm = ({
             <TextField
               aria-label={t('Memory limit')}
               name={`${appFieldName}.limits.memory`}
-              value={app.limits?.memory || ''}
+              value={app.resources?.limits?.memory || ''}
               placeholder={t('Enter numeric value with optional unit')}
               isDisabled={isReadOnly}
               helperText={t('Provide a valid memory value (e.g., "512", "512m", "2g", "1024k").')}
