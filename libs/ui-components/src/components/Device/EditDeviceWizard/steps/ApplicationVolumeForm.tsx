@@ -126,15 +126,12 @@ const ApplicationVolumeForm = ({
                   icon={<PlusCircleIcon />}
                   iconPosition="start"
                   onClick={() => {
-                    const emptyVolume: VolumeFormType = {
+                    push({
                       name: '',
                       imageRef: '',
                       imagePullPolicy: ImagePullPolicy.PullIfNotPresent,
-                    };
-                    if (isSingleContainerApp) {
-                      emptyVolume.mountPath = '';
-                    }
-                    push(emptyVolume);
+                      mountPath: '',
+                    });
                   }}
                 >
                   {t('Add volume')}
