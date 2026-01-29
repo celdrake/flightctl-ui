@@ -13,7 +13,7 @@ import {
   ComposeAppForm,
   DisruptionBudgetForm,
   GitConfigTemplate,
-  HelmImageAppForm,
+  HelmAppForm,
   HttpConfigTemplate,
   InlineConfigTemplate,
   InlineFileForm,
@@ -26,7 +26,7 @@ import {
   UpdatePolicyForm,
   getAppIdentifier,
   isGitConfigTemplate,
-  isHelmImageAppForm,
+  isHelmAppForm,
   isHttpConfigTemplate,
   isInlineConfigTemplate,
   isKubeSecretTemplate,
@@ -699,8 +699,8 @@ export const validApplicationsSchema = (t: TFunction) => {
         }
 
         // Helm applications
-        if (isHelmImageAppForm(value)) {
-          return Yup.object<HelmImageAppForm>().shape({
+        if (isHelmAppForm(value)) {
+          return Yup.object<HelmAppForm>().shape({
             specType: Yup.string()
               .oneOf([AppSpecType.OCI_IMAGE])
               .required(t('Definition source must be image for this type of applications')),

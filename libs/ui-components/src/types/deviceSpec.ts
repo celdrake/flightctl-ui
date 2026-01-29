@@ -8,7 +8,9 @@ import {
   GitConfigProviderSpec,
   HelmApplication,
   HttpConfigProviderSpec,
+  ImageApplicationProviderSpec,
   ImagePullPolicy,
+  InlineApplicationProviderSpec,
   InlineConfigProviderSpec,
   KubernetesSecretProviderSpec,
   QuadletApplication,
@@ -71,8 +73,12 @@ export const isQuadletApplication = (app: ApplicationProviderSpec): app is Quadl
 export const isComposeApplication = (app: ApplicationProviderSpec): app is ComposeApplication =>
   app.appType === AppType.AppTypeCompose;
 
-export const hasImageSource = (app: ApplicationProviderSpec): boolean => 'image' in app;
-export const hasInlineSource = (app: ApplicationProviderSpec): boolean => 'inline' in app;
+export const isImageVariantApp = (
+  app: ApplicationProviderSpec,
+): app is ApplicationProviderSpec & ImageApplicationProviderSpec => 'image' in app;
+export const isInlineVariantApp = (
+  app: ApplicationProviderSpec,
+): app is ApplicationProviderSpec & InlineApplicationProviderSpec => 'inline' in app;
 
 export type ApplicationVolumeForm = {
   name: string;
@@ -111,7 +117,7 @@ export type SingleContainerAppForm = Omit<ContainerApplication, 'ports' | 'envVa
   volumes: ApplicationVolumeForm[];
 };
 
-export type HelmImageAppForm = Omit<HelmApplication, 'values'> & {
+export type HelmAppForm = Omit<HelmApplication, 'values'> & {
   specType: AppSpecType.OCI_IMAGE;
   valuesYaml?: string;
   valuesFiles: string[];
@@ -129,11 +135,11 @@ export type ComposeAppForm = Omit<ComposeApplication, 'envVars' | 'volumes' | 'i
     volumes: ApplicationVolumeForm[];
   };
 
-export type AppForm = SingleContainerAppForm | HelmImageAppForm | QuadletAppForm | ComposeAppForm;
+export type AppForm = SingleContainerAppForm | HelmAppForm | QuadletAppForm | ComposeAppForm;
 
 export const isSingleContainerAppForm = (app: AppForm): app is SingleContainerAppForm =>
   app.appType === AppType.AppTypeContainer;
-export const isHelmImageAppForm = (app: AppForm): app is HelmImageAppForm => app.appType === AppType.AppTypeHelm;
+export const isHelmAppForm = (app: AppForm): app is HelmAppForm => app.appType === AppType.AppTypeHelm;
 export const isQuadletAppForm = (app: AppForm): app is QuadletAppForm => app.appType === AppType.AppTypeQuadlet;
 export const isComposeAppForm = (app: AppForm): app is ComposeAppForm => app.appType === AppType.AppTypeCompose;
 
