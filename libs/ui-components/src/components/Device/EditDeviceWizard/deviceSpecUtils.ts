@@ -695,64 +695,82 @@ export const getApiConfig = (ct: SpecConfigTemplate): ConfigSourceProvider => {
   };
 };
 
-/** Creates a minimal AppForm for the "Add application" flow. */
-export const createInitialAppForm = (
-  appType: AppType,
-  specType: AppSpecType = AppSpecType.OCI_IMAGE,
-  name: string = '',
-): AppForm => {
-  const base = { appType, name: name || undefined };
-  const emptyVars: { name: string; value: string }[] = [];
-  const emptyVolumes: ApplicationVolumeForm[] = [];
-  const emptyFiles: InlineFileForm[] = [];
+// CELIA-WIP: use this functions from the template and for the "isAppComplete" functions
+// Also for initializing the FOrmik form
+const createContainerAppForm = (containerApp: ContainerApplication | undefined): SingleContainerAppForm => {
+  const ports =
+    containerApp?.ports?.map((portString) => {
+      const [hostPort, containerPort] = portString.split(':');
+      return { hostPort: hostPort || '', containerPort: containerPort || '' };
+    }) || [];
 
+  return {
+    appType: AppType.AppTypeContainer,
+    specType: AppSpecType.OCI_IMAGE,
+    name: containerApp?.name || '',
+    image: containerApp?.image || '',
+    variables: toFormVariables(containerApp?.envVars),
+    volumes: toFormVolumes(containerApp?.volumes),
+    ports,
+    limits: containerApp?.resources?.limits || { cpu: '', memory: '' },
+    runAs: containerApp?.runAs || RUN_AS_DEFAULT_USER,
+  };
+};
+
+const createHelmAppForm = (helmApp: HelmApplication | undefined): HelmAppForm => {
+  const values = helmApp?.values || {};
+  return {
+    appType: AppType.AppTypeHelm,
+    specType: AppSpecType.OCI_IMAGE,
+    name: helmApp?.name || '',
+    image: helmApp?.image || '',
+    namespace: helmApp?.namespace,
+    valuesYaml: Object.keys(values).length > 0 ? yaml.dump(values) : '',
+    valuesFiles: helmApp?.valuesFiles || [''],
+  };
+};
+
+const createQuadletOrComposeAppForm = (
+  appType: AppType.AppTypeQuadlet | AppType.AppTypeCompose,
+  app: QuadletApplication | ComposeApplication | undefined,
+): QuadletAppForm | ComposeAppForm => {
+  const isInlineVariant = app && isInlineVariantApp(app);
+  const specType = isInlineVariant ? AppSpecType.INLINE : AppSpecType.OCI_IMAGE;
+  const formApp: Partial<QuadletAppForm | ComposeAppForm> = {
+    appType,
+    specType,
+    name: app?.name || '',
+    variables: toFormVariables(app?.envVars),
+    volumes: toFormVolumes(app?.volumes),
+    runAs: app?.runAs || RUN_AS_DEFAULT_USER,
+  };
+
+  // We want to have both fields initialized for the formik form
+  formApp.image = isInlineVariant ? '' : app?.image || '';
+  formApp.files = isInlineVariant ? toFormFiles(app?.inline || []) : [];
+  return formApp as QuadletAppForm;
+};
+
+export const createInitialAppForm = (appType: AppType, name: string = ''): AppForm => {
+  let app: AppForm;
   switch (appType) {
     case AppType.AppTypeContainer:
-      return {
-        ...base,
-        specType: AppSpecType.OCI_IMAGE,
-        // CELIA-WIP DO THE PROPER CONVERSION
-        limits: { cpu: '333', memory: '333m' },
-        image: '',
-        variables: emptyVars,
-        ports: [],
-        volumes: emptyVolumes,
-        runAs: RUN_AS_DEFAULT_USER,
-      } as SingleContainerAppForm;
+      app = createContainerAppForm(undefined);
+      break;
     case AppType.AppTypeHelm:
-      return {
-        ...base,
-        specType: AppSpecType.OCI_IMAGE,
-        image: '',
-        valuesFiles: [''],
-      } as HelmAppForm;
+      app = createHelmAppForm(undefined);
+      break;
     case AppType.AppTypeQuadlet:
-      return (
-        specType === AppSpecType.OCI_IMAGE
-          ? {
-              ...base,
-              specType: AppSpecType.OCI_IMAGE,
-              image: '',
-              variables: emptyVars,
-              volumes: emptyVolumes,
-              runAs: RUN_AS_DEFAULT_USER,
-            }
-          : {
-              ...base,
-              specType: AppSpecType.INLINE,
-              variables: emptyVars,
-              volumes: emptyVolumes,
-              files: emptyFiles,
-              runAs: RUN_AS_DEFAULT_USER,
-            }
-      ) as QuadletAppForm;
+      app = createQuadletOrComposeAppForm(appType, undefined);
+      break;
     case AppType.AppTypeCompose:
-      return (
-        specType === AppSpecType.OCI_IMAGE
-          ? { ...base, specType: AppSpecType.OCI_IMAGE, image: '', variables: emptyVars, volumes: emptyVolumes }
-          : { ...base, specType: AppSpecType.INLINE, variables: emptyVars, volumes: emptyVolumes, files: emptyFiles }
-      ) as ComposeAppForm;
+      app = createQuadletOrComposeAppForm(appType, undefined);
+      break;
+    default:
+      throw new Error('Unknown application type');
   }
+  app.name = name;
+  return app;
 };
 
 export const getApplicationValues = (deviceSpec?: DeviceSpec): AppForm[] =>
