@@ -83,9 +83,9 @@ export const isInlineVariantApp = (
 
 export type ApplicationVolumeForm = {
   name: string;
-  imageRef?: string;
-  imagePullPolicy?: ImagePullPolicy;
-  mountPath?: string;
+  imageRef: string;
+  imagePullPolicy: ImagePullPolicy;
+  mountPath: string;
 };
 
 // --- AppForm: API types + UI-friendly replacements for problematic fields ---

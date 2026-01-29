@@ -8,20 +8,12 @@ import TextField from '../../../form/TextField';
 import ErrorHelperText from '../../../form/FieldHelperText';
 import { isDuplicatePortMapping, isValidPortMapping, validatePortNumber } from '../../../form/validations';
 import { useTranslation } from '../../../../hooks/useTranslation';
-import { PortMapping, SingleContainerAppForm } from '../../../../types/deviceSpec';
+import { PortMapping } from '../../../../types/deviceSpec';
 import ApplicationIntegritySettings from './ApplicationIntegritySettings';
 
 import './ApplicationContainerForm.css';
 
-const ApplicationContainerForm = ({
-  app,
-  index,
-  isReadOnly,
-}: {
-  app: SingleContainerAppForm;
-  index: number;
-  isReadOnly?: boolean;
-}) => {
+const ApplicationContainerForm = ({ index, isReadOnly }: { index: number; isReadOnly?: boolean }) => {
   const { t } = useTranslation();
   const appFieldName = `applications[${index}]`;
   const [{ value: ports }, , { setValue: setPorts, setTouched }] = useField<PortMapping[]>(`${appFieldName}.ports`);
@@ -172,7 +164,6 @@ const ApplicationContainerForm = ({
         <TextField
           aria-label={t('Image')}
           name={`${appFieldName}.image`}
-          value={app.image || ''}
           isDisabled={isReadOnly}
           helperText={t('Provide a valid image reference')}
         />
@@ -272,7 +263,6 @@ const ApplicationContainerForm = ({
             <TextField
               aria-label={t('CPU limit')}
               name={`${appFieldName}.limits.cpu`}
-              value={app.resources?.limits?.cpu || ''}
               placeholder={t('Enter numeric value')}
               isDisabled={isReadOnly}
               helperText={t('Provide a valid CPU value (e.g., "0.4" or "2").')}
@@ -287,7 +277,6 @@ const ApplicationContainerForm = ({
             <TextField
               aria-label={t('Memory limit')}
               name={`${appFieldName}.limits.memory`}
-              value={app.resources?.limits?.memory || ''}
               placeholder={t('Enter numeric value with optional unit')}
               isDisabled={isReadOnly}
               helperText={t('Provide a valid memory value (e.g., "512", "512m", "2g", "1024k").')}

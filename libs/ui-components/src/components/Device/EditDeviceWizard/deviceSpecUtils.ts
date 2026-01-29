@@ -44,22 +44,22 @@ import {
   SingleContainerAppForm,
   SpecConfigTemplate,
   SystemdUnitFormValue,
-  isImageVariantApp,
   isComposeApplication,
   isContainerApplication,
   isGitConfigTemplate,
   isGitProviderSpec,
-  isHelmApplication,
   isHelmAppForm,
+  isHelmApplication,
   isHttpConfigTemplate,
   isHttpProviderSpec,
+  isImageVariantApp,
   isInlineProviderSpec,
+  isInlineVariantApp,
   isKubeProviderSpec,
   isKubeSecretTemplate,
+  isQuadletAppForm,
   isQuadletApplication,
   isSingleContainerAppForm,
-  isQuadletAppForm,
-  isComposeAppForm,
 } from '../../../types/deviceSpec';
 
 const DEFAULT_INLINE_FILE_MODE = 420; // In Octal: 0644
@@ -434,11 +434,18 @@ const formVolumesToApi = (volumes: ApplicationVolumeForm[]): ApplicationVolume[]
     return vol as ApplicationVolume;
   });
 
-const formFilesToInline = (files: InlineFileForm[]) =>
+const formFilesToApi = (files: InlineFileForm[]) =>
   files.map((f) => ({
     path: f.path,
     content: f.content ?? '',
     contentEncoding: f.base64 ? EncodingType.EncodingBase64 : EncodingType.EncodingPlain,
+  }));
+
+const toFormFiles = (files: (FileContent & RelativePath)[]) =>
+  files.map((file) => ({
+    path: file.path || '',
+    content: file.content || '',
+    base64: file.contentEncoding === EncodingType.EncodingBase64,
   }));
 
 export const toAPIApplication = (app: AppForm): ApplicationProviderSpec => {
@@ -509,7 +516,7 @@ export const toAPIApplication = (app: AppForm): ApplicationProviderSpec => {
     if (app.specType === AppSpecType.OCI_IMAGE) {
       (quadletApp as ImageApplicationProviderSpec).image = app.image;
     } else {
-      (quadletApp as InlineApplicationProviderSpec).inline = formFilesToInline(app.files);
+      (quadletApp as InlineApplicationProviderSpec).inline = formFilesToApi(app.files);
     }
     return quadletApp as QuadletApplication;
   }
@@ -525,7 +532,7 @@ export const toAPIApplication = (app: AppForm): ApplicationProviderSpec => {
   if (formApp.specType === AppSpecType.OCI_IMAGE) {
     (composeApp as ImageApplicationProviderSpec).image = formApp.image;
   } else {
-    (composeApp as InlineApplicationProviderSpec).inline = formFilesToInline(formApp.files);
+    (composeApp as InlineApplicationProviderSpec).inline = formFilesToApi(formApp.files);
   }
   return composeApp as ComposeApplication;
 };
@@ -536,14 +543,13 @@ const envVarsToVariables = (envVars: Record<string, string> | undefined): { name
 const apiVolumesToForm = (volumes?: ApplicationVolume[]): ApplicationVolumeForm[] => {
   if (!volumes) return [];
   return volumes.map((vol) => {
-    const full = vol as ApplicationVolume & ImageMountVolumeProviderSpec;
-    const form: ApplicationVolumeForm = {
-      name: full.name,
-      imageRef: full.image?.reference ?? '',
-      mountPath: full.mount?.path ?? '',
+    const fullVolume = vol as ApplicationVolume & ImageMountVolumeProviderSpec;
+    return {
+      name: fullVolume.name,
+      imageRef: fullVolume.image?.reference || '',
+      mountPath: fullVolume.mount?.path || '',
+      imagePullPolicy: fullVolume.image?.pullPolicy || ImagePullPolicy.PullIfNotPresent,
     };
-    if (full.image) form.imagePullPolicy = full.image.pullPolicy ?? ImagePullPolicy.PullIfNotPresent;
-    return form;
   });
 };
 
@@ -556,69 +562,70 @@ const apiToAppForm = (app: ApplicationProviderSpec): AppForm => {
       app.ports?.map((p) => {
         const [host, container] = String(p).split(':');
         return { hostPort: host ?? '', containerPort: container ?? '' };
-      }) ?? [];
-    return {
-      ...app,
+      }) || [];
+
+    const containerApp: SingleContainerAppForm = {
+      appType: AppType.AppTypeContainer,
       specType: AppSpecType.OCI_IMAGE,
+      name: app.name,
+      image: app.image,
+      limits: app.resources?.limits ?? { cpu: '', memory: '' },
       variables,
       ports,
       volumes,
-    } as SingleContainerAppForm;
+    };
+    return containerApp;
   }
 
   if (isHelmApplication(app)) {
-    return {
-      ...app,
+    // We want to always show at least one values file field, even when no files have been added yet.
+    const valuesFiles = app.valuesFiles?.length ? app.valuesFiles : [''];
+    const valuesYaml = Object.keys(app.values || {}).length > 0 ? yaml.dump(app.values) : '';
+
+    const helmApp: HelmAppForm = {
+      appType: AppType.AppTypeHelm,
       specType: AppSpecType.OCI_IMAGE,
-      valuesYaml: app.values && Object.keys(app.values).length > 0 ? yaml.dump(app.values) : undefined,
-      valuesFiles: app.valuesFiles ?? [''],
-    } as HelmAppForm;
+      name: app.name,
+      image: app.image,
+      namespace: app.namespace,
+      valuesYaml,
+      valuesFiles,
+    };
+    return helmApp;
   }
 
   if (isQuadletApplication(app)) {
-    const base: Omit<QuadletAppForm, 'image' | 'files'> = {
+    const isInlineVariant = isInlineVariantApp(app);
+
+    const quadletApp: QuadletAppForm = {
       appType: app.appType,
-      name: app.name,
       specType: isImageVariantApp(app) ? AppSpecType.OCI_IMAGE : AppSpecType.INLINE,
+      name: app.name,
       variables,
       volumes,
-      runAs: (app as { runAs?: string }).runAs,
+      runAs: app.runAs || RUN_AS_DEFAULT_USER,
+      image: isInlineVariant ? '' : app.image,
+      files: isInlineVariant ? toFormFiles(app.inline) : [],
     };
-    if (isImageVariantApp(app)) {
-      return { ...base, image: (app as { image: string }).image } as QuadletAppForm;
-    }
-    const inline = (app as { inline: { path?: string; content?: string; contentEncoding?: string }[] }).inline ?? [];
-    return {
-      ...base,
-      files: inline.map((f) => ({
-        path: f.path ?? '',
-        content: f.content,
-        base64: f.contentEncoding === EncodingType.EncodingBase64,
-      })),
-    } as QuadletAppForm;
+
+    return quadletApp;
   }
 
   if (isComposeApplication(app)) {
-    const a = app as ComposeApplication;
-    const base: Omit<ComposeAppForm, 'image' | 'files'> = {
-      appType: a.appType,
-      name: a.name,
-      specType: isImageVariantApp(a) ? AppSpecType.OCI_IMAGE : AppSpecType.INLINE,
+    const composeApp = app as ComposeApplication;
+    const isInlineVariant = isInlineVariantApp(composeApp);
+
+    const formApp: ComposeAppForm = {
+      appType: composeApp.appType,
+      specType: isInlineVariant ? AppSpecType.INLINE : AppSpecType.OCI_IMAGE,
+      name: composeApp.name,
       variables,
       volumes,
+      runAs: composeApp.runAs || RUN_AS_DEFAULT_USER,
+      image: isInlineVariant ? '' : composeApp.image,
+      files: isInlineVariant ? toFormFiles(composeApp.inline) : [],
     };
-    if (isImageVariantApp(a)) {
-      return { ...base, image: (a as { image: string }).image } as ComposeAppForm;
-    }
-    const inline = (a as { inline: { path?: string; content?: string; contentEncoding?: string }[] }).inline ?? [];
-    return {
-      ...base,
-      files: inline.map((f) => ({
-        path: f.path ?? '',
-        content: f.content,
-        base64: f.contentEncoding === EncodingType.EncodingBase64,
-      })),
-    } as ComposeAppForm;
+    return formApp;
   }
 
   throw new Error('Unknown application type');
@@ -723,6 +730,8 @@ export const createInitialAppForm = (
       return {
         ...base,
         specType: AppSpecType.OCI_IMAGE,
+        // CELIA-WIP DO THE PROPER CONVERSION
+        limits: { cpu: '333', memory: '333m' },
         image: '',
         variables: emptyVars,
         ports: [],

@@ -8,9 +8,9 @@ import { FormGroupWithHelperText } from '../../../common/WithHelperText';
 import TextField from '../../../form/TextField';
 import UploadField from '../../../form/UploadField';
 import { useTranslation } from '../../../../hooks/useTranslation';
-import { AppSpecType, HelmAppForm } from '../../../../types/deviceSpec';
+import { AppSpecType } from '../../../../types/deviceSpec';
 
-const ApplicationHelmForm = ({ app, index, isReadOnly }: { app: HelmAppForm; index: number; isReadOnly?: boolean }) => {
+const ApplicationHelmForm = ({ index, isReadOnly }: { index: number; isReadOnly?: boolean }) => {
   const { t } = useTranslation();
   const appFieldName = `applications[${index}]`;
   const [{ value: valuesFiles }] = useField<Array<string>>(`${appFieldName}.valuesFiles`);
@@ -40,7 +40,6 @@ const ApplicationHelmForm = ({ app, index, isReadOnly }: { app: HelmAppForm; ind
         <TextField
           aria-label={t('Image')}
           name={`${appFieldName}.image`}
-          value={app.image || ''}
           isDisabled={isReadOnly}
           helperText={t('Provide a valid image reference')}
         />
@@ -50,7 +49,6 @@ const ApplicationHelmForm = ({ app, index, isReadOnly }: { app: HelmAppForm; ind
         <TextField
           aria-label={t('Namespace')}
           name={`${appFieldName}.namespace`}
-          value={app.namespace || ''}
           isDisabled={isReadOnly}
           placeholder={t('Type namespace here')}
         />

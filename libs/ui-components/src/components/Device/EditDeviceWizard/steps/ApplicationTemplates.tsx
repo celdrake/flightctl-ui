@@ -167,9 +167,9 @@ const ApplicationSection = ({ index, isReadOnly }: { index: number; isReadOnly?:
         </FormGroup>
 
         {isContainer ? (
-          <ApplicationContainerForm app={app} index={index} isReadOnly={isReadOnly} />
+          <ApplicationContainerForm index={index} isReadOnly={isReadOnly} />
         ) : isHelm ? (
-          <ApplicationHelmForm app={app} index={index} isReadOnly={isReadOnly} />
+          <ApplicationHelmForm index={index} isReadOnly={isReadOnly} />
         ) : (
           <>
             <FormGroupWithHelperText
