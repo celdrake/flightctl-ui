@@ -26,11 +26,9 @@ import {
   UpdatePolicyForm,
   getAppIdentifier,
   isGitConfigTemplate,
-  isHelmAppForm,
   isHttpConfigTemplate,
   isInlineConfigTemplate,
   isKubeSecretTemplate,
-  isSingleContainerAppForm,
 } from '../../types/deviceSpec';
 import { labelToString } from '../../utils/labels';
 import { UpdateScheduleMode } from '../../utils/time';
@@ -660,7 +658,7 @@ export const validApplicationsSchema = (t: TFunction) => {
     .of(
       Yup.lazy((value: AppForm) => {
         // Container applications (image-based with ports and resources)
-        if (isSingleContainerAppForm(value)) {
+        if (value.appType === AppType.AppTypeContainer) {
           return Yup.object().shape({
             specType: Yup.string()
               .oneOf([AppSpecType.OCI_IMAGE])
@@ -699,7 +697,7 @@ export const validApplicationsSchema = (t: TFunction) => {
         }
 
         // Helm applications
-        if (isHelmAppForm(value)) {
+        if (value.appType === AppType.AppTypeHelm) {
           return Yup.object<HelmAppForm>().shape({
             specType: Yup.string()
               .oneOf([AppSpecType.OCI_IMAGE])

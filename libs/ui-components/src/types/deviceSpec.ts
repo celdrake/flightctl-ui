@@ -1,5 +1,4 @@
 import {
-  AppType,
   ApplicationProviderSpec,
   ComposeApplication,
   ConfigProviderSpec,
@@ -77,22 +76,14 @@ export type ApplicationVolumeForm = {
   mountPath: string;
 };
 
-// --- AppForm: API types + UI-friendly replacements for problematic fields ---
-
-// Convenience type for managing ports. The API uses a string "host:container".
 export type PortMapping = {
   hostPort: string;
   containerPort: string;
 };
 
-// Convenience type for managing environment variables. The API uses a Record<string, string>.
 export type VariablesForm = { name: string; value: string }[];
 
-// Convenience type for managing inline files. The API uses ApplicationContent with path, content, contentEncoding.
 export type InlineFileForm = { path: string; content?: string; base64?: boolean };
-
-// For applications, we use convenience types to overwrite specific fields with their Form-friendly variants
-// That makes handling the form data easier and provides better type safety.
 
 type InlineOrImageVariantForm = {
   specType: AppSpecType;
@@ -128,12 +119,6 @@ export type ComposeAppForm = Omit<ComposeApplication, 'envVars' | 'volumes' | 'i
   };
 
 export type AppForm = SingleContainerAppForm | HelmAppForm | QuadletAppForm | ComposeAppForm;
-
-export const isSingleContainerAppForm = (app: AppForm): app is SingleContainerAppForm =>
-  app.appType === AppType.AppTypeContainer;
-export const isHelmAppForm = (app: AppForm): app is HelmAppForm => app.appType === AppType.AppTypeHelm;
-export const isQuadletAppForm = (app: AppForm): app is QuadletAppForm => app.appType === AppType.AppTypeQuadlet;
-export const isComposeAppForm = (app: AppForm): app is ComposeAppForm => app.appType === AppType.AppTypeCompose;
 
 const hasTemplateVariables = (str: string) => /{{.+?}}/.test(str);
 

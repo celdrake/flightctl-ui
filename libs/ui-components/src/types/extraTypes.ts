@@ -51,7 +51,8 @@ export type AnnotationType = DeviceAnnotation; // Add more types when they are a
 
 export const isFleet = (resource: ResourceSync | Fleet): resource is Fleet => resource.kind === 'Fleet';
 
-// ApplicationProviderSpec's definition for inline files adds a Record<string, any>. We use the fixed type for form/API file shape where strict typing is needed.
+// ApplicationProviderSpec's definition for inline files adds a Record<string, any>.
+// We use the fixed type to get proper Typescript checks for the field
 export type InlineApplicationFileFixed = FileContent & RelativePath;
 
 type CliArtifact = {

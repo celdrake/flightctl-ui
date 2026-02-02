@@ -6,7 +6,6 @@ import {
   FormGroup,
   FormSection,
   Grid,
-  Radio,
   Split,
   SplitItem,
   Stack,
@@ -22,6 +21,7 @@ import { createInitialAppForm } from '../deviceSpecUtils';
 import { useTranslation } from '../../../../hooks/useTranslation';
 import TextField from '../../../form/TextField';
 import FormSelect from '../../../form/FormSelect';
+import RadioField from '../../../form/RadioField';
 import ExpandableFormSection from '../../../form/ExpandableFormSection';
 import { FormGroupWithHelperText } from '../../../common/WithHelperText';
 import { appTypeOptions } from '../../../../utils/apps';
@@ -37,21 +37,19 @@ import './ApplicationsForm.css';
 
 const ApplicationSection = ({ index, isReadOnly }: { index: number; isReadOnly?: boolean }) => {
   const { t } = useTranslation();
-  const { setFieldValue } = useFormikContext<DeviceSpecConfigFormValues>();
   const appFieldName = `applications[${index}]`;
   const [{ value: app }, , { setValue }] = useField<AppForm>(appFieldName);
   const { appType, specType, name: appName } = app;
 
   const isContainer = app.appType === AppType.AppTypeContainer;
   const isHelm = app.appType === AppType.AppTypeHelm;
-  const isQuadlet = app.appType === AppType.AppTypeQuadlet;
-  const isCompose = app.appType === AppType.AppTypeCompose;
+  const isQuadletOrCompose = app.appType === AppType.AppTypeQuadlet || app.appType === AppType.AppTypeCompose;
 
   // Each AppForm type has all data structures it needs initialized with safe defaults (eg. empty arrays, etc).
   // However, when the user switches to a type that doesn't have those fields, we must reset the app to define the missing fields.
   const isContainerIncomplete = isContainer && !('ports' in app);
   const isHelmIncomplete = isHelm && !('valuesFiles' in app);
-  const isQuadletComposeIncomplete = (isQuadlet || isCompose) && !('volumes' in app);
+  const isQuadletComposeIncomplete = isQuadletOrCompose && !('volumes' in app);
 
   const shouldResetApp = isContainerIncomplete || isHelmIncomplete || isQuadletComposeIncomplete;
 
@@ -110,31 +108,21 @@ const ApplicationSection = ({ index, isReadOnly }: { index: number; isReadOnly?:
             >
               <Split hasGutter>
                 <SplitItem>
-                  <Radio
+                  <RadioField
                     id={`${appFieldName}-spec-type-image`}
-                    name={`${appFieldName}-spec-type-radio`}
+                    name={`${appFieldName}.specType`}
                     label={t('OCI reference URL')}
-                    isChecked={specType === AppSpecType.OCI_IMAGE}
                     isDisabled={isReadOnly}
-                    onChange={() => {
-                      if (specType !== AppSpecType.OCI_IMAGE) {
-                        setFieldValue(`${appFieldName}.specType`, AppSpecType.OCI_IMAGE);
-                      }
-                    }}
+                    checkedValue={AppSpecType.OCI_IMAGE}
                   />
                 </SplitItem>
                 <SplitItem>
-                  <Radio
+                  <RadioField
                     id={`${appFieldName}-spec-type-inline`}
-                    name={`${appFieldName}-spec-type-radio`}
+                    name={`${appFieldName}.specType`}
                     label={t('Inline')}
-                    isChecked={specType === AppSpecType.INLINE}
                     isDisabled={isReadOnly}
-                    onChange={() => {
-                      if (specType !== AppSpecType.INLINE) {
-                        setFieldValue(`${appFieldName}.specType`, AppSpecType.INLINE);
-                      }
-                    }}
+                    checkedValue={AppSpecType.INLINE}
                   />
                 </SplitItem>{' '}
               </Split>
@@ -156,7 +144,7 @@ const ApplicationSection = ({ index, isReadOnly }: { index: number; isReadOnly?:
             {specType === AppSpecType.INLINE && (
               <ApplicationInlineForm files={app.files || []} index={index} isReadOnly={isReadOnly} />
             )}
-            {isQuadlet && <ApplicationIntegritySettings index={index} isReadOnly={isReadOnly} />}
+            {isQuadletOrCompose && <ApplicationIntegritySettings index={index} isReadOnly={isReadOnly} />}
           </>
         )}
 

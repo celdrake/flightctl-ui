@@ -65,8 +65,8 @@ const ApplicationInlineForm = ({
 }) => {
   const { t } = useTranslation();
 
-  const fileCount = files?.length ?? 0;
-  if (isReadOnly && fileCount === 0) {
+  const fileList = files || [];
+  if (isReadOnly && fileList.length === 0) {
     return null;
   }
 
@@ -75,7 +75,7 @@ const ApplicationInlineForm = ({
       <FieldArray name={`applications.${index}.files`}>
         {({ push, remove }) => (
           <>
-            {files?.map((file, fileIndex) => {
+            {fileList.map((file, fileIndex) => {
               const fieldName = `applications[${index}].files[${fileIndex}]`;
               return (
                 <Split key={fileIndex} hasGutter>
@@ -87,7 +87,7 @@ const ApplicationInlineForm = ({
                       isReadOnly={isReadOnly}
                     />
                   </SplitItem>
-                  {!isReadOnly && fileCount > 1 && (
+                  {!isReadOnly && fileList.length > 1 && (
                     <SplitItem>
                       <Button
                         aria-label={t('Delete file')}
