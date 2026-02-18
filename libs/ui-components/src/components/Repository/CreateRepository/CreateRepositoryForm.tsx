@@ -5,6 +5,8 @@ import {
   Button,
   ButtonVariant,
   Checkbox,
+  Flex,
+  FlexItem,
   FormGroup,
   FormSection,
   Grid,
@@ -46,6 +48,7 @@ import TextField from '../../form/TextField';
 import FlightCtlForm from '../../form/FlightCtlForm';
 import { getDnsSubdomainValidations } from '../../form/validations';
 import { DEMO_REPOSITORY_URL } from '../../../hooks/useAppLinks';
+import WithTooltip from '../../common/WithTooltip';
 import { usePermissionsContext } from '../../common/PermissionsContext';
 import { RESOURCE, VERB } from '../../../types/rbac';
 
@@ -296,7 +299,13 @@ const RepositoryType = ({ isEdit }: { isEdit?: boolean }) => {
   );
 };
 
-export const RepositoryForm = ({ isEdit }: { isEdit?: boolean }) => {
+export const RepositoryForm = ({
+  isEdit,
+  accessModeDisabledReason,
+}: {
+  isEdit?: boolean;
+  accessModeDisabledReason?: string;
+}) => {
   const { t } = useTranslation();
   const { values } = useFormikContext<RepositoryFormValues>();
   const isOciRepo = values.repoType === RepoSpecType.RepoSpecTypeOci;
@@ -353,24 +362,28 @@ export const RepositoryForm = ({ isEdit }: { isEdit?: boolean }) => {
             </Split>
           </FormGroup>
           <FormGroup label={t('Access mode')}>
-            <Split hasGutter>
-              <SplitItem>
-                <RadioField
-                  id="oci-access-read"
-                  name="ociConfig.accessMode"
-                  label={t('Read only')}
-                  checkedValue={OciRepoSpec.accessMode.READ}
-                />
-              </SplitItem>
-              <SplitItem>
-                <RadioField
-                  id="oci-access-readwrite"
-                  name="ociConfig.accessMode"
-                  label={t('Read and write')}
-                  checkedValue={OciRepoSpec.accessMode.READ_WRITE}
-                />
-              </SplitItem>
-            </Split>
+            <WithTooltip showTooltip={!!accessModeDisabledReason} content={accessModeDisabledReason}>
+              <Flex>
+                <FlexItem>
+                  <RadioField
+                    id="oci-access-read"
+                    name="ociConfig.accessMode"
+                    label={t('Read only')}
+                    checkedValue={OciRepoSpec.accessMode.READ}
+                    isDisabled={!!accessModeDisabledReason}
+                  />
+                </FlexItem>
+                <FlexItem>
+                  <RadioField
+                    id="oci-access-readwrite"
+                    name="ociConfig.accessMode"
+                    label={t('Read and write')}
+                    checkedValue={OciRepoSpec.accessMode.READ_WRITE}
+                    isDisabled={!!accessModeDisabledReason}
+                  />
+                </FlexItem>
+              </Flex>
+            </WithTooltip>
           </FormGroup>
         </FormSection>
       )}
@@ -380,12 +393,11 @@ export const RepositoryForm = ({ isEdit }: { isEdit?: boolean }) => {
 };
 
 type CreateRepositoryFormContentProps = React.PropsWithChildren &
-  Pick<CreateRepositoryFormProps, 'onClose'> & {
+  Pick<CreateRepositoryFormProps, 'onClose' | 'options'> & {
     isEdit: boolean;
-    isReadOnly: boolean;
   };
 
-const CreateRepositoryFormContent = ({ isEdit, isReadOnly, onClose, children }: CreateRepositoryFormContentProps) => {
+const CreateRepositoryFormContent = ({ isEdit, onClose, options, children }: CreateRepositoryFormContentProps) => {
   const { t } = useTranslation();
   const { values, setFieldValue, isValid, dirty, submitForm, isSubmitting } = useFormikContext<RepositoryFormValues>();
   const isSubmitDisabled = isSubmitting || !dirty || !isValid;
@@ -396,9 +408,16 @@ const CreateRepositoryFormContent = ({ isEdit, isReadOnly, onClose, children }: 
   const showResourceSyncs = values.canUseResourceSyncs && values.repoType === RepoSpecType.RepoSpecTypeGit;
   return (
     <FlightCtlForm className="fctl-create-repo">
-      <fieldset disabled={isReadOnly}>
+      <fieldset disabled={options?.isReadOnly ?? false}>
         <Grid hasGutter span={8}>
-          <RepositoryForm isEdit={isEdit} />
+          <RepositoryForm
+            isEdit={isEdit}
+            accessModeDisabledReason={
+              options?.writeAccessOnly
+                ? t('Access mode must be set to read and write for this repository type')
+                : undefined
+            }
+          />
           {showResourceSyncs && canCreateRS && (
             <Checkbox
               id="use-resource-syncs"
@@ -444,16 +463,17 @@ export type CreateRepositoryFormProps = {
     canUseResourceSyncs?: boolean;
     showRepoTypes?: boolean;
     allowedRepoTypes?: RepoSpecType[];
+    writeAccessOnly?: boolean;
   };
 };
 
-const CreateRepositoryForm: React.FC<CreateRepositoryFormProps> = ({
+const CreateRepositoryForm = ({
   repository,
   resourceSyncs,
   options,
   onClose,
   onSuccess,
-}) => {
+}: CreateRepositoryFormProps) => {
   const [errors, setErrors] = React.useState<string[]>();
   const { patch, remove, post } = useFetch();
   const { t } = useTranslation();
@@ -532,7 +552,7 @@ const CreateRepositoryForm: React.FC<CreateRepositoryFormProps> = ({
         }
       }}
     >
-      <CreateRepositoryFormContent isEdit={!!repository} onClose={onClose} isReadOnly={!!options?.isReadOnly}>
+      <CreateRepositoryFormContent isEdit={!!repository} onClose={onClose} options={options}>
         {errors?.length && (
           <Alert isInline variant="danger" title={t('An error occurred')}>
             {errors.map((e, index) => (
