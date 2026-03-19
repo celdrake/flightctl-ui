@@ -1,52 +1,35 @@
-import { FlightCtlApp, useAppContext } from './useAppContext';
+import { useAppContext } from './useAppContext';
 
 // Links to other flightctl upstream resources
 export const DEMO_REPOSITORY_URL = 'https://github.com/flightctl/flightctl-demos';
 
-const ACM_VERSION = '2.14';
-const AAP_VERSION = '2.5';
+export const RHEM_VERSION = '1.1';
 
-const upstreamDocsBase = 'https://github.com/flightctl/flightctl/blob/main/docs';
-const acmDownstreamDocsBase = `https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/${ACM_VERSION}/html-single/edge_manager/index`;
-const aapDownstreamDocsBase = `https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/${AAP_VERSION}/html/managing_device_fleets_with_the_red_hat_edge_manager`;
+const upstreamLinks = {
+  createApp:
+    'https://github.com/flightctl/flightctl/blob/main/docs/user/using/managing-devices.md#creating-applications',
+  useTemplateVars:
+    'https://github.com/flightctl/flightctl/blob/main/docs/user/using/managing-fleets.md#defining-device-templates',
+  addNewDevice:
+    'https://github.com/flightctl/flightctl/blob/main/docs/user/building/building-images.md#choosing-an-enrollment-method',
+  createAcmRepo:
+    'https://github.com/flightctl/flightctl/blob/main/docs/user/using/registering-microshift-devices-acm.md#auto-registering-devices-with-microshift-into-acm',
+  provisionDevice:
+    'https://github.com/flightctl/flightctl/blob/main/docs/user/using/provisioning-devices.md#provisioning-physical-devices',
+};
 
-const links: Record<'fc' | 'acm' | 'aap', Record<AppLink, string>> = {
-  fc: {
-    createApp: `${upstreamDocsBase}/user/using/managing-devices.md#creating-applications`,
-    useTemplateVars: `${upstreamDocsBase}/user/using/managing-fleets.md#defining-device-templates`,
-    addNewDevice: `${upstreamDocsBase}/user/building/building-images.md#choosing-an-enrollment-method`,
-    createAcmRepo: `${upstreamDocsBase}/user/using/registering-microshift-devices-acm.md#auto-registering-devices-with-microshift-into-acm`,
-    provisionDevice: `${upstreamDocsBase}/user/using/provisioning-devices.md#provisioning-physical-devices`,
-  },
-  acm: {
-    createApp: `${acmDownstreamDocsBase}#build-app-packages`,
-    useTemplateVars: `${acmDownstreamDocsBase}#device-templates`,
-    addNewDevice: `${acmDownstreamDocsBase}#edge-mgr-build`,
-    createAcmRepo: `${acmDownstreamDocsBase}#device-config-git-cli`,
-    provisionDevice: `${acmDownstreamDocsBase}#provision-devices-intro`,
-  },
-  aap: {
-    createApp: `${aapDownstreamDocsBase}/edge-manager-manage-apps#edge-manager-build-app-packages`,
-    useTemplateVars: `${aapDownstreamDocsBase}/assembly-edge-manager-device-fleets#edge-manager-device-templates`,
-    addNewDevice: `${aapDownstreamDocsBase}/assembly-edge-manager-images#edge-manager-build-bootc`,
-    createAcmRepo: '',
-    provisionDevice: `${aapDownstreamDocsBase}/edge-manager-provisioning-devices`,
-  },
+const downstreamLinks = {
+  createApp: `https://docs.redhat.com/en/documentation/red_hat_edge_manager/${RHEM_VERSION}/html/managing_applications_on_an_edge_device/rhem-manage-apps#build-app-packages`,
+  useTemplateVars: `https://docs.redhat.com/en/documentation/red_hat_edge_manager/${RHEM_VERSION}/html/managing_device_fleets/device-fleets#device-templates`,
+  addNewDevice: `https://docs.redhat.com/en/documentation/red_hat_edge_manager/${RHEM_VERSION}/html/operating_system_images_for_the_red_hat_edge_manager/edge-mgr-images#build-images-consider`,
+  createAcmRepo: `https://docs.redhat.com/en/documentation/red_hat_edge_manager/${RHEM_VERSION}/html/managing_devices/manage-devices-intro#manage-git-repository`,
+  provisionDevice: `https://docs.redhat.com/en/documentation/red_hat_edge_manager/${RHEM_VERSION}/html/provisioning_devices/provision-devices-intro`,
 };
 
 type AppLink = 'createApp' | 'useTemplateVars' | 'addNewDevice' | 'createAcmRepo' | 'provisionDevice';
 
-const getLinkSource = (appType: FlightCtlApp, isRHEM?: boolean) => {
-  // Default doc links are AAP's and apply when using RHEM branding
-  if (isRHEM || appType === FlightCtlApp.AAP) {
-    return links.aap;
-  }
-  return appType === FlightCtlApp.STANDALONE ? links.fc : links.acm;
-};
-
 export const useAppLinks = (link: AppLink) => {
-  const { appType, settings } = useAppContext();
+  const { settings } = useAppContext();
 
-  const links = getLinkSource(appType, settings.isRHEM);
-  return links[link];
+  return settings.isRHEM ? downstreamLinks[link] : upstreamLinks[link];
 };
