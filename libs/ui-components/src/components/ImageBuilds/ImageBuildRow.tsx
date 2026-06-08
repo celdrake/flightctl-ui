@@ -1,18 +1,23 @@
 import * as React from 'react';
-import { Button, Content, Flex, FlexItem, Icon, Stack, StackItem, Title } from '@patternfly/react-core';
+import { Alert, AlertActionLink, Button, Stack, StackItem, Title } from '@patternfly/react-core';
 import { ActionsColumn, ExpandableRowContent, IAction, OnSelect, Tbody, Td, Tr } from '@patternfly/react-table';
-import { ExclamationCircleIcon } from '@patternfly/react-icons/dist/js/icons/exclamation-circle-icon';
 
 import { ImageBuild, ImageBuildConditionReason, ImagePromotion } from '@flightctl/types/imagebuilder';
-import ImagePromotionStatus from '../ImagePromotion/ImagePromotionStatus';
 import { ImageBuildWithExports } from '../../types/extraTypes';
 import { useTranslation } from '../../hooks/useTranslation';
 import { ROUTE, useNavigate } from '../../hooks/useNavigate';
-import { getImageBuildImage, getImageBuildStatusReason, isImageBuildCancelable } from '../../utils/imageBuilds';
+import { getImageBuildPrimaryAction } from '../../utils/imageBuildPrimaryAction';
+import {
+  getImageBuildImage,
+  getImageBuildReadyCondition,
+  getImageBuildStatusReason,
+  isImageBuildCancelable,
+  isImageBuildFailed,
+} from '../../utils/imageBuilds';
 import { getDateDisplay } from '../../utils/dates';
 import ResourceLink from '../common/ResourceLink';
 import ImageBuildExportsGallery from './ImageBuildDetails/ImageBuildExportsGallery';
-import { ImageBuildStatusDisplay } from './ImageBuildAndExportStatus';
+import ImageBuildPipelineStatusDisplay from './ImageBuildPipelineStatus';
 
 type ImageBuildRowProps = {
   imageBuild: ImageBuildWithExports;
@@ -52,6 +57,7 @@ const ImageBuildRow = ({
   const [isExpanded, setIsExpanded] = React.useState(false);
 
   const imageBuildName = imageBuild.metadata.name || '';
+  const buildCondition = getImageBuildReadyCondition(imageBuild);
   const buildReason = getImageBuildStatusReason(imageBuild);
 
   const actions: IAction[] = [
@@ -74,6 +80,7 @@ const ImageBuildRow = ({
     actions.push({
       title: t('Add to catalog'),
       onClick: onAddToCatalog,
+      isDisabled: isImageBuildFailed(buildReason),
     });
   }
 
@@ -91,6 +98,31 @@ const ImageBuildRow = ({
 
   const sourceImage = getImageBuildImage(imageBuild.spec.source);
   const destinationImage = getImageBuildImage(imageBuild.spec.destination);
+
+  const primaryAction = React.useMemo(
+    () =>
+      getImageBuildPrimaryAction({
+        imageBuild,
+        latestPromotion,
+        canPromote: canAddToCatalog,
+        t,
+      }),
+    [imageBuild, latestPromotion, canAddToCatalog, t],
+  );
+
+  const handlePrimaryAction = () => {
+    switch (primaryAction.type) {
+      case 'pushToCatalog':
+        onAddToCatalog();
+        break;
+      case 'seeFailureMessage':
+      case 'retryExport':
+        setIsExpanded(true);
+        break;
+      default:
+        break;
+    }
+  };
 
   return (
     <Tbody isExpanded={isExpanded}>
@@ -114,11 +146,15 @@ const ImageBuildRow = ({
         </Td>
         <Td dataLabel={t('Base image')}>{sourceImage}</Td>
         <Td dataLabel={t('Image output')}>{destinationImage}</Td>
-        <Td dataLabel={t('Build status')}>
-          <ImageBuildStatusDisplay buildStatus={imageBuild.status} />
+        <Td dataLabel={t('Status')}>
+          <ImageBuildPipelineStatusDisplay imageBuild={imageBuild} latestPromotion={latestPromotion} />
         </Td>
-        <Td dataLabel={t('Promotion status')}>
-          {latestPromotion ? <ImagePromotionStatus promotion={latestPromotion} /> : '-'}
+        <Td dataLabel={t('Actions')}>
+          {primaryAction.type !== 'none' && (
+            <Button variant="link" isInline onClick={handlePrimaryAction}>
+              {primaryAction.label}
+            </Button>
+          )}
         </Td>
         <Td dataLabel={t('Date')}>{getDateDisplay(imageBuild.metadata.creationTimestamp)}</Td>
         <Td isActionCell>
@@ -137,34 +173,24 @@ const ImageBuildRow = ({
                     </Title>
                   </StackItem>
                   {buildReason === ImageBuildConditionReason.ImageBuildConditionReasonFailed && (
-                    <Flex alignItems={{ default: 'alignItemsCenter' }}>
-                      <FlexItem>
-                        <Icon status="danger">
-                          <ExclamationCircleIcon />
-                        </Icon>
-                      </FlexItem>
-                      {canNewVersion ? (
-                        <>
-                          <FlexItem>
-                            <Content>{t('Build failed. Please rebuild.')}</Content>
-                          </FlexItem>
-                          <FlexItem>
-                            <Button
-                              variant="link"
-                              onClick={() =>
-                                navigate({ route: ROUTE.IMAGE_BUILD_NEW_VERSION, postfix: imageBuildName })
-                              }
-                            >
-                              {t('Rebuild')}
-                            </Button>
-                          </FlexItem>
-                        </>
-                      ) : (
-                        <FlexItem>
-                          <Content>{t('Build failed.')}</Content>
-                        </FlexItem>
-                      )}
-                    </Flex>
+                    <Alert
+                      variant="danger"
+                      title={t('Build failed')}
+                      actionLinks={
+                        canNewVersion ? (
+                          <AlertActionLink
+                            onClick={() => navigate({ route: ROUTE.IMAGE_BUILD_NEW_VERSION, postfix: imageBuildName })}
+                          >
+                            {t('Retry build')}
+                          </AlertActionLink>
+                        ) : undefined
+                      }
+                    >
+                      <details>
+                        <summary>{t('View error details')}</summary>
+                        {buildCondition?.message}
+                      </details>
+                    </Alert>
                   )}
                   <StackItem>
                     <Button

@@ -13,6 +13,7 @@ import {
   ImageExportStatus,
 } from '@flightctl/types/imagebuilder';
 import { useTranslation } from '../../hooks/useTranslation';
+import { getImageBuilderCondition } from '../../utils/imageBuilds';
 import { StatusLevel } from '../../utils/status/common';
 import { StatusDisplayContent } from '../Status/StatusDisplay';
 import ImageUrl from './ImageUrl';
@@ -112,8 +113,10 @@ const ImageBuildAndExportStatus = ({
 export const ImageBuildStatusDisplay = ({ buildStatus }: ImageBuildStatusProps) => {
   const { t } = useTranslation();
 
-  const conditions = buildStatus?.conditions || [];
-  const readyCondition = conditions.find((c) => c.type === ImageBuildConditionType.ImageBuildConditionTypeReady);
+  const readyCondition = getImageBuilderCondition(
+    buildStatus?.conditions,
+    ImageBuildConditionType.ImageBuildConditionTypeReady,
+  );
   const { level, label } = getImageBuildStatusInfo(readyCondition, t);
 
   return (
@@ -129,8 +132,10 @@ export const ImageBuildStatusDisplay = ({ buildStatus }: ImageBuildStatusProps) 
 export const ImageExportStatusDisplay = ({ imageStatus, imageReference }: ImageExportStatusProps) => {
   const { t } = useTranslation();
 
-  const conditions = imageStatus?.conditions || [];
-  const readyCondition = conditions.find((c) => c.type === ImageExportConditionType.ImageExportConditionTypeReady);
+  const readyCondition = getImageBuilderCondition(
+    imageStatus?.conditions,
+    ImageExportConditionType.ImageExportConditionTypeReady,
+  );
   const { level, label } = getImageExportStatusInfo(readyCondition, t);
 
   return (

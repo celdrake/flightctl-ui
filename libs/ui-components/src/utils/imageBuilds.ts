@@ -2,13 +2,18 @@ import { TFunction } from 'react-i18next';
 import {
   ExportFormatType,
   ImageBuild,
+  ImageBuildCondition,
   ImageBuildConditionReason,
   ImageBuildConditionType,
   ImageBuildDestination,
   ImageBuildSource,
   ImageExport,
+  ImageExportCondition,
   ImageExportConditionReason,
   ImageExportConditionType,
+  ImagePromotion,
+  ImagePromotionCondition,
+  ImagePromotionConditionType,
 } from '@flightctl/types/imagebuilder';
 import { Repository } from '@flightctl/types';
 import { isOciRepoSpec } from '../components/Repository/CreateRepository/utils';
@@ -71,19 +76,29 @@ export const getImageReference = (
   return `${registryUrl}/${imageTarget.imageName}:${imageTarget.imageTag}`;
 };
 
+export const getImageBuilderCondition = <TCondition extends { type: string }>(
+  conditions: TCondition[] | undefined,
+  conditionType: TCondition['type'],
+): TCondition | undefined => conditions?.find((condition) => condition.type === conditionType);
+
+export const getImageBuildReadyCondition = (imageBuild: ImageBuild): ImageBuildCondition | undefined =>
+  getImageBuilderCondition(imageBuild.status?.conditions, ImageBuildConditionType.ImageBuildConditionTypeReady);
+
+export const getImageExportReadyCondition = (imageExport: ImageExport): ImageExportCondition | undefined =>
+  getImageBuilderCondition(imageExport.status?.conditions, ImageExportConditionType.ImageExportConditionTypeReady);
+
+export const getImagePromotionReadyCondition = (promotion: ImagePromotion): ImagePromotionCondition | undefined =>
+  getImageBuilderCondition(promotion.status?.conditions, ImagePromotionConditionType.ImagePromotionConditionTypeReady);
+
 export const getImageBuildStatusReason = (imageBuild: ImageBuild): ImageBuildConditionReason => {
-  const readyCondition = imageBuild.status?.conditions?.find(
-    (c) => c.type === ImageBuildConditionType.ImageBuildConditionTypeReady,
-  );
+  const readyCondition = getImageBuildReadyCondition(imageBuild);
   return (
     (readyCondition?.reason as ImageBuildConditionReason) || ImageBuildConditionReason.ImageBuildConditionReasonPending
   );
 };
 
 export const getImageExportStatusReason = (imageExport: ImageExport): ImageExportConditionReason => {
-  const readyCondition = imageExport.status?.conditions?.find(
-    (c) => c.type === ImageExportConditionType.ImageExportConditionTypeReady,
-  );
+  const readyCondition = getImageExportReadyCondition(imageExport);
   return (
     (readyCondition?.reason as ImageExportConditionReason) ||
     ImageExportConditionReason.ImageExportConditionReasonPending
@@ -96,6 +111,17 @@ export const isImageBuildActiveReason = (reason: ImageBuildConditionReason): boo
     reason === ImageBuildConditionReason.ImageBuildConditionReasonBuilding ||
     reason === ImageBuildConditionReason.ImageBuildConditionReasonPushing ||
     reason === ImageBuildConditionReason.ImageBuildConditionReasonGeneratingSBOM ||
+    reason === ImageBuildConditionReason.ImageBuildConditionReasonCanceling
+  );
+};
+
+export const isImageBuildFailed = (reason: ImageBuildConditionReason): boolean => {
+  return reason === ImageBuildConditionReason.ImageBuildConditionReasonFailed;
+};
+
+export const isImageBuildCanceled = (reason: ImageBuildConditionReason): boolean => {
+  return (
+    reason === ImageBuildConditionReason.ImageBuildConditionReasonCanceled ||
     reason === ImageBuildConditionReason.ImageBuildConditionReasonCanceling
   );
 };

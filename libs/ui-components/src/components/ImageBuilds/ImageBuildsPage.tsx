@@ -46,10 +46,10 @@ const getColumns = (t: TFunction) => [
     name: t('Image output'),
   },
   {
-    name: t('Build status'),
+    name: t('Status'),
   },
   {
-    name: t('Promotion status'),
+    name: t('Actions'),
   },
   {
     name: t('Date'),

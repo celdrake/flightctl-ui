@@ -1,10 +1,7 @@
 import { TFunction } from 'i18next';
 
-import {
-  ImagePromotion,
-  ImagePromotionConditionReason,
-  ImagePromotionConditionType,
-} from '@flightctl/types/imagebuilder';
+import { ImagePromotion, ImagePromotionConditionReason } from '@flightctl/types/imagebuilder';
+import { getImagePromotionReadyCondition } from '../imageBuilds';
 import { StatusLevel } from './common';
 
 export type ImagePromotionStatusReason = ImagePromotionConditionReason | 'Unknown';
@@ -52,9 +49,7 @@ export const getImagePromotionStatus = (
   promotion: ImagePromotion,
   t: TFunction,
 ): { reason: ImagePromotionStatusReason; label: string; level: StatusLevel; message: string | undefined } => {
-  const readyCondition = promotion.status?.conditions?.find(
-    (c) => c.type === ImagePromotionConditionType.ImagePromotionConditionTypeReady,
-  );
+  const readyCondition = getImagePromotionReadyCondition(promotion);
   const reason = (readyCondition?.reason as ImagePromotionConditionReason | undefined) ?? 'Unknown';
   return {
     reason,

@@ -7,7 +7,7 @@ import { useTranslation } from '../../../hooks/useTranslation';
 import { ROUTE, useNavigate } from '../../../hooks/useNavigate';
 import { usePermissionsContext } from '../../common/PermissionsContext';
 import { useAppContext } from '../../../hooks/useAppContext';
-import { getImageBuildStatusReason, isImageBuildCancelable } from '../../../utils/imageBuilds';
+import { getImageBuildStatusReason, isImageBuildCancelable, isImageBuildFailed } from '../../../utils/imageBuilds';
 import DetailsPage from '../../DetailsPage/DetailsPage';
 import DetailsPageActions from '../../DetailsPage/DetailsPageActions';
 import DeleteImageBuildModal from '../DeleteImageBuildModal/DeleteImageBuildModal';
@@ -81,7 +81,12 @@ const ImageBuildDetailsPageContent = () => {
                 </DropdownItem>
               )}
               {canPromote && (
-                <DropdownItem onClick={() => setIsImagePromotionOpen(true)}>{t('Add to catalog')}</DropdownItem>
+                <DropdownItem
+                  onClick={() => setIsImagePromotionOpen(true)}
+                  isDisabled={buildReason ? isImageBuildFailed(buildReason) : false}
+                >
+                  {t('Add to catalog')}
+                </DropdownItem>
               )}
               {canCancel && (
                 <DropdownItem onClick={() => setIsCancelModalOpen(true)}>{t('Cancel image build')}</DropdownItem>

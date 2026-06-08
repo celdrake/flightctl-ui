@@ -200,6 +200,8 @@ const ImagePromotionsCard = ({
   );
 };
 
+// TODO(EDM-4056): Replace the separate build-status chip with the same compact pipeline
+// ProgressStepper used in the Image builds table once the table design is validated.
 const ImageBuildDetailsTab = ({ imageBuild }: { imageBuild: ImageBuildWithExports }) => {
   const { t } = useTranslation();
   const { checkPermissions } = usePermissionsContext();
