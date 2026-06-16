@@ -14,14 +14,16 @@ var (
 	FctlApiExternalUrl     = getEnvUrlVar("FLIGHTCTL_SERVER_EXTERNAL", "https://localhost:3443")
 	FctlImageBuilderApiUrl = getEnvUrlVar("FLIGHTCTL_IMAGEBUILDER_SERVER", "https://localhost:8445")
 	FctlApiInsecure        = getEnvVar("FLIGHTCTL_SERVER_INSECURE_SKIP_VERIFY", "false")
-	FctlCliArtifactsUrl    = getEnvUrlVar("FLIGHTCTL_CLI_ARTIFACTS_SERVER", "http://localhost:8090")
-	AlertManagerApiUrl     = getEnvUrlVar("FLIGHTCTL_ALERTMANAGER_PROXY", "https://localhost:8443")
-	TlsKeyPath             = getEnvVar("TLS_KEY", "")
-	TlsCertPath            = getEnvVar("TLS_CERT", "")
-	BaseUiUrl              = getEnvUrlVar("BASE_UI_URL", "http://localhost:9000")
-	AuthInsecure           = getEnvVar("AUTH_INSECURE_SKIP_VERIFY", "")
-	OcpPlugin              = getEnvVar("IS_OCP_PLUGIN", "false")
-	IsRHEM                 = getEnvVar("IS_RHEM", "")
+	// DevToken is a local-development fallback bearer token used when no UI session cookie is present.
+	DevToken            = strings.TrimSpace(getEnvVar("FLIGHTCTL_DEV_TOKEN", ""))
+	FctlCliArtifactsUrl = getEnvUrlVar("FLIGHTCTL_CLI_ARTIFACTS_SERVER", "http://localhost:8090")
+	AlertManagerApiUrl  = getEnvUrlVar("FLIGHTCTL_ALERTMANAGER_PROXY", "https://localhost:8443")
+	TlsKeyPath          = getEnvVar("TLS_KEY", "")
+	TlsCertPath         = getEnvVar("TLS_CERT", "")
+	BaseUiUrl           = getEnvUrlVar("BASE_UI_URL", "http://localhost:9000")
+	AuthInsecure        = getEnvVar("AUTH_INSECURE_SKIP_VERIFY", "")
+	OcpPlugin           = getEnvVar("IS_OCP_PLUGIN", "false")
+	IsRHEM              = getEnvVar("IS_RHEM", "")
 	// TrustXForwardedHeaders enables use of X-Forwarded-Proto and X-Forwarded-Host for request
 	// origin (e.g. TLS termination at an ingress). When false, only r.TLS and r.Host are used.
 	// Set to true when a trusted reverse proxy sets these headers; see also TrustedProxyNets.

@@ -564,14 +564,17 @@ func (a AuthHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// If no provider specified, clear the cookie and force a new login
-	if tokenData.Provider == "" {
+	// If no provider is available and no dev token fallback is configured, force login.
+	if tokenData.Provider == "" && config.DevToken == "" {
 		clearSessionCookie(w, r)
 		respondWithError(w, http.StatusUnauthorized, "No authentication provider specified in session")
 		return
 	}
 
 	token := tokenData.Token
+	if token == "" && config.DevToken != "" {
+		token = config.DevToken
+	}
 	if token == "" {
 		clearSessionCookie(w, r)
 		respondWithError(w, http.StatusUnauthorized, "No authentication token found in session")

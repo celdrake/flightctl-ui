@@ -46,3 +46,10 @@ FLIGHTCTL_SERVER=https://flightctl.prod.example.com \
 ENABLE_CLI_ARTIFACTS=false \
 npm run dev
 ```
+
+```shell
+# Use remote backend with a development token fallback (review-only)
+FLIGHTCTL_SERVER=https://flightctl.prod.example.com \
+FLIGHTCTL_DEV_TOKEN="$(oc whoami -t)" \
+npm run dev
+```

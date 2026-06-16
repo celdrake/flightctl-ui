@@ -68,6 +68,17 @@ If backend is not running in your Kind cluster, you need to specify your Flight 
 FLIGHTCTL_SERVER=<api_server_url> npm run dev
 ```
 
+For PR reviews against a remote backend where local OAuth callback login is not practical, you can provide a
+development token fallback:
+
+```shell
+FLIGHTCTL_SERVER=<api_server_url> \
+FLIGHTCTL_DEV_TOKEN="$(oc whoami -t)" \
+npm run dev
+```
+
+`FLIGHTCTL_DEV_TOKEN` is intended for local development/review only. Do not use it in production environments.
+
 If the backend, or Auth provider is running self-signed certs, you will need to disable the verification via environment variables:
 
 - `FLIGHTCTL_SERVER_INSECURE_SKIP_VERIFY='true'` - to disable verification of backend certs

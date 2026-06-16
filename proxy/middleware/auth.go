@@ -5,6 +5,7 @@ import (
 
 	"github.com/flightctl/flightctl-ui/auth"
 	"github.com/flightctl/flightctl-ui/common"
+	"github.com/flightctl/flightctl-ui/config"
 	"github.com/flightctl/flightctl-ui/log"
 )
 
@@ -16,6 +17,9 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			log.GetLogger().Warn(err.Error())
 		} else {
 			token := tokenData.Token
+			if token == "" && config.DevToken != "" {
+				token = config.DevToken
+			}
 			if token != "" {
 				r.Header.Add(common.AuthHeaderKey, "Bearer "+token)
 			}
