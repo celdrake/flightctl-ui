@@ -2,13 +2,8 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { ImageOrCatalogItemRefSpec } from './ImageOrCatalogItemRefSpec';
 /**
  * DeviceOsSpec describes the target OS for the device.
  */
-export type DeviceOsSpec = {
-  /**
-   * The target OS image name or URL.
-   */
-  image: string;
-};
-
+export type DeviceOsSpec = ImageOrCatalogItemRefSpec;
