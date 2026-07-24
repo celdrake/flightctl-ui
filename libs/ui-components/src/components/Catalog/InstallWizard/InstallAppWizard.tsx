@@ -9,7 +9,7 @@ import { Device, Fleet } from '@flightctl/types';
 
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useFetch } from '../../../hooks/useFetch';
-import { getAppPatches } from '../utils';
+import { getAppPatches } from '../../../utils/catalog';
 import { InstallAppFormik, appConfigStepId, reviewStepId, selectTargetStepId, specificationsStepId } from './types';
 import SpecificationsStep, { isSpecsStepValid } from './steps/SpecificationsStep';
 import SelectTargetStep, { isSelectTargetStepValid } from './steps/SelectTargetStep';

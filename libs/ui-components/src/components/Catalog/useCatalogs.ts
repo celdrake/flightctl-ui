@@ -6,7 +6,7 @@ import { useFetchPeriodically } from '../../hooks/useFetchPeriodically';
 import { PaginationDetails, useTablePagination } from '../../hooks/useTablePagination';
 import { PAGE_SIZE } from '../../constants';
 
-export const useCatalogItem = (
+export const useFindCatalogItem = (
   catalog: string | undefined,
   item: string | undefined,
 ): [CatalogItem | undefined, boolean, unknown, boolean, VoidFunction] => {

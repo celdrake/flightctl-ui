@@ -11,7 +11,7 @@ import {
 import { useFormikContext } from 'formik';
 
 import { useTranslation } from '../../../../hooks/useTranslation';
-import { FleetFormValues } from '../../../../types/deviceSpec';
+import { FleetFormValues, formatImageRef } from '../../../../types/deviceSpec';
 import LabelsView from '../../../common/LabelsView';
 import { toAPILabel } from '../../../../utils/labels';
 import RepositorySourceList from '../../../Repository/RepositoryDetails/RepositorySourceList';
@@ -64,7 +64,7 @@ const ReviewStep = ({ error }: { error?: unknown }) => {
           <DescriptionListGroup>
             <DescriptionListTerm>{t('System image')}</DescriptionListTerm>
             <DescriptionListDescription>
-              {values.osImage || t(`The fleet will not manage system image`)}
+              {formatImageRef(values.os) || t(`The fleet will not manage system image`)}
             </DescriptionListDescription>
           </DescriptionListGroup>
           {values.configTemplates.length > 0 && (

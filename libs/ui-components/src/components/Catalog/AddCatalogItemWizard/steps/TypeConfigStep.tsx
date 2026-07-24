@@ -14,7 +14,7 @@ import FormSelect from '../../../form/FormSelect';
 import FlightCtlForm from '../../../form/FlightCtlForm';
 import ExpandableFormSection from '../../../form/ExpandableFormSection';
 import UploadField from '../../../form/UploadField';
-import { getArtifactLabel, getCatalogItemBadge } from '../../utils';
+import { getArtifactLabel, getCatalogItemBadge } from '../../../../utils/catalog';
 
 export const typeConfigStepId = 'type-config';
 

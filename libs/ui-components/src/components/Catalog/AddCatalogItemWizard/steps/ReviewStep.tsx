@@ -13,12 +13,12 @@ import {
 } from '@patternfly/react-core';
 import { useFormikContext } from 'formik';
 
+import { CatalogItemArtifactType } from '@flightctl/types/alpha';
 import { useTranslation } from '../../../../hooks/useTranslation';
 import { getErrorMessage } from '../../../../utils/error';
 import { AddCatalogItemFormValues } from '../types';
 import { appTypeIds } from '../../useCatalogs';
-import { getArtifactLabel } from '../../utils';
-import { CatalogItemArtifactType } from '@flightctl/types/alpha';
+import { getArtifactLabel } from '../../../../utils/catalog';
 
 export const reviewStepId = 'review';
 

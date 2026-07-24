@@ -1,6 +1,7 @@
 import {
   AppType,
   ApplicationProviderSpec,
+  CatalogItemRefSpec,
   ComposeApplication,
   ConfigProviderSpec,
   ContainerApplication,
@@ -9,6 +10,7 @@ import {
   HelmApplication,
   HttpConfigProviderSpec,
   ImageApplicationProviderSpec,
+  ImageOrCatalogItemRefSpec,
   ImagePullPolicy,
   InlineApplicationProviderSpec,
   InlineConfigProviderSpec,
@@ -48,6 +50,41 @@ export enum AppSpecType {
   INLINE = 'inline',
 }
 
+/** Form image slot: OCI URI string or catalog ref (mirrors API image XOR catalogItemRef). */
+export type ImageOrCatalogRef = string | CatalogItemRefSpec;
+
+export const isCatalogImageRefSpec = (spec: ImageOrCatalogItemRefSpec | undefined) =>
+  typeof spec === 'object' && !!spec && 'catalogItemRef' in spec;
+
+export const isCatalogImageRef = (v: ImageOrCatalogRef | undefined): v is CatalogItemRefSpec =>
+  typeof v === 'object' && !!v && 'catalog' in v && 'item' in v;
+
+export const formatCatalogItemRef = (ref: CatalogItemRefSpec): string => `${ref.catalog}/${ref.item}:${ref.version}`;
+
+export const formatImageRef = (imageRef: ImageOrCatalogRef | undefined): string => {
+  if (!imageRef || typeof imageRef === 'string') {
+    return imageRef || '';
+  }
+  return formatCatalogItemRef(imageRef);
+};
+
+export const toImageRefFormValue = (spec?: ImageOrCatalogItemRefSpec): ImageOrCatalogRef => {
+  if (spec?.catalogItemRef) {
+    return spec.catalogItemRef;
+  }
+  if (spec?.image) {
+    return spec.image;
+  }
+  return '';
+};
+
+export const toImageOrCatalogRefApiSpec = (imageRef: ImageOrCatalogRef): ImageOrCatalogItemRefSpec | undefined => {
+  if (typeof imageRef === 'string') {
+    return { image: imageRef };
+  }
+  return { catalogItemRef: imageRef };
+};
+
 export const isGitConfigTemplate = (configTemplate: ConfigTemplate): configTemplate is GitConfigTemplate =>
   configTemplate.type === ConfigType.GIT;
 
@@ -68,6 +105,12 @@ export const isRepoConfig = (config: ConfigSourceProvider): config is RepoConfig
 export const isImageVariantApp = (
   app: ApplicationProviderSpec,
 ): app is ApplicationProviderSpec & ImageApplicationProviderSpec => 'image' in app;
+
+export const isCatalogItemRefVariantApp = (
+  app: ApplicationProviderSpec,
+): app is ApplicationProviderSpec & { catalogItemRef: CatalogItemRefSpec } =>
+  'catalogItemRef' in app && !!(app as { catalogItemRef?: CatalogItemRefSpec }).catalogItemRef;
+
 export const isInlineVariantApp = (
   app: ApplicationProviderSpec,
 ): app is ApplicationProviderSpec & InlineApplicationProviderSpec => 'inline' in app;
@@ -105,12 +148,16 @@ export type InlineFileForm = { path: string; content?: string; base64?: boolean 
 
 type InlineOrImageVariantForm = {
   specType: AppSpecType;
-  image: string;
+  image: ImageOrCatalogRef;
   files: InlineFileForm[];
 };
 
-export type SingleContainerAppForm = Omit<ContainerApplication, 'ports' | 'resources' | 'envVars' | 'volumes'> & {
+export type SingleContainerAppForm = Omit<
+  ContainerApplication,
+  'ports' | 'resources' | 'envVars' | 'volumes' | 'image' | 'catalogItemRef'
+> & {
   specType: AppSpecType.OCI_IMAGE;
+  image: ImageOrCatalogRef;
   ports: PortMapping[];
   cpuLimit: string;
   memoryLimit: string;
@@ -118,19 +165,20 @@ export type SingleContainerAppForm = Omit<ContainerApplication, 'ports' | 'resou
   volumes: ApplicationVolumeForm[];
 };
 
-export type HelmAppForm = Omit<HelmApplication, 'values'> & {
+export type HelmAppForm = Omit<HelmApplication, 'values' | 'image' | 'catalogItemRef'> & {
   specType: AppSpecType.OCI_IMAGE;
+  image: ImageOrCatalogRef;
   valuesYaml?: string;
   valuesFiles: string[];
 };
 
-export type QuadletAppForm = Omit<QuadletApplication, 'envVars' | 'volumes' | 'image' | 'inline'> &
+export type QuadletAppForm = Omit<QuadletApplication, 'envVars' | 'volumes' | 'image' | 'inline' | 'catalogItemRef'> &
   InlineOrImageVariantForm & {
     variables: VariablesForm;
     volumes: ApplicationVolumeForm[];
   };
 
-export type ComposeAppForm = Omit<ComposeApplication, 'envVars' | 'volumes' | 'image' | 'inline'> &
+export type ComposeAppForm = Omit<ComposeApplication, 'envVars' | 'volumes' | 'image' | 'inline' | 'catalogItemRef'> &
   InlineOrImageVariantForm & {
     variables: VariablesForm;
     volumes: ApplicationVolumeForm[];
@@ -164,9 +212,15 @@ export type AppForm = SingleContainerAppForm | HelmAppForm | QuadletAppForm | Co
 
 const hasTemplateVariables = (str: string) => /{{.+?}}/.test(str);
 
-export const getAppIdentifier = (app: AppForm | ApplicationProviderSpec): string => {
+export const isCatalogAppForm = (app: AppForm): boolean =>
+  app.specType === AppSpecType.OCI_IMAGE && isCatalogImageRef(app.image);
+
+export const getAppIdentifier = (app: AppForm): string => {
   if (app.name) return app.name;
-  if ('image' in app && app.image) return app.image;
+  // Name is mandatory for all apps, except when the apps have an image which then becomes the ID.
+  if ('image' in app) {
+    return formatImageRef(app.image);
+  }
   return '';
 };
 
@@ -245,7 +299,7 @@ export type SystemdUnitFormValue = {
 };
 
 export type DeviceSpecConfigFormValues = {
-  osImage?: string;
+  os: ImageOrCatalogRef;
   configTemplates: SpecConfigTemplate[];
   applications: AppForm[];
   systemdUnits: SystemdUnitFormValue[];

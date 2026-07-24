@@ -14,7 +14,7 @@ import {
 
 import { Device } from '@flightctl/types';
 import { getUpdatePolicyValues } from '../../Fleet/CreateFleet/fleetSpecUtils';
-import { EditDeviceFormValues } from './../../../types/deviceSpec';
+import { EditDeviceFormValues, toImageRefFormValue } from './../../../types/deviceSpec';
 import { getErrorMessage } from '../../../utils/error';
 import { fromAPILabel } from '../../../utils/labels';
 import { getEditDisabledReason } from '../../../utils/devices';
@@ -100,7 +100,7 @@ const EditDeviceWizard = () => {
       <Formik<EditDeviceFormValues>
         initialValues={{
           deviceAlias,
-          osImage: device.spec?.os?.image || '',
+          os: toImageRefFormValue(device.spec?.os),
           labels: fromAPILabel(device.metadata.labels || {}).filter((label) => label.key !== 'alias'),
           configTemplates: getConfigTemplatesValues(device.spec, registerMicroShift),
           fleetMatch: '', // Initially this is always a fleetless device
@@ -153,7 +153,7 @@ const EditDeviceWizard = () => {
                   id={deviceTemplateStepId}
                   isDisabled={isWizardStepDisabled(deviceTemplateStepId, orderedIds, validStepIds) || !isFleetless}
                 >
-                  <DeviceTemplateStep isFleet={false} labels={device.metadata.labels} />
+                  <DeviceTemplateStep isFleet={false} />
                 </WizardStep>
                 <WizardStep
                   name={t('Updates')}

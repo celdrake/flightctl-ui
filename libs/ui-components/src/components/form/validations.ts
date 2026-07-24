@@ -15,6 +15,7 @@ import {
   GitConfigTemplate,
   HelmAppForm,
   HttpConfigTemplate,
+  ImageOrCatalogRef,
   InlineConfigTemplate,
   InlineFileForm,
   KubeSecretTemplate,
@@ -26,6 +27,7 @@ import {
   UpdatePolicyForm,
   VmAppForm,
   getAppIdentifier,
+  isCatalogImageRef,
   isGitConfigTemplate,
   isHttpConfigTemplate,
   isInlineConfigTemplate,
@@ -308,6 +310,38 @@ export const validOsImage = (t: TFunction, { isFleet }: { isFleet: boolean }) =>
       return OCI_IMAGE_FULL_REGEXP.test(validateOsImage);
     },
   );
+
+const catalogItemRefSchema = () =>
+  Yup.object().shape({
+    catalog: Yup.string().required(),
+    item: Yup.string().required(),
+    version: Yup.string().required(),
+    channel: Yup.string(),
+  });
+
+export const validOsFormValue = (t: TFunction, { isFleet }: { isFleet: boolean }) =>
+  Yup.mixed().test('os-image-or-catalog', t('System image is invalid'), function (value) {
+    if (value === undefined || value === null || value === '') {
+      return true;
+    }
+    if (isCatalogImageRef(value as ImageOrCatalogRef)) {
+      try {
+        catalogItemRefSchema().validateSync(value);
+        return true;
+      } catch {
+        return this.createError({ message: t('Catalog item reference is invalid') });
+      }
+    }
+    if (typeof value === 'string') {
+      try {
+        validOsImage(t, { isFleet }).validateSync(value);
+        return true;
+      } catch (e) {
+        return this.createError({ message: (e as Yup.ValidationError).message || t('System image is invalid') });
+      }
+    }
+    return false;
+  });
 
 export const validHelmNamespace = (t: TFunction) =>
   genericNameSchema(t).max(
@@ -770,6 +804,30 @@ const ociImageSchema = (t: TFunction) =>
 const requiredOciImageSchema = (t: TFunction, requiredMessage?: string) =>
   ociImageSchema(t).required(requiredMessage || t('Image is required.'));
 
+/** App image slot: required OCI string or CatalogItemRefSpec. */
+const requiredAppImageOrCatalogRefSchema = (t: TFunction) =>
+  Yup.mixed()
+    .required(t('Image is required.'))
+    .test('app-image-or-catalog-ref', t('Image is required.'), function (value) {
+      if (isCatalogImageRef(value as ImageOrCatalogRef)) {
+        try {
+          catalogItemRefSchema().validateSync(value);
+          return true;
+        } catch {
+          return this.createError({ message: t('Catalog item reference is invalid') });
+        }
+      }
+      if (typeof value === 'string') {
+        try {
+          requiredOciImageSchema(t).validateSync(value);
+          return true;
+        } catch (e) {
+          return this.createError({ message: (e as Yup.ValidationError).message || t('Image is required.') });
+        }
+      }
+      return this.createError({ message: t('Image is required.') });
+    });
+
 const volumeNameSchema = (t: TFunction) => validApplicationAndVolumeName(t).required(t('Volume name is required'));
 
 const imagePullPolicySchema = (t: TFunction) =>
@@ -852,7 +910,7 @@ export const validApplicationsSchema = (t: TFunction) => {
               .required(t('Definition source must be image for this type of applications')),
             appType: Yup.string().oneOf([AppType.AppTypeContainer]).required(t('Application type is required')),
             name: validApplicationAndVolumeName(t),
-            image: requiredOciImageSchema(t),
+            image: requiredAppImageOrCatalogRefSchema(t),
             ports: containerAppPortMappingSchema(t),
             cpuLimit: Yup.string().test(
               'valid-cpu-format',
@@ -878,7 +936,7 @@ export const validApplicationsSchema = (t: TFunction) => {
               .required(t('Definition source must be image for this type of applications')),
             appType: Yup.string().oneOf([AppType.AppTypeHelm]).required(t('Application type is required')),
             name: validApplicationAndVolumeName(t),
-            image: requiredOciImageSchema(t),
+            image: requiredAppImageOrCatalogRefSchema(t),
             namespace: validHelmNamespace(t),
             valuesYaml: Yup.string().test('valid-yaml', t('YAML content is invalid.'), (value) => {
               if (!value || value.trim() === '') {
@@ -1008,7 +1066,7 @@ export const validApplicationsSchema = (t: TFunction) => {
           });
         }
 
-        // Image applications (Quadlet or Compose)
+        // Image applications (Quadlet or Compose) — OCI string or catalog ref
         if (value.specType === AppSpecType.OCI_IMAGE) {
           return Yup.object<QuadletAppForm | ComposeAppForm>().shape({
             specType: Yup.string()
@@ -1018,7 +1076,7 @@ export const validApplicationsSchema = (t: TFunction) => {
               .oneOf([AppType.AppTypeCompose, AppType.AppTypeQuadlet])
               .required(t('Application type is required')),
             name: validApplicationAndVolumeName(t),
-            image: requiredOciImageSchema(t),
+            image: requiredAppImageOrCatalogRefSchema(t),
             volumes: composeQuadletVolumesSchema(t),
             variables: appVariablesSchema(t),
           });

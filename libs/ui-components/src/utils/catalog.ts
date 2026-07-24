@@ -1,4 +1,10 @@
-import { AppType, ApplicationProviderSpec, ContainerApplication, PatchRequest } from '@flightctl/types';
+import {
+  AppType,
+  ApplicationProviderSpec,
+  CatalogItemRefSpec,
+  ContainerApplication,
+  PatchRequest,
+} from '@flightctl/types';
 import {
   CatalogItem,
   CatalogItemArtifact,
@@ -10,24 +16,49 @@ import {
 import { TFunction } from 'i18next';
 import semver from 'semver';
 
-import { appendJSONPatch, getLabelPatches } from '../../utils/patch';
 import {
-  APP_CATALOG_LABEL_KEY,
-  APP_CHANNEL_LABEL_KEY,
-  APP_ITEM_LABEL_KEY,
   APP_VOLUME_CATALOG_LABEL_KEY,
   APP_VOLUME_CHANNEL_LABEL_KEY,
   APP_VOLUME_ITEM_LABEL_KEY,
-  OS_CATALOG_LABEL_KEY,
-  OS_CHANNEL_LABEL_KEY,
-  OS_ITEM_LABEL_KEY,
   getAppVolumeName,
-} from './const';
-import { fromAPILabel } from '../../utils/labels';
-import { AssetSelection } from '../DynamicForm/DynamicForm';
+} from '../components/Catalog/const';
+import { AssetSelection } from '../components/DynamicForm/DynamicForm';
+import appIcon from '../../assets/application.svg';
+import osIcon from '../../assets/os.svg';
+import { fromAPILabel } from './labels';
+import { getLabelPatches } from './patch';
 
-import appIcon from '../../../assets/application.svg';
-import osIcon from '../../../assets/os.svg';
+export const getAppCatalogItemRef = (app: ApplicationProviderSpec): CatalogItemRefSpec | undefined =>
+  'catalogItemRef' in app ? app.catalogItemRef : undefined;
+
+export const getCurrentVersion = (
+  catalogItem: CatalogItem,
+  version: string | undefined,
+  catalogRef: CatalogItemRefSpec | undefined,
+) => {
+  const matchingVersion = version || catalogRef?.version;
+  return catalogItem.spec.versions.find((v) => v.version === matchingVersion);
+};
+
+export const buildCatalogItemRef = ({
+  catalogItem,
+  catalogItemVersion,
+  channel,
+}: {
+  catalogItem: CatalogItem;
+  catalogItemVersion: CatalogItemVersion;
+  channel: string;
+}): CatalogItemRefSpec => {
+  const ref: CatalogItemRefSpec = {
+    catalog: catalogItem.metadata.catalog,
+    item: catalogItem.metadata.name || '',
+    version: catalogItemVersion.version,
+  };
+  if (channel) {
+    ref.channel = channel;
+  }
+  return ref;
+};
 
 const tagRegex = /^[\w][\w.-]{0,127}$/;
 
@@ -84,54 +115,26 @@ export const getCatalogItemBadge = (itemType: CatalogItemType | undefined, t: TF
   }
 };
 
-export const getRemoveOsPatches = ({
-  specPath,
-  currentLabels,
-}: {
-  specPath: string;
-  currentLabels: Record<string, string> | undefined;
-}) => {
+export const getRemoveOsPatches = ({ specPath }: { specPath: string }) => {
   const allPatches: PatchRequest = [];
   allPatches.push({
     path: `${specPath}spec/os`,
     op: 'remove',
   });
-
-  const newLabels = currentLabels
-    ? {
-        ...currentLabels,
-      }
-    : {};
-  delete newLabels[OS_ITEM_LABEL_KEY];
-  delete newLabels[OS_CHANNEL_LABEL_KEY];
-  delete newLabels[OS_CATALOG_LABEL_KEY];
-  const labelPatches = getLabelPatches('/metadata/labels', currentLabels || {}, fromAPILabel(newLabels));
-
-  if (labelPatches.length) {
-    allPatches.push(...labelPatches);
-  }
-
   return allPatches;
 };
 
-const removeAppLabels = (currentLabels: Record<string, string>, appName: string) => {
+/** Clears Data-catalog volume provenance labels for an app (volume refs are still label-based). */
+const removeAppVolumeLabels = (currentLabels: Record<string, string>, appName: string) => {
   const apiLabels = fromAPILabel(currentLabels);
-  const newLabels = apiLabels.filter(({ key }) => {
-    return (
-      ![
-        `${appName}.${APP_ITEM_LABEL_KEY}`,
-        `${appName}.${APP_CHANNEL_LABEL_KEY}`,
-        `${appName}.${APP_CATALOG_LABEL_KEY}`,
-      ].includes(key) &&
-      !(
-        key.startsWith(`${appName}.`) &&
-        (key.endsWith(`.${APP_VOLUME_ITEM_LABEL_KEY}`) ||
-          key.endsWith(`.${APP_VOLUME_CATALOG_LABEL_KEY}`) ||
-          key.endsWith(`.${APP_VOLUME_CHANNEL_LABEL_KEY}`))
-      )
+  return apiLabels.filter(({ key }) => {
+    return !(
+      key.startsWith(`${appName}.`) &&
+      (key.endsWith(`.${APP_VOLUME_ITEM_LABEL_KEY}`) ||
+        key.endsWith(`.${APP_VOLUME_CATALOG_LABEL_KEY}`) ||
+        key.endsWith(`.${APP_VOLUME_CHANNEL_LABEL_KEY}`))
     );
   });
-  return newLabels;
 };
 
 export const getRemoveAppPatches = ({
@@ -156,60 +159,12 @@ export const getRemoveAppPatches = ({
   }
 
   if (currentLabels) {
-    const newLabels = removeAppLabels(currentLabels, appName);
+    const newLabels = removeAppVolumeLabels(currentLabels, appName);
     const labelPatches = getLabelPatches('/metadata/labels', currentLabels || {}, newLabels);
 
     if (labelPatches.length) {
       allPatches.push(...labelPatches);
     }
-  }
-
-  return allPatches;
-};
-
-export const getOsPatches = ({
-  currentOsImage,
-  currentLabels,
-  catalogItem,
-  catalogItemVersion,
-  channel,
-  specPath,
-}: {
-  currentOsImage: string | undefined;
-  currentLabels: Record<string, string> | undefined;
-  catalogItem: CatalogItem;
-  catalogItemVersion: CatalogItemVersion;
-  channel: string;
-  specPath: string;
-}) => {
-  const allPatches: PatchRequest = [];
-  const newOsImage = getFullContainerURI(catalogItem.spec.artifacts, catalogItemVersion);
-  if (!currentOsImage) {
-    allPatches.push({
-      path: `${specPath}spec/os`,
-      op: 'add',
-      value: { image: newOsImage },
-    });
-  } else if (currentOsImage !== newOsImage) {
-    appendJSONPatch({
-      path: `${specPath}spec/os/image`,
-      patches: allPatches,
-      newValue: newOsImage,
-      originalValue: currentOsImage,
-    });
-  }
-
-  const newLabels = fromAPILabel({
-    ...(currentLabels || {}),
-    [OS_CHANNEL_LABEL_KEY]: channel,
-    [OS_CATALOG_LABEL_KEY]: catalogItem.metadata.catalog,
-    [OS_ITEM_LABEL_KEY]: catalogItem.metadata.name || '',
-  });
-
-  const labelPatches = getLabelPatches('/metadata/labels', currentLabels || {}, newLabels);
-
-  if (labelPatches.length) {
-    allPatches.push(...labelPatches);
   }
 
   return allPatches;
@@ -258,16 +213,15 @@ export const getAppPatches = ({
     throw new Error('Unknown application type');
   }
 
-  const image = getFullContainerURI(catalogItem.spec.artifacts, catalogItemVersion);
-  if (!image) {
-    throw new Error(`Failed to create image uri for ${appName}`);
-  }
-
+  // Drop any image from form/YAML config — catalogItemRef replaces image
+  const restFormValues = { ...(formValues || {}) } as Record<string, unknown>;
+  delete restFormValues.image;
+  const catalogItemRef = buildCatalogItemRef({ catalogItem, catalogItemVersion, channel });
   const appSpec: ApplicationProviderSpec = {
-    ...formValues,
+    ...restFormValues,
     name: appName,
     appType,
-    image,
+    catalogItemRef,
   };
   const existingAppIndex = currentApps?.findIndex((app) => app.name === appSpec.name);
 
@@ -306,15 +260,9 @@ export const getAppPatches = ({
     };
   }, {});
 
-  const newLabels = removeAppLabels(currentLabels || {}, appName);
-  const appLabels = fromAPILabel({
-    [`${appSpec.name}.${APP_CHANNEL_LABEL_KEY}`]: channel,
-    [`${appSpec.name}.${APP_CATALOG_LABEL_KEY}`]: catalogItem.metadata.catalog,
-    [`${appSpec.name}.${APP_ITEM_LABEL_KEY}`]: catalogItem.metadata.name || '',
-    ...volumeLabels,
-  });
-
-  newLabels.push(...appLabels);
+  // Volume catalog provenance remains label-based until backend supports volume catalogItemRef
+  const newLabels = removeAppVolumeLabels(currentLabels || {}, appName);
+  newLabels.push(...fromAPILabel(volumeLabels));
 
   const labelPatches = getLabelPatches('/metadata/labels', currentLabels || {}, newLabels);
 

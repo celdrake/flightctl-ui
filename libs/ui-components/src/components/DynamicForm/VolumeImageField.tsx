@@ -32,7 +32,7 @@ import { FieldProps } from '@rjsf/utils';
 import { CatalogItem, CatalogItemList, CatalogItemType, CatalogItemVersion } from '@flightctl/types/alpha';
 
 import CatalogItemCard from '../Catalog/CatalogItemCard';
-import { getFullContainerURI } from '../Catalog/utils';
+import { getFullContainerURI } from '../../utils/catalog';
 import { DynamicFormContext } from './DynamicForm';
 import { useTranslation } from '../../hooks/useTranslation';
 import { usePermissionsContext } from '../common/PermissionsContext';

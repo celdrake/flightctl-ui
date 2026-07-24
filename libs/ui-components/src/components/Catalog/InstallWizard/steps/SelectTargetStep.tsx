@@ -32,7 +32,7 @@ import EnrolledDeviceTableRow from '../../../Device/DevicesPage/EnrolledDeviceTa
 import FlightCtlForm from '../../../form/FlightCtlForm';
 import { InstallAppFormik, InstallOsFormik } from '../types';
 import FormSelect from '../../../form/FormSelect';
-import { getArtifactLabel, getFullArtifactURI } from '../../utils';
+import { getArtifactLabel, getFullArtifactURI } from '../../../../utils/catalog';
 import LearnMoreLink from '../../../common/LearnMoreLink';
 import { useAppLinks } from '../../../../hooks/useAppLinks';
 import { FilterSearchParams } from '../../../../utils/status/devices';

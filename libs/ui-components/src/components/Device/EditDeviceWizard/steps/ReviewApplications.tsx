@@ -3,7 +3,7 @@ import { Stack, StackItem } from '@patternfly/react-core';
 import { TFunction } from 'react-i18next';
 
 import { useTranslation } from '../../../../hooks/useTranslation';
-import { AppForm, getAppIdentifier } from '../../../../types/deviceSpec';
+import { AppForm, formatImageRef, getAppIdentifier } from '../../../../types/deviceSpec';
 import { getAppTypeLabel } from '../../../../utils/apps';
 
 const getAppName = (app: AppForm, t: TFunction): string => {
@@ -11,7 +11,7 @@ const getAppName = (app: AppForm, t: TFunction): string => {
     return app.name;
   }
   if ('image' in app && app.image) {
-    return `${t('Unnamed')} (${app.image})`;
+    return `${t('Unnamed')} (${formatImageRef(app.image)})`;
   }
   return '';
 };

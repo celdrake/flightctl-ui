@@ -33,7 +33,7 @@ import ErrorBoundary from '../../common/ErrorBoundary';
 import LeaveFormConfirmation from '../../common/LeaveFormConfirmation';
 import { usePermissionsContext } from '../../common/PermissionsContext';
 import { OciRegistriesContextProvider, useOciRegistriesContext } from '../OciRegistriesContext';
-import { useCatalogItem } from '../../Catalog/useCatalogs';
+import { useFindCatalogItem } from '../../Catalog/useCatalogs';
 import NewVersionStep, { isNewVersionStepValid, newVersionStepId } from './steps/NewVersionStep';
 import CatalogStep, { catalogStepId, isCatalogStepValid } from '../CreateImageBuildWizard/steps/CatalogStep';
 import ReviewStep, { reviewStepId } from './steps/ReviewStep';
@@ -238,7 +238,7 @@ const NewVersionImageBuildWizard = () => {
   const activePromotion = getLatestPromotion(promotionList?.items || []);
   const promotionTarget = activePromotion?.spec.target;
 
-  const [catalogItem, , catalogItemError] = useCatalogItem(
+  const [catalogItem, , catalogItemError] = useFindCatalogItem(
     promotionTarget?.catalogName,
     promotionTarget?.catalogItemName,
   );

@@ -3,7 +3,7 @@ import * as React from 'react';
 import { Stack, StackItem } from '@patternfly/react-core';
 
 import { CatalogItem } from '@flightctl/types/alpha';
-import { getRemoveAppPatches, getRemoveOsPatches } from '../../Catalog/utils';
+import { getRemoveAppPatches, getRemoveOsPatches } from '../../../utils/catalog';
 import { CatalogPageContent } from '../../Catalog/CatalogPage';
 import InstalledSoftware from '../../Catalog/InstalledSoftware';
 import { usePermissionsContext } from '../../common/PermissionsContext';
@@ -41,7 +41,7 @@ const ResourceCatalogPage = ({
   const { checkPermissions, loading } = usePermissionsContext();
   const [canListItems, canListCatalogs] = checkPermissions(catalogPagePermissions);
   const onDeleteOs = async () => {
-    const allPatches = getRemoveOsPatches({ currentLabels, specPath });
+    const allPatches = getRemoveOsPatches({ specPath });
     await onPatch(allPatches);
   };
 
@@ -60,7 +60,6 @@ const ResourceCatalogPage = ({
       <Stack>
         <StackItem>
           <InstalledSoftware
-            labels={currentLabels}
             spec={spec}
             onDeleteOs={onDeleteOs}
             onEdit={onEdit}

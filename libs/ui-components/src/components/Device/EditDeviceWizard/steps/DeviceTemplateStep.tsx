@@ -9,7 +9,7 @@ import LabelWithHelperText, { FormGroupWithHelperText } from '../../../common/Wi
 import LearnMoreLink from '../../../common/LearnMoreLink';
 import TextField from '../../../form/TextField';
 import FlightCtlForm from '../../../form/FlightCtlForm';
-import { DeviceSpecConfigFormValues } from '../../../../types/deviceSpec';
+import { DeviceSpecConfigFormValues, formatImageRef, isCatalogImageRef } from '../../../../types/deviceSpec';
 import ConfigurationTemplates from './ConfigurationTemplates';
 import ApplicationsForm from './ApplicationTemplates';
 import SystemdUnitsForm from './SystemdUnitsForm';
@@ -18,12 +18,11 @@ import { useAppLinks } from '../../../../hooks/useAppLinks';
 import { useFetchPeriodically } from '../../../../hooks/useFetchPeriodically';
 import { FlightCtlApp, useAppContext } from '../../../../hooks/useAppContext';
 import { ACM_REPO_NAME } from '../deviceSpecUtils';
-import { OS_CATALOG_LABEL_KEY } from '../../../Catalog/const';
 
 export const deviceTemplateStepId = 'device-template';
 
 export const isDeviceTemplateStepValid = (errors: FormikErrors<DeviceSpecConfigFormValues>) =>
-  !errors.osImage && !errors.configTemplates && !errors.applications && !errors.systemdUnits;
+  !errors.os && !errors.configTemplates && !errors.applications && !errors.systemdUnits;
 
 const templateOption1 = '{{ .metadata.labels.key }}';
 const templateOption2 = '{{ .metadata.name }}';
@@ -104,21 +103,13 @@ const MicroShiftCheckbox = ({ isFleet, isReadOnly }: { isFleet: boolean; isReadO
   );
 };
 
-const DeviceTemplateStep = ({
-  labels,
-  isFleet,
-  isReadOnly,
-}: {
-  isFleet: boolean;
-  isReadOnly?: boolean;
-  labels: Record<string, string> | undefined;
-}) => {
+const DeviceTemplateStep = ({ isFleet, isReadOnly }: { isFleet: boolean; isReadOnly?: boolean }) => {
   const { appType } = useAppContext();
   const { t } = useTranslation();
   const { values } = useFormikContext<DeviceSpecConfigFormValues>();
   const useTemplateVarsLink = useAppLinks('useTemplateVars');
 
-  const catalogOs = !!labels?.[OS_CATALOG_LABEL_KEY];
+  const catalogOs = isCatalogImageRef(values.os);
 
   return (
     <FlightCtlForm>
@@ -151,9 +142,9 @@ const DeviceTemplateStep = ({
           )}
           <StackItem>
             <TextField
-              name="osImage"
+              name="os"
               aria-label={t('System image')}
-              value={values.osImage}
+              value={formatImageRef(values.os)}
               isDisabled={isReadOnly || catalogOs}
               helperText={t(
                 'Must be a reference to a bootable container image (such as "quay.io/<my-org>/my-rhel-with-fc-agent:<version>"). If you do not want to manage your OS from Edge management, leave this field empty.',
@@ -163,7 +154,7 @@ const DeviceTemplateStep = ({
         </Stack>
       </FormGroupWithHelperText>
       <ConfigurationTemplates isReadOnly={isReadOnly} />
-      <ApplicationsForm isReadOnly={isReadOnly} labels={labels} />
+      <ApplicationsForm isReadOnly={isReadOnly} />
       <SystemdUnitsForm isReadOnly={isReadOnly} />
       {appType === FlightCtlApp.OCP && <MicroShiftCheckbox isFleet={isFleet} isReadOnly={isReadOnly} />}
     </FlightCtlForm>

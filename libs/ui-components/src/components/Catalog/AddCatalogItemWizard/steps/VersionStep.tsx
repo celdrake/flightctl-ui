@@ -18,7 +18,7 @@ import ExpandableFormSection from '../../../form/ExpandableFormSection';
 import ChannelsSelect from '../ChannelsSelect';
 import UploadField from '../../../form/UploadField';
 import ErrorHelperText from '../../../form/FieldHelperText';
-import { getArtifactLabel } from '../../utils';
+import { getArtifactLabel } from '../../../../utils/catalog';
 
 export const versionStepId = 'version';
 

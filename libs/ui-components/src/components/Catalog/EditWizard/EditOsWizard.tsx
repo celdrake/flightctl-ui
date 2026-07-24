@@ -8,7 +8,7 @@ import semver from 'semver';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { InstallSpecFormik } from '../InstallWizard/types';
 import FlightCtlWizardFooter from '../../common/FlightCtlWizardFooter';
-import { getUpdates } from '../utils';
+import { getUpdates } from '../../../utils/catalog';
 import UpdateStep, { isUpdateStepValid } from './steps/UpdateStep';
 import { getErrorMessage } from '../../../utils/error';
 import ReviewStep from './steps/ReviewStep';

@@ -12,7 +12,7 @@ import { getInitialAppConfig } from '../InstallWizard/utils';
 import AppConfigStep, { isAppConfigStepValid } from '../InstallWizard/steps/AppConfigStep';
 import FlightCtlWizardFooter from '../../common/FlightCtlWizardFooter';
 import { useSubmitCatalogForm } from '../useSubmitCatalogForm';
-import { getUpdates } from '../utils';
+import { getUpdates } from '../../../utils/catalog';
 import { AppUpdateFormik } from './types';
 import UpdateStep, { isUpdateStepValid } from './steps/UpdateStep';
 import ReviewStep from './steps/ReviewStep';

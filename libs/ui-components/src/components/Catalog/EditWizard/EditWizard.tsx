@@ -14,30 +14,30 @@ import {
   Title,
 } from '@patternfly/react-core';
 import { CatalogItemCategory } from '@flightctl/types/alpha';
-import { ApplicationProviderSpec, ContainerApplication, Device, Fleet } from '@flightctl/types';
+import { ApplicationProviderSpec, Device, DeviceOsSpec, Fleet, PatchRequest } from '@flightctl/types';
 import { load } from 'js-yaml';
 
 import ErrorBoundary from '../../common/ErrorBoundary';
 import { getErrorMessage } from '../../../utils/error';
-import { getAppPatches, getFullContainerURI, getOsPatches } from '../utils';
-import EditOsWizard from './EditOsWizard';
-import { APP_CHANNEL_LABEL_KEY, OS_CHANNEL_LABEL_KEY } from '../const';
-import EditAppWizard from './EditAppWizard';
+import { buildCatalogItemRef, getAppCatalogItemRef, getAppPatches, getCurrentVersion } from '../../../utils/catalog';
 import { useAppContext } from '../../../hooks/useAppContext';
 import { useFetch } from '../../../hooks/useFetch';
 import { Link, ROUTE, useNavigate } from '../../../hooks/useNavigate';
 import { useTranslation } from '../../../hooks/useTranslation';
-import { useCatalogItem } from '../useCatalogs';
+import { useFindCatalogItem } from '../useCatalogs';
 import { useFetchPeriodically } from '../../../hooks/useFetchPeriodically';
 import { UpdateSuccessPageContent } from '../InstallWizard/UpdateSuccessPage';
 import { usePermissionsContext } from '../../common/PermissionsContext';
 import PageWithPermissions from '../../common/PageWithPermissions';
 import { RESOURCE, VERB } from '../../../types/rbac';
+import { appendJSONPatch } from '../../../utils/patch';
+import EditOsWizard from './EditOsWizard';
+import EditAppWizard from './EditAppWizard';
 
 type EditWizardProps = {
   specPath: string;
   currentLabels: Record<string, string> | undefined;
-  currentOsImage: string | undefined;
+  currentOsSpec: DeviceOsSpec | undefined;
   currentApps: ApplicationProviderSpec[] | undefined;
   loading: boolean;
   error: unknown;
@@ -49,7 +49,7 @@ type EditWizardProps = {
 const EditWizard = ({
   specPath,
   currentLabels,
-  currentOsImage,
+  currentOsSpec,
   currentApps,
   error,
   loading,
@@ -65,7 +65,7 @@ const EditWizard = ({
   } = useAppContext();
   const { catalogId, itemId } = useParams() as { catalogId: string; itemId: string };
 
-  const [catalogItem, catalogItemLoading, catalogItemErr] = useCatalogItem(catalogId, itemId);
+  const [catalogItem, catalogItemLoading, catalogItemErr] = useFindCatalogItem(catalogId, itemId);
 
   const {
     router: { useSearchParams },
@@ -92,14 +92,10 @@ const EditWizard = ({
   } else if (catalogItemLoading || loading) {
     content = <EmptyState titleText={t('Loading')} headingLevel="h4" icon={Spinner} />;
   } else if (catalogItem?.spec.category === CatalogItemCategory.CatalogItemCategorySystem) {
-    const currentVersion = version
-      ? catalogItem.spec.versions.find((v) => v.version === version)
-      : catalogItem.spec.versions.find((v) => {
-          const imgUri = getFullContainerURI(catalogItem.spec.artifacts, v);
-          return !!currentOsImage && !!imgUri && imgUri === currentOsImage;
-        });
-    const currentChannel = channel || currentLabels?.[OS_CHANNEL_LABEL_KEY];
-    if (!currentVersion || !currentChannel) {
+    const osRef = currentOsSpec?.catalogItemRef;
+    const currentVersion = getCurrentVersion(catalogItem, version, osRef);
+    const currentChannel = channel || osRef?.channel || '';
+    if (!currentVersion) {
       content = <Alert isInline variant="danger" title={t('Failed to find operating system')} />;
     } else {
       content = (
@@ -112,15 +108,18 @@ const EditWizard = ({
           version={version}
           channel={channel}
           onUpdate={async (catalogItemVersion, values) => {
-            const allPatches = getOsPatches({
-              catalogItem,
-              catalogItemVersion,
-              channel: values.channel,
-              currentLabels,
-              specPath,
-              currentOsImage,
+            const allPatches: PatchRequest = [];
+            appendJSONPatch({
+              patches: allPatches,
+              path: `${specPath}spec/os`,
+              newValue: {
+                catalogItemRef: buildCatalogItemRef({ catalogItem, catalogItemVersion, channel: values.channel }),
+              },
+              originalValue: currentOsSpec,
             });
-            await patch(`${isDevice ? 'devices' : 'fleets'}/${resourceId}`, allPatches);
+            if (allPatches.length > 0) {
+              await patch(`${isDevice ? 'devices' : 'fleets'}/${resourceId}`, allPatches);
+            }
             setIsSuccess(true);
           }}
         />
@@ -132,15 +131,11 @@ const EditWizard = ({
     if (!!appName && !appSpec) {
       content = <Alert isInline variant="danger" title={t('Failed to find application')} />;
     } else {
-      const currentVersion = appSpec
-        ? catalogItem.spec.versions.find((v) => {
-            const imgUri = getFullContainerURI(catalogItem.spec.artifacts, v);
-            return !!imgUri && imgUri === (appSpec as ContainerApplication).image;
-          })
-        : catalogItem.spec.versions.find((v) => v.version === version);
-      const currentChannel = appSpec ? currentLabels?.[`${appName}.${APP_CHANNEL_LABEL_KEY}`] : channel;
+      const appRef = appSpec ? getAppCatalogItemRef(appSpec) : undefined;
+      const currentVersion = getCurrentVersion(catalogItem, version, appRef);
+      const currentChannel = appRef?.channel || channel || '';
 
-      if (!currentVersion || !currentChannel) {
+      if (!currentVersion) {
         content = <Alert isInline variant="danger" title={t('Failed to find application')} />;
       } else {
         content = (
@@ -260,7 +255,7 @@ export const EditDeviceWizard = () => {
       <EditWizard
         currentApps={device?.spec.applications}
         currentLabels={device?.metadata.labels}
-        currentOsImage={device?.spec.os?.image}
+        currentOsSpec={device?.spec.os}
         error={error}
         loading={loading}
         specPath="/"
@@ -288,7 +283,7 @@ export const EditFleetWizard = () => {
       <EditWizard
         currentApps={fleet?.spec.template.spec.applications}
         currentLabels={fleet?.metadata.labels}
-        currentOsImage={fleet?.spec.template.spec.os?.image}
+        currentOsSpec={fleet?.spec.template.spec.os}
         error={error}
         loading={loading}
         specPath="/spec/template/"

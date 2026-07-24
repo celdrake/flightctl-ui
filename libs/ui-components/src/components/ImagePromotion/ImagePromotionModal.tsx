@@ -9,7 +9,7 @@ import { defaultInitialValues, getEditInitialValues, getInitialValues } from './
 import { useTranslation } from '../../hooks/useTranslation';
 import { useFetch } from '../../hooks/useFetch';
 import { useFetchPeriodically } from '../../hooks/useFetchPeriodically';
-import { useCatalogItem } from '../Catalog/useCatalogs';
+import { useFindCatalogItem } from '../Catalog/useCatalogs';
 import { ExportFormatType, ImageExport, ImagePromotion, ImagePromotionList } from '@flightctl/types/imagebuilder';
 import { PatchRequest } from '@flightctl/types';
 import { getErrorMessage } from '../../utils/error';
@@ -62,7 +62,7 @@ const ImagePromotionFormContainer = ({
   const isEdit = !!imagePromotion;
 
   const target = parentPromotion?.spec.target;
-  const [catalogItem, catalogItemLoading] = useCatalogItem(target?.catalogName, target?.catalogItemName);
+  const [catalogItem, catalogItemLoading] = useFindCatalogItem(target?.catalogName, target?.catalogItemName);
 
   if (parentPromotion && catalogItemLoading) {
     return <LoadingModal onClose={onClose} />;
