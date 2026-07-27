@@ -311,26 +311,14 @@ export const validOsImage = (t: TFunction, { isFleet }: { isFleet: boolean }) =>
     },
   );
 
-const catalogItemRefSchema = () =>
-  Yup.object().shape({
-    catalog: Yup.string().required(),
-    item: Yup.string().required(),
-    version: Yup.string().required(),
-    channel: Yup.string(),
-  });
-
 export const validOsFormValue = (t: TFunction, { isFleet }: { isFleet: boolean }) =>
   Yup.mixed().test('os-image-or-catalog', t('System image is invalid'), function (value) {
-    if (value === undefined || value === null || value === '') {
+    if (!value) {
       return true;
     }
     if (isCatalogImageRef(value as ImageOrCatalogRef)) {
-      try {
-        catalogItemRefSchema().validateSync(value);
-        return true;
-      } catch {
-        return this.createError({ message: t('Catalog item reference is invalid') });
-      }
+      // For now, CatalogItems cannot be edited via the UI, so if they are set they must be valid
+      return true;
     }
     if (typeof value === 'string') {
       try {
@@ -810,22 +798,15 @@ const requiredAppImageOrCatalogRefSchema = (t: TFunction) =>
     .required(t('Image is required.'))
     .test('app-image-or-catalog-ref', t('Image is required.'), function (value) {
       if (isCatalogImageRef(value as ImageOrCatalogRef)) {
-        try {
-          catalogItemRefSchema().validateSync(value);
-          return true;
-        } catch {
-          return this.createError({ message: t('Catalog item reference is invalid') });
-        }
+        // For now, CatalogItems cannot be edited via the UI, so if they are set they must be valid
+        return true;
       }
-      if (typeof value === 'string') {
-        try {
-          requiredOciImageSchema(t).validateSync(value);
-          return true;
-        } catch (e) {
-          return this.createError({ message: (e as Yup.ValidationError).message || t('Image is required.') });
-        }
+      try {
+        requiredOciImageSchema(t).validateSync(value);
+        return true;
+      } catch (e) {
+        return this.createError({ message: (e as Yup.ValidationError).message || t('Image is required.') });
       }
-      return this.createError({ message: t('Image is required.') });
     });
 
 const volumeNameSchema = (t: TFunction) => validApplicationAndVolumeName(t).required(t('Volume name is required'));

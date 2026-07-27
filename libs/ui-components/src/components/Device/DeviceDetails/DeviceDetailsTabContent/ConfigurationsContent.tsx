@@ -3,18 +3,19 @@ import { CardBody, CardTitle, Divider, Stack, StackItem } from '@patternfly/reac
 
 import { Device } from '@flightctl/types';
 import { useTranslation } from '../../../../hooks/useTranslation';
-import { formatImageRef, toImageRefFormValue } from '../../../../types/deviceSpec';
+import { formatImageRef } from '../../../../types/deviceSpec';
 import DetailsPageCard from '../../../DetailsPage/DetailsPageCard';
 import RepositorySourceList from '../../../Repository/RepositoryDetails/RepositorySourceList';
+import { useResolvedCatalogRef } from '../../../Catalog/useResolvedCatalogRef';
 import DeviceOs from '../DeviceOs';
 
 const ConfigurationsContent = ({ device }: { device: Required<Device> }) => {
   const { t } = useTranslation();
 
   const configs = device.spec?.config || [];
-  // CELIA-WIP: if coming from the catalog, we don't have the actual OS image, think about how to handle this
-  const test = toImageRefFormValue(device.spec?.os);
-  const osImage = formatImageRef(test);
+  const catalogRef = useResolvedCatalogRef(device.spec?.os?.catalogItemRef);
+  const desiredOsImage = catalogRef?.imageUri || formatImageRef(device.spec?.os?.image);
+
   return (
     <DetailsPageCard>
       <CardTitle>{t('Configurations')}</CardTitle>
@@ -22,7 +23,7 @@ const ConfigurationsContent = ({ device }: { device: Required<Device> }) => {
         <Stack hasGutter>
           <StackItem className="pf-v6-u-text-color-subtle">{t('System image (running)')}</StackItem>
           <StackItem>
-            <DeviceOs desiredOsImage={osImage} renderedOsImage={device.status?.os?.image} />
+            <DeviceOs desiredOsImage={desiredOsImage} renderedOsImage={device.status?.os?.image} />
           </StackItem>
         </Stack>
       </CardBody>

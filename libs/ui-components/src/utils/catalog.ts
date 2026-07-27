@@ -3,6 +3,7 @@ import {
   ApplicationProviderSpec,
   CatalogItemRefSpec,
   ContainerApplication,
+  DeviceSpec,
   PatchRequest,
 } from '@flightctl/types';
 import {
@@ -23,13 +24,64 @@ import {
   getAppVolumeName,
 } from '../components/Catalog/const';
 import { AssetSelection } from '../components/DynamicForm/DynamicForm';
+import { formatCatalogItemRef } from '../types/deviceSpec';
 import appIcon from '../../assets/application.svg';
 import osIcon from '../../assets/os.svg';
 import { fromAPILabel } from './labels';
 import { getLabelPatches } from './patch';
 
+export type CatalogItemId = { catalog: string; item: string };
+
+export type ResolvedCatalogRef = {
+  item: CatalogItem;
+  displayName: string;
+  version: CatalogItemVersion | undefined;
+  channel: string;
+  imageUri?: string;
+  label: string;
+};
+
 export const getAppCatalogItemRef = (app: ApplicationProviderSpec): CatalogItemRefSpec | undefined =>
   'catalogItemRef' in app ? app.catalogItemRef : undefined;
+
+export const catalogItemCacheKey = (id: CatalogItemId): string => `${id.catalog}\0${id.item}`;
+
+export const toCatalogItemId = (ref: Pick<CatalogItemRefSpec, 'catalog' | 'item'>): CatalogItemId => ({
+  catalog: ref.catalog,
+  item: ref.item,
+});
+
+/** OS + application catalogItemRefs from a Device/Fleet template spec. */
+export const extractCatalogRefsFromSpec = (spec: DeviceSpec | undefined): CatalogItemRefSpec[] => {
+  const refs: CatalogItemRefSpec[] = [];
+  if (spec?.os?.catalogItemRef) {
+    refs.push(spec.os.catalogItemRef);
+  }
+  (spec?.applications || []).forEach((app) => {
+    const ref = getAppCatalogItemRef(app);
+    if (ref) {
+      refs.push(ref);
+    }
+  });
+  return refs;
+};
+
+export const extractCatalogItemIdsFromSpec = (spec: DeviceSpec | undefined): CatalogItemId[] => {
+  const byKey = new Map<string, CatalogItemId>();
+  extractCatalogRefsFromSpec(spec).forEach((ref) => {
+    const id = toCatalogItemId(ref);
+    byKey.set(catalogItemCacheKey(id), id);
+  });
+  return [...byKey.values()];
+};
+
+export const formatCatalogRefLabel = (item: CatalogItem | undefined, ref: CatalogItemRefSpec): string => {
+  if (!item) {
+    return formatCatalogItemRef(ref);
+  }
+  const displayName = item.spec.displayName || item.metadata.name || ref.item;
+  return `${displayName}:${ref.version}`;
+};
 
 export const getCurrentVersion = (
   catalogItem: CatalogItem,
@@ -87,6 +139,20 @@ export const getFullContainerURI = (artifacts: CatalogItemArtifact[], version: C
   }
 
   return getFullArtifactURI(containerArtifact, version);
+};
+
+export const resolveCatalogRef = (item: CatalogItem, ref: CatalogItemRefSpec): ResolvedCatalogRef => {
+  const version = getCurrentVersion(item, ref.version, ref);
+  const displayName = item.spec.displayName || item.metadata.name || ref.item;
+  const imageUri = version ? getFullContainerURI(item.spec.artifacts, version) : undefined;
+  return {
+    item,
+    displayName,
+    version,
+    channel: ref.channel || '',
+    imageUri,
+    label: formatCatalogRefLabel(item, ref),
+  };
 };
 
 export const getCatalogItemBadge = (itemType: CatalogItemType | undefined, t: TFunction) => {
@@ -206,25 +272,23 @@ export const getAppPatches = ({
   specPath: string;
   selectedAssets: AssetSelection[];
 }) => {
-  const allPatches: PatchRequest = [];
-
   const appType = getAppType(catalogItem);
   if (!appType) {
     throw new Error('Unknown application type');
   }
 
-  // Drop any image from form/YAML config — catalogItemRef replaces image
-  const restFormValues = { ...(formValues || {}) } as Record<string, unknown>;
-  delete restFormValues.image;
-  const catalogItemRef = buildCatalogItemRef({ catalogItem, catalogItemVersion, channel });
   const appSpec: ApplicationProviderSpec = {
-    ...restFormValues,
+    ...formValues,
     name: appName,
     appType,
-    catalogItemRef,
+    catalogItemRef: buildCatalogItemRef({ catalogItem, catalogItemVersion, channel }),
+    // Explicitly clear image to ensure only one of image or catalogItemRef is set
+    image: undefined,
   };
+
   const existingAppIndex = currentApps?.findIndex((app) => app.name === appSpec.name);
 
+  const allPatches: PatchRequest = [];
   if (!currentApps) {
     allPatches.push({
       path: `${specPath}spec/applications`,

@@ -12,6 +12,7 @@ import { buildAllDropdownActions } from '../common/ActionsDropdownList';
 import FleetDevicesCount from './FleetDetails/FleetDevicesCount';
 import { FleetOwnerLinkIcon } from './FleetDetails/FleetOwnerLink';
 import FleetStatus from './FleetStatus';
+import { formatImageRef, toImageRefFormValue } from '../../types/deviceSpec';
 
 type FleetRowProps = {
   fleet: Fleet;
@@ -99,7 +100,7 @@ const FleetRow: React.FC<FleetRowProps> = ({
           <ResourceLink id={fleetName} routeLink={ROUTE.FLEET_DETAILS} data-testid={`fleet-name-link-${fleetName}`} />
         </FleetOwnerLinkIcon>
       </Td>
-      <Td dataLabel={t('System image')}>{fleet.spec.template.spec.os?.image || '-'}</Td>
+      <Td dataLabel={t('System image')}>{formatImageRef(toImageRefFormValue(fleet.spec.template.spec.os)) || '-'}</Td>
       <Td dataLabel={t('Up-to-date/devices')}>
         <FleetDevicesCount
           fleetId={fleetName}

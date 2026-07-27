@@ -20,7 +20,7 @@ import { Link, ROUTE } from '../../../hooks/useNavigate';
 import InstallOsWizard from './InstallOsWizard';
 import InstallAppWizard from './InstallAppWizard';
 import { useAppContext } from '../../../hooks/useAppContext';
-import { useFindCatalogItem } from '../useCatalogs';
+import { useCatalogItemsLookup } from '../useCatalogItemsLookup';
 import { getErrorMessage } from '../../../utils/error';
 import { usePermissionsContext } from '../../common/PermissionsContext';
 import PageWithPermissions from '../../common/PageWithPermissions';
@@ -32,7 +32,13 @@ const InstallWizard = () => {
     router: { useParams },
   } = useAppContext();
   const { catalogId, itemId } = useParams() as { catalogId: string; itemId: string };
-  const [catalogItem, loading, error] = useFindCatalogItem(catalogId, itemId);
+  const hasCatalogParams = catalogId && itemId;
+  const {
+    getItem,
+    isLoading: loading,
+    error,
+  } = useCatalogItemsLookup(hasCatalogParams ? [{ catalog: catalogId, item: itemId }] : []);
+  const catalogItem = getItem(catalogId, itemId);
 
   let content: React.ReactNode;
   if (error) {

@@ -320,33 +320,30 @@ const hasRunAsChanged = (current: string | undefined, updated: string | undefine
 };
 
 // Single container apps always have an image or catalogItemRef, and it doesn't have an inline variant
-const hasContainerAppChanged = (current: ContainerApplication, updated: ContainerApplication): boolean => {
-  const hasImageChanged = hasImageOrCatalogRefChanged(current, updated);
-
-  return (
-    hasStringChanged(current.name, updated.name) ||
-    hasImageChanged ||
-    havePortsChanged(current.ports || [], updated.ports || []) ||
-    haveResourceLimitsChanged(current.resources?.limits, updated.resources?.limits) ||
-    haveEnvVarsChanged(current.envVars || {}, updated.envVars || {}) ||
-    hasRunAsChanged(current.runAs, updated.runAs) ||
-    haveVolumesChanged(current.volumes || [], updated.volumes || [])
-  );
-};
+const hasContainerAppChanged = (current: ContainerApplication, updated: ContainerApplication): boolean =>
+  hasStringChanged(current.name, updated.name) ||
+  hasImageOrCatalogRefChanged(current, updated) ||
+  havePortsChanged(current.ports || [], updated.ports || []) ||
+  haveResourceLimitsChanged(current.resources?.limits, updated.resources?.limits) ||
+  haveEnvVarsChanged(current.envVars || {}, updated.envVars || {}) ||
+  hasRunAsChanged(current.runAs, updated.runAs) ||
+  haveVolumesChanged(current.volumes || [], updated.volumes || []);
 
 // Helm apps always have an image (chart) or catalogItemRef, and it doesn't have an inline variant
 const hasHelmAppChanged = (current: HelmApplication, updated: HelmApplication): boolean => {
-  const hasImageChanged = hasImageOrCatalogRefChanged(current, updated);
-
   return (
     hasStringChanged(current.name, updated.name) ||
-    hasImageChanged ||
+    hasImageOrCatalogRefChanged(current, updated) ||
     hasStringChanged(current.namespace, updated.namespace) ||
     haveValuesFilesChanged(current.valuesFiles || [], updated.valuesFiles || []) ||
     haveHelmValuesChanged(current.values || {}, updated.values || {})
   );
 };
-const hasComposeAppChanged = (current: ComposeApplication, updated: ComposeApplication): boolean => {
+const hasComposeAppChanged = (
+  current: ComposeApplication,
+  updated: ComposeApplication,
+  specType: AppSpecType,
+): boolean => {
   const baseChanged =
     hasStringChanged(current.name, updated.name) ||
     haveEnvVarsChanged(current.envVars || {}, updated.envVars || {}) ||
@@ -356,18 +353,22 @@ const hasComposeAppChanged = (current: ComposeApplication, updated: ComposeAppli
     return true;
   }
 
-  if (isInlineVariantApp(current)) {
+  if (specType === AppSpecType.INLINE) {
     return haveInlineFilesChanged(
       (current as InlineApplicationProviderSpec).inline,
       (updated as InlineApplicationProviderSpec).inline,
     );
   }
-  return hasImageOrCatalogRefChanged(current, updated as ImageOrCatalogItemRefSpec | undefined);
+  return hasImageOrCatalogRefChanged(current as ImageOrCatalogItemRefSpec, updated as ImageOrCatalogItemRefSpec);
 };
 
 // Quadlet apps are currently the same as Compose apps, plus an optional "runAs" field.
-const hasQuadletAppChanged = (current: QuadletApplication, updated: QuadletApplication): boolean => {
-  const baseChanged = hasComposeAppChanged(current, updated);
+const hasQuadletAppChanged = (
+  current: QuadletApplication,
+  updated: QuadletApplication,
+  specType: AppSpecType,
+): boolean => {
+  const baseChanged = hasComposeAppChanged(current, updated, specType);
   if (baseChanged) {
     return true;
   }
@@ -384,9 +385,7 @@ const hasImageOrCatalogRefChanged = (
     return true;
   }
   if (isCurrentCatalog && isUpdatedCatalog) {
-    const currentRef = current?.catalogItemRef;
-    const updatedRef = updated?.catalogItemRef;
-    return JSON.stringify(currentRef) !== JSON.stringify(updatedRef);
+    return JSON.stringify(current?.catalogItemRef) !== JSON.stringify(updated?.catalogItemRef);
   }
 
   return hasStringChanged(current?.image, updated?.image);
@@ -402,20 +401,21 @@ const hasApplicationChanged = (current: ApplicationProviderSpec, updated: Applic
     return true;
   }
 
-  const isCurrentInline = isInlineVariantApp(current);
-  const isUpdatedInline = isInlineVariantApp(updated);
-  if (isCurrentInline !== isUpdatedInline) {
+  const currentSpectType = isInlineVariantApp(current) ? AppSpecType.INLINE : AppSpecType.OCI_IMAGE;
+  const updatedSpectType = isInlineVariantApp(updated) ? AppSpecType.INLINE : AppSpecType.OCI_IMAGE;
+  if (currentSpectType !== updatedSpectType) {
     return true;
   }
+
   switch (current.appType) {
     case AppType.AppTypeContainer:
       return hasContainerAppChanged(current as ContainerApplication, updated as ContainerApplication);
     case AppType.AppTypeHelm:
       return hasHelmAppChanged(current as HelmApplication, updated as HelmApplication);
     case AppType.AppTypeQuadlet:
-      return hasQuadletAppChanged(current as QuadletApplication, updated as QuadletApplication);
+      return hasQuadletAppChanged(current as QuadletApplication, updated as QuadletApplication, currentSpectType);
     case AppType.AppTypeCompose:
-      return hasComposeAppChanged(current as ComposeApplication, updated as ComposeApplication);
+      return hasComposeAppChanged(current as ComposeApplication, updated as ComposeApplication, currentSpectType);
     case AppType.AppTypeVm:
       return hasVmAppChanged(current as VmApplication, updated as VmApplication);
   }
@@ -473,15 +473,22 @@ const toFormFiles = (files: ApplicationContent[]) =>
     base64: file.contentEncoding === EncodingType.EncodingBase64,
   }));
 
+const setAppImage = (
+  app: Partial<HelmApplication | ComposeApplication | ContainerApplication>,
+  image: ImageOrCatalogRef,
+) => {
+  if (isCatalogImageRef(image)) {
+    (app as Partial<CatalogItemRefApplicationProviderSpec>).catalogItemRef = image;
+  } else {
+    (app as Partial<ImageApplicationProviderSpec>).image = image;
+  }
+};
+
 const toApiHelmApp = (app: HelmAppForm): HelmApplication => {
-  const helmApp: Partial<HelmApplication> = {
+  const helmApp: HelmApplication = {
     appType: app.appType,
   };
-  if (isCatalogImageRef(app.image)) {
-    (helmApp as CatalogItemRefApplicationProviderSpec).catalogItemRef = app.image;
-  } else {
-    (helmApp as ImageApplicationProviderSpec).image = app.image;
-  }
+
   if (app.name) {
     helmApp.name = app.name;
   }
@@ -500,21 +507,18 @@ const toApiHelmApp = (app: HelmAppForm): HelmApplication => {
   if (fileNames.length > 0) {
     helmApp.valuesFiles = fileNames;
   }
-  return helmApp as HelmApplication;
+
+  setAppImage(helmApp, app.image);
+  return helmApp;
 };
 
 const toApiContainerApp = (app: SingleContainerAppForm): ContainerApplication => {
-  const containerApp: Partial<ContainerApplication> = {
+  const containerApp: ContainerApplication = {
     appType: app.appType,
     runAs: app.runAs || RUN_AS_ROOT_USER,
     envVars: variablesToEnvVars(app.variables || []),
     volumes: formVolumesToApi(app.volumes || [], AppType.AppTypeContainer),
   };
-  if (isCatalogImageRef(app.image)) {
-    (containerApp as CatalogItemRefApplicationProviderSpec).catalogItemRef = app.image;
-  } else {
-    (containerApp as ImageApplicationProviderSpec).image = app.image;
-  }
   if (app.name) {
     containerApp.name = app.name;
   }
@@ -535,28 +539,26 @@ const toApiContainerApp = (app: SingleContainerAppForm): ContainerApplication =>
 
     containerApp.resources = { limits };
   }
-  return containerApp as ContainerApplication;
+
+  setAppImage(containerApp, app.image);
+  return containerApp;
 };
 
 const toApiComposeApp = (app: ComposeAppForm): ComposeApplication => {
-  const formApp: Partial<ComposeApplication> = {
+  const composeApp: ComposeApplication = {
     appType: app.appType,
     envVars: variablesToEnvVars(app.variables || []),
     volumes: formVolumesToApi(app.volumes || [], app.appType),
   };
   if (app.name) {
-    formApp.name = app.name;
+    composeApp.name = app.name;
   }
   if (app.specType === AppSpecType.OCI_IMAGE) {
-    if (isCatalogImageRef(app.image)) {
-      (formApp as CatalogItemRefApplicationProviderSpec).catalogItemRef = app.image;
-    } else {
-      (formApp as ImageApplicationProviderSpec).image = app.image;
-    }
+    setAppImage(composeApp, app.image);
   } else {
-    (formApp as InlineApplicationProviderSpec).inline = formFilesToApi(app.files);
+    (composeApp as unknown as InlineApplicationProviderSpec).inline = formFilesToApi(app.files);
   }
-  return formApp as ComposeApplication;
+  return composeApp;
 };
 
 // Quadlet apps are currently the same as Compose apps, plus an optional "runAs" field.
@@ -763,34 +765,31 @@ export const getApplicationPatches = (
   return patches;
 };
 
-/** Patches for OS image / catalogItemRef from form values (form owns the ref). */
 export const getOsSpecPatches = (
   osPath: string,
   currentOs: DeviceOsSpec | undefined,
   formOs: ImageOrCatalogRef,
 ): PatchRequest => {
-  const newOs = toImageOrCatalogRefApiSpec(formOs);
-
+  // Currently, editing a Fleet/Device should not update its OS when it's defined via a catalogItemRef
   const isCurrentCatalog = isCatalogImageRef(currentOs?.image);
+  if (!isCurrentCatalog) {
+    return [];
+  }
+
+  const newOs = toImageOrCatalogRefApiSpec(formOs);
   const osChanged = hasImageOrCatalogRefChanged(currentOs, newOs);
-  // Currently it's not allowed to update the OS image when it's from the catalog
-  if (!osChanged || isCurrentCatalog) {
+  if (!osChanged) {
     return [];
   }
 
   const patches: PatchRequest = [];
-  if (!currentOs && newOs) {
-    patches.push({ path: osPath, op: 'add', value: newOs });
-  } else if (currentOs && !newOs) {
-    patches.push({ path: osPath, op: 'remove' });
-  } else if (currentOs && newOs) {
-    appendJSONPatch({
-      path: `${osPath}/image`,
-      patches,
-      newValue: newOs.image,
-      originalValue: currentOs.image,
-    });
-  }
+  appendJSONPatch({
+    path: `${osPath}/image`,
+    patches,
+    newValue: newOs?.image,
+    originalValue: currentOs?.image,
+  });
+
   return patches;
 };
 
@@ -907,7 +906,7 @@ const toHelmAppForm = (helmApp: HelmApplication | undefined): HelmAppForm => {
 const toComposeAppForm = (app: ComposeApplication | undefined): ComposeAppForm => {
   const isInlineVariant = app && isInlineVariantApp(app);
   const specType = isInlineVariant ? AppSpecType.INLINE : AppSpecType.OCI_IMAGE;
-  const formApp: Partial<QuadletAppForm | ComposeAppForm> = {
+  const formApp: Partial<ComposeAppForm> = {
     appType: AppType.AppTypeCompose,
     specType,
     name: app?.name || '',

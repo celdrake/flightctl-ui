@@ -28,8 +28,7 @@ import { getCatalogItemIcon, getUpdates } from '../../utils/catalog';
 import { useTranslation } from '../../hooks/useTranslation';
 import DeleteModal from '../modals/DeleteModal/DeleteModal';
 import { buildAllDropdownActions } from '../common/ActionsDropdownList';
-import { useFindCatalogItem } from './useCatalogs';
-import { useInstalledAppCatalogItems } from './useInstalledAppCatalogItems';
+import { useSpecCatalogItems } from './useSpecCatalogItems';
 
 type UpdateInfoProps = {
   catalogItem: CatalogItem;
@@ -102,7 +101,7 @@ type InstalledSoftwareItemProps = {
   item: CatalogItem;
   version: CatalogItemVersion | undefined;
   channel: string;
-  onEdit: (catalogId: string, catalogItemId: string, appName?: string) => void;
+  onEdit: VoidFunction;
   onDelete: VoidFunction;
   canEdit: boolean;
 };
@@ -115,7 +114,7 @@ const InstalledSoftwareItem = ({ item, version, channel, onEdit, onDelete, canEd
           [
             {
               title: t('Edit'),
-              onClick: () => onEdit(item.metadata.catalog, item.metadata.name || ''),
+              onClick: onEdit,
             },
           ],
           [
@@ -137,13 +136,7 @@ const InstalledSoftwareItem = ({ item, version, channel, onEdit, onDelete, canEd
         </FlexItem>
         {version && (
           <FlexItem>
-            <UpdateInfo
-              catalogItem={item}
-              itemVersion={version}
-              channel={channel}
-              onClick={() => onEdit(item.metadata.catalog, item.metadata.name || '')}
-              canEdit={canEdit}
-            />
+            <UpdateInfo catalogItem={item} itemVersion={version} channel={channel} onClick={onEdit} canEdit={canEdit} />
           </FlexItem>
         )}
         {deprecationMessage && (
@@ -177,18 +170,14 @@ const InstalledSoftware = ({ spec, onDeleteOs, onDeleteApp, onEdit, canEdit }: I
   const { t } = useTranslation();
   const [deleteOs, setDeleteOs] = React.useState(false);
   const [appToDelete, setAppToDelete] = React.useState<string>();
-  const [appItems, appsLoading] = useInstalledAppCatalogItems(spec);
+  const { os, apps, isLoading } = useSpecCatalogItems(spec);
 
-  const osCatalogRef = spec?.os?.catalogItemRef;
-  const [osItem, osLoading] = useFindCatalogItem(osCatalogRef?.catalog, osCatalogRef?.item);
-  if (osLoading || appsLoading) {
+  if (isLoading) {
     return <EmptyState titleText={t('Loading installed software')} headingLevel="h4" icon={Spinner} />;
   }
 
-  const osCatalogVersion = osItem?.spec.versions.find((v) => v.version === osCatalogRef?.version);
-  const osChannel = osCatalogRef?.channel || '';
-  const hasOs = !!osItem;
-  const hasApps = appItems.length > 0;
+  const hasOs = !!os?.version;
+  const hasApps = apps.length > 0;
   const isEmpty = !hasOs && !hasApps;
 
   return (
@@ -202,44 +191,41 @@ const InstalledSoftware = ({ spec, onDeleteOs, onDeleteApp, onEdit, canEdit }: I
             </EmptyState>
           ) : (
             <Stack hasGutter>
-              {hasOs && osCatalogVersion && (
+              {hasOs && os && (
                 <InstalledSoftwareItem
-                  item={osItem}
-                  version={osCatalogVersion}
-                  channel={osChannel}
-                  onEdit={onEdit}
+                  item={os.item}
+                  version={os.version}
+                  channel={os.channel}
+                  onEdit={() => onEdit(os.item.metadata.catalog, os.item.metadata.name || '')}
                   onDelete={() => setDeleteOs(true)}
                   canEdit={canEdit}
                 />
               )}
-              {appItems.map((app, index) => {
-                const itemVersion = app.item.spec.versions.find((v) => v.version === app.version);
-                return (
-                  <React.Fragment key={app.name}>
-                    {(hasOs || index > 0) && <Divider />}
-                    <InstalledSoftwareItem
-                      item={app.item}
-                      version={itemVersion}
-                      channel={app.channel}
-                      onEdit={onEdit}
-                      onDelete={() => setAppToDelete(app.name)}
-                      canEdit={canEdit}
-                    />
-                  </React.Fragment>
-                );
-              })}
+              {apps.map((app, index) => (
+                <React.Fragment key={app.name}>
+                  {(hasOs || index > 0) && <Divider />}
+                  <InstalledSoftwareItem
+                    item={app.item}
+                    version={app.version}
+                    channel={app.channel}
+                    onEdit={() => onEdit(app.item.metadata.catalog, app.item.metadata.name || '', app.name)}
+                    onDelete={() => setAppToDelete(app.name)}
+                    canEdit={canEdit}
+                  />
+                </React.Fragment>
+              ))}
             </Stack>
           )}
         </CardBody>
       </Card>
-      {deleteOs && (
+      {deleteOs && os && (
         <DeleteModal
           onClose={() => setDeleteOs(false)}
           onDelete={async () => {
             await onDeleteOs();
             setDeleteOs(false);
           }}
-          resourceName={osItem?.spec.displayName || osItem?.metadata.name || ''}
+          resourceName={os.item.spec.displayName || os.item.metadata.name || ''}
           resourceType={t('operating system')}
         />
       )}

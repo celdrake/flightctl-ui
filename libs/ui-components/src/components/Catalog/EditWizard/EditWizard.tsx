@@ -24,7 +24,7 @@ import { useAppContext } from '../../../hooks/useAppContext';
 import { useFetch } from '../../../hooks/useFetch';
 import { Link, ROUTE, useNavigate } from '../../../hooks/useNavigate';
 import { useTranslation } from '../../../hooks/useTranslation';
-import { useFindCatalogItem } from '../useCatalogs';
+import { useCatalogItemsLookup } from '../useCatalogItemsLookup';
 import { useFetchPeriodically } from '../../../hooks/useFetchPeriodically';
 import { UpdateSuccessPageContent } from '../InstallWizard/UpdateSuccessPage';
 import { usePermissionsContext } from '../../common/PermissionsContext';
@@ -64,8 +64,14 @@ const EditWizard = ({
     router: { useParams },
   } = useAppContext();
   const { catalogId, itemId } = useParams() as { catalogId: string; itemId: string };
+  const hasCatalogParams = catalogId && itemId;
 
-  const [catalogItem, catalogItemLoading, catalogItemErr] = useFindCatalogItem(catalogId, itemId);
+  const {
+    getItem,
+    isLoading: catalogItemLoading,
+    error: catalogItemErr,
+  } = useCatalogItemsLookup(hasCatalogParams ? [{ catalog: catalogId, item: itemId }] : []);
+  const catalogItem = getItem(catalogId, itemId);
 
   const {
     router: { useSearchParams },
@@ -74,6 +80,7 @@ const EditWizard = ({
   const appName = searchParams.get('appName') || '';
   const version = searchParams.get('version') || '';
   const channel = searchParams.get('channel') || '';
+
   const navigate = useNavigate();
 
   let content: React.ReactNode;
@@ -141,7 +148,7 @@ const EditWizard = ({
         content = (
           <EditAppWizard
             catalogItem={catalogItem}
-            appSpec={appName ? appSpec : undefined}
+            appSpec={appSpec}
             currentApps={currentApps}
             currentLabels={currentLabels}
             currentVersion={currentVersion}

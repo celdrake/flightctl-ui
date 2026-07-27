@@ -25,9 +25,11 @@ import FleetStatus from '../FleetStatus';
 import FleetDevicesCount from './FleetDevicesCount';
 import EventsCard from '../../Events/EventsCard';
 import FleetVulnerabilities from './FleetVulnerabilities';
+import { useResolvedCatalogRef } from '../../Catalog/useResolvedCatalogRef';
 
 const FleetDetailsContent = ({ fleet }: { fleet: Fleet }) => {
   const { t } = useTranslation();
+  const catalogRef = useResolvedCatalogRef(fleet.spec.template.spec.os?.catalogItemRef);
   const [vulnerabilitiesEnabled, canListVulnerabilities] = useVulnerabilitiesEnabled();
   const showVulnerabilities = vulnerabilitiesEnabled && canListVulnerabilities;
   const fleetId = fleet.metadata.name as string;
@@ -55,7 +57,9 @@ const FleetDetailsContent = ({ fleet }: { fleet: Fleet }) => {
               </DescriptionListGroup>
               <DescriptionListGroup>
                 <DescriptionListTerm>{t('System image')}</DescriptionListTerm>
-                <DescriptionListDescription>{fleet.spec.template.spec.os?.image || '-'}</DescriptionListDescription>
+                <DescriptionListDescription>
+                  {catalogRef?.imageUri || fleet.spec.template.spec.os?.image || '-'}
+                </DescriptionListDescription>
               </DescriptionListGroup>
               <DescriptionListGroup>
                 <DescriptionListTerm>{t('Device selector')}</DescriptionListTerm>

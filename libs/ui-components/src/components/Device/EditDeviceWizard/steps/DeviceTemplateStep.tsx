@@ -9,7 +9,7 @@ import LabelWithHelperText, { FormGroupWithHelperText } from '../../../common/Wi
 import LearnMoreLink from '../../../common/LearnMoreLink';
 import TextField from '../../../form/TextField';
 import FlightCtlForm from '../../../form/FlightCtlForm';
-import { DeviceSpecConfigFormValues, formatImageRef, isCatalogImageRef } from '../../../../types/deviceSpec';
+import { DeviceSpecConfigFormValues, isCatalogImageRef } from '../../../../types/deviceSpec';
 import ConfigurationTemplates from './ConfigurationTemplates';
 import ApplicationsForm from './ApplicationTemplates';
 import SystemdUnitsForm from './SystemdUnitsForm';
@@ -18,6 +18,7 @@ import { useAppLinks } from '../../../../hooks/useAppLinks';
 import { useFetchPeriodically } from '../../../../hooks/useFetchPeriodically';
 import { FlightCtlApp, useAppContext } from '../../../../hooks/useAppContext';
 import { ACM_REPO_NAME } from '../deviceSpecUtils';
+import { useResolvedCatalogRef } from '../../../Catalog/useResolvedCatalogRef';
 
 export const deviceTemplateStepId = 'device-template';
 
@@ -109,7 +110,9 @@ const DeviceTemplateStep = ({ isFleet, isReadOnly }: { isFleet: boolean; isReadO
   const { values } = useFormikContext<DeviceSpecConfigFormValues>();
   const useTemplateVarsLink = useAppLinks('useTemplateVars');
 
-  const catalogOs = isCatalogImageRef(values.os);
+  const catalogOs = isCatalogImageRef(values.os) ? values.os : undefined;
+  const catalogRef = useResolvedCatalogRef(catalogOs);
+  const catalogOsLabel = catalogOs ? catalogRef?.label : (values.os as string);
 
   return (
     <FlightCtlForm>
@@ -144,8 +147,8 @@ const DeviceTemplateStep = ({ isFleet, isReadOnly }: { isFleet: boolean; isReadO
             <TextField
               name="os"
               aria-label={t('System image')}
-              value={formatImageRef(values.os)}
-              isDisabled={isReadOnly || catalogOs}
+              value={catalogOsLabel}
+              isDisabled={isReadOnly || !!catalogOs}
               helperText={t(
                 'Must be a reference to a bootable container image (such as "quay.io/<my-org>/my-rhel-with-fc-agent:<version>"). If you do not want to manage your OS from Edge management, leave this field empty.',
               )}

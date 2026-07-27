@@ -6,17 +6,6 @@ import { useFetchPeriodically } from '../../hooks/useFetchPeriodically';
 import { PaginationDetails, useTablePagination } from '../../hooks/useTablePagination';
 import { PAGE_SIZE } from '../../constants';
 
-export const useFindCatalogItem = (
-  catalog: string | undefined,
-  item: string | undefined,
-): [CatalogItem | undefined, boolean, unknown, boolean, VoidFunction] => {
-  const [catalogItem, loading, error, refetch, updating] = useFetchPeriodically<CatalogItem>({
-    endpoint: catalog && item ? `catalogs/${catalog}/items/${item}` : '',
-  });
-
-  return [catalogItem, loading, error, updating, refetch];
-};
-
 export const appTypeIds = [
   CatalogItemType.CatalogItemTypeContainer,
   CatalogItemType.CatalogItemTypeHelm,

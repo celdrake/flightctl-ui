@@ -5,6 +5,7 @@ import { FormGroup, TextInput, TextInputProps } from '@patternfly/react-core';
 import { ImageOrCatalogRef, formatImageRef, isCatalogImageRef } from '../../types/deviceSpec';
 import { useTranslation } from '../../hooks/useTranslation';
 import { DefaultHelperText } from './FieldHelperText';
+import { useResolvedCatalogRef } from '../Catalog/useResolvedCatalogRef';
 
 export interface ImageOrCatalogRefFieldProps extends TextInputProps {
   name: string;
@@ -13,13 +14,16 @@ export interface ImageOrCatalogRefFieldProps extends TextInputProps {
 
 const ImageOrCatalogRefField = ({ name, helperText, ...props }: ImageOrCatalogRefFieldProps) => {
   const { t } = useTranslation();
-  const [field, meta] = useField<string>({
+  const [field, meta] = useField({
     name,
   });
 
   const value = field.value as ImageOrCatalogRef;
-  const isCatalog = isCatalogImageRef(value);
-  const displayValue = isCatalog ? `${t('Catalog item')}: ${formatImageRef(value)}` : formatImageRef(value);
+  const catalogRef = isCatalogImageRef(value) ? value : undefined;
+  const { label } = useResolvedCatalogRef(catalogRef);
+  const displayValue = catalogRef
+    ? t('Catalog item {{ catalogItemRef }}', { catalogItemRef: label })
+    : formatImageRef(value);
 
   const fieldId = `textfield-${name}`;
   const hasError = meta.touched && !!meta.error;
@@ -31,7 +35,7 @@ const ImageOrCatalogRefField = ({ name, helperText, ...props }: ImageOrCatalogRe
         {...props}
         label={t('Image')}
         value={displayValue}
-        isDisabled={isCatalog}
+        isDisabled={!!catalogRef}
         id={fieldId}
         data-testid={fieldId}
         validated={hasError ? 'error' : 'default'}

@@ -152,10 +152,7 @@ type InlineOrImageVariantForm = {
   files: InlineFileForm[];
 };
 
-export type SingleContainerAppForm = Omit<
-  ContainerApplication,
-  'ports' | 'resources' | 'envVars' | 'volumes' | 'image' | 'catalogItemRef'
-> & {
+export type SingleContainerAppForm = Omit<ContainerApplication, 'ports' | 'resources' | 'envVars' | 'volumes'> & {
   specType: AppSpecType.OCI_IMAGE;
   image: ImageOrCatalogRef;
   ports: PortMapping[];
@@ -165,20 +162,20 @@ export type SingleContainerAppForm = Omit<
   volumes: ApplicationVolumeForm[];
 };
 
-export type HelmAppForm = Omit<HelmApplication, 'values' | 'image' | 'catalogItemRef'> & {
+export type HelmAppForm = Omit<HelmApplication, 'values'> & {
   specType: AppSpecType.OCI_IMAGE;
   image: ImageOrCatalogRef;
   valuesYaml?: string;
   valuesFiles: string[];
 };
 
-export type QuadletAppForm = Omit<QuadletApplication, 'envVars' | 'volumes' | 'image' | 'inline' | 'catalogItemRef'> &
+export type QuadletAppForm = Omit<QuadletApplication, 'envVars' | 'volumes' | 'inline'> &
   InlineOrImageVariantForm & {
     variables: VariablesForm;
     volumes: ApplicationVolumeForm[];
   };
 
-export type ComposeAppForm = Omit<ComposeApplication, 'envVars' | 'volumes' | 'image' | 'inline' | 'catalogItemRef'> &
+export type ComposeAppForm = Omit<ComposeApplication, 'envVars' | 'volumes' | 'inline'> &
   InlineOrImageVariantForm & {
     variables: VariablesForm;
     volumes: ApplicationVolumeForm[];

@@ -15,7 +15,7 @@ import { AssetSelection } from '../../DynamicForm/DynamicForm';
 import { DynamicFormConfigFormik } from './types';
 import { convertObjToYAMLString } from '../../common/CodeEditor/YamlEditor';
 
-const appSpecFilteredKeys = ['name', 'image', 'appType'];
+const appSpecFilteredKeys = ['name', 'appType', 'catalogItemRef'];
 
 export const getInitialAppConfig = (
   catalogItem: CatalogItem,
