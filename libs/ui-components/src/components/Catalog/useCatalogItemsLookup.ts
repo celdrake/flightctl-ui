@@ -1,8 +1,8 @@
 import * as React from 'react';
-import { CatalogItem } from '@flightctl/types/alpha';
+import type { CatalogItem } from '@flightctl/types/alpha';
 
 import { useFetch } from '../../hooks/useFetch';
-import { CatalogItemId, catalogItemCacheKey } from '../../utils/catalog';
+import { type CatalogItemId, catalogItemCacheKey } from '../../utils/catalog';
 
 export type CatalogItemsLookupResult = {
   getItem: (catalog: string, item: string) => CatalogItem | undefined;
@@ -20,6 +20,13 @@ const getNeededCatalogItemIdsKey = (ids: CatalogItemId[]): string => {
   return JSON.stringify(
     [...byKey.values()].sort((a, b) => a.catalog.localeCompare(b.catalog) || a.item.localeCompare(b.item)),
   );
+};
+
+export const useCatalogItemFromParams = (params: { catalogId: string; itemId: string }) => {
+  const { catalogId, itemId } = params;
+  const { getItem, isLoading, error } = useCatalogItemsLookup([{ catalog: catalogId, item: itemId }]);
+  const item = getItem(catalogId, itemId);
+  return { item, isLoading, error };
 };
 
 /**

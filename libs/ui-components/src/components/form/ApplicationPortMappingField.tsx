@@ -1,6 +1,8 @@
 import * as React from 'react';
 import {
   Button,
+  Content,
+  ContentVariants,
   FormGroup,
   Label,
   LabelGroup,
@@ -237,8 +239,9 @@ const ApplicationPortMappingField = ({
     }
   };
 
-  const addedPortsContent =
-    ports.length > 0 ? (
+  let addedPortsContent: React.ReactNode;
+  if (ports.length > 0) {
+    addedPortsContent = (
       <>
         <LabelGroup numLabels={5} categoryName={t('Added ports')} isEditable={!isReadOnly}>
           {ports.map((port, portIndex) => {
@@ -274,9 +277,10 @@ const ApplicationPortMappingField = ({
           <ErrorHelperText error={editingPortError} touchRequired={false} />
         )}
       </>
-    ) : (
-      t('No ports added')
     );
+  } else if (isReadOnly) {
+    addedPortsContent = t('No ports added');
+  }
 
   const fieldContent = !isReadOnly ? (
     <Split hasGutter>
@@ -359,15 +363,19 @@ const ApplicationPortMappingField = ({
     </Split>
   ) : null;
 
+  // CELIA-WIP: For editable fields this does not behave well, the
+
   return (
     <FormGroup label={t('Ports')}>
       <Stack hasGutter>
         {!isReadOnly && (
-          <StackItem>
-            <small>{description}</small>
-          </StackItem>
+          <>
+            <StackItem>
+              <Content component={ContentVariants.small}>{description}</Content>
+            </StackItem>
+            <StackItem>{fieldContent}</StackItem>
+          </>
         )}
-        {!isReadOnly && <StackItem>{fieldContent}</StackItem>}
         <StackItem>{addedPortsContent}</StackItem>
       </Stack>
     </FormGroup>

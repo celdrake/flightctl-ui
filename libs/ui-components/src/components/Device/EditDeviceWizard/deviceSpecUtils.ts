@@ -10,7 +10,6 @@ import {
   ComposeApplication,
   ConfigProviderSpec,
   ContainerApplication,
-  DeviceOsSpec,
   DeviceSpec,
   EncodingType,
   FileSpec,
@@ -38,7 +37,6 @@ import {
   GitConfigTemplate,
   HelmAppForm,
   HttpConfigTemplate,
-  ImageOrCatalogRef,
   InlineConfigTemplate,
   InlineFileForm,
   KubeSecretTemplate,
@@ -50,8 +48,6 @@ import {
   SpecConfigTemplate,
   SystemdUnitFormValue,
   VmAppForm,
-  isCatalogImageRef,
-  isCatalogImageRefSpec,
   isGitConfigTemplate,
   isGitProviderSpec,
   isHttpConfigTemplate,
@@ -60,8 +56,6 @@ import {
   isInlineVariantApp,
   isKubeProviderSpec,
   isKubeSecretTemplate,
-  toImageOrCatalogRefApiSpec,
-  toImageRefFormValue,
 } from '../../../types/deviceSpec';
 import { appendJSONPatch } from '../../../utils/patch';
 import {
@@ -379,15 +373,15 @@ const hasImageOrCatalogRefChanged = (
   current: ImageOrCatalogItemRefSpec | undefined,
   updated: ImageOrCatalogItemRefSpec | undefined,
 ): boolean => {
-  const isCurrentCatalog = isCatalogImageRefSpec(current);
-  const isUpdatedCatalog = isCatalogImageRefSpec(updated);
-  if (isCurrentCatalog !== isUpdatedCatalog) {
+  const currentCatalogRef = current?.catalogItemRef;
+  const updatedCatalogRef = updated?.catalogItemRef;
+
+  if (Boolean(currentCatalogRef) !== Boolean(updatedCatalogRef)) {
     return true;
   }
-  if (isCurrentCatalog && isUpdatedCatalog) {
-    return JSON.stringify(current?.catalogItemRef) !== JSON.stringify(updated?.catalogItemRef);
+  if (currentCatalogRef && updatedCatalogRef) {
+    return JSON.stringify(currentCatalogRef) !== JSON.stringify(updatedCatalogRef);
   }
-
   return hasStringChanged(current?.image, updated?.image);
 };
 
@@ -473,20 +467,10 @@ const toFormFiles = (files: ApplicationContent[]) =>
     base64: file.contentEncoding === EncodingType.EncodingBase64,
   }));
 
-const setAppImage = (
-  app: Partial<HelmApplication | ComposeApplication | ContainerApplication>,
-  image: ImageOrCatalogRef,
-) => {
-  if (isCatalogImageRef(image)) {
-    (app as Partial<CatalogItemRefApplicationProviderSpec>).catalogItemRef = image;
-  } else {
-    (app as Partial<ImageApplicationProviderSpec>).image = image;
-  }
-};
-
 const toApiHelmApp = (app: HelmAppForm): HelmApplication => {
   const helmApp: HelmApplication = {
     appType: app.appType,
+    ...app.imageSpec, // Sets either image or catalogItemRef
   };
 
   if (app.name) {
@@ -508,7 +492,6 @@ const toApiHelmApp = (app: HelmAppForm): HelmApplication => {
     helmApp.valuesFiles = fileNames;
   }
 
-  setAppImage(helmApp, app.image);
   return helmApp;
 };
 
@@ -518,6 +501,7 @@ const toApiContainerApp = (app: SingleContainerAppForm): ContainerApplication =>
     runAs: app.runAs || RUN_AS_ROOT_USER,
     envVars: variablesToEnvVars(app.variables || []),
     volumes: formVolumesToApi(app.volumes || [], AppType.AppTypeContainer),
+    ...app.imageSpec, // Sets either image or catalogItemRef
   };
   if (app.name) {
     containerApp.name = app.name;
@@ -540,7 +524,6 @@ const toApiContainerApp = (app: SingleContainerAppForm): ContainerApplication =>
     containerApp.resources = { limits };
   }
 
-  setAppImage(containerApp, app.image);
   return containerApp;
 };
 
@@ -553,8 +536,10 @@ const toApiComposeApp = (app: ComposeAppForm): ComposeApplication => {
   if (app.name) {
     composeApp.name = app.name;
   }
-  if (app.specType === AppSpecType.OCI_IMAGE) {
-    setAppImage(composeApp, app.image);
+  if (app.specType === AppSpecType.OCI_IMAGE && app.imageSpec?.image) {
+    (composeApp as unknown as ImageApplicationProviderSpec).image = app.imageSpec.image;
+  } else if (app.specType === AppSpecType.OCI_IMAGE && app.imageSpec?.catalogItemRef) {
+    (composeApp as unknown as CatalogItemRefApplicationProviderSpec).catalogItemRef = app.imageSpec.catalogItemRef;
   } else {
     (composeApp as unknown as InlineApplicationProviderSpec).inline = formFilesToApi(app.files);
   }
@@ -767,17 +752,15 @@ export const getApplicationPatches = (
 
 export const getOsSpecPatches = (
   osPath: string,
-  currentOs: DeviceOsSpec | undefined,
-  formOs: ImageOrCatalogRef,
+  currentOsSpec: ImageOrCatalogItemRefSpec | undefined,
+  formOsSpec: ImageOrCatalogItemRefSpec | undefined,
 ): PatchRequest => {
   // Currently, editing a Fleet/Device should not update its OS when it's defined via a catalogItemRef
-  const isCurrentCatalog = isCatalogImageRef(currentOs?.image);
-  if (!isCurrentCatalog) {
+  if (currentOsSpec?.catalogItemRef) {
     return [];
   }
 
-  const newOs = toImageOrCatalogRefApiSpec(formOs);
-  const osChanged = hasImageOrCatalogRefChanged(currentOs, newOs);
+  const osChanged = hasImageOrCatalogRefChanged(currentOsSpec, formOsSpec);
   if (!osChanged) {
     return [];
   }
@@ -786,8 +769,8 @@ export const getOsSpecPatches = (
   appendJSONPatch({
     path: `${osPath}/image`,
     patches,
-    newValue: newOs?.image,
-    originalValue: currentOs?.image,
+    newValue: formOsSpec?.image,
+    originalValue: currentOsSpec?.image,
   });
 
   return patches;
@@ -868,6 +851,19 @@ export const toFormPortMapping = (portStr: string): PortMapping => {
   return { hostPort: hostPort || '', targetPort: targetPort || '' };
 };
 
+const getImageSpec = (
+  app: ImageApplicationProviderSpec | CatalogItemRefApplicationProviderSpec | undefined,
+): ImageOrCatalogItemRefSpec => {
+  if (!app) {
+    return { image: '' };
+  }
+  if ('catalogItemRef' in app && app.catalogItemRef) {
+    return { catalogItemRef: app.catalogItemRef };
+  }
+  const img = 'image' in app ? app.image : '';
+  return { image: img };
+};
+
 const toContainerAppForm = (containerApp: ContainerApplication | undefined): SingleContainerAppForm => {
   const ports = containerApp?.ports?.map(toFormPortMapping) || [];
   const limits = containerApp?.resources?.limits;
@@ -876,7 +872,7 @@ const toContainerAppForm = (containerApp: ContainerApplication | undefined): Sin
     appType: AppType.AppTypeContainer,
     specType: AppSpecType.OCI_IMAGE,
     name: containerApp?.name || '',
-    image: toImageRefFormValue(containerApp),
+    imageSpec: getImageSpec(containerApp),
     variables: toFormVariables(containerApp?.envVars || {}),
     volumes: toFormVolumes(containerApp?.volumes),
     ports,
@@ -896,7 +892,7 @@ const toHelmAppForm = (helmApp: HelmApplication | undefined): HelmAppForm => {
     appType: AppType.AppTypeHelm,
     specType: AppSpecType.OCI_IMAGE,
     name: helmApp?.name || '',
-    image: toImageRefFormValue(helmApp),
+    imageSpec: getImageSpec(helmApp),
     namespace: helmApp?.namespace || '',
     valuesYaml,
     valuesFiles,
@@ -917,9 +913,9 @@ const toComposeAppForm = (app: ComposeApplication | undefined): ComposeAppForm =
   // We want to have both fields initialized for the formik form
   if (isInlineVariant) {
     formApp.files = toFormFiles(app?.inline || []);
-    formApp.image = '';
+    formApp.imageSpec = { image: '' };
   } else {
-    formApp.image = toImageRefFormValue(app);
+    formApp.imageSpec = getImageSpec(app);
     formApp.files = [];
   }
   return formApp as ComposeAppForm;

@@ -10,6 +10,7 @@ import {
   DescriptionListTerm,
   Grid,
   GridItem,
+  Spinner,
 } from '@patternfly/react-core';
 
 import { Fleet, ResourceKind } from '@flightctl/types';
@@ -36,6 +37,13 @@ const FleetDetailsContent = ({ fleet }: { fleet: Fleet }) => {
   const devicesSummary = fleet.status?.devicesSummary;
   const rolloutError = getFleetRolloutStatusWarning(fleet, t);
 
+  let osImage: React.ReactNode;
+  if (catalogRef) {
+    osImage = catalogRef?.isLoading ? <Spinner size="sm" /> : catalogRef?.imageUri;
+  } else {
+    osImage = fleet.spec.template.spec.os?.image || '-';
+  }
+
   return (
     <Grid hasGutter>
       <GridItem md={9}>
@@ -57,9 +65,7 @@ const FleetDetailsContent = ({ fleet }: { fleet: Fleet }) => {
               </DescriptionListGroup>
               <DescriptionListGroup>
                 <DescriptionListTerm>{t('System image')}</DescriptionListTerm>
-                <DescriptionListDescription>
-                  {catalogRef?.imageUri || fleet.spec.template.spec.os?.image || '-'}
-                </DescriptionListDescription>
+                <DescriptionListDescription>{osImage}</DescriptionListDescription>
               </DescriptionListGroup>
               <DescriptionListGroup>
                 <DescriptionListTerm>{t('Device selector')}</DescriptionListTerm>

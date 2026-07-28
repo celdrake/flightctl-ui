@@ -219,8 +219,9 @@ const NewDeviceTarget = ({ catalogItem }: NewDeviceTargetProps) => {
 
   const artifacts = React.useMemo(() => {
     const versionRefs = catalogItem.spec.versions.find((v) => v.version === values.version)?.references || {};
-    return catalogItem.spec.artifacts
-      ?.sort((a, b) => getArtifactLabel(t, a.type, a.name).localeCompare(getArtifactLabel(t, b.type, b.name)))
+    const specArtifacts = catalogItem.spec.artifacts || [];
+    return [...specArtifacts]
+      .sort((a, b) => getArtifactLabel(t, a).localeCompare(getArtifactLabel(t, b)))
       .filter((a) => Object.keys(versionRefs).includes(a.type));
   }, [catalogItem, values.version, t]);
 
@@ -252,7 +253,7 @@ const NewDeviceTarget = ({ catalogItem }: NewDeviceTargetProps) => {
                 artifacts.length
                   ? artifacts.reduce((acc, curr) => {
                       acc[curr.type] = {
-                        label: getArtifactLabel(t, curr.type, curr.name),
+                        label: getArtifactLabel(t, curr),
                       };
                       return acc;
                     }, {})

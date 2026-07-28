@@ -153,10 +153,7 @@ const ReferencesField = ({ index, isReadOnly }: { index: number; isReadOnly?: bo
     <FormSection title={t('References')}>
       {artifactsWithType.map((artifact) => {
         return (
-          <FormGroup
-            key={artifact.type}
-            label={getArtifactLabel(t, artifact.type as CatalogItemArtifactType, artifact.name)}
-          >
+          <FormGroup key={artifact.type} label={getArtifactLabel(t, artifact)}>
             <TextField
               name={`${prefix}.references.${artifact.type}`}
               aria-label={t('{{type}} reference', { type: artifact.type })}

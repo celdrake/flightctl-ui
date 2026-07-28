@@ -10,15 +10,12 @@ import {
   StackItem,
 } from '@patternfly/react-core';
 
-import {
-  EditDeviceFormValues,
-  ImageOrCatalogRef,
-  formatCatalogItemRef,
-  isCatalogImageRef,
-} from '../../../../types/deviceSpec';
+import type { ImageOrCatalogItemRefSpec } from '@flightctl/types';
+import { EditDeviceFormValues } from '../../../../types/deviceSpec';
 import { useTranslation } from '../../../../hooks/useTranslation';
 import LabelsView from '../../../common/LabelsView';
 import { toAPILabel } from '../../../../utils/labels';
+import { formatCatalogItemRef } from '../../../../utils/catalog';
 import { getErrorMessage } from '../../../../utils/error';
 import RepositorySourceList from '../../../Repository/RepositoryDetails/RepositorySourceList';
 import { getApiConfig } from '../deviceSpecUtils';
@@ -26,12 +23,12 @@ import ReviewApplications from './ReviewApplications';
 
 export const reviewDeviceStepId = 'review-device';
 
-const ReviewDeviceOs = ({ os }: { os: ImageOrCatalogRef }) => {
+const ReviewDeviceOs = ({ osSpec }: { osSpec: ImageOrCatalogItemRefSpec | undefined }) => {
   const { t } = useTranslation();
-  if (isCatalogImageRef(os)) {
-    return t('Catalog item {{ catalogItemRef }}', { catalogItemRef: formatCatalogItemRef(os) });
+  if (osSpec?.catalogItemRef) {
+    return t('Catalog item {{ catalogItemRef }}', { catalogItemRef: formatCatalogItemRef(osSpec.catalogItemRef) });
   }
-  return os || t('Edge Manager will not manage system image');
+  return osSpec?.image || t('Edge Manager will not manage system image');
 };
 
 const ReviewStep = ({ error }: { error?: string }) => {
@@ -69,7 +66,7 @@ const ReviewStep = ({ error }: { error?: string }) => {
           <DescriptionListGroup>
             <DescriptionListTerm>{t('System image')}</DescriptionListTerm>
             <DescriptionListDescription>
-              <ReviewDeviceOs os={values.os} />
+              <ReviewDeviceOs osSpec={values.osSpec} />
             </DescriptionListDescription>
           </DescriptionListGroup>
           {values.configTemplates.length > 0 && (

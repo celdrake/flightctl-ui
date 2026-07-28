@@ -1,8 +1,8 @@
 import * as React from 'react';
-import { CatalogItemRefSpec } from '@flightctl/types';
-import { CatalogItem, CatalogItemVersion } from '@flightctl/types/alpha';
+import type { CatalogItemRefSpec } from '@flightctl/types';
+import type { CatalogItem, CatalogItemVersion } from '@flightctl/types/alpha';
 
-import { ResolvedCatalogRef, formatCatalogRefLabel, resolveCatalogRef, toCatalogItemId } from '../../utils/catalog';
+import { type ResolvedCatalogRef, resolveCatalogRef, toCatalogItemId } from '../../utils/catalog';
 import { useOptionalCatalogItemsContext } from './CatalogItemsContext';
 import { useCatalogItemsLookup } from './useCatalogItemsLookup';
 
@@ -11,7 +11,6 @@ export type UseResolvedCatalogRefResult = {
   version: CatalogItemVersion | undefined;
   channel: string;
   imageUri: string | undefined;
-  label: string;
   isLoading: boolean;
   error?: unknown;
 };
@@ -24,21 +23,20 @@ export const useResolvedCatalogRef = (ref: CatalogItemRefSpec | undefined): UseR
   const contextLookup = useOptionalCatalogItemsContext();
   const localIds = React.useMemo(() => (!contextLookup && ref ? [toCatalogItemId(ref)] : []), [contextLookup, ref]);
   const localLookup = useCatalogItemsLookup(localIds);
-  const lookup = contextLookup ?? localLookup;
 
   if (!ref) {
     return undefined;
   }
 
+  const lookup = contextLookup ?? localLookup;
   const item = lookup.getItem(ref.catalog, ref.item);
   const resolved: ResolvedCatalogRef | undefined = item ? resolveCatalogRef(item, ref) : undefined;
 
   return {
     item,
     version: resolved?.version,
-    channel: ref.channel || '',
+    channel: resolved?.channel || ref.channel || '',
     imageUri: resolved?.imageUri,
-    label: formatCatalogRefLabel(item, ref),
     isLoading: lookup.isLoading,
     error: lookup.error,
   };

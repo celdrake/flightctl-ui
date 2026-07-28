@@ -20,7 +20,7 @@ import { Link, ROUTE } from '../../../hooks/useNavigate';
 import InstallOsWizard from './InstallOsWizard';
 import InstallAppWizard from './InstallAppWizard';
 import { useAppContext } from '../../../hooks/useAppContext';
-import { useCatalogItemsLookup } from '../useCatalogItemsLookup';
+import { useCatalogItemFromParams } from '../useCatalogItemsLookup';
 import { getErrorMessage } from '../../../utils/error';
 import { usePermissionsContext } from '../../common/PermissionsContext';
 import PageWithPermissions from '../../common/PageWithPermissions';
@@ -31,14 +31,8 @@ const InstallWizard = () => {
   const {
     router: { useParams },
   } = useAppContext();
-  const { catalogId, itemId } = useParams() as { catalogId: string; itemId: string };
-  const hasCatalogParams = catalogId && itemId;
-  const {
-    getItem,
-    isLoading: loading,
-    error,
-  } = useCatalogItemsLookup(hasCatalogParams ? [{ catalog: catalogId, item: itemId }] : []);
-  const catalogItem = getItem(catalogId, itemId);
+  const params = useParams() as { catalogId: string; itemId: string };
+  const { item: catalogItem, isLoading, error } = useCatalogItemFromParams(params);
 
   let content: React.ReactNode;
   if (error) {
@@ -47,7 +41,7 @@ const InstallWizard = () => {
         {getErrorMessage(error)}
       </Alert>
     );
-  } else if (loading) {
+  } else if (isLoading) {
     content = <EmptyState titleText={t('Loading catalog item')} headingLevel="h4" icon={Spinner} />;
   } else if (catalogItem?.spec.category === CatalogItemCategory.CatalogItemCategorySystem) {
     content = <InstallOsWizard catalogItem={catalogItem} />;
@@ -62,14 +56,14 @@ const InstallWizard = () => {
           <BreadcrumbItem>
             <Link to={ROUTE.CATALOG}>{t('Software Catalog')}</Link>
           </BreadcrumbItem>
-          <BreadcrumbItem isActive>{catalogItem?.spec.displayName || itemId}</BreadcrumbItem>
+          <BreadcrumbItem isActive>{catalogItem?.spec.displayName || params.itemId}</BreadcrumbItem>
         </Breadcrumb>
       </PageSection>
       <PageSection hasBodyWrapper={false}>
         <Stack>
           <StackItem>
             <Title headingLevel="h1" size="3xl">
-              {t('Deploy {{name}}', { name: catalogItem?.spec.displayName || itemId })}
+              {t('Deploy {{name}}', { name: catalogItem?.spec.displayName || params.itemId })}
             </Title>
           </StackItem>
           <StackItem>

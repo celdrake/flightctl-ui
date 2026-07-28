@@ -237,7 +237,7 @@ const NewVersionImageBuildWizard = () => {
 
   const activePromotion = getLatestPromotion(promotionList?.items || []);
   const promotionTarget = activePromotion?.spec.target;
-  const hasCatalogParams = promotionTarget?.catalogName && promotionTarget?.catalogItemName;
+  const hasCatalogParams = promotionTarget && promotionTarget.catalogName && promotionTarget.catalogItemName;
   const {
     getItem,
     isLoading: catalogItemLoading,
@@ -254,9 +254,10 @@ const NewVersionImageBuildWizard = () => {
     imageBuildLoading ||
     registriesLoading ||
     (canListPromotions && promotionsLoading) ||
-    (!!activePromotion && catalogItemLoading) ||
-    (!!activePromotion && !catalogItem && !catalogItemError);
-  const loadError = imageBuildError || registriesError || promotionsError;
+    (!!activePromotion && hasCatalogParams && catalogItemLoading) ||
+    (!!activePromotion && hasCatalogParams && !catalogItem && !catalogItemError);
+  const loadError =
+    imageBuildError || registriesError || promotionsError || (hasCatalogParams ? catalogItemError : undefined);
 
   return (
     <>

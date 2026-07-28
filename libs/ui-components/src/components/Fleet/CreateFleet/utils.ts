@@ -36,18 +36,13 @@ import {
   toApiApplication,
 } from '../../Device/EditDeviceWizard/deviceSpecUtils';
 import { getDisruptionBudgetValues, getRolloutPolicyValues, getUpdatePolicyValues } from './fleetSpecUtils';
-import {
-  FleetFormValues,
-  UpdatePolicyForm,
-  toImageOrCatalogRefApiSpec,
-  toImageRefFormValue,
-} from '../../../types/deviceSpec';
+import { FleetFormValues, UpdatePolicyForm } from '../../../types/deviceSpec';
 
 export const getValidationSchema = (t: TFunction) => {
   return Yup.lazy((values: FleetFormValues) =>
     Yup.object<FleetFormValues>({
       name: validKubernetesDnsSubdomain(t, { isRequired: true }),
-      os: validOsFormValue(t, { isFleet: true }),
+      osSpec: validOsFormValue(t, { isFleet: true }),
       fleetLabels: validLabelsSchema(t),
       labels: validLabelsSchema(t),
       configTemplates: validConfigTemplatesSchema(t),
@@ -108,7 +103,7 @@ export const getFleetPatches = (currentFleet: Fleet, updatedFleet: FleetFormValu
 
   // OS (image or reference to Catalog item). Currently only image is editable via the UI.
   allPatches = allPatches.concat(
-    getOsSpecPatches('/spec/template/spec/os', currentFleet.spec.template.spec.os, updatedFleet.os),
+    getOsSpecPatches('/spec/template/spec/os', currentFleet.spec.template.spec.os, updatedFleet.osSpec),
   );
 
   // Configurations
@@ -163,6 +158,8 @@ export const getFleetResource = (values: FleetFormValues): Fleet => {
             matchPatterns: values.systemdUnits.map((unit) => unit.pattern),
           },
         };
+
+  const isOsSet = Boolean(values.osSpec?.image) || Boolean(values.osSpec?.catalogItemRef);
   const fleet: Fleet = {
     apiVersion: ApiVersion.ApiVersionV1beta1,
     kind: 'Fleet',
@@ -181,7 +178,7 @@ export const getFleetResource = (values: FleetFormValues): Fleet => {
           },
         },
         spec: {
-          os: toImageOrCatalogRefApiSpec(values.os),
+          os: isOsSet ? values.osSpec : undefined,
           config: values.configTemplates.map(getApiConfig),
           applications: values.applications.map(toApiApplication),
           ...systemdPatterns,
@@ -220,7 +217,7 @@ export const getInitialValues = (fleet?: Fleet): FleetFormValues => {
         key,
         value: fleet.metadata.labels?.[key],
       })),
-      os: toImageRefFormValue(fleet.spec.template.spec.os),
+      osSpec: fleet.spec.template.spec.os,
       configTemplates: getConfigTemplatesValues(fleet.spec.template.spec, registerMicroShift),
       applications: getApplicationValues(fleet.spec.template.spec),
       systemdUnits: getSystemdUnitsValues(fleet.spec.template.spec),
@@ -236,7 +233,7 @@ export const getInitialValues = (fleet?: Fleet): FleetFormValues => {
     name: '',
     labels: [],
     fleetLabels: [],
-    os: '',
+    osSpec: { image: '' },
     configTemplates: [],
     applications: [],
     systemdUnits: [],

@@ -3,7 +3,6 @@ import { CardBody, CardTitle, Divider, Stack, StackItem } from '@patternfly/reac
 
 import { Device } from '@flightctl/types';
 import { useTranslation } from '../../../../hooks/useTranslation';
-import { formatImageRef } from '../../../../types/deviceSpec';
 import DetailsPageCard from '../../../DetailsPage/DetailsPageCard';
 import RepositorySourceList from '../../../Repository/RepositoryDetails/RepositorySourceList';
 import { useResolvedCatalogRef } from '../../../Catalog/useResolvedCatalogRef';
@@ -14,7 +13,7 @@ const ConfigurationsContent = ({ device }: { device: Required<Device> }) => {
 
   const configs = device.spec?.config || [];
   const catalogRef = useResolvedCatalogRef(device.spec?.os?.catalogItemRef);
-  const desiredOsImage = catalogRef?.imageUri || formatImageRef(device.spec?.os?.image);
+  const desiredOsImage = catalogRef?.imageUri || device.spec?.os?.image;
 
   return (
     <DetailsPageCard>

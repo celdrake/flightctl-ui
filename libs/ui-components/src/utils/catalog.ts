@@ -24,11 +24,11 @@ import {
   getAppVolumeName,
 } from '../components/Catalog/const';
 import { AssetSelection } from '../components/DynamicForm/DynamicForm';
-import { formatCatalogItemRef } from '../types/deviceSpec';
 import appIcon from '../../assets/application.svg';
 import osIcon from '../../assets/os.svg';
 import { fromAPILabel } from './labels';
 import { getLabelPatches } from './patch';
+import { ArtifactFormValue } from '../components/Catalog/AddCatalogItemWizard/types';
 
 export type CatalogItemId = { catalog: string; item: string };
 
@@ -38,7 +38,6 @@ export type ResolvedCatalogRef = {
   version: CatalogItemVersion | undefined;
   channel: string;
   imageUri?: string;
-  label: string;
 };
 
 export const getAppCatalogItemRef = (app: ApplicationProviderSpec): CatalogItemRefSpec | undefined =>
@@ -46,41 +45,27 @@ export const getAppCatalogItemRef = (app: ApplicationProviderSpec): CatalogItemR
 
 export const catalogItemCacheKey = (id: CatalogItemId): string => `${id.catalog}\0${id.item}`;
 
+export const formatCatalogItemRef = (ref: CatalogItemRefSpec): string => `${ref.catalog}/${ref.item}:${ref.version}`;
+
 export const toCatalogItemId = (ref: Pick<CatalogItemRefSpec, 'catalog' | 'item'>): CatalogItemId => ({
   catalog: ref.catalog,
   item: ref.item,
 });
 
-/** OS + application catalogItemRefs from a Device/Fleet template spec. */
-export const extractCatalogRefsFromSpec = (spec: DeviceSpec | undefined): CatalogItemRefSpec[] => {
-  const refs: CatalogItemRefSpec[] = [];
+export const extractCatalogItemIdsFromSpec = (spec: DeviceSpec | undefined): CatalogItemId[] => {
+  const byKey = new Map<string, CatalogItemId>();
   if (spec?.os?.catalogItemRef) {
-    refs.push(spec.os.catalogItemRef);
+    const id = toCatalogItemId(spec.os.catalogItemRef);
+    byKey.set(catalogItemCacheKey(id), id);
   }
   (spec?.applications || []).forEach((app) => {
     const ref = getAppCatalogItemRef(app);
     if (ref) {
-      refs.push(ref);
+      const id = toCatalogItemId(ref);
+      byKey.set(catalogItemCacheKey(id), id);
     }
   });
-  return refs;
-};
-
-export const extractCatalogItemIdsFromSpec = (spec: DeviceSpec | undefined): CatalogItemId[] => {
-  const byKey = new Map<string, CatalogItemId>();
-  extractCatalogRefsFromSpec(spec).forEach((ref) => {
-    const id = toCatalogItemId(ref);
-    byKey.set(catalogItemCacheKey(id), id);
-  });
   return [...byKey.values()];
-};
-
-export const formatCatalogRefLabel = (item: CatalogItem | undefined, ref: CatalogItemRefSpec): string => {
-  if (!item) {
-    return formatCatalogItemRef(ref);
-  }
-  const displayName = item.spec.displayName || item.metadata.name || ref.item;
-  return `${displayName}:${ref.version}`;
 };
 
 export const getCurrentVersion = (
@@ -151,7 +136,6 @@ export const resolveCatalogRef = (item: CatalogItem, ref: CatalogItemRefSpec): R
     version,
     channel: ref.channel || '',
     imageUri,
-    label: formatCatalogRefLabel(item, ref),
   };
 };
 
@@ -309,8 +293,8 @@ export const getAppPatches = ({
     });
   }
 
+  const volumes = appType === AppType.AppTypeContainer ? (appSpec as ContainerApplication).volumes : undefined;
   const volumeLabels = selectedAssets.reduce((acc, { assetChannel, assetItemName, assetCatalog, volumeIndex }) => {
-    const volumes = (appSpec as ContainerApplication).volumes;
     if (!volumes || volumes.length <= volumeIndex) {
       return acc;
     }
@@ -364,46 +348,37 @@ export const getCatalogItemIcon = (catalogItem: CatalogItem): string =>
   catalogItem.spec.icon ||
   ((catalogItem.spec.category === CatalogItemCategory.CatalogItemCategorySystem ? osIcon : appIcon) as string);
 
-export const getArtifactLabel = (t: TFunction, type: CatalogItemArtifactType, name?: string) => {
-  let artifactType: CatalogItemArtifactType;
-  switch (type) {
-    case CatalogItemArtifactType.CatalogItemArtifactTypeQcow2:
-      artifactType = t('QCOW2');
-      break;
-    case CatalogItemArtifactType.CatalogItemArtifactTypeIso:
-      artifactType = t('Bare Metal');
-      break;
-    case CatalogItemArtifactType.CatalogItemArtifactTypeAmi:
-      artifactType = t('Amazon Web Services');
-      break;
-    case CatalogItemArtifactType.CatalogItemArtifactTypeAnacondaIso:
-      artifactType = t('Anaconda Installer');
-      break;
-    case CatalogItemArtifactType.CatalogItemArtifactTypeGce:
-      artifactType = t('Google Cloud');
-      break;
-    case CatalogItemArtifactType.CatalogItemArtifactTypeRaw:
-      artifactType = t('KVM/custom cloud import');
-      break;
-    case CatalogItemArtifactType.CatalogItemArtifactTypeVhd:
-      artifactType = t('Microsoft Hyper-V');
-      break;
-    case CatalogItemArtifactType.CatalogItemArtifactTypeVmdk:
-      artifactType = t('VMware vSphere');
-      break;
-    case CatalogItemArtifactType.CatalogItemArtifactTypeContainer:
-      artifactType = t('Cloud native');
-      break;
-    case CatalogItemArtifactType.CatalogItemArtifactTypeQcow2DiskContainer:
-      artifactType = t('OpenShift Virtualization');
+export const getArtifactLabel = (t: TFunction, artifact: ArtifactFormValue | CatalogItemArtifact) => {
+  const { type, name } = artifact;
+  if (type === '') {
+    return name;
   }
-
   if (name) {
     return `${name} (${type})`;
   }
-  if (artifactType) {
-    return `${artifactType} (${type})`;
+  switch (type) {
+    case CatalogItemArtifactType.CatalogItemArtifactTypeQcow2:
+      return t('QCOW2 (qcow2)');
+    case CatalogItemArtifactType.CatalogItemArtifactTypeIso:
+      return t('Bare Metal (iso)');
+    case CatalogItemArtifactType.CatalogItemArtifactTypeAmi:
+      return t('Amazon Web Services (ami)');
+    case CatalogItemArtifactType.CatalogItemArtifactTypeAnacondaIso:
+      return t('Anaconda Installer (anaconda-iso)');
+    case CatalogItemArtifactType.CatalogItemArtifactTypeGce:
+      return t('Google Cloud (gce)');
+    case CatalogItemArtifactType.CatalogItemArtifactTypeRaw:
+      return t('KVM/custom cloud import (raw)');
+    case CatalogItemArtifactType.CatalogItemArtifactTypeVhd:
+      return t('Microsoft Hyper-V (vhd)');
+    case CatalogItemArtifactType.CatalogItemArtifactTypeVmdk:
+      return t('VMware vSphere (vmdk)');
+    case CatalogItemArtifactType.CatalogItemArtifactTypeContainer:
+      return t('Cloud native (container)');
+    case CatalogItemArtifactType.CatalogItemArtifactTypeQcow2DiskContainer:
+      return t('OpenShift Virtualization (qcow2-disk-container)');
+    default: {
+      return t('Unknown ({{ type }})', { type });
+    }
   }
-
-  return type;
 };

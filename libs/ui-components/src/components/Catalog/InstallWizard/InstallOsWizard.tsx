@@ -170,11 +170,13 @@ const InstallOsWizard = ({ catalogItem }: InstallOsWizardProps) => {
     const installToDevice = values.target === 'device';
     const selectedResource = installToDevice ? (values.device as Device) : (values.fleet as Fleet);
     if (!selectedResource) {
+      setError(t('Deployment target not found for {{ target }}', { target: values.target }));
       return;
     }
 
     const catalogItemVersion = catalogItem.spec.versions.find((v) => v.version === values.version);
     if (!catalogItemVersion || !values.channel) {
+      setError(t('Failed to find requested version {{ version }}', { version: values.version }));
       return;
     }
 

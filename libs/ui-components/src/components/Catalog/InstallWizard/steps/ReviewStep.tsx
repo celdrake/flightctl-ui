@@ -14,15 +14,15 @@ import {
   Title,
 } from '@patternfly/react-core';
 import { useFormikContext } from 'formik';
-import { CatalogItem, CatalogItemType } from '@flightctl/types/alpha';
 
-import { type DeviceSpec } from '@flightctl/types';
+import { type DeviceSpec, ImageOrCatalogItemRefSpec } from '@flightctl/types';
+import { CatalogItem, CatalogItemType } from '@flightctl/types/alpha';
+import { InstallAppFormik, InstallOsFormik } from '../types';
+
 import { useTranslation } from '../../../../hooks/useTranslation';
 import FlightCtlForm from '../../../form/FlightCtlForm';
-import { InstallAppFormik, InstallOsFormik } from '../types';
-import { toImageRefFormValue } from '../../../../types/deviceSpec';
 
-const isOsUnset = (spec: DeviceSpec | undefined) => !toImageRefFormValue(spec?.os);
+const isOsUnset = (osSpec: ImageOrCatalogItemRefSpec | undefined) => !(osSpec?.image || osSpec?.catalogItemRef);
 
 const isOsUpdate = (catalogItem: CatalogItem, version: string, spec: DeviceSpec | undefined) => {
   const osRef = spec?.os?.catalogItemRef;
@@ -44,7 +44,7 @@ const UpdateOsUpdateAlerts = ({ catalogItem }: { catalogItem: CatalogItem }) => 
 
   if (values.target === 'fleet') {
     const numOfDevices = `${values.fleet?.status?.devicesSummary?.total || 0}`;
-    if (isOsUnset(values.fleet?.spec.template.spec)) {
+    if (isOsUnset(values.fleet?.spec.template.spec?.os)) {
       return (
         <Alert isInline variant="warning" title={t('Fleet update')}>
           <Trans t={t}>
@@ -80,7 +80,7 @@ const UpdateOsUpdateAlerts = ({ catalogItem }: { catalogItem: CatalogItem }) => 
   }
 
   if (values.target === 'device') {
-    if (isOsUnset(values.device?.spec)) {
+    if (isOsUnset(values.device?.spec?.os)) {
       return (
         <Alert isInline variant="warning" title={t('Device update')}>
           <Trans t={t}>

@@ -1,11 +1,10 @@
 import * as React from 'react';
-import { ApplicationProviderSpec, DeviceSpec } from '@flightctl/types';
-import { CatalogItem, CatalogItemVersion } from '@flightctl/types/alpha';
+import type { ApplicationProviderSpec, DeviceSpec } from '@flightctl/types';
+import type { CatalogItem, CatalogItemVersion } from '@flightctl/types/alpha';
 
 import {
-  CatalogItemId,
+  type CatalogItemId,
   extractCatalogItemIdsFromSpec,
-  formatCatalogRefLabel,
   getAppCatalogItemRef,
   resolveCatalogRef,
 } from '../../utils/catalog';
@@ -17,7 +16,6 @@ export type SpecCatalogOsItem = {
   version: CatalogItemVersion | undefined;
   channel: string;
   imageUri?: string;
-  label: string;
 };
 
 export type SpecCatalogAppItem = {
@@ -25,7 +23,6 @@ export type SpecCatalogAppItem = {
   item: CatalogItem;
   version: CatalogItemVersion | undefined;
   channel: string;
-  label: string;
 };
 
 export type UseSpecCatalogItemsResult = {
@@ -57,7 +54,6 @@ export const useSpecCatalogItems = (spec: DeviceSpec | undefined): UseSpecCatalo
         version: resolved.version,
         channel: resolved.channel,
         imageUri: resolved.imageUri,
-        label: resolved.label,
       };
     }
   }
@@ -78,7 +74,6 @@ export const useSpecCatalogItems = (spec: DeviceSpec | undefined): UseSpecCatalo
       item,
       version: resolved.version,
       channel: resolved.channel,
-      label: formatCatalogRefLabel(item, ref),
     });
   });
 

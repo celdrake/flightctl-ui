@@ -1,7 +1,7 @@
 import * as React from 'react';
 
-import { CatalogItemId } from '../../utils/catalog';
-import { CatalogItemsLookupResult, useCatalogItemsLookup } from './useCatalogItemsLookup';
+import type { CatalogItemId } from '../../utils/catalog';
+import { type CatalogItemsLookupResult, useCatalogItemsLookup } from './useCatalogItemsLookup';
 
 const CatalogItemsContext = React.createContext<CatalogItemsLookupResult | undefined>(undefined);
 

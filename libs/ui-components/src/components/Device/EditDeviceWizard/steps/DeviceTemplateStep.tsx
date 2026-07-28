@@ -7,9 +7,9 @@ import { Repository } from '@flightctl/types';
 import { useTranslation } from '../../../../hooks/useTranslation';
 import LabelWithHelperText, { FormGroupWithHelperText } from '../../../common/WithHelperText';
 import LearnMoreLink from '../../../common/LearnMoreLink';
-import TextField from '../../../form/TextField';
 import FlightCtlForm from '../../../form/FlightCtlForm';
-import { DeviceSpecConfigFormValues, isCatalogImageRef } from '../../../../types/deviceSpec';
+import ImageOrCatalogRefField from '../../../form/ImageOrCatalogRefField';
+import { DeviceSpecConfigFormValues } from '../../../../types/deviceSpec';
 import ConfigurationTemplates from './ConfigurationTemplates';
 import ApplicationsForm from './ApplicationTemplates';
 import SystemdUnitsForm from './SystemdUnitsForm';
@@ -18,12 +18,11 @@ import { useAppLinks } from '../../../../hooks/useAppLinks';
 import { useFetchPeriodically } from '../../../../hooks/useFetchPeriodically';
 import { FlightCtlApp, useAppContext } from '../../../../hooks/useAppContext';
 import { ACM_REPO_NAME } from '../deviceSpecUtils';
-import { useResolvedCatalogRef } from '../../../Catalog/useResolvedCatalogRef';
 
 export const deviceTemplateStepId = 'device-template';
 
 export const isDeviceTemplateStepValid = (errors: FormikErrors<DeviceSpecConfigFormValues>) =>
-  !errors.os && !errors.configTemplates && !errors.applications && !errors.systemdUnits;
+  !errors.osSpec && !errors.configTemplates && !errors.applications && !errors.systemdUnits;
 
 const templateOption1 = '{{ .metadata.labels.key }}';
 const templateOption2 = '{{ .metadata.name }}';
@@ -110,9 +109,7 @@ const DeviceTemplateStep = ({ isFleet, isReadOnly }: { isFleet: boolean; isReadO
   const { values } = useFormikContext<DeviceSpecConfigFormValues>();
   const useTemplateVarsLink = useAppLinks('useTemplateVars');
 
-  const catalogOs = isCatalogImageRef(values.os) ? values.os : undefined;
-  const catalogRef = useResolvedCatalogRef(catalogOs);
-  const catalogOsLabel = catalogOs ? catalogRef?.label : (values.os as string);
+  const osCatalogRef = values.osSpec?.catalogItemRef;
 
   return (
     <FlightCtlForm>
@@ -138,17 +135,16 @@ const DeviceTemplateStep = ({ isFleet, isReadOnly }: { isFleet: boolean; isReadO
         }
       >
         <Stack hasGutter>
-          {catalogOs && (
+          {osCatalogRef && (
             <StackItem>
               <Alert isInline variant="info" title={t('System image is managed by Software Catalog')} />
             </StackItem>
           )}
           <StackItem>
-            <TextField
-              name="os"
+            <ImageOrCatalogRefField
+              name="osSpec"
               aria-label={t('System image')}
-              value={catalogOsLabel}
-              isDisabled={isReadOnly || !!catalogOs}
+              isDisabled={isReadOnly}
               helperText={t(
                 'Must be a reference to a bootable container image (such as "quay.io/<my-org>/my-rhel-with-fc-agent:<version>"). If you do not want to manage your OS from Edge management, leave this field empty.',
               )}

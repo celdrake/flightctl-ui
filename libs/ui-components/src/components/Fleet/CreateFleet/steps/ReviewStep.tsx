@@ -11,7 +11,7 @@ import {
 import { useFormikContext } from 'formik';
 
 import { useTranslation } from '../../../../hooks/useTranslation';
-import { FleetFormValues, formatImageRef } from '../../../../types/deviceSpec';
+import { FleetFormValues } from '../../../../types/deviceSpec';
 import LabelsView from '../../../common/LabelsView';
 import { toAPILabel } from '../../../../utils/labels';
 import RepositorySourceList from '../../../Repository/RepositoryDetails/RepositorySourceList';
@@ -23,12 +23,15 @@ import {
   ReviewUpdateDisruptionBudget,
   ReviewUpdateRolloutPolicy,
 } from '../../../Device/EditDeviceWizard/steps/ReviewUpdatePolicy';
+import { useResolvedCatalogRef } from '../../../Catalog/useResolvedCatalogRef';
 
 export const reviewStepId = 'review';
 
 const ReviewStep = ({ error }: { error?: unknown }) => {
   const { t } = useTranslation();
   const { values } = useFormikContext<FleetFormValues>();
+
+  const catalogItem = useResolvedCatalogRef(values.osSpec?.catalogItemRef);
 
   return (
     <Stack hasGutter>
@@ -64,7 +67,7 @@ const ReviewStep = ({ error }: { error?: unknown }) => {
           <DescriptionListGroup>
             <DescriptionListTerm>{t('System image')}</DescriptionListTerm>
             <DescriptionListDescription>
-              {formatImageRef(values.os) || t(`The fleet will not manage system image`)}
+              {catalogItem?.imageUri || values.osSpec?.image || t('The fleet will not manage system image')}
             </DescriptionListDescription>
           </DescriptionListGroup>
           {values.configTemplates.length > 0 && (

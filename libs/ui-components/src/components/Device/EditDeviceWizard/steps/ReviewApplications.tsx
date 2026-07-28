@@ -3,15 +3,15 @@ import { Stack, StackItem } from '@patternfly/react-core';
 import { TFunction } from 'react-i18next';
 
 import { useTranslation } from '../../../../hooks/useTranslation';
-import { AppForm, formatImageRef, getAppIdentifier } from '../../../../types/deviceSpec';
+import { AppForm, getAppIdentifier } from '../../../../types/deviceSpec';
 import { getAppTypeLabel } from '../../../../utils/apps';
 
 const getAppName = (app: AppForm, t: TFunction): string => {
   if (app.name) {
     return app.name;
   }
-  if ('image' in app && app.image) {
-    return `${t('Unnamed')} (${formatImageRef(app.image)})`;
+  if ('imageSpec' in app && app.imageSpec?.image) {
+    return `${t('Unnamed')} (${app.imageSpec.image})`;
   }
   return '';
 };

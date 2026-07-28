@@ -26,7 +26,7 @@ export const getValidationSchema = (t: TFunction) =>
   Yup.lazy((values: EditDeviceFormValues) =>
     Yup.object({
       deviceAlias: validKubernetesLabelValue(t, { isRequired: false, fieldName: t('Alias') }),
-      os: validOsFormValue(t, { isFleet: false }),
+      osSpec: validOsFormValue(t, { isFleet: false }),
       labels: validLabelsSchema(t),
       configTemplates: validConfigTemplatesSchema(t),
       applications: validApplicationsSchema(t),
@@ -51,7 +51,7 @@ export const getDevicePatches = (currentDevice: Device, updatedDevice: EditDevic
   }
 
   // OS (image or reference to Catalog item). Currently only image is editable via the UI.
-  allPatches = allPatches.concat(getOsSpecPatches('/spec/os', currentDevice.spec?.os, updatedDevice.os));
+  allPatches = allPatches.concat(getOsSpecPatches('/spec/os', currentDevice.spec?.os, updatedDevice.osSpec));
 
   // Configurations
   const currentConfigs = currentDevice.spec?.config || [];

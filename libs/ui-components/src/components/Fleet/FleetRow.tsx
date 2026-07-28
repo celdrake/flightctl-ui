@@ -12,7 +12,7 @@ import { buildAllDropdownActions } from '../common/ActionsDropdownList';
 import FleetDevicesCount from './FleetDetails/FleetDevicesCount';
 import { FleetOwnerLinkIcon } from './FleetDetails/FleetOwnerLink';
 import FleetStatus from './FleetStatus';
-import { formatImageRef, toImageRefFormValue } from '../../types/deviceSpec';
+import { useResolvedCatalogRef } from '../Catalog/useResolvedCatalogRef';
 
 type FleetRowProps = {
   fleet: Fleet;
@@ -84,6 +84,10 @@ const FleetRow: React.FC<FleetRowProps> = ({
   const actions = buildAllDropdownActions(regularActions, dangerActions);
   const fleetRolloutError = getFleetRolloutStatusWarning(fleet, t);
 
+  // CELIA-WIP do not fetch once per row
+  const fleetOsSpec = fleet.spec.template.spec.os;
+  const osCatalogItem = useResolvedCatalogRef(fleetOsSpec?.catalogItemRef);
+
   return (
     <Tr>
       <Td
@@ -100,7 +104,7 @@ const FleetRow: React.FC<FleetRowProps> = ({
           <ResourceLink id={fleetName} routeLink={ROUTE.FLEET_DETAILS} data-testid={`fleet-name-link-${fleetName}`} />
         </FleetOwnerLinkIcon>
       </Td>
-      <Td dataLabel={t('System image')}>{formatImageRef(toImageRefFormValue(fleet.spec.template.spec.os)) || '-'}</Td>
+      <Td dataLabel={t('System image')}>{osCatalogItem?.imageUri || fleetOsSpec?.image || '-'}</Td>
       <Td dataLabel={t('Up-to-date/devices')}>
         <FleetDevicesCount
           fleetId={fleetName}

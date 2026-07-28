@@ -50,41 +50,6 @@ export enum AppSpecType {
   INLINE = 'inline',
 }
 
-/** Form image slot: OCI URI string or catalog ref (mirrors API image XOR catalogItemRef). */
-export type ImageOrCatalogRef = string | CatalogItemRefSpec;
-
-export const isCatalogImageRefSpec = (spec: ImageOrCatalogItemRefSpec | undefined) =>
-  typeof spec === 'object' && !!spec && 'catalogItemRef' in spec;
-
-export const isCatalogImageRef = (v: ImageOrCatalogRef | undefined): v is CatalogItemRefSpec =>
-  typeof v === 'object' && !!v && 'catalog' in v && 'item' in v;
-
-export const formatCatalogItemRef = (ref: CatalogItemRefSpec): string => `${ref.catalog}/${ref.item}:${ref.version}`;
-
-export const formatImageRef = (imageRef: ImageOrCatalogRef | undefined): string => {
-  if (!imageRef || typeof imageRef === 'string') {
-    return imageRef || '';
-  }
-  return formatCatalogItemRef(imageRef);
-};
-
-export const toImageRefFormValue = (spec?: ImageOrCatalogItemRefSpec): ImageOrCatalogRef => {
-  if (spec?.catalogItemRef) {
-    return spec.catalogItemRef;
-  }
-  if (spec?.image) {
-    return spec.image;
-  }
-  return '';
-};
-
-export const toImageOrCatalogRefApiSpec = (imageRef: ImageOrCatalogRef): ImageOrCatalogItemRefSpec | undefined => {
-  if (typeof imageRef === 'string') {
-    return { image: imageRef };
-  }
-  return { catalogItemRef: imageRef };
-};
-
 export const isGitConfigTemplate = (configTemplate: ConfigTemplate): configTemplate is GitConfigTemplate =>
   configTemplate.type === ConfigType.GIT;
 
@@ -148,13 +113,13 @@ export type InlineFileForm = { path: string; content?: string; base64?: boolean 
 
 type InlineOrImageVariantForm = {
   specType: AppSpecType;
-  image: ImageOrCatalogRef;
+  imageSpec: ImageOrCatalogItemRefSpec;
   files: InlineFileForm[];
 };
 
 export type SingleContainerAppForm = Omit<ContainerApplication, 'ports' | 'resources' | 'envVars' | 'volumes'> & {
   specType: AppSpecType.OCI_IMAGE;
-  image: ImageOrCatalogRef;
+  imageSpec: ImageOrCatalogItemRefSpec;
   ports: PortMapping[];
   cpuLimit: string;
   memoryLimit: string;
@@ -164,7 +129,7 @@ export type SingleContainerAppForm = Omit<ContainerApplication, 'ports' | 'resou
 
 export type HelmAppForm = Omit<HelmApplication, 'values'> & {
   specType: AppSpecType.OCI_IMAGE;
-  image: ImageOrCatalogRef;
+  imageSpec: ImageOrCatalogItemRefSpec;
   valuesYaml?: string;
   valuesFiles: string[];
 };
@@ -210,13 +175,13 @@ export type AppForm = SingleContainerAppForm | HelmAppForm | QuadletAppForm | Co
 const hasTemplateVariables = (str: string) => /{{.+?}}/.test(str);
 
 export const isCatalogAppForm = (app: AppForm): boolean =>
-  app.specType === AppSpecType.OCI_IMAGE && isCatalogImageRef(app.image);
+  app.specType === AppSpecType.OCI_IMAGE && Boolean(app.imageSpec?.catalogItemRef);
 
 export const getAppIdentifier = (app: AppForm): string => {
   if (app.name) return app.name;
   // Name is mandatory for all apps, except when the apps have an image which then becomes the ID.
-  if ('image' in app) {
-    return formatImageRef(app.image);
+  if ('imageSpec' in app) {
+    return app.imageSpec.image || '';
   }
   return '';
 };
@@ -296,7 +261,7 @@ export type SystemdUnitFormValue = {
 };
 
 export type DeviceSpecConfigFormValues = {
-  os: ImageOrCatalogRef;
+  osSpec?: ImageOrCatalogItemRefSpec;
   configTemplates: SpecConfigTemplate[];
   applications: AppForm[];
   systemdUnits: SystemdUnitFormValue[];

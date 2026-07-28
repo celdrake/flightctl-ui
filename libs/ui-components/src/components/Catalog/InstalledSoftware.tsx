@@ -108,23 +108,22 @@ type InstalledSoftwareItemProps = {
 
 const InstalledSoftwareItem = ({ item, version, channel, onEdit, onDelete, canEdit }: InstalledSoftwareItemProps) => {
   const { t } = useTranslation();
-  const actions =
-    item && canEdit
-      ? buildAllDropdownActions(
-          [
-            {
-              title: t('Edit'),
-              onClick: onEdit,
-            },
-          ],
-          [
-            {
-              title: t('Delete'),
-              onClick: onDelete,
-            },
-          ],
-        )
-      : [];
+  const actions = canEdit
+    ? buildAllDropdownActions(
+        [
+          {
+            title: t('Edit'),
+            onClick: onEdit,
+          },
+        ],
+        [
+          {
+            title: t('Delete'),
+            onClick: onDelete,
+          },
+        ],
+      )
+    : [];
 
   const deprecationMessage = item.spec.deprecation?.message || version?.deprecation?.message;
 
@@ -176,7 +175,7 @@ const InstalledSoftware = ({ spec, onDeleteOs, onDeleteApp, onEdit, canEdit }: I
     return <EmptyState titleText={t('Loading installed software')} headingLevel="h4" icon={Spinner} />;
   }
 
-  const hasOs = !!os?.version;
+  const hasOs = !!os?.item;
   const hasApps = apps.length > 0;
   const isEmpty = !hasOs && !hasApps;
 
@@ -191,7 +190,7 @@ const InstalledSoftware = ({ spec, onDeleteOs, onDeleteApp, onEdit, canEdit }: I
             </EmptyState>
           ) : (
             <Stack hasGutter>
-              {hasOs && os && (
+              {hasOs && (
                 <InstalledSoftwareItem
                   item={os.item}
                   version={os.version}

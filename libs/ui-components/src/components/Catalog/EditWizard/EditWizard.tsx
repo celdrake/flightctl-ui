@@ -14,7 +14,7 @@ import {
   Title,
 } from '@patternfly/react-core';
 import { CatalogItemCategory } from '@flightctl/types/alpha';
-import { ApplicationProviderSpec, Device, DeviceOsSpec, Fleet, PatchRequest } from '@flightctl/types';
+import { ApplicationProviderSpec, Device, Fleet, ImageOrCatalogItemRefSpec, PatchRequest } from '@flightctl/types';
 import { load } from 'js-yaml';
 
 import ErrorBoundary from '../../common/ErrorBoundary';
@@ -24,7 +24,7 @@ import { useAppContext } from '../../../hooks/useAppContext';
 import { useFetch } from '../../../hooks/useFetch';
 import { Link, ROUTE, useNavigate } from '../../../hooks/useNavigate';
 import { useTranslation } from '../../../hooks/useTranslation';
-import { useCatalogItemsLookup } from '../useCatalogItemsLookup';
+import { useCatalogItemFromParams } from '../useCatalogItemsLookup';
 import { useFetchPeriodically } from '../../../hooks/useFetchPeriodically';
 import { UpdateSuccessPageContent } from '../InstallWizard/UpdateSuccessPage';
 import { usePermissionsContext } from '../../common/PermissionsContext';
@@ -37,7 +37,7 @@ import EditAppWizard from './EditAppWizard';
 type EditWizardProps = {
   specPath: string;
   currentLabels: Record<string, string> | undefined;
-  currentOsSpec: DeviceOsSpec | undefined;
+  currentOsSpec: ImageOrCatalogItemRefSpec | undefined;
   currentApps: ApplicationProviderSpec[] | undefined;
   loading: boolean;
   error: unknown;
@@ -63,15 +63,9 @@ const EditWizard = ({
   const {
     router: { useParams },
   } = useAppContext();
-  const { catalogId, itemId } = useParams() as { catalogId: string; itemId: string };
-  const hasCatalogParams = catalogId && itemId;
-
-  const {
-    getItem,
-    isLoading: catalogItemLoading,
-    error: catalogItemErr,
-  } = useCatalogItemsLookup(hasCatalogParams ? [{ catalog: catalogId, item: itemId }] : []);
-  const catalogItem = getItem(catalogId, itemId);
+  const params = useParams() as { catalogId: string; itemId: string };
+  const { item: catalogItem, isLoading: catalogItemLoading, error: catalogItemErr } = useCatalogItemFromParams(params);
+  const catalogDisplayName = catalogItem?.spec.displayName || params.itemId;
 
   const {
     router: { useSearchParams },
@@ -198,9 +192,7 @@ const EditWizard = ({
               {t('Software catalog')}
             </Link>
           </BreadcrumbItem>
-          <BreadcrumbItem
-            isActive
-          >{`${catalogItem?.spec.displayName || itemId}${appName ? ` (${appName})` : ''}`}</BreadcrumbItem>
+          <BreadcrumbItem isActive>{`${catalogDisplayName}${appName ? ` (${appName})` : ''}`}</BreadcrumbItem>
         </Breadcrumb>
       </PageSection>
       <PageSection hasBodyWrapper={false}>
@@ -208,8 +200,8 @@ const EditWizard = ({
           <StackItem>
             <Title headingLevel="h1" size="3xl">
               {version
-                ? t('Deploy {{ name }}', { name: catalogItem?.spec.displayName || itemId })
-                : t('Edit {{name}}', { name: catalogItem?.spec.displayName || itemId })}
+                ? t('Deploy {{ name }}', { name: catalogDisplayName })
+                : t('Edit {{name}}', { name: catalogDisplayName })}
             </Title>
           </StackItem>
           <StackItem>
