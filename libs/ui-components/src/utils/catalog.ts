@@ -1,29 +1,29 @@
 import {
   AppType,
-  ApplicationProviderSpec,
+  type ApplicationProviderSpec,
   type ApplicationVolume,
   type CatalogItemRefSpec,
   type DeviceSpec,
-  ImageMountVolumeProviderSpec,
-  ImageOrCatalogItemRefSpec,
+  type ImageMountVolumeProviderSpec,
+  type ImageOrCatalogItemRefSpec,
   ImagePullPolicy,
-  PatchRequest,
+  type PatchRequest,
 } from '@flightctl/types';
 import {
   CatalogItem,
-  CatalogItemArtifact,
+  type CatalogItemArtifact,
   CatalogItemArtifactType,
   CatalogItemCategory,
   CatalogItemType,
-  CatalogItemVersion,
+  type CatalogItemVersion,
 } from '@flightctl/types/alpha';
+
 import { TFunction } from 'i18next';
 import semver from 'semver';
 
-import { ApplicationVolumeForm } from '../types/deviceSpec';
 import { CatalogVolumSelection } from '../components/DynamicForm/DynamicForm';
 import type { ArtifactFormValue } from '../components/Catalog/AddCatalogItemWizard/types';
-import { formVolumesToApi } from '../components/Device/EditDeviceWizard/deviceSpecUtils';
+import { type ApplicationVolumeForm, formVolumesToApi } from './volumes';
 
 import appIcon from '../../assets/application.svg';
 import osIcon from '../../assets/os.svg';
@@ -40,6 +40,9 @@ export type ResolvedCatalogRef = {
 
 export const getAppCatalogItemRef = (app: ApplicationProviderSpec): CatalogItemRefSpec | undefined =>
   'catalogItemRef' in app ? app.catalogItemRef : undefined;
+
+export const isCatalogRef = (value: unknown): value is CatalogItemRefSpec =>
+  typeof value === 'object' && value !== null && 'catalogItemRef' in value && Boolean(value.catalogItemRef);
 
 export const catalogItemCacheKey = (id: CatalogItemId): string => `${id.catalog}\0${id.item}`;
 
@@ -269,14 +272,12 @@ export const getAppPatches = ({
     throw new Error('Unknown application type');
   }
 
-  // Copy the volumes so we can treat them separately
-  const formVolumes = Array.isArray(formValues?.volumes)
-    ? [...(formValues.volumes as ApplicationVolumeForm[])]
-    : undefined;
-  delete formValues?.volumes;
+  // Separate the volumes since they need to be transformed to API volumes first
+  const { volumes: rawVolumes, ...appFormValues } = formValues || {};
+  const formVolumes = Array.isArray(rawVolumes) ? [...(rawVolumes as ApplicationVolumeForm[])] : undefined;
 
   const appSpec: ApplicationProviderSpec = {
-    ...formValues,
+    ...appFormValues,
     name: appName,
     appType,
     catalogItemRef: buildCatalogItemRef({ catalogItem, catalogItemVersion, channel }),

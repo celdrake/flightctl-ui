@@ -363,8 +363,6 @@ const ApplicationPortMappingField = ({
     </Split>
   ) : null;
 
-  // CELIA-WIP: For editable fields this does not behave well, the
-
   return (
     <FormGroup label={t('Ports')}>
       <Stack hasGutter>

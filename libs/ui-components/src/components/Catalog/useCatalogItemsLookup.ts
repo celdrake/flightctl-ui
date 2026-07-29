@@ -4,19 +4,44 @@ import type { CatalogItem } from '@flightctl/types/alpha';
 import { useFetch } from '../../hooks/useFetch';
 import { type CatalogItemId, catalogItemCacheKey } from '../../utils/catalog';
 
+const catalogItemEndpoint = (id: CatalogItemId): string =>
+  `catalogs/${encodeURIComponent(id.catalog)}/items/${encodeURIComponent(id.item)}`;
+
+/** Matches K8s DNS subdomain resource names used for Catalog / CatalogItem metadata.name. */
+const CATALOG_PATH_SEGMENT_MAX_LENGTH = 253;
+const CATALOG_PATH_SEGMENT_REGEXP = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/;
+
+export const isValidCatalogPathSegment = (segment: string): boolean =>
+  segment.length > 0 && segment.length <= CATALOG_PATH_SEGMENT_MAX_LENGTH && CATALOG_PATH_SEGMENT_REGEXP.test(segment);
+
+const isValidCatalogItemId = (id: CatalogItemId): boolean =>
+  isValidCatalogPathSegment(id.catalog) && isValidCatalogPathSegment(id.item);
+
 export type CatalogItemsLookupResult = {
   getItem: (catalog: string, item: string) => CatalogItem | undefined;
   isLoading: boolean;
   error?: unknown;
 };
 
-const getNeededCatalogItemIdsKey = (ids: CatalogItemId[]): string => {
+/**
+ * Dedupes, sorts, and validates ids into a stable effect dependency key.
+ * Returns null if any ids are invalid.
+ */
+const getNeededCatalogItemIdsKey = (ids: CatalogItemId[]): string | null => {
   const byKey = new Map<string, CatalogItemId>();
+  let hasError = false;
   ids.forEach((id) => {
-    if (id.catalog && id.item) {
+    const isValid = isValidCatalogItemId(id);
+    if (isValid) {
       byKey.set(catalogItemCacheKey(id), id);
+    } else {
+      hasError = true;
+      return;
     }
   });
+  if (hasError) {
+    return null;
+  }
   return JSON.stringify(
     [...byKey.values()].sort((a, b) => a.catalog.localeCompare(b.catalog) || a.item.localeCompare(b.item)),
   );
@@ -44,9 +69,22 @@ export const useCatalogItemsLookup = (ids: CatalogItemId[]): CatalogItemsLookupR
 
   React.useEffect(() => {
     let cancelled = false;
-    const neededIds: CatalogItemId[] = JSON.parse(neededCatalogItemIdsKey) as CatalogItemId[];
-    const neededKeys = new Set(neededIds.map(catalogItemCacheKey));
+
     const cache = catalogItemsCacheRef.current;
+
+    const publishCache = (nextError?: unknown) => {
+      setCatalogItemsByKey(new Map(cache));
+      setError(nextError);
+      setIsLoading(false);
+    };
+
+    if (neededCatalogItemIdsKey === null) {
+      publishCache(new Error('Catalog item ids are invalid'));
+      return;
+    }
+
+    const neededIds = JSON.parse(neededCatalogItemIdsKey) as CatalogItemId[];
+    const neededKeys = new Set(neededIds.map(catalogItemCacheKey));
 
     for (const key of [...cache.keys()]) {
       if (!neededKeys.has(key)) {
@@ -55,12 +93,6 @@ export const useCatalogItemsLookup = (ids: CatalogItemId[]): CatalogItemsLookupR
     }
 
     const missingIds = neededIds.filter((id) => !cache.has(catalogItemCacheKey(id)));
-
-    const publishCache = (nextError?: unknown) => {
-      setCatalogItemsByKey(new Map(cache));
-      setError(nextError);
-      setIsLoading(false);
-    };
 
     if (neededIds.length === 0) {
       publishCache(undefined);
@@ -77,7 +109,7 @@ export const useCatalogItemsLookup = (ids: CatalogItemId[]): CatalogItemsLookupR
     (async () => {
       const results = await Promise.allSettled(
         missingIds.map((id) =>
-          fetchGet<CatalogItem>(`catalogs/${id.catalog}/items/${id.item}`).then((value) => ({
+          fetchGet<CatalogItem>(catalogItemEndpoint(id)).then((value) => ({
             key: catalogItemCacheKey(id),
             value,
           })),

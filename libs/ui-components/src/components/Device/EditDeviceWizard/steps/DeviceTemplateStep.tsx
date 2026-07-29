@@ -142,8 +142,8 @@ const DeviceTemplateStep = ({ isFleet, isReadOnly }: { isFleet: boolean; isReadO
           )}
           <StackItem>
             <ImageOrCatalogRefField
+              label={t('System image')}
               name="osSpec"
-              aria-label={t('System image')}
               isDisabled={isReadOnly}
               helperText={t(
                 'Must be a reference to a bootable container image (such as "quay.io/<my-org>/my-rhel-with-fc-agent:<version>"). If you do not want to manage your OS from Edge management, leave this field empty.',

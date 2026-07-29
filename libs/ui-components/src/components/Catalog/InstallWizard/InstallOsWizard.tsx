@@ -195,14 +195,14 @@ const InstallOsWizard = ({ catalogItem }: InstallOsWizardProps) => {
 
     try {
       const resourceId = selectedResource.metadata.name as string;
-      const endpoint = installToDevice ? `/devices/${resourceId}` : `/fleets/${resourceId}`;
+      const endpoint = installToDevice ? `devices/${resourceId}` : `fleets/${resourceId}`;
       const currentOsSpec = await getResourceOs(endpoint, installToDevice);
 
       const allPatches: PatchRequest = [];
       appendJSONPatch({
         patches: allPatches,
         path: `${installToDevice ? '/spec/os' : '/spec/template/spec/os'}`,
-        newValue: { catalogItemRef: buildCatalogItemRef({ catalogItem, catalogItemVersion, channel }) },
+        newValue: { catalogItemRef: buildCatalogItemRef({ catalogItem, catalogItemVersion, channel: values.channel }) },
         originalValue: currentOsSpec,
       });
 

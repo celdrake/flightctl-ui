@@ -11,7 +11,6 @@ import {
   HttpConfigProviderSpec,
   ImageApplicationProviderSpec,
   ImageOrCatalogItemRefSpec,
-  ImagePullPolicy,
   InlineApplicationProviderSpec,
   InlineConfigProviderSpec,
   KubernetesSecretProviderSpec,
@@ -21,6 +20,7 @@ import {
 import { FlightCtlLabel } from './extraTypes';
 import { UpdateScheduleMode } from '../utils/time';
 import { formatCatalogItemRef } from '../utils/catalog';
+import { ApplicationVolumeForm } from '../utils/volumes';
 
 // At the moment the "root" user is the default user when no user is specified.
 export const RUN_AS_ROOT_USER = 'root';
@@ -94,13 +94,6 @@ export const isComposeAppSpec = (app: ApplicationProviderSpec): app is ComposeAp
 
 export const isContainerAppSpec = (app: ApplicationProviderSpec): app is ContainerApplication =>
   app.appType === AppType.AppTypeContainer;
-
-export type ApplicationVolumeForm = {
-  name: string;
-  imageSpec: ImageOrCatalogItemRefSpec;
-  imagePullPolicy: ImagePullPolicy;
-  mountPath: string;
-};
 
 export type PortMapping = {
   hostPort: string;

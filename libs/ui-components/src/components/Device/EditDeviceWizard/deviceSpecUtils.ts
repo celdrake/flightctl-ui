@@ -17,7 +17,6 @@ import {
   HelmApplication,
   HttpConfigProviderSpec,
   ImageApplicationProviderSpec,
-  ImageMountVolumeProviderSpec,
   ImageOrCatalogItemRefSpec,
   ImagePullPolicy,
   ImageVolumeSource,
@@ -31,7 +30,6 @@ import {
 import {
   AppForm,
   AppSpecType,
-  ApplicationVolumeForm,
   ComposeAppForm,
   ConfigSourceProvider,
   ConfigType,
@@ -65,9 +63,7 @@ import {
   parseVmYamlForForm,
   vmYamlHasAdvancedSettings,
 } from '../../../utils/vmApplications';
-
-// A full application volume includes the image mount volume provider spec
-type FullAppVolume = ApplicationVolume & ImageMountVolumeProviderSpec;
+import { FullAppVolume, formVolumesToApi, toFormVolumes } from '../../../utils/volumes';
 
 const DEFAULT_INLINE_FILE_MODE = 420; // In Octal: 0644
 const DEFAULT_INLINE_FILE_USER = 'root';
@@ -261,13 +257,10 @@ const hasVolumeImageChanged = (
     return true;
   }
 
-  // Check if "reference" has changed. This is the field that's used for volumes in place of "image"
   if (hasStringChanged(current?.reference, updated?.reference)) {
     return true;
   }
-
-  // Check if "catalogItemRef" has changed. Field "image" should be unset in both, so it won't affect the result.
-  return hasImageOrCatalogRefChanged(current, updated);
+  return hasCatalogRefChanged(current, updated);
 };
 
 const haveVolumesChanged = (current: ApplicationVolume[], updated: ApplicationVolume[]): boolean => {
@@ -382,7 +375,7 @@ const hasQuadletAppChanged = (
   return hasRunAsChanged(current.runAs, updated.runAs);
 };
 
-const hasImageOrCatalogRefChanged = (
+const hasCatalogRefChanged = (
   current: ImageOrCatalogItemRefSpec | undefined,
   updated: ImageOrCatalogItemRefSpec | undefined,
 ): boolean => {
@@ -392,10 +385,17 @@ const hasImageOrCatalogRefChanged = (
   if (Boolean(currentCatalogRef) !== Boolean(updatedCatalogRef)) {
     return true;
   }
-  if (currentCatalogRef && updatedCatalogRef) {
-    return JSON.stringify(currentCatalogRef) !== JSON.stringify(updatedCatalogRef);
+  return JSON.stringify(currentCatalogRef) !== JSON.stringify(updatedCatalogRef);
+};
+
+const hasImageOrCatalogRefChanged = (
+  current: ImageOrCatalogItemRefSpec | undefined,
+  updated: ImageOrCatalogItemRefSpec | undefined,
+): boolean => {
+  if (hasStringChanged(current?.image, updated?.image)) {
+    return true;
   }
-  return hasStringChanged(current?.image, updated?.image);
+  return hasCatalogRefChanged(current, updated);
 };
 
 const hasVmAppChanged = (current: VmApplication, updated: VmApplication): boolean =>
@@ -441,30 +441,6 @@ const variablesToEnvVars = (variables: { name: string; value: string }[]) => {
     },
     {} as Record<string, string>,
   );
-};
-
-/**
- * Converts form volumes to API volumes, ignoring fields that are not allowed for the given app type.
- * Quadlet/Compose apps --> can only be image volumes (mount is not allowed)
- * Container apps --> can either be mount or image mount volumes
- */
-export const formVolumesToApi = (volumes: ApplicationVolumeForm[], appType: AppType): ApplicationVolume[] => {
-  return volumes.map((v) => {
-    const vol: Partial<ApplicationVolume & ImageMountVolumeProviderSpec> = {
-      name: v.name || '',
-    };
-
-    const catalogRef = v.imageSpec?.catalogItemRef;
-    const imageRef = v.imageSpec?.image;
-    if (catalogRef || imageRef) {
-      const pullPolicy = v.imagePullPolicy || ImagePullPolicy.PullIfNotPresent;
-      vol.image = catalogRef ? { catalogItemRef: catalogRef, pullPolicy } : { reference: imageRef, pullPolicy };
-    }
-    if (v.mountPath && appType === AppType.AppTypeContainer) {
-      vol.mount = { path: v.mountPath };
-    }
-    return vol as ApplicationVolume;
-  });
 };
 
 const formFilesToApi = (files: InlineFileForm[]) =>
@@ -514,7 +490,7 @@ const toApiContainerApp = (app: SingleContainerAppForm): ContainerApplication =>
     appType: app.appType,
     runAs: app.runAs || RUN_AS_ROOT_USER,
     envVars: variablesToEnvVars(app.variables || []),
-    volumes: formVolumesToApi(app.volumes || [], AppType.AppTypeContainer),
+    volumes: formVolumesToApi(app.volumes, AppType.AppTypeContainer),
     ...app.imageSpec, // Sets either image or catalogItemRef
   };
   if (app.name) {
@@ -550,13 +526,17 @@ const toApiComposeApp = (app: ComposeAppForm): ComposeApplication => {
   if (app.name) {
     composeApp.name = app.name;
   }
-  if (app.specType === AppSpecType.OCI_IMAGE && app.imageSpec?.image) {
-    (composeApp as unknown as ImageApplicationProviderSpec).image = app.imageSpec.image;
-  } else if (app.specType === AppSpecType.OCI_IMAGE && app.imageSpec?.catalogItemRef) {
-    (composeApp as unknown as CatalogItemRefApplicationProviderSpec).catalogItemRef = app.imageSpec.catalogItemRef;
+
+  if (app.specType === AppSpecType.OCI_IMAGE) {
+    if (app.imageSpec.image) {
+      (composeApp as ImageApplicationProviderSpec).image = app.imageSpec.image;
+    } else if (app.imageSpec?.catalogItemRef) {
+      (composeApp as CatalogItemRefApplicationProviderSpec).catalogItemRef = app.imageSpec.catalogItemRef;
+    }
   } else {
-    (composeApp as unknown as InlineApplicationProviderSpec).inline = formFilesToApi(app.files);
+    (composeApp as InlineApplicationProviderSpec).inline = formFilesToApi(app.files);
   }
+
   return composeApp as ComposeApplication;
 };
 
@@ -650,26 +630,6 @@ export const toApiApplication = (app: AppForm): ApplicationProviderSpec => {
 
 const toFormVariables = (envVars: Record<string, string>): { name: string; value: string }[] =>
   Object.entries(envVars).map(([name, value]) => ({ name, value: value || '' }));
-
-const toFormVolumeImageSpec = (image?: ImageVolumeSource): ImageOrCatalogItemRefSpec => {
-  if (image?.catalogItemRef) {
-    return { catalogItemRef: image.catalogItemRef };
-  }
-  return { image: image?.reference || '' };
-};
-
-const toFormVolumes = (volumes?: ApplicationVolume[]): ApplicationVolumeForm[] => {
-  if (!volumes) return [];
-  return volumes.map((vol) => {
-    const fullVolume = vol as FullAppVolume;
-    return {
-      name: fullVolume.name,
-      imageSpec: toFormVolumeImageSpec(fullVolume.image),
-      imagePullPolicy: fullVolume.image?.pullPolicy || ImagePullPolicy.PullIfNotPresent,
-      mountPath: fullVolume.mount?.path || '',
-    };
-  });
-};
 
 const createDefaultVmAppForm = (name: string = ''): VmAppForm => ({
   appType: AppType.AppTypeVm,
@@ -771,17 +731,31 @@ export const getApplicationPatches = (
   return patches;
 };
 
-export const getOsSpecPatches = (
+/**
+ * Function that generates the patches to update the OS spec of a device/fleet, via the EditDevice/EditFleet form.
+ *
+ * Supported use cases:
+ * - Any modification when the spec uses an image (or it has an unset value): initially defining it, replacing it, or removing it
+ *
+ * Unsupported use cases:
+ * - Changing from Image to CatalogItemRef or vice versa
+ * - Modifying the catalogItemRef itself (must be done via the Catalog page)
+ *
+ * @param osPath - The path to the OS spec in the device/fleet spec
+ * @param currentOsSpec - The current OS spec in the device/fleet spec
+ * @param formOsSpec - The new OS spec in the device/fleet spec
+ * @returns The patches to update the OS spec in the device/fleet spec
+ */
+export const getFormOsSpecPatches = (
   osPath: string,
   currentOsSpec: ImageOrCatalogItemRefSpec | undefined,
   formOsSpec: ImageOrCatalogItemRefSpec | undefined,
 ): PatchRequest => {
-  // Currently, editing a Fleet/Device should not update its OS when it's defined via a catalogItemRef
   if (currentOsSpec?.catalogItemRef) {
     return [];
   }
 
-  const osChanged = hasImageOrCatalogRefChanged(currentOsSpec, formOsSpec);
+  const osChanged = hasStringChanged(currentOsSpec?.image, formOsSpec?.image);
   if (!osChanged) {
     return [];
   }

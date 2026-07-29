@@ -6,7 +6,7 @@ import { MinusCircleIcon } from '@patternfly/react-icons/dist/js/icons/minus-cir
 import { PlusCircleIcon } from '@patternfly/react-icons/dist/js/icons/plus-circle-icon';
 
 import { ImagePullPolicy } from '@flightctl/types';
-import type { ApplicationVolumeForm as VolumeFormType } from '../../../../types/deviceSpec';
+import type { ApplicationVolumeForm as VolumeFormType } from '../../../../utils/volumes';
 import { useTranslation } from '../../../../hooks/useTranslation';
 import TextField from '../../../form/TextField';
 import FormSelect from '../../../form/FormSelect';
@@ -78,8 +78,8 @@ const ApplicationVolumeForm = ({
                           )}
 
                           <ImageOrCatalogRefField
-                            name={`${volumeFieldName}.imageSpec`}
                             label={t('Image reference')}
+                            name={`${volumeFieldName}.imageSpec`}
                             isRequired={!isSingleContainerApp}
                             isDisabled={isReadOnly}
                             helperText={

@@ -30,7 +30,7 @@ import {
   getApplicationValues,
   getConfigTemplatesValues,
   getDeviceSpecConfigPatches,
-  getOsSpecPatches,
+  getFormOsSpecPatches,
   getSystemdUnitsValues,
   hasMicroshiftRegistrationConfig,
   toApiApplication,
@@ -101,9 +101,9 @@ export const getFleetPatches = (currentFleet: Fleet, updatedFleet: FleetFormValu
     });
   }
 
-  // OS (image or reference to Catalog item). Currently only image is editable via the UI.
+  // OS patches. ATM only the image can be modified via the Fleet form.
   allPatches = allPatches.concat(
-    getOsSpecPatches('/spec/template/spec/os', currentFleet.spec.template.spec.os, updatedFleet.osSpec),
+    getFormOsSpecPatches('/spec/template/spec/os', currentFleet.spec.template.spec.os, updatedFleet.osSpec),
   );
 
   // Configurations

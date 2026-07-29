@@ -15,6 +15,7 @@ import {
 
 import { Fleet, ResourceKind } from '@flightctl/types';
 import LabelsView from '../../common/LabelsView';
+import { useSystemImage } from '../../Catalog/useSystemImage';
 import { getDateDisplay } from '../../../utils/dates';
 import { getFleetRolloutStatusWarning } from '../../../utils/status/fleet';
 import { useTranslation } from '../../../hooks/useTranslation';
@@ -26,23 +27,16 @@ import FleetStatus from '../FleetStatus';
 import FleetDevicesCount from './FleetDevicesCount';
 import EventsCard from '../../Events/EventsCard';
 import FleetVulnerabilities from './FleetVulnerabilities';
-import { useResolvedCatalogRef } from '../../Catalog/useResolvedCatalogRef';
 
 const FleetDetailsContent = ({ fleet }: { fleet: Fleet }) => {
   const { t } = useTranslation();
-  const catalogRef = useResolvedCatalogRef(fleet.spec.template.spec.os?.catalogItemRef);
+
   const [vulnerabilitiesEnabled, canListVulnerabilities] = useVulnerabilitiesEnabled();
   const showVulnerabilities = vulnerabilitiesEnabled && canListVulnerabilities;
   const fleetId = fleet.metadata.name as string;
   const devicesSummary = fleet.status?.devicesSummary;
-  const rolloutError = getFleetRolloutStatusWarning(fleet, t);
 
-  let osImage: React.ReactNode;
-  if (catalogRef) {
-    osImage = catalogRef?.isLoading ? <Spinner size="sm" /> : catalogRef?.imageUri;
-  } else {
-    osImage = fleet.spec.template.spec.os?.image || '-';
-  }
+  const { isLoading: isLoadingOs, label: osImageLabel } = useSystemImage(fleet.spec.template.spec.os);
 
   return (
     <Grid hasGutter>
@@ -65,7 +59,9 @@ const FleetDetailsContent = ({ fleet }: { fleet: Fleet }) => {
               </DescriptionListGroup>
               <DescriptionListGroup>
                 <DescriptionListTerm>{t('System image')}</DescriptionListTerm>
-                <DescriptionListDescription>{osImage}</DescriptionListDescription>
+                <DescriptionListDescription>
+                  {isLoadingOs ? <Spinner size="sm" /> : osImageLabel || '-'}
+                </DescriptionListDescription>
               </DescriptionListGroup>
               <DescriptionListGroup>
                 <DescriptionListTerm>{t('Device selector')}</DescriptionListTerm>
@@ -76,7 +72,11 @@ const FleetDetailsContent = ({ fleet }: { fleet: Fleet }) => {
               <DescriptionListGroup>
                 <DescriptionListTerm>{t('Up-to-date/devices')}</DescriptionListTerm>
                 <DescriptionListDescription>
-                  <FleetDevicesCount fleetId={fleetId} devicesSummary={devicesSummary} error={rolloutError} />
+                  <FleetDevicesCount
+                    fleetId={fleetId}
+                    devicesSummary={devicesSummary}
+                    error={getFleetRolloutStatusWarning(fleet, t)}
+                  />
                 </DescriptionListDescription>
               </DescriptionListGroup>
               <DescriptionListGroup>

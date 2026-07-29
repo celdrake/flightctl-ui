@@ -40,8 +40,8 @@ const buildCatalogItemsFieldSelector = (
     }
   }
 
-  if (nameFilter?.trim()) {
-    parts.push(`metadata.name contains ${nameFilter.trim()}`);
+  if (nameFilter) {
+    parts.push(`metadata.name contains ${nameFilter}`);
   }
   if (catalogs.length) {
     parts.push(`metadata.catalog in (${catalogs.join(',')})`);
@@ -92,7 +92,6 @@ export const useCatalogItems = ({
   const isDebouncing = endpoint !== endpointDebounced;
 
   React.useEffect(() => {
-    console.log('%c setting page to 1', 'color: red; font-size:18px');
     pagination.setCurrentPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nameFilter, itemType, catalogs]);

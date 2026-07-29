@@ -5,6 +5,7 @@ import {
   DescriptionListDescription,
   DescriptionListGroup,
   DescriptionListTerm,
+  Spinner,
   Stack,
   StackItem,
 } from '@patternfly/react-core';
@@ -13,6 +14,7 @@ import { useFormikContext } from 'formik';
 import { useTranslation } from '../../../../hooks/useTranslation';
 import { FleetFormValues } from '../../../../types/deviceSpec';
 import LabelsView from '../../../common/LabelsView';
+import { useSystemImage } from '../../../Catalog/useSystemImage';
 import { toAPILabel } from '../../../../utils/labels';
 import RepositorySourceList from '../../../Repository/RepositoryDetails/RepositorySourceList';
 import { getErrorMessage } from '../../../../utils/error';
@@ -23,7 +25,6 @@ import {
   ReviewUpdateDisruptionBudget,
   ReviewUpdateRolloutPolicy,
 } from '../../../Device/EditDeviceWizard/steps/ReviewUpdatePolicy';
-import { useResolvedCatalogRef } from '../../../Catalog/useResolvedCatalogRef';
 
 export const reviewStepId = 'review';
 
@@ -31,7 +32,7 @@ const ReviewStep = ({ error }: { error?: unknown }) => {
   const { t } = useTranslation();
   const { values } = useFormikContext<FleetFormValues>();
 
-  const catalogItem = useResolvedCatalogRef(values.osSpec?.catalogItemRef);
+  const { isLoading: isLoadingOs, label: osImageLabel } = useSystemImage(values.osSpec);
 
   return (
     <Stack hasGutter>
@@ -67,7 +68,7 @@ const ReviewStep = ({ error }: { error?: unknown }) => {
           <DescriptionListGroup>
             <DescriptionListTerm>{t('System image')}</DescriptionListTerm>
             <DescriptionListDescription>
-              {catalogItem?.imageUri || values.osSpec?.image || t('The fleet will not manage system image')}
+              {isLoadingOs ? <Spinner size="sm" /> : osImageLabel || t('The fleet will not manage system image')}
             </DescriptionListDescription>
           </DescriptionListGroup>
           {values.configTemplates.length > 0 && (

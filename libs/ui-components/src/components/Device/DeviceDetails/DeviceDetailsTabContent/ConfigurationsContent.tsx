@@ -5,15 +5,12 @@ import { Device } from '@flightctl/types';
 import { useTranslation } from '../../../../hooks/useTranslation';
 import DetailsPageCard from '../../../DetailsPage/DetailsPageCard';
 import RepositorySourceList from '../../../Repository/RepositoryDetails/RepositorySourceList';
-import { useResolvedCatalogRef } from '../../../Catalog/useResolvedCatalogRef';
 import DeviceOs from '../DeviceOs';
 
 const ConfigurationsContent = ({ device }: { device: Required<Device> }) => {
   const { t } = useTranslation();
 
   const configs = device.spec?.config || [];
-  const catalogRef = useResolvedCatalogRef(device.spec?.os?.catalogItemRef);
-  const desiredOsImage = catalogRef?.imageUri || device.spec?.os?.image;
 
   return (
     <DetailsPageCard>
@@ -22,7 +19,7 @@ const ConfigurationsContent = ({ device }: { device: Required<Device> }) => {
         <Stack hasGutter>
           <StackItem className="pf-v6-u-text-color-subtle">{t('System image (running)')}</StackItem>
           <StackItem>
-            <DeviceOs desiredOsImage={desiredOsImage} renderedOsImage={device.status?.os?.image} />
+            <DeviceOs osSpec={device.spec?.os} renderedOsImage={device.status?.os?.image} />
           </StackItem>
         </Stack>
       </CardBody>

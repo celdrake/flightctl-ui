@@ -35,6 +35,7 @@ import { labelToString } from '../../utils/labels';
 import { isValidKubernetesQuantity } from '../../utils/kubernetesQuantity';
 import { UpdateScheduleMode } from '../../utils/time';
 import { VM_PORT_PROTOCOLS, loadYamlDocument, parseVmCloudInitUserData } from '../../utils/vmApplications';
+import { isCatalogRef } from '../../utils/catalog';
 
 const SYSTEMD_PATTERNS_REGEXP =
   /^[0-9a-zA-Z:\-_.\\\[\]!\-\*\?]+(@[0-9a-zA-Z:\-_.\\\[\]!\-\*\?]+)?(\.[a-zA-Z\[\]!\-\*\?]+)?$/;
@@ -792,10 +793,7 @@ const requiredAppImageSpecSchema = (t: TFunction) =>
   Yup.mixed()
     .required(t('Image is required.'))
     .test('app-image-or-catalog-ref', t('Image is required.'), function (value) {
-      if (!value) {
-        return true; // validated via "required()"
-      }
-      if ('catalogItemRef' in value && value.catalogItemRef) {
+      if (!value || isCatalogRef(value)) {
         // For now, CatalogItems cannot be edited via the UI, so if they are set they must be valid
         return true;
       }

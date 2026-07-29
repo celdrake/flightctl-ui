@@ -33,7 +33,7 @@ const ApplicationContainerForm = ({ index, isReadOnly }: { index: number; isRead
       </FormGroupWithHelperText>
 
       <ImageOrCatalogRefField
-        aria-label={t('Image')}
+        label={t('Image')}
         name={`${appFieldName}.imageSpec`}
         isDisabled={isReadOnly}
         helperText={t('Provide a valid image reference')}

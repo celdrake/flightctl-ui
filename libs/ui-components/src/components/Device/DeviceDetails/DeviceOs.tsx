@@ -1,18 +1,22 @@
 import * as React from 'react';
 import { Icon, Popover, PopoverPosition } from '@patternfly/react-core';
 import ExclamationTriangleIcon from '@patternfly/react-icons/dist/js/icons/exclamation-triangle-icon';
+import type { ImageOrCatalogItemRefSpec } from '@flightctl/types';
 
 import { useTranslation } from '../../../hooks/useTranslation';
+import { useSystemImage } from '../../Catalog/useSystemImage';
 
 const DeviceOs = ({
-  desiredOsImage,
+  osSpec,
   renderedOsImage,
 }: {
-  desiredOsImage: string | undefined;
+  osSpec?: ImageOrCatalogItemRefSpec;
   renderedOsImage: string | undefined;
 }) => {
-  const hasDiff = desiredOsImage && desiredOsImage !== renderedOsImage;
   const { t } = useTranslation();
+  const { imageUri: desiredOsImage } = useSystemImage(osSpec);
+  const hasDiff = desiredOsImage && desiredOsImage !== renderedOsImage;
+
   let popover: React.ReactNode;
   if (hasDiff) {
     popover = (

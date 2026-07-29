@@ -19,7 +19,7 @@ import {
   getApiConfig,
   getApplicationPatches,
   getDeviceSpecConfigPatches,
-  getOsSpecPatches,
+  getFormOsSpecPatches,
 } from './deviceSpecUtils';
 
 export const getValidationSchema = (t: TFunction) =>
@@ -50,8 +50,8 @@ export const getDevicePatches = (currentDevice: Device, updatedDevice: EditDevic
     return allPatches;
   }
 
-  // OS (image or reference to Catalog item). Currently only image is editable via the UI.
-  allPatches = allPatches.concat(getOsSpecPatches('/spec/os', currentDevice.spec?.os, updatedDevice.osSpec));
+  // OS patches. ATM only the image can be modified via the Device form.
+  allPatches = allPatches.concat(getFormOsSpecPatches('/spec/os', currentDevice.spec?.os, updatedDevice.osSpec));
 
   // Configurations
   const currentConfigs = currentDevice.spec?.config || [];

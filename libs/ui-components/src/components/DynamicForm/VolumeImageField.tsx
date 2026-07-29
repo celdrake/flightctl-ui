@@ -80,7 +80,7 @@ type SelectAssetModalProps = {
   onSelect: (item: CatalogItem, version: CatalogItemVersion, channel: string) => void;
 };
 
-const assetItemTypeFilter = [CatalogItemType.CatalogItemTypeData]
+const assetItemTypeFilter = [CatalogItemType.CatalogItemTypeData];
 
 const SelectAssetModal = ({ onClose, onSelect }: SelectAssetModalProps) => {
   const [selectedAsset, setSelectedAsset] = React.useState<CatalogItem>();

@@ -40,7 +40,7 @@ const ApplicationHelmForm = ({ index, isReadOnly }: { index: number; isReadOnly?
         isRequired
       >
         <ImageOrCatalogRefField
-          aria-label={t('Image')}
+          label={t('Image')}
           name={`${appFieldName}.imageSpec`}
           isDisabled={isReadOnly}
           helperText={t('Provide a valid image reference')}
