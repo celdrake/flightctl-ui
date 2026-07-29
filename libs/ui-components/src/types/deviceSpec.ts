@@ -20,6 +20,7 @@ import {
 } from '@flightctl/types';
 import { FlightCtlLabel } from './extraTypes';
 import { UpdateScheduleMode } from '../utils/time';
+import { formatCatalogItemRef } from '../utils/catalog';
 
 // At the moment the "root" user is the default user when no user is specified.
 export const RUN_AS_ROOT_USER = 'root';
@@ -96,7 +97,7 @@ export const isContainerAppSpec = (app: ApplicationProviderSpec): app is Contain
 
 export type ApplicationVolumeForm = {
   name: string;
-  imageRef: string;
+  imageSpec: ImageOrCatalogItemRefSpec;
   imagePullPolicy: ImagePullPolicy;
   mountPath: string;
 };
@@ -181,7 +182,8 @@ export const getAppIdentifier = (app: AppForm): string => {
   if (app.name) return app.name;
   // Name is mandatory for all apps, except when the apps have an image which then becomes the ID.
   if ('imageSpec' in app) {
-    return app.imageSpec.image || '';
+    const catalogItemRef = app.imageSpec.catalogItemRef;
+    return catalogItemRef ? formatCatalogItemRef(catalogItemRef) : app.imageSpec.image || '';
   }
   return '';
 };

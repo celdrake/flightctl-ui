@@ -4,11 +4,11 @@ import { Stack, StackItem } from '@patternfly/react-core';
 
 import { CatalogItem } from '@flightctl/types/alpha';
 import { getRemoveAppPatches, getRemoveOsPatches } from '../../../utils/catalog';
+import { RESOURCE, VERB } from '../../../types/rbac';
+import { usePermissionsContext } from '../../common/PermissionsContext';
+import PageWithPermissions from '../../common/PageWithPermissions';
 import { CatalogPageContent } from '../../Catalog/CatalogPage';
 import InstalledSoftware from '../../Catalog/InstalledSoftware';
-import { usePermissionsContext } from '../../common/PermissionsContext';
-import { RESOURCE, VERB } from '../../../types/rbac';
-import PageWithPermissions from '../../common/PageWithPermissions';
 
 import './ResourceCatalogPage.css';
 
@@ -17,7 +17,6 @@ type ResourceCatalogPageProps = {
   canEdit: boolean;
   hasOwner?: boolean;
   spec: DeviceSpec | undefined;
-  currentLabels: Record<string, string> | undefined;
   onPatch: (allPatches: PatchRequest) => Promise<void>;
   onEdit: (catalogId: string, catalogItemId: string, appName?: string) => void;
   onInstall: (installItem: { item: CatalogItem; channel: string; version: string }) => void;
@@ -29,7 +28,6 @@ const catalogPagePermissions = [
 ];
 
 const ResourceCatalogPage = ({
-  currentLabels,
   spec,
   onPatch,
   specPath,
@@ -49,7 +47,6 @@ const ResourceCatalogPage = ({
     const allPatches = getRemoveAppPatches({
       appName,
       currentApps: spec?.applications,
-      currentLabels,
       specPath,
     });
     await onPatch(allPatches);

@@ -4,6 +4,6 @@
 /* eslint-disable */
 import type { CatalogItemRefSpec } from './CatalogItemRefSpec';
 export type CatalogItemRefApplicationProviderSpec = {
-  catalogItemRef?: CatalogItemRefSpec;
+  catalogItemRef: CatalogItemRefSpec;
 };
 

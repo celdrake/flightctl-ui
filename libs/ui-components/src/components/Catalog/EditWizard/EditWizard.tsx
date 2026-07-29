@@ -14,9 +14,9 @@ import {
   Title,
 } from '@patternfly/react-core';
 import { CatalogItemCategory } from '@flightctl/types/alpha';
-import { ApplicationProviderSpec, Device, Fleet, ImageOrCatalogItemRefSpec, PatchRequest } from '@flightctl/types';
 import { load } from 'js-yaml';
 
+import type { ApplicationProviderSpec, Device, Fleet, ImageOrCatalogItemRefSpec, PatchRequest } from '@flightctl/types';
 import ErrorBoundary from '../../common/ErrorBoundary';
 import { getErrorMessage } from '../../../utils/error';
 import { buildCatalogItemRef, getAppCatalogItemRef, getAppPatches, getCurrentVersion } from '../../../utils/catalog';
@@ -36,7 +36,6 @@ import EditAppWizard from './EditAppWizard';
 
 type EditWizardProps = {
   specPath: string;
-  currentLabels: Record<string, string> | undefined;
   currentOsSpec: ImageOrCatalogItemRefSpec | undefined;
   currentApps: ApplicationProviderSpec[] | undefined;
   loading: boolean;
@@ -48,7 +47,6 @@ type EditWizardProps = {
 
 const EditWizard = ({
   specPath,
-  currentLabels,
   currentOsSpec,
   currentApps,
   error,
@@ -105,7 +103,6 @@ const EditWizard = ({
           catalogItem={catalogItem}
           currentChannel={currentChannel}
           currentVersion={currentVersion}
-          currentLabels={currentLabels}
           version={version}
           channel={channel}
           onUpdate={async (catalogItemVersion, values) => {
@@ -144,7 +141,6 @@ const EditWizard = ({
             catalogItem={catalogItem}
             appSpec={appSpec}
             currentApps={currentApps}
-            currentLabels={currentLabels}
             currentVersion={currentVersion}
             currentChannel={currentChannel}
             version={version}
@@ -156,12 +152,11 @@ const EditWizard = ({
                 catalogItemVersion,
                 channel: values.channel,
                 currentApps,
-                currentLabels,
                 formValues:
                   values.configureVia === 'editor'
                     ? (load(values.editorContent) as Record<string, unknown>)
                     : values.formValues,
-                selectedAssets: values.selectedAssets,
+                volumeSelection: values.volumeSelection,
                 specPath,
               });
               await patch(`${isDevice ? 'devices' : 'fleets'}/${resourceId}`, allPatches);
@@ -253,7 +248,6 @@ export const EditDeviceWizard = () => {
     <PageWithPermissions allowed={canGetItem} loading={permissionsLoading}>
       <EditWizard
         currentApps={device?.spec.applications}
-        currentLabels={device?.metadata.labels}
         currentOsSpec={device?.spec.os}
         error={error}
         loading={loading}
@@ -281,7 +275,6 @@ export const EditFleetWizard = () => {
     <PageWithPermissions allowed={canGetItem} loading={permissionsLoading}>
       <EditWizard
         currentApps={fleet?.spec.template.spec.applications}
-        currentLabels={fleet?.metadata.labels}
         currentOsSpec={fleet?.spec.template.spec.os}
         error={error}
         loading={loading}

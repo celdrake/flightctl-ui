@@ -13,7 +13,7 @@ import TextField from '../form/TextField';
 import TextAreaField from '../form/TextAreaField';
 import NameField from '../form/NameField';
 import { getDnsSubdomainValidations } from '../form/validations';
-import { useCatalogItems } from '../Catalog/useCatalogs';
+import { useCatalogItems } from '../Catalog/useCatalogItems';
 import { getErrorMessage } from '../../utils/error';
 import { getExportFormatLabel } from '../../utils/imageBuilds';
 import { ImagePromotionFormValues } from './types';
@@ -129,9 +129,11 @@ const ImagePromotionForm = ({
     endpoint: 'catalogs',
   });
 
-  const [catalogItems, , itemsErr] = useCatalogItems({
-    catalogs: values.catalog ? [values.catalog] : undefined,
-  });
+  const catalogFilter = React.useMemo(() => {
+    return values.catalog ? { catalogs: [values.catalog] } : {};
+  }, [values.catalog]);
+
+  const [catalogItems, , itemsErr] = useCatalogItems(catalogFilter);
 
   const catalogs = (catalogList?.items || [])
     .sort((a, b) => {

@@ -20,6 +20,7 @@ import {
   ImageMountVolumeProviderSpec,
   ImageOrCatalogItemRefSpec,
   ImagePullPolicy,
+  ImageVolumeSource,
   InlineApplicationProviderSpec,
   InlineConfigProviderSpec,
   KubernetesSecretProviderSpec,
@@ -64,6 +65,9 @@ import {
   parseVmYamlForForm,
   vmYamlHasAdvancedSettings,
 } from '../../../utils/vmApplications';
+
+// A full application volume includes the image mount volume provider spec
+type FullAppVolume = ApplicationVolume & ImageMountVolumeProviderSpec;
 
 const DEFAULT_INLINE_FILE_MODE = 420; // In Octal: 0644
 const DEFAULT_INLINE_FILE_USER = 'root';
@@ -249,30 +253,39 @@ const haveEnvVarsChanged = (current: Record<string, string>, updated: Record<str
   return aKeys.some((key) => current[key] !== updated[key]);
 };
 
+const hasVolumeImageChanged = (
+  current: ImageVolumeSource | undefined,
+  updated: ImageVolumeSource | undefined,
+): boolean => {
+  if (hasStringChanged(current?.pullPolicy, updated?.pullPolicy, ImagePullPolicy.PullIfNotPresent)) {
+    return true;
+  }
+
+  // Check if "reference" has changed. This is the field that's used for volumes in place of "image"
+  if (hasStringChanged(current?.reference, updated?.reference)) {
+    return true;
+  }
+
+  // Check if "catalogItemRef" has changed. Field "image" should be unset in both, so it won't affect the result.
+  return hasImageOrCatalogRefChanged(current, updated);
+};
+
 const haveVolumesChanged = (current: ApplicationVolume[], updated: ApplicationVolume[]): boolean => {
   if (current.length !== updated.length) return true;
-  return current.some((currentVol, index) => {
-    const updatedVol = updated[index];
-    if (currentVol.name !== updatedVol.name) return true;
-    if (
-      (currentVol.reclaimPolicy || ApplicationVolumeReclaimPolicy.RETAIN) !==
-      (updatedVol.reclaimPolicy || ApplicationVolumeReclaimPolicy.RETAIN)
-    )
+  return current.some((currentVolume, index) => {
+    const currentVol = currentVolume as FullAppVolume;
+    const updatedVol = updated[index] as FullAppVolume;
+    if (currentVol.name !== updatedVol.name) {
       return true;
-
-    const currentFull = currentVol as ApplicationVolume & ImageMountVolumeProviderSpec;
-    const updatedFull = updatedVol as ApplicationVolume & ImageMountVolumeProviderSpec;
-    const currentImageRef = currentFull.image?.reference || '';
-    const updatedImageRef = updatedFull.image?.reference || '';
-    if (currentImageRef !== updatedImageRef) return true;
-    if (currentImageRef || updatedImageRef) {
-      if (
-        (currentFull.image?.pullPolicy || ImagePullPolicy.PullIfNotPresent) !==
-        (updatedFull.image?.pullPolicy || ImagePullPolicy.PullIfNotPresent)
-      )
-        return true;
     }
-    return (currentFull.mount?.path || '') !== (updatedFull.mount?.path || '');
+    if (hasStringChanged(currentVol.reclaimPolicy, updatedVol.reclaimPolicy, ApplicationVolumeReclaimPolicy.RETAIN)) {
+      return true;
+    }
+
+    if (hasStringChanged(currentVol.mount?.path, updatedVol.mount?.path)) {
+      return true;
+    }
+    return hasVolumeImageChanged(currentVol.image, updatedVol.image);
   });
 };
 
@@ -435,16 +448,17 @@ const variablesToEnvVars = (variables: { name: string; value: string }[]) => {
  * Quadlet/Compose apps --> can only be image volumes (mount is not allowed)
  * Container apps --> can either be mount or image mount volumes
  */
-const formVolumesToApi = (volumes: ApplicationVolumeForm[], appType: AppType): ApplicationVolume[] => {
+export const formVolumesToApi = (volumes: ApplicationVolumeForm[], appType: AppType): ApplicationVolume[] => {
   return volumes.map((v) => {
     const vol: Partial<ApplicationVolume & ImageMountVolumeProviderSpec> = {
       name: v.name || '',
     };
-    if (v.imageRef) {
-      vol.image = {
-        reference: v.imageRef,
-        pullPolicy: v.imagePullPolicy || ImagePullPolicy.PullIfNotPresent,
-      };
+
+    const catalogRef = v.imageSpec?.catalogItemRef;
+    const imageRef = v.imageSpec?.image;
+    if (catalogRef || imageRef) {
+      const pullPolicy = v.imagePullPolicy || ImagePullPolicy.PullIfNotPresent;
+      vol.image = catalogRef ? { catalogItemRef: catalogRef, pullPolicy } : { reference: imageRef, pullPolicy };
     }
     if (v.mountPath && appType === AppType.AppTypeContainer) {
       vol.mount = { path: v.mountPath };
@@ -468,7 +482,7 @@ const toFormFiles = (files: ApplicationContent[]) =>
   }));
 
 const toApiHelmApp = (app: HelmAppForm): HelmApplication => {
-  const helmApp: HelmApplication = {
+  const helmApp: Partial<HelmApplication> = {
     appType: app.appType,
     ...app.imageSpec, // Sets either image or catalogItemRef
   };
@@ -492,11 +506,11 @@ const toApiHelmApp = (app: HelmAppForm): HelmApplication => {
     helmApp.valuesFiles = fileNames;
   }
 
-  return helmApp;
+  return helmApp as HelmApplication;
 };
 
 const toApiContainerApp = (app: SingleContainerAppForm): ContainerApplication => {
-  const containerApp: ContainerApplication = {
+  const containerApp: Partial<ContainerApplication> = {
     appType: app.appType,
     runAs: app.runAs || RUN_AS_ROOT_USER,
     envVars: variablesToEnvVars(app.variables || []),
@@ -524,11 +538,11 @@ const toApiContainerApp = (app: SingleContainerAppForm): ContainerApplication =>
     containerApp.resources = { limits };
   }
 
-  return containerApp;
+  return containerApp as ContainerApplication;
 };
 
 const toApiComposeApp = (app: ComposeAppForm): ComposeApplication => {
-  const composeApp: ComposeApplication = {
+  const composeApp: Partial<ComposeApplication> = {
     appType: app.appType,
     envVars: variablesToEnvVars(app.variables || []),
     volumes: formVolumesToApi(app.volumes || [], app.appType),
@@ -543,7 +557,7 @@ const toApiComposeApp = (app: ComposeAppForm): ComposeApplication => {
   } else {
     (composeApp as unknown as InlineApplicationProviderSpec).inline = formFilesToApi(app.files);
   }
-  return composeApp;
+  return composeApp as ComposeApplication;
 };
 
 // Quadlet apps are currently the same as Compose apps, plus an optional "runAs" field.
@@ -637,15 +651,22 @@ export const toApiApplication = (app: AppForm): ApplicationProviderSpec => {
 const toFormVariables = (envVars: Record<string, string>): { name: string; value: string }[] =>
   Object.entries(envVars).map(([name, value]) => ({ name, value: value || '' }));
 
+const toFormVolumeImageSpec = (image?: ImageVolumeSource): ImageOrCatalogItemRefSpec => {
+  if (image?.catalogItemRef) {
+    return { catalogItemRef: image.catalogItemRef };
+  }
+  return { image: image?.reference || '' };
+};
+
 const toFormVolumes = (volumes?: ApplicationVolume[]): ApplicationVolumeForm[] => {
   if (!volumes) return [];
   return volumes.map((vol) => {
-    const fullVolume = vol as ApplicationVolume & ImageMountVolumeProviderSpec;
+    const fullVolume = vol as FullAppVolume;
     return {
       name: fullVolume.name,
-      imageRef: fullVolume.image?.reference || '',
-      mountPath: fullVolume.mount?.path || '',
+      imageSpec: toFormVolumeImageSpec(fullVolume.image),
       imagePullPolicy: fullVolume.image?.pullPolicy || ImagePullPolicy.PullIfNotPresent,
+      mountPath: fullVolume.mount?.path || '',
     };
   });
 };

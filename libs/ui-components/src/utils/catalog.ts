@@ -1,9 +1,12 @@
 import {
   AppType,
   ApplicationProviderSpec,
-  CatalogItemRefSpec,
-  ContainerApplication,
-  DeviceSpec,
+  type ApplicationVolume,
+  type CatalogItemRefSpec,
+  type DeviceSpec,
+  ImageMountVolumeProviderSpec,
+  ImageOrCatalogItemRefSpec,
+  ImagePullPolicy,
   PatchRequest,
 } from '@flightctl/types';
 import {
@@ -17,18 +20,13 @@ import {
 import { TFunction } from 'i18next';
 import semver from 'semver';
 
-import {
-  APP_VOLUME_CATALOG_LABEL_KEY,
-  APP_VOLUME_CHANNEL_LABEL_KEY,
-  APP_VOLUME_ITEM_LABEL_KEY,
-  getAppVolumeName,
-} from '../components/Catalog/const';
-import { AssetSelection } from '../components/DynamicForm/DynamicForm';
+import { ApplicationVolumeForm } from '../types/deviceSpec';
+import { CatalogVolumSelection } from '../components/DynamicForm/DynamicForm';
+import type { ArtifactFormValue } from '../components/Catalog/AddCatalogItemWizard/types';
+import { formVolumesToApi } from '../components/Device/EditDeviceWizard/deviceSpecUtils';
+
 import appIcon from '../../assets/application.svg';
 import osIcon from '../../assets/os.svg';
-import { fromAPILabel } from './labels';
-import { getLabelPatches } from './patch';
-import { ArtifactFormValue } from '../components/Catalog/AddCatalogItemWizard/types';
 
 export type CatalogItemId = { catalog: string; item: string };
 
@@ -54,15 +52,24 @@ export const toCatalogItemId = (ref: Pick<CatalogItemRefSpec, 'catalog' | 'item'
 
 export const extractCatalogItemIdsFromSpec = (spec: DeviceSpec | undefined): CatalogItemId[] => {
   const byKey = new Map<string, CatalogItemId>();
-  if (spec?.os?.catalogItemRef) {
-    const id = toCatalogItemId(spec.os.catalogItemRef);
+  const addRef = (ref: CatalogItemRefSpec | undefined) => {
+    if (!ref) {
+      return;
+    }
+    const id = toCatalogItemId(ref);
     byKey.set(catalogItemCacheKey(id), id);
+  };
+
+  if (spec?.os?.catalogItemRef) {
+    addRef(spec.os.catalogItemRef);
   }
   (spec?.applications || []).forEach((app) => {
-    const ref = getAppCatalogItemRef(app);
-    if (ref) {
-      const id = toCatalogItemId(ref);
-      byKey.set(catalogItemCacheKey(id), id);
+    addRef(getAppCatalogItemRef(app));
+    const volumes = 'volumes' in app ? (app.volumes as ImageMountVolumeProviderSpec[]) : undefined;
+    if (volumes) {
+      volumes.forEach((vol) => {
+        addRef(vol.image?.catalogItemRef);
+      });
     }
   });
   return [...byKey.values()];
@@ -174,28 +181,13 @@ export const getRemoveOsPatches = ({ specPath }: { specPath: string }) => {
   return allPatches;
 };
 
-/** Clears Data-catalog volume provenance labels for an app (volume refs are still label-based). */
-const removeAppVolumeLabels = (currentLabels: Record<string, string>, appName: string) => {
-  const apiLabels = fromAPILabel(currentLabels);
-  return apiLabels.filter(({ key }) => {
-    return !(
-      key.startsWith(`${appName}.`) &&
-      (key.endsWith(`.${APP_VOLUME_ITEM_LABEL_KEY}`) ||
-        key.endsWith(`.${APP_VOLUME_CATALOG_LABEL_KEY}`) ||
-        key.endsWith(`.${APP_VOLUME_CHANNEL_LABEL_KEY}`))
-    );
-  });
-};
-
 export const getRemoveAppPatches = ({
   appName,
   specPath,
-  currentLabels,
   currentApps,
 }: {
   appName: string;
   specPath: string;
-  currentLabels: Record<string, string> | undefined;
   currentApps: ApplicationProviderSpec[] | undefined;
 }) => {
   const allPatches: PatchRequest = [];
@@ -206,15 +198,6 @@ export const getRemoveAppPatches = ({
       path: `${specPath}spec/applications/${appIndex}`,
       op: 'remove',
     });
-  }
-
-  if (currentLabels) {
-    const newLabels = removeAppVolumeLabels(currentLabels, appName);
-    const labelPatches = getLabelPatches('/metadata/labels', currentLabels || {}, newLabels);
-
-    if (labelPatches.length) {
-      allPatches.push(...labelPatches);
-    }
   }
 
   return allPatches;
@@ -235,40 +218,76 @@ const getAppType = (catalogItem: CatalogItem): AppType | undefined => {
   }
 };
 
+// Combines the form volumes with their selected Data catalog assets.
+const combineFormVolumeWithSelection = (
+  volumes: ApplicationVolumeForm[] | undefined,
+  volumeSelection: CatalogVolumSelection[],
+): ApplicationVolumeForm[] => {
+  if (!volumes?.length) {
+    return [];
+  }
+
+  return volumes.map((vol, idx) => {
+    const selectedVolume = volumeSelection.find((a) => a.volumeIndex === idx);
+    const imageSpec: ImageOrCatalogItemRefSpec = selectedVolume?.catalogItemRef
+      ? {
+          catalogItemRef: selectedVolume.catalogItemRef,
+        }
+      : {
+          image: vol.imageSpec.image,
+        };
+    return {
+      name: vol.name,
+      imageSpec,
+      imagePullPolicy: vol?.imagePullPolicy || ImagePullPolicy.PullIfNotPresent,
+      mountPath: vol.mountPath,
+    };
+  });
+};
+
 export const getAppPatches = ({
   appName,
   currentApps,
-  currentLabels,
   catalogItem,
   catalogItemVersion,
   channel,
   formValues,
   specPath,
-  selectedAssets,
+  volumeSelection,
 }: {
   appName: string;
   currentApps: ApplicationProviderSpec[] | undefined;
-  currentLabels: Record<string, string> | undefined;
   catalogItem: CatalogItem;
   catalogItemVersion: CatalogItemVersion;
   channel: string;
   formValues: Record<string, unknown> | undefined;
   specPath: string;
-  selectedAssets: AssetSelection[];
+  volumeSelection: CatalogVolumSelection[];
 }) => {
   const appType = getAppType(catalogItem);
   if (!appType) {
     throw new Error('Unknown application type');
   }
 
+  // Copy the volumes so we can treat them separately
+  const formVolumes = Array.isArray(formValues?.volumes)
+    ? [...(formValues.volumes as ApplicationVolumeForm[])]
+    : undefined;
+  delete formValues?.volumes;
+
   const appSpec: ApplicationProviderSpec = {
     ...formValues,
     name: appName,
     appType,
     catalogItemRef: buildCatalogItemRef({ catalogItem, catalogItemVersion, channel }),
-    // Explicitly clear image to ensure only one of image or catalogItemRef is set
+    // Explicitly clear image since the catalog item ref will be used instead
     image: undefined,
   };
+
+  const volumes = combineFormVolumeWithSelection(formVolumes, volumeSelection);
+  if (volumes.length > 0) {
+    (appSpec as { volumes?: ApplicationVolume[] }).volumes = formVolumesToApi(volumes, appType);
+  }
 
   const existingAppIndex = currentApps?.findIndex((app) => app.name === appSpec.name);
 
@@ -291,31 +310,6 @@ export const getAppPatches = ({
       op: 'replace',
       value: appSpec,
     });
-  }
-
-  const volumes = appType === AppType.AppTypeContainer ? (appSpec as ContainerApplication).volumes : undefined;
-  const volumeLabels = selectedAssets.reduce((acc, { assetChannel, assetItemName, assetCatalog, volumeIndex }) => {
-    if (!volumes || volumes.length <= volumeIndex) {
-      return acc;
-    }
-    const volumeName = volumes[volumeIndex].name;
-
-    return {
-      ...acc,
-      [`${getAppVolumeName(appSpec.name, volumeName, APP_VOLUME_ITEM_LABEL_KEY)}`]: assetItemName,
-      [`${getAppVolumeName(appSpec.name, volumeName, APP_VOLUME_CHANNEL_LABEL_KEY)}`]: assetChannel,
-      [`${getAppVolumeName(appSpec.name, volumeName, APP_VOLUME_CATALOG_LABEL_KEY)}`]: assetCatalog,
-    };
-  }, {});
-
-  // Volume catalog provenance remains label-based until backend supports volume catalogItemRef
-  const newLabels = removeAppVolumeLabels(currentLabels || {}, appName);
-  newLabels.push(...fromAPILabel(volumeLabels));
-
-  const labelPatches = getLabelPatches('/metadata/labels', currentLabels || {}, newLabels);
-
-  if (labelPatches.length) {
-    allPatches.push(...labelPatches);
   }
 
   return allPatches;

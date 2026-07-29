@@ -7,9 +7,9 @@ import { FieldArray, FormikErrors, useField, useFormikContext } from 'formik';
 import { CatalogItemArtifactType } from '@flightctl/types/alpha';
 
 import { useTranslation } from '../../../../hooks/useTranslation';
-import { AddCatalogItemFormValues, VersionFormValues, configurableAppTypes } from '../types';
+import { type AddCatalogItemFormValues, type VersionFormValues, configurableAppTypes } from '../types';
 import { getEmptyVersion } from '../utils';
-import { appTypeIds } from '../../useCatalogs';
+import { appTypeIds } from '../../useCatalogItems';
 import TextField from '../../../form/TextField';
 import TextAreaField from '../../../form/TextAreaField';
 import CheckboxField from '../../../form/CheckboxField';

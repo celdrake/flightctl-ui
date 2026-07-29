@@ -92,9 +92,10 @@ export const useCatalogItems = ({
   const isDebouncing = endpoint !== endpointDebounced;
 
   React.useEffect(() => {
+    console.log('%c setting page to 1', 'color: red; font-size:18px');
     pagination.setCurrentPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nameFilter, itemType]);
+  }, [nameFilter, itemType, catalogs]);
 
   const [catalogItemsList, loading, error, refetch, isFetchUpdating] = useFetchPeriodically<CatalogItemList>(
     { endpoint: endpointDebounced },

@@ -823,11 +823,38 @@ const mountPathSchema = (t: TFunction, isRequired: boolean = true) => {
   return isRequired ? schema.required(t('Mount path is required for this volume type')) : schema;
 };
 
+const volumeImageSpecSchema = (t: TFunction, imageRequired: boolean) =>
+  Yup.mixed().test(
+    'volume-image-or-catalog-ref',
+    t('Image reference is required for this volume type'),
+    function (value) {
+      if (!value) {
+        return !imageRequired;
+      }
+      if (typeof value === 'object' && 'catalogItemRef' in value && value.catalogItemRef) {
+        // CatalogItems cannot be edited via the UI; if set they are assumed valid
+        return true;
+      }
+      try {
+        const imageSpec = value as ImageOrCatalogItemRefSpec;
+        const schema = imageRequired
+          ? requiredOciImageSchema(t, t('Image reference is required for this volume type'))
+          : ociImageSchema(t);
+        schema.validateSync(imageSpec.image || '');
+        return true;
+      } catch (e) {
+        return this.createError({
+          message: (e as Yup.ValidationError).message || t('Image reference is required for this volume type'),
+        });
+      }
+    },
+  );
+
 export const singleContainerVolumesSchema = (t: TFunction) =>
   Yup.array().of(
     Yup.object().shape({
       name: volumeNameSchema(t),
-      imageRef: ociImageSchema(t),
+      imageSpec: volumeImageSpecSchema(t, false),
       imagePullPolicy: Yup.string(),
       mountPath: mountPathSchema(t, true),
     }),
@@ -837,7 +864,7 @@ export const composeQuadletVolumesSchema = (t: TFunction) =>
   Yup.array().of(
     Yup.object().shape({
       name: volumeNameSchema(t),
-      imageRef: requiredOciImageSchema(t, t('Image reference is required for this volume type')),
+      imageSpec: volumeImageSpecSchema(t, true).required(t('Image reference is required for this volume type')),
       imagePullPolicy: imagePullPolicySchema(t),
     }),
   );
