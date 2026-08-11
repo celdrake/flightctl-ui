@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { type TFunction } from 'react-i18next';
+import { type TFunction } from 'i18next';
 
 import { Event, type EventList, type ObjectReference, ResourceKind } from '@flightctl/types';
 import { useFetchPeriodically } from '../../hooks/useFetchPeriodically';

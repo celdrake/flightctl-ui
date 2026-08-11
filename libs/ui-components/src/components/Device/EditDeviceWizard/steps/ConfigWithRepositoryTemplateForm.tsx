@@ -1,7 +1,8 @@
 import * as React from 'react';
 import { useFormikContext } from 'formik';
 import { FormGroup } from '@patternfly/react-core';
-import { type TFunction, Trans } from 'react-i18next';
+import { type TFunction } from 'i18next';
+import { Trans } from 'react-i18next';
 
 import { type GitRepoSpec, type HttpRepoSpec, RepoSpecType, type Repository } from '@flightctl/types';
 import {
@@ -78,9 +79,12 @@ const HttpConfigForm = ({
   if (baseURL) {
     const fullURL = `${baseURL}${template.suffix || ''}`;
     suffixHelperText = (
-      <Trans t={t}>
-        Full HTTP service URL: <strong>{fullURL}</strong>
-      </Trans>
+      <Trans
+        t={t}
+        i18nKey="Full HTTP service URL: <bold>{{fullURL}}</bold>"
+        values={{ fullURL }}
+        components={{ bold: <b /> }}
+      />
     );
   } else {
     suffixHelperText = t('Select a repository to generate the full URL');

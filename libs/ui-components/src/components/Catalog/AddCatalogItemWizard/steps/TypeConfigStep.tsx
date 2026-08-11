@@ -187,9 +187,13 @@ const TypeConfigStep = ({ isEdit, isReadOnly }: { isEdit?: boolean; isReadOnly?:
               <UploadField name="defaultConfig" ariaLabel={t('Configuration')} isDisabled={isReadOnly} />
               <FormGroup
                 label={t('JSON schema')}
-                labelHelp={t(
-                  'JSON Schema defining configurable parameters (JSON or YAML format). Can be overridden per version.',
-                )}
+                labelHelp={
+                  <span>
+                    {t(
+                      'JSON Schema defining configurable parameters (JSON or YAML format). Can be overridden per version.',
+                    )}
+                  </span>
+                }
               >
                 <UploadField
                   name="defaultConfigSchema"

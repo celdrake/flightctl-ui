@@ -167,7 +167,7 @@ const RedirectToEnrollmentDetails = () => {
   return <Navigate to={`/devicemanagement/enrollmentrequests/${enrollmentRequestId}`} replace />;
 };
 
-const getAppRoutes = (t: TFunction): ExtendedRouteObject[] => [
+const getAppRoutes = (t: TFunction<string>): ExtendedRouteObject[] => [
   {
     path: '/',
     element: <Navigate to="/overview" replace />,

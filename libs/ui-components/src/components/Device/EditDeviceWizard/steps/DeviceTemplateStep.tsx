@@ -127,11 +127,12 @@ const DeviceTemplateStep = ({
     <FlightCtlForm>
       {isFleet && !isReadOnly && (
         <Alert isInline variant="info" title={t('Using template variables')} isExpandable>
-          <Trans t={t}>
-            Add a variable by using <strong>{templateOption1}</strong> or <strong>{templateOption2}</strong> and it will
-            be applied based on each device&rsquo;s details. For example, you could set the following value to apply
-            different files in a Git configuration:
-          </Trans>
+          <Trans
+            t={t}
+            i18nKey="Add a variable by using <bold>{{templateOption1}}</bold> or <bold>{{templateOption2}}</bold> and it will be applied based on each device's details. For example, you could set the following value to apply different files in a Git configuration:"
+            values={{ templateOption1, templateOption2 }}
+            components={{ bold: <b /> }}
+          />
           <CodeBlock className="pf-v6-u-my-md">
             <CodeBlockCode>{exampleCode}</CodeBlockCode>
           </CodeBlock>

@@ -189,9 +189,12 @@ const ReviewStep = ({ error }: ReviewStepProps) => {
                 <DescriptionListGroup>
                   <DescriptionListTerm>{t('Remote access')}</DescriptionListTerm>
                   <DescriptionListDescription>
-                    <Trans t={t}>
-                      Enabled for <strong>{remoteAccessUsername}</strong>
-                    </Trans>
+                    <Trans
+                      t={t}
+                      i18nKey="Enabled for <bold>{{remoteAccessUsername}}</bold>"
+                      values={{ remoteAccessUsername }}
+                      components={{ bold: <b /> }}
+                    />
                   </DescriptionListDescription>
                 </DescriptionListGroup>
               )}

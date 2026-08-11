@@ -63,18 +63,23 @@ const SuspendedDevicesAlert = ({
         );
       case 'fleet':
         return (
-          <Trans t={t} count={suspendedCount}>
-            <strong>{suspendedCountStr}</strong> <strong>devices in this fleet</strong> are suspended because their
-            local configuration is newer than the server&apos;s record. These devices will not receive updates until
-            they are resumed.
-          </Trans>
+          <Trans
+            t={t}
+            count={suspendedCount}
+            i18nKey="<bold>{{suspendedCountStr}}</bold> <bold>devices in this fleet</bold> are suspended because their local configuration is newer than the server's record. These devices will not receive updates until they are resumed."
+            values={{ suspendedCountStr }}
+            components={{ bold: <b /> }}
+          />
         );
       default:
         return (
-          <Trans t={t} count={suspendedCount}>
-            <strong>{suspendedCountStr}</strong> devices are suspended because their local configuration is newer than
-            the server&apos;s record. These devices will not receive updates until they are resumed.
-          </Trans>
+          <Trans
+            t={t}
+            count={suspendedCount}
+            i18nKey="<bold>{{suspendedCountStr}}</bold> devices are suspended because their local configuration is newer than the server's record. These devices will not receive updates until they are resumed."
+            values={{ suspendedCountStr }}
+            components={{ bold: <b /> }}
+          />
         );
     }
   };
@@ -106,15 +111,17 @@ const SuspendedDevicesAlert = ({
           <StackItem>{getMainMessage()}</StackItem>
           <StackItem>
             {mode === 'fleet' ? (
-              <Trans t={t}>
-                <strong>Warning:</strong> Please review this fleet&apos;s configuration before taking action. Resuming a
-                device will cause it to apply the current specification, which may be older than what is on the device.
-              </Trans>
+              <Trans
+                t={t}
+                i18nKey="<bold>Warning:</bold> Please review this fleet's configuration before taking action. Resuming a device will cause it to apply the current specification, which may be older than what is on the device."
+                components={{ bold: <b /> }}
+              />
             ) : (
-              <Trans t={t}>
-                <strong>Warning:</strong> Please review device configurations before taking action. Resuming a device
-                will cause it to apply the current specification, which may be older than what is on the device.
-              </Trans>
+              <Trans
+                t={t}
+                i18nKey="<bold>Warning:</bold> Please review device configurations before taking action. Resuming a device will cause it to apply the current specification, which may be older than what is on the device."
+                components={{ bold: <b /> }}
+              />
             )}
           </StackItem>
         </Stack>

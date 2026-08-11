@@ -27,7 +27,7 @@ import * as React from 'react';
 import { type FormikErrors, useFormikContext } from 'formik';
 import * as semver from 'semver';
 import ReactMarkdown from 'react-markdown';
-import { type TFunction } from 'react-i18next';
+import { type TFunction } from 'i18next';
 
 import type { ApplicationProviderSpec } from '@flightctl/types';
 import { useTranslation } from '../../../../hooks/useTranslation';

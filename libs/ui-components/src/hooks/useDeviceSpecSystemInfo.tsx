@@ -2,7 +2,7 @@ import React from 'react';
 import { Label } from '@patternfly/react-core';
 import OsImageIcon from '@patternfly/react-icons/dist/js/icons/os-image-icon';
 import ArchiveIcon from '@patternfly/react-icons/dist/js/icons/archive-icon';
-import type { TFunction } from 'react-i18next';
+import type { TFunction } from 'i18next';
 
 import { type CustomDeviceInfo, type DeviceStatus, type DeviceSystemInfo, OsModeType } from '@flightctl/types';
 

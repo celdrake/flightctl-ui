@@ -56,11 +56,11 @@
     "@patternfly/react-styles": "^6.4.0",
     "@patternfly/react-table": "^6.4.0",
     "@patternfly/react-log-viewer": "^6.3.0",
-    "i18next": "21.8.14 - 23.x",
+    "i18next": ">=25.8.18 <26",
     "monaco-editor": "^0.51.0",
     "react": "17.0.1 - 18.x",
     "react-dom": "17.0.1 - 18.x",
-    "react-i18next": "11.7.3 - 15.x",
+    "react-i18next": "~16.5.8",
     "react-router-dom": "^5.3 || ^6.30.3",
     "victory": "^37.3.6"
   }

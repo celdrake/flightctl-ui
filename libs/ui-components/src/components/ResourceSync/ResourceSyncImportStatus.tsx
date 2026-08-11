@@ -35,12 +35,12 @@ const isDismissed = (rs: ResourceSync) => {
 };
 
 const hasError = (rs: ResourceSync) => {
-  const rsStatus = getRepositorySyncStatus(rs, (msg: string) => msg);
+  const rsStatus = getRepositorySyncStatus(rs);
   return ['Not parsed', 'Not synced', 'Not accessible'].includes(rsStatus.status);
 };
 
 const isPending = (rs: ResourceSync) => {
-  const rsStatus = getRepositorySyncStatus(rs, (msg: string) => msg);
+  const rsStatus = getRepositorySyncStatus(rs);
   return rsStatus?.status !== ConditionType.ResourceSyncSynced;
 };
 
@@ -53,15 +53,19 @@ const ResourceSyncInfoAlert = ({ rs, type }: { rs: ResourceSync; type: 'fleet' |
       variant="info"
       title={
         type === 'fleet' ? (
-          <Trans t={t}>
-            Importing fleets from <Link to={{ route: ROUTE.RESOURCE_SYNC_DETAILS, postfix: name }}>{name}</Link>. This
-            might take a few minutes to complete.
-          </Trans>
+          <Trans
+            t={t}
+            i18nKey="Importing fleets from <link>{{name}}</link>. This might take a few minutes to complete."
+            values={{ name }}
+            components={{ link: <Link to={{ route: ROUTE.RESOURCE_SYNC_DETAILS, postfix: name }} /> }}
+          />
         ) : (
-          <Trans t={t}>
-            Importing catalogs from <Link to={{ route: ROUTE.RESOURCE_SYNC_DETAILS, postfix: name }}>{name}</Link>. This
-            might take a few minutes to complete.
-          </Trans>
+          <Trans
+            t={t}
+            i18nKey="Importing catalogs from <link>{{name}}</link>. This might take a few minutes to complete."
+            values={{ name }}
+            components={{ link: <Link to={{ route: ROUTE.RESOURCE_SYNC_DETAILS, postfix: name }} /> }}
+          />
         )
       }
       isInline
@@ -116,15 +120,19 @@ const ResourceSyncErrorAlert = ({
       actionClose={<AlertActionCloseButton onClose={dismissAlert} />}
     >
       {type === 'fleet' ? (
-        <Trans t={t}>
-          Importing fleets from <Link to={{ route: ROUTE.RESOURCE_SYNC_DETAILS, postfix: name }}>{name}</Link> failed.
-          Check the resource sync for more details.
-        </Trans>
+        <Trans
+          t={t}
+          i18nKey="Importing fleets from <link>{{name}}</link> failed. Check the resource sync for more details."
+          values={{ name }}
+          components={{ link: <Link to={{ route: ROUTE.RESOURCE_SYNC_DETAILS, postfix: name }} /> }}
+        />
       ) : (
-        <Trans t={t}>
-          Importing catalogs from <Link to={{ route: ROUTE.RESOURCE_SYNC_DETAILS, postfix: name }}>{name}</Link> failed.
-          Check the resource sync for more details.
-        </Trans>
+        <Trans
+          t={t}
+          i18nKey="Importing catalogs from <link>{{name}}</link> failed. Check the resource sync for more details."
+          values={{ name }}
+          components={{ link: <Link to={{ route: ROUTE.RESOURCE_SYNC_DETAILS, postfix: name }} /> }}
+        />
       )}
     </Alert>
   );

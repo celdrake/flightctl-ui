@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { type TFunction, Trans } from 'react-i18next';
+import { type TFunction } from 'i18next';
+import { Trans } from 'react-i18next';
 
 import { type DeviceDecommissionTargetType } from '@flightctl/types';
 import { type ListAction, type ListActionProps, type ListActionResult } from './types';
@@ -131,9 +132,12 @@ export const useResumeListAction = (onResumeComplete?: VoidFunction): ListAction
     <ResumeDevicesModal
       mode="device"
       title={
-        <Trans t={t}>
-          You are about to resume device <strong>{deviceName}</strong>
-        </Trans>
+        <Trans
+          t={t}
+          i18nKey="You are about to resume device <bold>{{deviceName}}</bold>"
+          values={{ deviceName }}
+          components={{ bold: <b /> }}
+        />
       }
       selector={{ fieldSelector: `metadata.name=${deviceId}` }}
       expectedCount={1}

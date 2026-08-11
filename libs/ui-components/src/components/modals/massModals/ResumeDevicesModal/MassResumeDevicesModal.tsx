@@ -345,19 +345,28 @@ const MassResumeDevicesModalContent = ({ onClose }: MassResumeDevicesModalProps)
                   title={t('Devices found')}
                 >
                   {values.mode === SelectionMode.FLEET ? (
-                    <Trans t={t}>
-                      <strong>{deviceCount}</strong> suspended devices are currently associated with fleet{' '}
-                      <strong>{values.fleetId}</strong>.
-                    </Trans>
+                    <Trans
+                      t={t}
+                      i18nKey="<bold>{{deviceCount}}</bold> suspended devices are currently associated with fleet <bold>{{fleetId}}</bold>."
+                      values={{ deviceCount, fleetId: values.fleetId }}
+                      components={{ bold: <b /> }}
+                    />
                   ) : values.mode === SelectionMode.LABELS ? (
-                    <Trans t={t}>
-                      <strong>{deviceCount}</strong> suspended devices match the specified labels.
-                    </Trans>
+                    <Trans
+                      t={t}
+                      i18nKey="<bold>{{deviceCount}}</bold> suspended devices match the specified labels."
+                      values={{ deviceCount }}
+                      components={{ bold: <b /> }}
+                    />
                   ) : (
                     <>
-                      <Trans t={t} count={deviceCountNum}>
-                        You are about to resume all <strong>{deviceCount}</strong> suspended devices.
-                      </Trans>
+                      <Trans
+                        t={t}
+                        count={deviceCountNum}
+                        i18nKey="You are about to resume all <bold>{{deviceCount}}</bold> suspended devices."
+                        values={{ deviceCount }}
+                        components={{ bold: <b /> }}
+                      />
                       {t(
                         'This action is irreversible and will allow all affected devices to receive new configuration updates from the server.',
                       )}
@@ -367,9 +376,12 @@ const MassResumeDevicesModalContent = ({ onClose }: MassResumeDevicesModalProps)
               ) : (
                 <Alert variant="warning" isInline title={t('No devices found')}>
                   {values.mode === SelectionMode.FLEET ? (
-                    <Trans t={t}>
-                      No suspended devices are associated with fleet <strong>{values.fleetId}</strong>.
-                    </Trans>
+                    <Trans
+                      t={t}
+                      i18nKey="No suspended devices are associated with fleet <bold>{{fleetId}}</bold>."
+                      values={{ fleetId: values.fleetId }}
+                      components={{ bold: <b /> }}
+                    />
                   ) : values.mode === SelectionMode.ALL ? (
                     t('No suspended devices found.')
                   ) : (

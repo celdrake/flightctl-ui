@@ -1,6 +1,7 @@
-import { type TFunction } from 'react-i18next';
+import { type TFunction } from 'i18next';
 
 import { DeviceIntegrityCheckStatusType, DeviceIntegrityStatusSummaryType } from '@flightctl/types';
+import { identityT } from '../i18n';
 import { type StatusItem } from './common';
 
 export const getIntegrityStatusItems = (t: TFunction): StatusItem<DeviceIntegrityStatusSummaryType>[] => [
@@ -41,4 +42,4 @@ export const integrityCheckToSummaryType = (
   }
 };
 
-export const integrityStatusOrder = getIntegrityStatusItems((s: string) => s).map((item) => item.id);
+export const integrityStatusOrder = getIntegrityStatusItems(identityT).map((item) => item.id);

@@ -1,4 +1,4 @@
-import { type TFunction } from 'react-i18next';
+import { type TFunction } from 'i18next';
 
 import { SeverityCriticalIcon } from '@patternfly/react-icons/dist/js/icons/severity-critical-icon';
 import SeverityImportantIcon from '@patternfly/react-icons/dist/js/icons/severity-important-icon';

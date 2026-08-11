@@ -270,7 +270,9 @@ export const useDeviceLogs = ({ deviceId }: UseDeviceLogsArgs) => {
                 }
                 setErrorTypeOrMsg(
                   buffer
-                    ? t('Log retrieval failed with exit code {{code}}', { code: parsed.code })
+                    ? (t('Log retrieval failed with exit code {{code}}', {
+                        code: parsed.code,
+                      }) as DeviceLogErrorType)
                     : 'CONNECTION_CLOSED',
                 );
                 setIsFetching(false);

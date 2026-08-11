@@ -115,9 +115,12 @@ const DeviceDetailsPage = ({ children }: React.PropsWithChildren) => {
   const resumeDevice = {
     actionText: t('Resume device'),
     title: (
-      <Trans t={t}>
-        You are about to resume <strong>{deviceNameOrAlias}</strong>
-      </Trans>
+      <Trans
+        t={t}
+        i18nKey="You are about to resume <bold>{{deviceNameOrAlias}}</bold>"
+        values={{ deviceNameOrAlias }}
+        components={{ bold: <b /> }}
+      />
     ),
     requestSelector: {
       fieldSelector: `metadata.name=${deviceId}`,

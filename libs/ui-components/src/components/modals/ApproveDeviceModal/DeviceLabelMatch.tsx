@@ -50,9 +50,12 @@ export const DeviceLabelMatch = ({
         <StatusDisplayContent
           level="success"
           label={
-            <Trans t={t} values={{ fleetName }}>
-              Device matches fleet <strong>{fleetName}</strong>.
-            </Trans>
+            <Trans
+              t={t}
+              i18nKey="Device matches fleet <bold>{{fleetName}}</bold>."
+              values={{ fleetName }}
+              components={{ bold: <b /> }}
+            />
           }
           customIcon={CheckCircleIcon}
         />

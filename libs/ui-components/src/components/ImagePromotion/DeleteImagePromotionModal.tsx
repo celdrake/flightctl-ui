@@ -27,9 +27,12 @@ const DeleteImagePromotionModal = ({
       <ModalBody>
         <Stack hasGutter>
           <StackItem>
-            <Trans t={t}>
-              <strong>{promotion.metadata.name}</strong> will be deleted permanently.
-            </Trans>
+            <Trans
+              t={t}
+              i18nKey="<bold>{{promotionName}}</bold> will be deleted permanently."
+              values={{ promotionName: promotion.metadata.name }}
+              components={{ bold: <b /> }}
+            />
           </StackItem>
           {promotion.status?.publishedAt && <StackItem>{t('The existing catalog item will be unaffected.')}</StackItem>}
           <StackItem>{t('Are you sure you want to delete?')}</StackItem>

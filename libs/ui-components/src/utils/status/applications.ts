@@ -1,5 +1,6 @@
-import { type TFunction } from 'react-i18next';
+import { type TFunction } from 'i18next';
 
+import { identityT } from '../i18n';
 import {
   ApplicationStatusType as AppStatus,
   ApplicationsSummaryStatusType as AppSummaryStatus,
@@ -74,4 +75,4 @@ export const getApplicationStatusItems = (t: TFunction): StatusItem<AppStatus>[]
   },
 ];
 
-export const applicationSummaryStatusOrder = getApplicationSummaryStatusItems((s: string) => s).map((item) => item.id);
+export const applicationSummaryStatusOrder = getApplicationSummaryStatusItems(identityT).map((item) => item.id);

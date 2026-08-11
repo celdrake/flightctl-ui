@@ -23,9 +23,12 @@ const DeleteModal: React.FC<DeleteModalProps> = ({ onDelete, onClose, resourceTy
       <ModalBody>
         <Stack hasGutter>
           <StackItem>
-            <Trans t={t}>
-              Are you sure you want to delete {resourceType} <b>{resourceName}</b>?
-            </Trans>
+            <Trans
+              t={t}
+              i18nKey="Are you sure you want to delete {{resourceType}} <bold>{{resourceName}}</bold>?"
+              values={{ resourceType, resourceName }}
+              components={{ bold: <b /> }}
+            />
           </StackItem>
           {error && (
             <StackItem>

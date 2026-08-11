@@ -23,9 +23,13 @@ const ModalContentBeforeResume = ({ devicesToResume }: { devicesToResume: number
     <Stack hasGutter>
       <StackItem>
         <Content component="p">
-          <Trans t={t} count={devicesToResume}>
-            You are about to resume all <strong>{deviceCount}</strong> suspended devices.
-          </Trans>
+          <Trans
+            t={t}
+            count={devicesToResume}
+            i18nKey="You are about to resume all <bold>{{deviceCount}}</bold> suspended devices."
+            values={{ deviceCount }}
+            components={{ bold: <b /> }}
+          />
         </Content>
         <Content component="p">
           {t(

@@ -99,7 +99,11 @@ const VersionEntry = ({
           <UploadField name={`${prefix}.config`} ariaLabel={t('Configuration')} isDisabled={isReadOnly} />
           <FormGroup
             label={t('JSON schema')}
-            labelHelp={t('JSON Schema for this version (JSON or YAML format). Overrides the default config schema.')}
+            labelHelp={
+              <span>
+                {t('JSON Schema for this version (JSON or YAML format). Overrides the default config schema.')}
+              </span>
+            }
           >
             <UploadField name={`${prefix}.configSchema`} ariaLabel={t('Config schema')} isDisabled={isReadOnly} />
           </FormGroup>

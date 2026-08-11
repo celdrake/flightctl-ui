@@ -1,6 +1,7 @@
-import { type TFunction } from 'react-i18next';
+import { type TFunction } from 'i18next';
 
 import { DeviceUpdatedStatusType as UpdatedStatus } from '@flightctl/types';
+import { identityT } from '../i18n';
 import { type StatusItem } from './common';
 
 export const getSystemUpdateStatusItems = (t: TFunction): StatusItem<UpdatedStatus>[] => [
@@ -25,4 +26,4 @@ export const getSystemUpdateStatusItems = (t: TFunction): StatusItem<UpdatedStat
     level: 'success',
   },
 ];
-export const systemUpdateStatusOrder = getSystemUpdateStatusItems((s: string) => s).map((item) => item.id);
+export const systemUpdateStatusOrder = getSystemUpdateStatusItems(identityT).map((item) => item.id);

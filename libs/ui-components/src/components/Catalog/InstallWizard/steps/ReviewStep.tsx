@@ -49,11 +49,12 @@ const UpdateOsUpdateAlerts = ({ catalogItem }: { catalogItem: CatalogItem }) => 
     if (isOsUnset(resourceOs)) {
       return (
         <Alert isInline variant="warning" title={t('Fleet update')}>
-          <Trans t={t}>
-            This will deploy the OS <strong>{osImageName}</strong> for all <strong>({numOfDevices})</strong> devices in
-            the <strong>{values.fleet?.metadata.name}</strong> fleet. Devices will download and apply the update
-            according to the configured update policies.
-          </Trans>
+          <Trans
+            t={t}
+            i18nKey="This will deploy the OS <bold>{{osImageName}}</bold> for all <bold>({{numOfDevices}})</bold> devices in the <bold>{{fleetName}}</bold> fleet. Devices will download and apply the update according to the configured update policies."
+            values={{ osImageName, numOfDevices, fleetName: values.fleet?.metadata.name }}
+            components={{ bold: <b /> }}
+          />
         </Alert>
       );
     }
@@ -61,9 +62,12 @@ const UpdateOsUpdateAlerts = ({ catalogItem }: { catalogItem: CatalogItem }) => 
     if (isSameCatalogRef(resourceOs?.catalogItemRef, catalogItem, values.version, values.channel)) {
       return (
         <Alert isInline variant="info" title={t('No action required')}>
-          <Trans t={t}>
-            The fleet already defines the selected OS <strong>{osImageName}</strong>. No update will be performed.
-          </Trans>
+          <Trans
+            t={t}
+            i18nKey="The fleet already defines the selected OS <bold>{{osImageName}}</bold>. No update will be performed."
+            values={{ osImageName }}
+            components={{ bold: <b /> }}
+          />
         </Alert>
       );
     }
@@ -71,22 +75,24 @@ const UpdateOsUpdateAlerts = ({ catalogItem }: { catalogItem: CatalogItem }) => 
     if (isOsUpdate(catalogItem, values.version, resourceOs)) {
       return (
         <Alert isInline variant="info" title={t('Version update')}>
-          <Trans t={t}>
-            You are about to update OS <strong>{osImageName}</strong>. This will update the OS image for all{' '}
-            <strong>({numOfDevices})</strong> devices in the <strong>{values.fleet?.metadata.name}</strong> fleet.
-            Devices will download and apply the update according to the configured update policies.
-          </Trans>
+          <Trans
+            t={t}
+            i18nKey="You are about to update OS <bold>{{osImageName}}</bold>. This will update the OS image for all <bold>({{numOfDevices}})</bold> devices in the <bold>{{fleetName}}</bold> fleet. Devices will download and apply the update according to the configured update policies."
+            values={{ osImageName, numOfDevices, fleetName: values.fleet?.metadata.name }}
+            components={{ bold: <b /> }}
+          />
         </Alert>
       );
     }
 
     return (
       <Alert isInline variant="warning" title={t('Existing OS image detected')}>
-        <Trans t={t}>
-          You are about to replace OS with <strong>{osImageName}</strong>. This will update the OS image for all{' '}
-          <strong>({numOfDevices})</strong> devices in the <strong>{values.fleet?.metadata.name}</strong> fleet. Devices
-          will download and apply the update according to the configured update policies.
-        </Trans>
+        <Trans
+          t={t}
+          i18nKey="You are about to replace OS with <bold>{{osImageName}}</bold>. This will update the OS image for all <bold>({{numOfDevices}})</bold> devices in the <bold>{{fleetName}}</bold> fleet. Devices will download and apply the update according to the configured update policies."
+          values={{ osImageName, numOfDevices, fleetName: values.fleet?.metadata.name }}
+          components={{ bold: <b /> }}
+        />
       </Alert>
     );
   }
@@ -95,10 +101,12 @@ const UpdateOsUpdateAlerts = ({ catalogItem }: { catalogItem: CatalogItem }) => 
     if (isOsUnset(resourceOs)) {
       return (
         <Alert isInline variant="warning" title={t('Device update')}>
-          <Trans t={t}>
-            This will deploy the OS <strong>{osImageName}</strong>. Device will download and apply the update according
-            to the configured update policies.
-          </Trans>
+          <Trans
+            t={t}
+            i18nKey="This will deploy the OS <bold>{{osImageName}}</bold>. Device will download and apply the update according to the configured update policies."
+            values={{ osImageName }}
+            components={{ bold: <b /> }}
+          />
         </Alert>
       );
     }
@@ -106,9 +114,12 @@ const UpdateOsUpdateAlerts = ({ catalogItem }: { catalogItem: CatalogItem }) => 
     if (isSameCatalogRef(resourceOs?.catalogItemRef, catalogItem, values.version, values.channel)) {
       return (
         <Alert isInline variant="info" title={t('No action required')}>
-          <Trans t={t}>
-            The device already defines the selected OS <strong>{osImageName}</strong>. No update will be performed.
-          </Trans>
+          <Trans
+            t={t}
+            i18nKey="The device already defines the selected OS <bold>{{osImageName}}</bold>. No update will be performed."
+            values={{ osImageName }}
+            components={{ bold: <b /> }}
+          />
         </Alert>
       );
     }
@@ -116,20 +127,24 @@ const UpdateOsUpdateAlerts = ({ catalogItem }: { catalogItem: CatalogItem }) => 
     if (isOsUpdate(catalogItem, values.version, resourceOs)) {
       return (
         <Alert isInline variant="info" title={t('Version update')}>
-          <Trans t={t}>
-            You are about to update OS with <strong>{osImageName}</strong>. Device will download and apply the update
-            according to the configured update policies.
-          </Trans>
+          <Trans
+            t={t}
+            i18nKey="You are about to update OS with <bold>{{osImageName}}</bold>. Device will download and apply the update according to the configured update policies."
+            values={{ osImageName }}
+            components={{ bold: <b /> }}
+          />
         </Alert>
       );
     }
 
     return (
       <Alert isInline variant="warning" title={t('Existing OS image detected')}>
-        <Trans t={t}>
-          You are about to replace OS with <strong>{osImageName}</strong>. Device will download and apply the update
-          according to the configured update policies.
-        </Trans>
+        <Trans
+          t={t}
+          i18nKey="You are about to replace OS with <bold>{{osImageName}}</bold>. Device will download and apply the update according to the configured update policies."
+          values={{ osImageName }}
+          components={{ bold: <b /> }}
+        />
       </Alert>
     );
   }

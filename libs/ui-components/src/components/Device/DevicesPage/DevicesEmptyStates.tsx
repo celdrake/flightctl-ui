@@ -22,10 +22,11 @@ export const EnrolledDevicesEmptyState = ({ onAddDevice }: DevicesEmptyStateProp
     <ResourceListEmptyState icon={MicrochipIcon} titleText={t('No devices here!')}>
       <EmptyStateBody>
         {canCreateFleet ? (
-          <Trans t={t}>
-            You can add devices and label them to match fleets, or you can{' '}
-            <Link to={ROUTE.FLEET_CREATE}>start with a fleet</Link> and add devices into it.
-          </Trans>
+          <Trans
+            t={t}
+            i18nKey="You can add devices and label them to match fleets, or you can <link>start with a fleet</link> and add devices into it."
+            components={{ link: <Link to={ROUTE.FLEET_CREATE} /> }}
+          />
         ) : (
           t('You can add devices and label them to match fleets')
         )}

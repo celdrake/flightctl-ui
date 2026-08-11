@@ -1,5 +1,6 @@
 import React from 'react';
-import { type TFunction, withTranslation } from 'react-i18next';
+import { type TFunction } from 'i18next';
+import { withTranslation } from 'react-i18next';
 import { Alert } from '@patternfly/react-core';
 
 import { getErrorMessage } from '../../utils/error';

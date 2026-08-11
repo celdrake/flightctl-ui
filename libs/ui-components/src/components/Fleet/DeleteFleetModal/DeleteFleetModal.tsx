@@ -34,11 +34,12 @@ const DeleteFleetModal = ({ fleetId, onClose }: { fleetId: string; onClose: (has
       <ModalBody>
         <Stack hasGutter>
           <StackItem>
-            <Trans t={t}>
-              <strong>{fleetId}</strong> will be deleted permanently. If the device selector of a remaining fleet
-              matches a device currently linked to this fleet, the device will be moved to the new fleet. If
-              there&apos;s no matching fleet for a device, it will be unlinked from any fleet.
-            </Trans>
+            <Trans
+              t={t}
+              i18nKey="<bold>{{fleetId}}</bold> will be deleted permanently. If the device selector of a remaining fleet matches a device currently linked to this fleet, the device will be moved to the new fleet. If there's no matching fleet for a device, it will be unlinked from any fleet."
+              values={{ fleetId }}
+              components={{ bold: <b /> }}
+            />
           </StackItem>
           <StackItem>{t('Are you sure you want to delete?')}</StackItem>
           {error && (

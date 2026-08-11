@@ -100,9 +100,12 @@ export const useResumeAction = ({ disabledReason, deviceId, alias, onResumeCompl
     <ResumeDevicesModal
       mode="device"
       title={
-        <Trans t={t}>
-          You are about to resume device <strong>{deviceNameOrAlias}</strong>
-        </Trans>
+        <Trans
+          t={t}
+          i18nKey="You are about to resume device <bold>{{deviceNameOrAlias}}</bold>"
+          values={{ deviceNameOrAlias }}
+          components={{ bold: <b /> }}
+        />
       }
       selector={resumeSelector}
       expectedCount={1}

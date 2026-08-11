@@ -173,9 +173,12 @@ const DeleteCatalogModal = ({ catalogId, catalogDisplayName, onClose, onDeleteSu
     );
   } else if (!hasFailedToDeleteItems) {
     content = (
-      <Trans t={t}>
-        Are you sure you want to delete the catalog <b>{catalogDisplayName}</b>?
-      </Trans>
+      <Trans
+        t={t}
+        i18nKey="Are you sure you want to delete the catalog <bold>{{catalogDisplayName}}</bold>?"
+        values={{ catalogDisplayName }}
+        components={{ bold: <b /> }}
+      />
     );
   }
 

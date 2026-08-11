@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Button, Switch, ToolbarItem } from '@patternfly/react-core';
 import { Tbody } from '@patternfly/react-table';
-import { type TFunction } from 'react-i18next';
+import { type TFunction } from 'i18next';
 
 import { type Device, type DeviceDecommission, DeviceDecommissionTargetType, type DeviceList } from '@flightctl/types';
 

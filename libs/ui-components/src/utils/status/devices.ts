@@ -1,4 +1,4 @@
-import { type TFunction } from 'react-i18next';
+import { type TFunction } from 'i18next';
 import { PowerOffIcon } from '@patternfly/react-icons/dist/js/icons/power-off-icon';
 import { PauseCircleIcon } from '@patternfly/react-icons/dist/js/icons/pause-circle-icon';
 import { BanIcon } from '@patternfly/react-icons/dist/js/icons/ban-icon';
@@ -16,6 +16,7 @@ import {
   type DeviceUpdatedStatusType,
   OsModeType,
 } from '@flightctl/types';
+import { identityT } from '../i18n';
 import { type StatusItem } from './common';
 
 export enum FilterSearchParams {
@@ -210,4 +211,4 @@ export const getDeviceLifecycleStatusItems = (t: TFunction): StatusItem<DeviceLi
   },
 ];
 
-export const deviceStatusOrder = getDeviceStatusItems((s: string) => s).map((item) => item.id);
+export const deviceStatusOrder = getDeviceStatusItems(identityT).map((item) => item.id);

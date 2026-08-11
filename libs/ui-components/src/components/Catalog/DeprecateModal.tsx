@@ -37,9 +37,12 @@ export const DeprecateModal = ({ onDeprecate, onClose, itemName }: DeprecateModa
       <ModalBody>
         <Stack hasGutter>
           <StackItem>
-            <Trans t={t}>
-              Are you sure you want to deprecate <b>{itemName}</b>?
-            </Trans>
+            <Trans
+              t={t}
+              i18nKey="Are you sure you want to deprecate <bold>{{itemName}}</bold>?"
+              values={{ itemName }}
+              components={{ bold: <b /> }}
+            />
           </StackItem>
           <StackItem>
             <FlightCtlForm>
@@ -108,9 +111,12 @@ export const RestoreModal = ({ onRestore, onClose, itemName }: RestoreModalProps
       <ModalBody>
         <Stack hasGutter>
           <StackItem>
-            <Trans t={t}>
-              Are you sure you want to restore <b>{itemName}</b> from its deprecated state?
-            </Trans>
+            <Trans
+              t={t}
+              i18nKey="Are you sure you want to restore <bold>{{itemName}}</bold> from its deprecated state?"
+              values={{ itemName }}
+              components={{ bold: <b /> }}
+            />
           </StackItem>
           {error && (
             <StackItem>

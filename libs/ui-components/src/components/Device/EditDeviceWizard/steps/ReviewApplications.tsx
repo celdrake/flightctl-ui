@@ -1,6 +1,6 @@
 import React from 'react';
 import { Stack, StackItem } from '@patternfly/react-core';
-import { type TFunction } from 'react-i18next';
+import { type TFunction } from 'i18next';
 
 import { useTranslation } from '../../../../hooks/useTranslation';
 import { type AppForm, getAppIdentifier } from '../../../../types/deviceSpec';

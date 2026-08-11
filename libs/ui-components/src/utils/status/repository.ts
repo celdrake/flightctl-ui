@@ -3,6 +3,7 @@ import { type Condition, ConditionStatus, ConditionType, type Repository, type R
 import { timeSinceText } from '../dates';
 import { getConditionMessage } from '../error';
 import { getCondition } from '../api';
+import { identityT } from '../i18n';
 
 export type RepositorySyncStatus =
   | ConditionType.ResourceSyncSynced
@@ -31,7 +32,7 @@ export const isAccessibleRepository = (repository: Repository): boolean => {
 
 const getRepositorySyncStatus = (
   repository: Repository | ResourceSync,
-  t: TFunction = (s: string) => s,
+  t: TFunction = identityT,
 ): {
   status: RepositorySyncStatus;
   message: string | undefined;
@@ -103,7 +104,7 @@ export const getLastTransitionTime = (conditions?: Condition[]): string | undefi
 
 const getLastTransitionTimeText = (
   repository: Repository,
-  t: TFunction = (s: string) => s,
+  t: TFunction = identityT,
 ): {
   text: string;
   timestamp: string;

@@ -104,10 +104,11 @@ const CatalogLandingPage = () => {
   ) : (
     <ResourceListEmptyState icon={BookOpenIcon} titleText={t('The Software Catalog is currently empty')}>
       <EmptyStateBody>
-        <Trans t={t}>
-          There are no items available to view. You have <b>view-only permissions</b> and cannot add or manage items.
-          Please contact your internal administrator for access or catalog details.
-        </Trans>
+        <Trans
+          t={t}
+          i18nKey="There are no items available to view. You have <bold>view-only permissions</bold> and cannot add or manage items. Please contact your internal administrator for access or catalog details."
+          components={{ bold: <b /> }}
+        />
       </EmptyStateBody>
       {catalogDocsLink && (
         <EmptyStateFooter>

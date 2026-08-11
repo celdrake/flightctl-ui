@@ -24,9 +24,12 @@ const PaginationTemplate = ({
   return (
     <>
       {isUpdating && <Spinner size="sm" />}{' '}
-      <Trans t={t}>
-        {page} of <strong>{totalPages}</strong>
-      </Trans>
+      <Trans
+        t={t}
+        i18nKey="{{page}} of <bold>{{totalPages}}</bold>"
+        values={{ page, totalPages }}
+        components={{ bold: <b /> }}
+      />
     </>
   );
 };

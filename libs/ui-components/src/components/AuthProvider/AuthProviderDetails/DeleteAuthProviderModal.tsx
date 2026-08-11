@@ -49,10 +49,12 @@ const DeleteAuthProviderModal = ({ authProviderId, onClose, onDeleteSuccess }: D
       <ModalBody>
         <Stack hasGutter>
           <StackItem>
-            <Trans t={t}>
-              This will permanently delete the authentication provider <strong>{authProviderId}</strong> and remove all
-              associated configurations.
-            </Trans>
+            <Trans
+              t={t}
+              i18nKey="This will permanently delete the authentication provider <bold>{{authProviderId}}</bold> and remove all associated configurations."
+              values={{ authProviderId }}
+              components={{ bold: <b /> }}
+            />
           </StackItem>
           <StackItem>
             <Alert
@@ -72,9 +74,12 @@ const DeleteAuthProviderModal = ({ authProviderId, onClose, onDeleteSuccess }: D
             </StackItem>
           )}
           <StackItem>
-            <Trans t={t}>
-              Type <strong>{authProviderId}</strong> to confirm deletion:
-            </Trans>
+            <Trans
+              t={t}
+              i18nKey="Type <bold>{{authProviderId}}</bold> to confirm deletion:"
+              values={{ authProviderId }}
+              components={{ bold: <b /> }}
+            />
           </StackItem>
           <TextInput
             value={confirmationText}

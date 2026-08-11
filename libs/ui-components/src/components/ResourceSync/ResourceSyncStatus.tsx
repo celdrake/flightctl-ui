@@ -52,10 +52,12 @@ const ResourceSyncStatus = ({ resourceSync, showLinksOnError = false }: Resource
         bodyContent={
           <Stack hasGutter>
             <StackItem>
-              <Trans t={t}>
-                An error occurred when trying to apply the resource sync <strong>{rsName}</strong> from repository{' '}
-                <strong>{repositoryName}</strong>:
-              </Trans>
+              <Trans
+                t={t}
+                i18nKey="An error occurred when trying to apply the resource sync <bold>{{rsName}}</bold> from repository <bold>{{repositoryName}}</bold>:"
+                values={{ rsName, repositoryName }}
+                components={{ bold: <b /> }}
+              />
             </StackItem>
             <StackItem>{statusType.message}</StackItem>
             <StackItem>

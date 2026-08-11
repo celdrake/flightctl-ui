@@ -11,7 +11,7 @@ import {
   Stack,
   StackItem,
 } from '@patternfly/react-core';
-import { type TFunction } from 'react-i18next';
+import { type TFunction } from 'i18next';
 import { ExclamationCircleIcon } from '@patternfly/react-icons/dist/js/icons/exclamation-circle-icon';
 
 import { Event, ResourceKind } from '@flightctl/types';

@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Stack, StackItem } from '@patternfly/react-core';
-import { type TFunction } from 'react-i18next';
+import { type TFunction } from 'i18next';
 import { type SVGIconProps } from '@patternfly/react-icons/dist/js/createIcon';
 import { PendingIcon } from '@patternfly/react-icons/dist/js/icons/pending-icon';
 

@@ -26,36 +26,48 @@ const getKindMsgs = (t: TFunction, kind: string, id: string) => {
       return {
         title: t('Fleet not found'),
         msg: (
-          <Trans t={t}>
-            We could not find the fleet with id <strong>{id}</strong>
-          </Trans>
+          <Trans
+            t={t}
+            i18nKey="We could not find the fleet with id <bold>{{id}}</bold>"
+            values={{ id }}
+            components={{ bold: <b /> }}
+          />
         ),
       };
     case 'Devices':
       return {
         title: t('Device not found'),
         msg: (
-          <Trans t={t}>
-            We could not find the device with id <strong>{id}</strong>
-          </Trans>
+          <Trans
+            t={t}
+            i18nKey="We could not find the device with id <bold>{{id}}</bold>"
+            values={{ id }}
+            components={{ bold: <b /> }}
+          />
         ),
       };
     case 'Repositories':
       return {
         title: t('Repository not found'),
         msg: (
-          <Trans t={t}>
-            We could not find the repository with id <strong>{id}</strong>
-          </Trans>
+          <Trans
+            t={t}
+            i18nKey="We could not find the repository with id <bold>{{id}}</bold>"
+            values={{ id }}
+            components={{ bold: <b /> }}
+          />
         ),
       };
     case 'Enrollment requests':
       return {
         title: t('Enrollment request not found'),
         msg: (
-          <Trans t={t}>
-            We could not find the enrollment request with id <strong>{id}</strong>
-          </Trans>
+          <Trans
+            t={t}
+            i18nKey="We could not find the enrollment request with id <bold>{{id}}</bold>"
+            values={{ id }}
+            components={{ bold: <b /> }}
+          />
         ),
       };
     default:

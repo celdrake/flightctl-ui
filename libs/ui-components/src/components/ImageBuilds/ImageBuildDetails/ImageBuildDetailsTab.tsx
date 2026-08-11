@@ -19,7 +19,8 @@ import {
   Stack,
   StackItem,
 } from '@patternfly/react-core';
-import { type TFunction, Trans } from 'react-i18next';
+import { type TFunction } from 'i18next';
+import { Trans } from 'react-i18next';
 import { InfoCircleIcon } from '@patternfly/react-icons/dist/js/icons/info-circle-icon';
 
 import { BindingType, type ImagePromotion } from '@flightctl/types/imagebuilder';
@@ -305,9 +306,12 @@ const ImageBuildDetailsTab = ({ imageBuild }: { imageBuild: ImageBuildWithExport
                     <DescriptionListGroup>
                       <DescriptionListTerm>{t('Remote access')}</DescriptionListTerm>
                       <DescriptionListDescription>
-                        <Trans t={t}>
-                          Enabled for <strong>{remoteAccessUsername}</strong>
-                        </Trans>
+                        <Trans
+                          t={t}
+                          i18nKey="Enabled for <bold>{{remoteAccessUsername}}</bold>"
+                          values={{ remoteAccessUsername }}
+                          components={{ bold: <b /> }}
+                        />
                       </DescriptionListDescription>
                     </DescriptionListGroup>
                   )}

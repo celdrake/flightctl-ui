@@ -2,7 +2,7 @@ import * as React from 'react';
 import { useField, useFormikContext } from 'formik';
 import { Content, ContentVariants, FormGroup, Grid, GridItem, Icon, Stack, StackItem } from '@patternfly/react-core';
 import { ExclamationCircleIcon } from '@patternfly/react-icons/dist/js/icons/exclamation-circle-icon';
-import { type TFunction } from 'react-i18next';
+import { type TFunction } from 'i18next';
 
 import { ConditionStatus, ConditionType, type RepoSpecType, type Repository } from '@flightctl/types';
 import { useTranslation } from '../../hooks/useTranslation';
