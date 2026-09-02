@@ -60,7 +60,7 @@ export const useQuickStartGuideDrag = (activePhaseId: QuickStartPhaseId | undefi
       }
 
       const target = event.target as HTMLElement;
-      if (!target.closest('.quickStart-guide__drag-handle') || target.closest('button')) {
+      if (!target.closest('.fctl-quickstart-guide__drag-handle') || target.closest('button')) {
         return;
       }
 

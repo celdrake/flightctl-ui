@@ -1,4 +1,4 @@
-.quickStart-guide {
+.fctl-quickstart-guide {
   position: fixed;
   bottom: var(--pf-t--global--spacer--lg, 1.5rem);
   right: var(--pf-t--global--spacer--lg, 1.5rem);
@@ -11,31 +11,31 @@
   overflow: hidden;
 }
 
-.quickStart-guide--positioned {
+.fctl-quickstart-guide--positioned {
   bottom: auto;
   right: auto;
 }
 
-.quickStart-guide__drag-handle {
+.fctl-quickstart-guide__drag-handle {
   cursor: grab;
   user-select: none;
   touch-action: none;
 }
 
-.quickStart-guide--dragging .quickStart-guide__drag-handle {
+.fctl-quickstart-guide--dragging .fctl-quickstart-guide__drag-handle {
   cursor: grabbing;
 }
 
-.quickStart-guide--dragging {
+.fctl-quickstart-guide--dragging {
   box-shadow: var(--pf-t--global--box-shadow--xl, 0 1rem 2rem rgba(0, 0, 0, 0.2));
 }
 
-.quickStart-guide--minimized {
+.fctl-quickstart-guide--minimized {
   width: auto;
   max-width: min(420px, calc(100vw - var(--pf-t--global--spacer--xl, 2rem)));
 }
 
-.quickStart-guide__restore {
+.fctl-quickstart-guide__restore {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -45,17 +45,17 @@
   height: auto;
 }
 
-.quickStart-guide__minimized-step {
+.fctl-quickstart-guide__minimized-step {
   margin-inline: var(--pf-t--global--spacer--xs, 0.25rem);
 }
 
-.quickStart-guide__minimized-title {
+.fctl-quickstart-guide__minimized-title {
   flex-basis: 100%;
   color: var(--pf-t--global--text--color--subtle, #6a6e73);
 }
 
 @media (max-width: 768px) {
-  .quickStart-guide {
+  .fctl-quickstart-guide {
     width: calc(100vw - var(--pf-t--global--spacer--xl, 2rem));
     bottom: var(--pf-t--global--spacer--md, 1rem);
     right: var(--pf-t--global--spacer--md, 1rem);
