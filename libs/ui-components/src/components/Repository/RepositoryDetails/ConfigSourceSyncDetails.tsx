@@ -7,6 +7,8 @@ import { timeSinceText } from '../../../utils/dates';
 
 type ConfigSourceSyncDetailsProps = {
   syncRef: DependencySyncConfigRefStatus;
+  /** Stack fingerprint and last synced on separate lines (device configurations card). */
+  stackBelow?: boolean;
 };
 
 // The delay improves the UX when moving from the "Copy" button to the timestamp or vice versa.
@@ -24,10 +26,38 @@ const getFingerprintTruncation = (fingerprint: string): Partial<TruncateProps> =
   };
 };
 
-const ConfigSourceSyncDetails = ({ syncRef }: ConfigSourceSyncDetailsProps) => {
+const ConfigSourceSyncDetails = ({ syncRef, stackBelow }: ConfigSourceSyncDetailsProps) => {
   const { t } = useTranslation();
 
   const fingerprint = syncRef.fingerprint;
+
+  if (stackBelow) {
+    return (
+      <>
+        {fingerprint && (
+          <ClipboardCopy
+            variant="inline-compact"
+            copyAriaLabel={t('Copy fingerprint')}
+            hoverTip={t('Copy fingerprint')}
+            clickTip={t('Copied!')}
+            entryDelay={TOOLTIP_DELAY}
+            exitDelay={TOOLTIP_DELAY}
+            truncation={getFingerprintTruncation(fingerprint)}
+          >
+            {fingerprint}
+          </ClipboardCopy>
+        )}
+        {syncRef.lastUpdatedAt && (
+          <Tooltip content={syncRef.lastUpdatedAt} entryDelay={TOOLTIP_DELAY} exitDelay={TOOLTIP_DELAY}>
+            <Content component="small">
+              {t('Last synced')} {timeSinceText(t, syncRef.lastUpdatedAt)}
+            </Content>
+          </Tooltip>
+        )}
+      </>
+    );
+  }
+
   return (
     <Flex>
       {fingerprint && (

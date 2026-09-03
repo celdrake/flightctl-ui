@@ -1,5 +1,16 @@
 import React from 'react';
-import { Divider, List, ListItem, Spinner, Stack, StackItem } from '@patternfly/react-core';
+import {
+  DescriptionList,
+  DescriptionListDescription,
+  DescriptionListGroup,
+  DescriptionListTerm,
+  Divider,
+  List,
+  ListItem,
+  Spinner,
+  Stack,
+  StackItem,
+} from '@patternfly/react-core';
 
 import { type DependencySyncConfigRefStatus, type DependencySyncStatus, type Repository } from '@flightctl/types';
 import { useFetch } from '../../../hooks/useFetch';
@@ -36,9 +47,16 @@ type RepoLoadDetails = { url?: string; errorMsg?: string };
 type RepositorySourceListProps = {
   configs: Array<ConfigSourceProvider>;
   dependencyStatus?: DependencySyncStatus;
+  layout?: 'list' | 'horizontalDescriptionList';
+  className?: string;
 };
 
-const RepositorySourceList = ({ configs, dependencyStatus }: RepositorySourceListProps) => {
+const RepositorySourceList = ({
+  configs,
+  dependencyStatus,
+  layout = 'list',
+  className,
+}: RepositorySourceListProps) => {
   const { get } = useFetch();
   const repoConfigs = configs.filter(isRepoConfig);
 
@@ -82,11 +100,47 @@ const RepositorySourceList = ({ configs, dependencyStatus }: RepositorySourceLis
     return null;
   }
 
+  if (layout === 'horizontalDescriptionList') {
+    return (
+      <DescriptionList
+        isHorizontal
+        isCompact
+        horizontalTermWidthModifier={{ default: '12ch' }}
+        className={className}
+      >
+        {configs.map((config) => {
+          let extraArgs = {};
+          if (isRepoConfig(config)) {
+            const repoName = getRepoName(config);
+            extraArgs = repoDetailsMap[repoName] || {};
+          }
+
+          const syncRef = getSyncRef(config.name, dependencyStatus);
+          return (
+            <DescriptionListGroup key={config.name}>
+              <DescriptionListTerm>{config.name}</DescriptionListTerm>
+              <DescriptionListDescription>
+                <Stack hasGutter className="fctl-config-source-description">
+                  <StackItem>{getConfigDetails(config, extraArgs)}</StackItem>
+                  {syncRef && (
+                    <StackItem className="fctl-config-source-description__sync">
+                      <ConfigSourceSyncDetails syncRef={syncRef} stackBelow />
+                    </StackItem>
+                  )}
+                </Stack>
+              </DescriptionListDescription>
+            </DescriptionListGroup>
+          );
+        })}
+      </DescriptionList>
+    );
+  }
+
   const configSyncs = configs.map((config) => getSyncRef(config.name, dependencyStatus));
   const hasSyncDetails = configSyncs.some((sync) => sync !== null);
 
   return (
-    <List isPlain>
+    <List isPlain className={className}>
       {configs.map((config, index) => {
         const addDivider = hasSyncDetails && index !== configs.length - 1;
 

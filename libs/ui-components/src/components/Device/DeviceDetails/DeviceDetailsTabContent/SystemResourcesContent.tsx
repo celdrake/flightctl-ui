@@ -3,16 +3,16 @@ import {
   CardBody,
   CardTitle,
   DescriptionList,
-  DescriptionListDescription,
-  DescriptionListGroup,
-  DescriptionListTerm,
   Title,
 } from '@patternfly/react-core';
 
 import { type Device } from '@flightctl/types';
 import { useTranslation } from '../../../../hooks/useTranslation';
 import DetailsPageCard from '../../../DetailsPage/DetailsPageCard';
-import DeviceResourceStatus, { MonitorType } from '../../../Status/DeviceResourceStatus';
+import {
+  DeviceStatusFieldGroup,
+  useDeviceOverviewStatusFields,
+} from '../deviceOverviewStatusFields';
 
 type SystemResourcesContentProps = {
   device: Required<Device>;
@@ -21,34 +21,20 @@ type SystemResourcesContentProps = {
 
 const SystemResourcesContent = ({ device, embedded = false }: SystemResourcesContentProps) => {
   const { t } = useTranslation();
+  const { resourceFields } = useDeviceOverviewStatusFields(device, t);
 
   const descriptionList = (
-    <DescriptionList columnModifier={{ default: '3Col' }}>
-      <DescriptionListGroup>
-        <DescriptionListTerm>{t('CPU pressure')}</DescriptionListTerm>
-        <DescriptionListDescription>
-          <DeviceResourceStatus device={device} monitorType={MonitorType.cpu} />
-        </DescriptionListDescription>
-      </DescriptionListGroup>
-      <DescriptionListGroup>
-        <DescriptionListTerm>{t('Disk pressure')}</DescriptionListTerm>
-        <DescriptionListDescription>
-          <DeviceResourceStatus device={device} monitorType={MonitorType.disk} />
-        </DescriptionListDescription>
-      </DescriptionListGroup>
-      <DescriptionListGroup>
-        <DescriptionListTerm>{t('Memory pressure')}</DescriptionListTerm>
-        <DescriptionListDescription>
-          <DeviceResourceStatus device={device} monitorType={MonitorType.memory} />
-        </DescriptionListDescription>
-      </DescriptionListGroup>
+    <DescriptionList isCompact className="pf-v6-u-mt-sm fctl-device-status-fields">
+      {resourceFields.map((field) => (
+        <DeviceStatusFieldGroup key={field.id} field={field} />
+      ))}
     </DescriptionList>
   );
 
   if (embedded) {
     return (
       <>
-        <Title headingLevel="h3" size="md">
+        <Title headingLevel="h3" size="md" className="pf-v6-u-mt-md">
           {t('Resource status')}
         </Title>
         {descriptionList}

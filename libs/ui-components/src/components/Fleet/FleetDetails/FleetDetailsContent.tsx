@@ -19,6 +19,7 @@ import { getFleetRolloutStatusWarning } from '../../../utils/status/fleet';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useVulnerabilitiesEnabled } from '../../../hooks/useServicesEnabled';
 import RepositorySourceList from '../../Repository/RepositoryDetails/RepositorySourceList';
+import ConfigurationSourcesHeader from '../../Repository/RepositoryDetails/ConfigurationSourcesHeader';
 import FleetOwnerLink from './FleetOwnerLink';
 import FleetDevicesCharts from './FleetDevicesCharts';
 import FleetStatus from '../FleetStatus';
@@ -37,6 +38,9 @@ const FleetDetailsContent = ({ fleet }: { fleet: Fleet }) => {
   const fleetId = fleet.metadata.name as string;
   const devicesSummary = fleet.status?.devicesSummary;
   const osModeCounts = devicesSummary?.capabilities?.osMode;
+
+  const fleetConfig = fleet.spec.template.spec.config || [];
+  const fleetConfigCount = fleetConfig.length;
 
   return (
     <Grid hasGutter>
@@ -91,10 +95,10 @@ const FleetDetailsContent = ({ fleet }: { fleet: Fleet }) => {
 
               <DescriptionListGroup>
                 <DescriptionListTerm>
-                  {t('Sources ({{size}})', { size: fleet.spec.template.spec.config?.length || 0 })}
+                  <ConfigurationSourcesHeader count={fleetConfigCount} />
                 </DescriptionListTerm>
                 <DescriptionListDescription>
-                  <RepositorySourceList configs={fleet.spec.template.spec.config || []} />
+                  <RepositorySourceList configs={fleetConfig} layout="horizontalDescriptionList" />
                 </DescriptionListDescription>
               </DescriptionListGroup>
             </DescriptionList>

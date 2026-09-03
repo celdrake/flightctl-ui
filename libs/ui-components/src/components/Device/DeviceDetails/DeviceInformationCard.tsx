@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { CardBody, CardTitle, Grid, GridItem, Stack, StackItem } from '@patternfly/react-core';
+import { CardBody, CardTitle } from '@patternfly/react-core';
 
 import { type Device } from '@flightctl/types';
 import { useTranslation } from '../../../hooks/useTranslation';
@@ -7,6 +7,7 @@ import EditLabelsForm, { ViewLabels } from '../../modals/EditLabelsModal/EditLab
 import ResourceLink from '../../common/ResourceLink';
 import DetailsPageCard from '../../DetailsPage/DetailsPageCard';
 import DeviceFleet from './DeviceFleet';
+import SidebarSpecFieldList, { type SidebarSpecField } from './SidebarSpecFieldList';
 
 import './DeviceDetailsTab.css';
 
@@ -24,41 +25,46 @@ const DeviceInformationCard = ({
 }: React.PropsWithChildren<DeviceInformationCardProps>) => {
   const { t } = useTranslation();
 
+  // CELIA-WIP: EDM-3863 design uses "Device ID" for metadata.name (not "Name").
+  // CELIA-WIP: EDM-3863 design uses label term "Fleet" (we use "Fleet" below; was "Fleet name").
+  // CELIA-WIP: EDM-3863 labels — blue compact chips, "Add label" link on its own row below chips,
+  // full-width key=value (no textMaxWidth). We did not change Label/LabelsField components here.
+
+  const identityFields: SidebarSpecField[] = [
+    {
+      key: 'name',
+      term: t('Name'),
+      description: <ResourceLink id={device.metadata.name || '-'} />,
+    },
+    {
+      key: 'fleet',
+      term: t('Fleet'),
+      description: <DeviceFleet device={device} />,
+    },
+    {
+      key: 'labels',
+      term: t('Labels'),
+      description: canEdit ? (
+        <EditLabelsForm device={device} onDeviceUpdate={refetch} />
+      ) : (
+        <ViewLabels device={device} />
+      ),
+    },
+  ];
+
   return (
     <DetailsPageCard>
       <CardTitle>{t('Device information')}</CardTitle>
       <CardBody>
-        <Grid>
-          <GridItem span={12}>
-            <Stack>
-              <StackItem className="fctl-device-details-tab__label">{t('Name')}</StackItem>
-              <StackItem>
-                <ResourceLink id={device.metadata.name || '-'} />
-              </StackItem>
-            </Stack>
-          </GridItem>
-          {children && <GridItem span={12}>{children}</GridItem>}
-          <GridItem span={12}>
-            <Stack>
-              <StackItem className="fctl-device-details-tab__label">{t('Fleet name')}</StackItem>
-              <StackItem>
-                <DeviceFleet device={device} />
-              </StackItem>
-            </Stack>
-          </GridItem>
-          <GridItem span={12}>
-            <Stack>
-              <StackItem className="fctl-device-details-tab__label">{t('Labels')}</StackItem>
-              <StackItem>
-                {canEdit ? (
-                  <EditLabelsForm device={device} onDeviceUpdate={refetch} />
-                ) : (
-                  <ViewLabels device={device} />
-                )}
-              </StackItem>
-            </Stack>
-          </GridItem>
-        </Grid>
+        {children ? (
+          <>
+            <SidebarSpecFieldList fields={[identityFields[0]]} />
+            <div className="pf-v6-u-my-md">{children}</div>
+            <SidebarSpecFieldList fields={identityFields.slice(1)} />
+          </>
+        ) : (
+          <SidebarSpecFieldList fields={identityFields} />
+        )}
       </CardBody>
     </DetailsPageCard>
   );

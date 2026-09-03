@@ -59,7 +59,11 @@ type EditLabelsFormProps = {
 
 export const ViewLabels = ({ device }: { device: Device }) => {
   const currentLabels = device.metadata.labels || {};
-  return <LabelsView prefix="read-only-labels" labels={currentLabels} />;
+  return (
+    <div style={{ border: '2px solid blue' }}>
+      <LabelsView prefix="read-only-labels" labels={currentLabels} />
+    </div>
+  );
 };
 
 const EditLabelsForm = ({ device, onDeviceUpdate }: EditLabelsFormProps) => {
