@@ -32,7 +32,7 @@ const DeviceApplications = ({ device, refetch = () => undefined }: DeviceDetails
   );
 
   return (
-    <DetailsPageCard isCompact>
+    <DetailsPageCard id="device-applications-card" isCompact>
       <CardTitle>{t('Applications')}</CardTitle>
       <CardBody>
         <ApplicationsTable

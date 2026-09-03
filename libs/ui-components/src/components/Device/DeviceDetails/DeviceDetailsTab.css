@@ -1,3 +1,16 @@
 .fctl-device-details-tab__label {
   font-weight: var(--pf-t--global--font--weight--body--bold, bold);
 }
+
+/* System services: main column at lg+, bottom of stack below lg (992px). */
+@media (min-width: 992px) {
+  .fctl-device-overview__systemd-narrow {
+    display: none;
+  }
+}
+
+@media (max-width: 991px) {
+  .fctl-device-overview__systemd-wide {
+    display: none;
+  }
+}
