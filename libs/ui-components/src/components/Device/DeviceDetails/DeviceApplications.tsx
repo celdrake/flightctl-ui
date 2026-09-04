@@ -9,6 +9,12 @@ import { getLifecycleDisabledReason } from '../../../utils/devices';
 import { getDeviceAppLifecycleOverrides } from '../../../utils/applicationLifecycle';
 import ApplicationsTable from '../../DetailsPage/Tables/ApplicationsTable';
 import DetailsPageCard, { DetailsPageCardTitle } from '../../DetailsPage/DetailsPageCard';
+import {
+  MOCK_DEVICE_APPLICATIONS_SPECS,
+  MOCK_DEVICE_APPLICATIONS_STATUS,
+  MOCK_DEVICE_APP_LIFECYCLE_OVERRIDES,
+  USE_MOCK_DEVICE_APPLICATIONS,
+} from './mockDeviceApplications';
 
 type DeviceDetailsTabProps = {
   device: Required<Device>;
@@ -23,7 +29,11 @@ const DeviceApplications = ({ device, refetch = () => undefined }: DeviceDetails
   const routerNavigate = useRouterNavigate();
 
   const lifecycleDisabledReason = getLifecycleDisabledReason(device, t);
-  const deviceAppLifecycleOverrides = getDeviceAppLifecycleOverrides(device.metadata.annotations ?? {});
+  const deviceAppLifecycleOverrides = USE_MOCK_DEVICE_APPLICATIONS
+    ? MOCK_DEVICE_APP_LIFECYCLE_OVERRIDES
+    : getDeviceAppLifecycleOverrides(device.metadata.annotations ?? {});
+  const appsStatus = USE_MOCK_DEVICE_APPLICATIONS ? MOCK_DEVICE_APPLICATIONS_STATUS : device.status.applications;
+  const appsSpecs = USE_MOCK_DEVICE_APPLICATIONS ? MOCK_DEVICE_APPLICATIONS_SPECS : device.spec.applications;
 
   const handleOpenConsole = React.useCallback(
     (name: string) => {
@@ -41,8 +51,8 @@ const DeviceApplications = ({ device, refetch = () => undefined }: DeviceDetails
           refetch={refetch}
           lifecycleDisabledReason={lifecycleDisabledReason}
           deviceAppLifecycleOverrides={deviceAppLifecycleOverrides}
-          appsStatus={device.status.applications}
-          appsSpecs={device.spec.applications}
+          appsStatus={appsStatus}
+          appsSpecs={appsSpecs}
           onOpenConsole={handleOpenConsole}
         />
       </CardBody>
