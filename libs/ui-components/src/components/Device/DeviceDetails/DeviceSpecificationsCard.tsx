@@ -1,18 +1,18 @@
 import * as React from 'react';
 import {
   CardBody,
-  CardTitle,
   Divider,
   ExpandableSection,
   Stack,
   StackItem,
   Title,
 } from '@patternfly/react-core';
+import AddressCardIcon from '@patternfly/react-icons/dist/js/icons/address-card-icon';
 
 import { type Device } from '@flightctl/types';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useDeviceSpecSystemInfo } from '../../../hooks/useDeviceSpecSystemInfo';
-import DetailsPageCard from '../../DetailsPage/DetailsPageCard';
+import DetailsPageCard, { DetailsPageCardTitle } from '../../DetailsPage/DetailsPageCard';
 import ConfigurationsContent from './DeviceDetailsTabContent/ConfigurationsContent';
 import SidebarSpecFieldList, { type SidebarSpecField } from './SidebarSpecFieldList';
 
@@ -70,7 +70,7 @@ const DeviceSpecificationsCard = ({ device }: { device: Required<Device> }) => {
 
   return (
     <DetailsPageCard>
-      <CardTitle>{t('Device specifications')}</CardTitle>
+      <DetailsPageCardTitle icon={<AddressCardIcon />}>{t('Device specifications')}</DetailsPageCardTitle>
       <CardBody>
         <Stack hasGutter>
           {visibleSystemInfoFields.length > 0 && (

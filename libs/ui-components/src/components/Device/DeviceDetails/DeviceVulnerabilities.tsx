@@ -1,12 +1,13 @@
 import * as React from 'react';
 
-import { CardBody, CardTitle } from '@patternfly/react-core';
+import { CardBody } from '@patternfly/react-core';
+import ShieldAltIcon from '@patternfly/react-icons/dist/js/icons/shield-alt-icon';
 import { type VulnerabilityList } from '@flightctl/types/alpha';
 
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useVulnerabilities } from '../../../hooks/useVulnerabilities';
 import ListPageBody from '../../ListPage/ListPageBody';
-import DetailsPageCard from '../../DetailsPage/DetailsPageCard';
+import DetailsPageCard, { DetailsPageCardTitle } from '../../DetailsPage/DetailsPageCard';
 import VulnerabilitiesTable from '../../SecurityOverview/VulnerabilitiesTable';
 
 const DeviceVulnerabilities = ({ deviceId }: { deviceId: string }) => {
@@ -32,7 +33,7 @@ const DeviceVulnerabilities = ({ deviceId }: { deviceId: string }) => {
 
   return (
     <DetailsPageCard>
-      <CardTitle>{t('Security overview')}</CardTitle>
+      <DetailsPageCardTitle icon={<ShieldAltIcon />}>{t('Security overview')}</DetailsPageCardTitle>
       <CardBody>
         <ListPageBody error={error} loading={isLoading}>
           <VulnerabilitiesTable

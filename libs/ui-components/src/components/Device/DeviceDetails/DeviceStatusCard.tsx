@@ -1,9 +1,10 @@
 import * as React from 'react';
-import { CardBody, CardTitle, Stack, StackItem } from '@patternfly/react-core';
+import { CardBody, Stack, StackItem } from '@patternfly/react-core';
+import TachometerAltIcon from '@patternfly/react-icons/dist/js/icons/tachometer-alt-icon';
 
 import { type Device } from '@flightctl/types';
 import { useTranslation } from '../../../hooks/useTranslation';
-import DetailsPageCard from '../../DetailsPage/DetailsPageCard';
+import DetailsPageCard, { DetailsPageCardTitle } from '../../DetailsPage/DetailsPageCard';
 import StatusContent from './DeviceDetailsTabContent/StatusContent';
 import SystemResourcesContent from './DeviceDetailsTabContent/SystemResourcesContent';
 
@@ -14,7 +15,7 @@ const DeviceStatusCard = ({ device }: { device: Required<Device> }) => {
 
   return (
     <DetailsPageCard id={DEVICE_STATUS_CARD_ID}>
-      <CardTitle>{t('Status')}</CardTitle>
+      <DetailsPageCardTitle icon={<TachometerAltIcon />}>{t('Status')}</DetailsPageCardTitle>
       <CardBody>
         <Stack hasGutter>
           <StackItem>

@@ -1,10 +1,12 @@
 import * as React from 'react';
-import { CardBody, CardTitle, Grid, GridItem, Stack, StackItem } from '@patternfly/react-core';
+import { CardBody } from '@patternfly/react-core';
+import TagIcon from '@patternfly/react-icons/dist/js/icons/tag-icon';
 
 import { type Device } from '@flightctl/types';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useDeviceSpecSystemInfo } from '../../../hooks/useDeviceSpecSystemInfo';
-import DetailsPageCard from '../../DetailsPage/DetailsPageCard';
+import DetailsPageCard, { DetailsPageCardTitle } from '../../DetailsPage/DetailsPageCard';
+import SidebarSpecFieldList from './SidebarSpecFieldList';
 
 import './DeviceDetailsTab.css';
 
@@ -16,20 +18,17 @@ const DeviceCustomDataCard = ({ device }: { device: Required<Device> }) => {
     return null;
   }
 
+  const customDataFields = devSystemInfo.customInfo.map((entry) => ({
+    key: entry.title,
+    term: entry.title,
+    description: entry.value,
+  }));
+
   return (
     <DetailsPageCard>
-      <CardTitle>{t('Custom data')}</CardTitle>
+      <DetailsPageCardTitle icon={<TagIcon />}>{t('Custom data')}</DetailsPageCardTitle>
       <CardBody>
-        <Grid hasGutter>
-          {devSystemInfo.customInfo.map((systemInfo) => (
-            <GridItem span={12} key={systemInfo.title}>
-              <Stack>
-                <StackItem className="fctl-device-details-tab__label">{systemInfo.title}</StackItem>
-                <StackItem>{systemInfo.value}</StackItem>
-              </Stack>
-            </GridItem>
-          ))}
-        </Grid>
+        <SidebarSpecFieldList fields={customDataFields} />
       </CardBody>
     </DetailsPageCard>
   );

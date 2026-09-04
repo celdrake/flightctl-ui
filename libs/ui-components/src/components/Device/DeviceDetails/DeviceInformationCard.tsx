@@ -1,11 +1,12 @@
 import * as React from 'react';
-import { CardBody, CardTitle } from '@patternfly/react-core';
+import { CardBody } from '@patternfly/react-core';
+import IdBadgeIcon from '@patternfly/react-icons/dist/js/icons/id-badge-icon';
 
 import { type Device } from '@flightctl/types';
 import { useTranslation } from '../../../hooks/useTranslation';
 import EditLabelsForm, { ViewLabels } from '../../modals/EditLabelsModal/EditLabelsForm';
 import ResourceLink from '../../common/ResourceLink';
-import DetailsPageCard from '../../DetailsPage/DetailsPageCard';
+import DetailsPageCard, { DetailsPageCardTitle } from '../../DetailsPage/DetailsPageCard';
 import DeviceFleet from './DeviceFleet';
 import SidebarSpecFieldList, { type SidebarSpecField } from './SidebarSpecFieldList';
 
@@ -54,7 +55,7 @@ const DeviceInformationCard = ({
 
   return (
     <DetailsPageCard>
-      <CardTitle>{t('Device information')}</CardTitle>
+      <DetailsPageCardTitle icon={<IdBadgeIcon />}>{t('Device information')}</DetailsPageCardTitle>
       <CardBody>
         {children ? (
           <>

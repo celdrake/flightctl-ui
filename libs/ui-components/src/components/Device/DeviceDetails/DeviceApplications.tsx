@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { CardBody, CardTitle } from '@patternfly/react-core';
+import { CardBody } from '@patternfly/react-core';
+import CubesIcon from '@patternfly/react-icons/dist/js/icons/cubes-icon';
 
 import { type Device } from '@flightctl/types';
 import { useTranslation } from '../../../hooks/useTranslation';
@@ -7,7 +8,7 @@ import { useAppContext } from '../../../hooks/useAppContext';
 import { getLifecycleDisabledReason } from '../../../utils/devices';
 import { getDeviceAppLifecycleOverrides } from '../../../utils/applicationLifecycle';
 import ApplicationsTable from '../../DetailsPage/Tables/ApplicationsTable';
-import DetailsPageCard from '../../DetailsPage/DetailsPageCard';
+import DetailsPageCard, { DetailsPageCardTitle } from '../../DetailsPage/DetailsPageCard';
 
 type DeviceDetailsTabProps = {
   device: Required<Device>;
@@ -33,7 +34,7 @@ const DeviceApplications = ({ device, refetch = () => undefined }: DeviceDetails
 
   return (
     <DetailsPageCard id="device-applications-card" isCompact>
-      <CardTitle>{t('Applications')}</CardTitle>
+      <DetailsPageCardTitle icon={<CubesIcon />}>{t('Applications')}</DetailsPageCardTitle>
       <CardBody>
         <ApplicationsTable
           deviceName={device.metadata.name as string}
