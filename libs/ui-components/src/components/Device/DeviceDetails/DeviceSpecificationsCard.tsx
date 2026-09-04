@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { CardBody, Divider, ExpandableSection, Stack, StackItem, Title } from '@patternfly/react-core';
+import { CardBody, Divider, ExpandableSection, Stack, StackItem } from '@patternfly/react-core';
 import AddressCardIcon from '@patternfly/react-icons/dist/js/icons/address-card-icon';
 
 import { type Device } from '@flightctl/types';
@@ -16,26 +16,8 @@ const PRIMARY_SYSTEM_INFO_VISIBLE_COUNT = 4;
 
 const DeviceSpecificationsCard = ({ device }: { device: Required<Device> }) => {
   const { t } = useTranslation();
-  const devSystemInfo = useDeviceSpecSystemInfo(device.status, t);
+  const systemInfoFields = useDeviceSpecSystemInfo(device.status?.systemInfo, t);
   const [showMoreSystemInfo, setShowMoreSystemInfo] = React.useState(false);
-
-  const osModeTitle = t('OS mode');
-
-  const { systemInfoFields, osModeField } = React.useMemo(() => {
-    const osModeEntry = devSystemInfo.baseInfo.find((entry) => entry.title === osModeTitle);
-    const withoutOsMode = devSystemInfo.baseInfo.filter((entry) => entry.title !== osModeTitle);
-
-    return {
-      systemInfoFields: withoutOsMode,
-      osModeField: osModeEntry
-        ? ({
-            key: 'osMode',
-            term: osModeEntry.title,
-            description: osModeEntry.value,
-          } satisfies SidebarSpecField)
-        : undefined,
-    };
-  }, [devSystemInfo.baseInfo, osModeTitle]);
 
   const { visibleSystemInfoFields, expandableSystemInfoFields } = React.useMemo(() => {
     const toField = (entry: { title: string; value: React.ReactNode }): SidebarSpecField => ({
@@ -59,8 +41,6 @@ const DeviceSpecificationsCard = ({ device }: { device: Required<Device> }) => {
     };
   }, [systemInfoFields]);
 
-  const capabilityFields = osModeField ? [osModeField] : [];
-
   return (
     <DetailsPageCard>
       <DetailsPageCardTitle icon={<AddressCardIcon />}>{t('Device specifications')}</DetailsPageCardTitle>
@@ -81,19 +61,6 @@ const DeviceSpecificationsCard = ({ device }: { device: Required<Device> }) => {
                 <SidebarSpecFieldList fields={expandableSystemInfoFields} className="pf-v6-u-mt-md" />
               </ExpandableSection>
             </StackItem>
-          )}
-          {capabilityFields.length > 0 && (
-            <>
-              <StackItem>
-                <Divider />
-              </StackItem>
-              <StackItem>
-                <Title headingLevel="h4" size="md" className="pf-v6-u-mb-sm">
-                  {t('Capabilities')}
-                </Title>
-                <SidebarSpecFieldList fields={capabilityFields} />
-              </StackItem>
-            </>
           )}
           <StackItem>
             <Divider />

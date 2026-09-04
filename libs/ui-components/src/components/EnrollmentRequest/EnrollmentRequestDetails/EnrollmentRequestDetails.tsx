@@ -60,7 +60,9 @@ const EnrollmentRequestDetails = () => {
   const [canApprove, canDelete] = checkPermissions(enrollmentRequestDetailsPermissions);
 
   const [isApprovalModalOpen, setIsApprovalModalOpen] = React.useState(false);
-  const erSystemInfo = useDeviceSpecSystemInfo(er?.spec.deviceStatus, t);
+  const erSystemInfo = useDeviceSpecSystemInfo(er?.spec.deviceStatus?.systemInfo, t);
+  // CELIA-WIP: custom data will use a dedicated hook
+  const erCustomInfo: { title: string; value: React.ReactNode }[] = [];
   const hasDefaultLabels = Object.keys(er?.spec.labels || {}).length > 0;
   const deviceId = er?.metadata.name as string;
 
@@ -130,7 +132,7 @@ const EnrollmentRequestDetails = () => {
                     <EnrollmentRequestStatus er={er} />
                   </DescriptionListDescription>
                 </DescriptionListGroup>
-                {erSystemInfo.baseInfo.map((systemInfo) => (
+                {erSystemInfo.map((systemInfo) => (
                   <DescriptionListGroup key={systemInfo.title}>
                     <DescriptionListTerm>{systemInfo.title}</DescriptionListTerm>
                     <DescriptionListDescription>{systemInfo.value}</DescriptionListDescription>
@@ -140,13 +142,13 @@ const EnrollmentRequestDetails = () => {
             </CardBody>
           </DetailsPageCard>
         </GridItem>
-        {erSystemInfo.customInfo.length > 0 && (
+        {erCustomInfo.length > 0 && (
           <GridItem md={6}>
             <DetailsPageCard>
               <CardTitle>{t('Custom data')}</CardTitle>
               <CardBody>
                 <DescriptionList columnModifier={{ lg: '3Col' }}>
-                  {erSystemInfo.customInfo.map((systemInfo) => (
+                  {erCustomInfo.map((systemInfo) => (
                     <DescriptionListGroup key={systemInfo.title}>
                       <DescriptionListTerm>{systemInfo.title}</DescriptionListTerm>
                       <DescriptionListDescription>{systemInfo.value}</DescriptionListDescription>

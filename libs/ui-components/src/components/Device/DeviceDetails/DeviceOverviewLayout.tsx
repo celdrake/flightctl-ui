@@ -3,8 +3,6 @@ import { Grid, GridItem, Stack, StackItem } from '@patternfly/react-core';
 
 import { type Device } from '@flightctl/types';
 import { useVulnerabilitiesEnabled } from '../../../hooks/useServicesEnabled';
-import { useDeviceSpecSystemInfo } from '../../../hooks/useDeviceSpecSystemInfo';
-import { useTranslation } from '../../../hooks/useTranslation';
 import DeviceInformationCard from './DeviceInformationCard';
 import DeviceSpecificationsCard from './DeviceSpecificationsCard';
 import DeviceCustomDataCard from './DeviceCustomDataCard';
@@ -27,11 +25,10 @@ const DeviceOverviewLayout = ({
   canEdit,
   children,
 }: React.PropsWithChildren<DeviceOverviewLayoutProps>) => {
-  const { t } = useTranslation();
   const [vulnerabilitiesEnabled, canListVulnerabilities] = useVulnerabilitiesEnabled();
   const showVulnerabilities = vulnerabilitiesEnabled && canListVulnerabilities;
-  const devSystemInfo = useDeviceSpecSystemInfo(device.status, t);
-  const hasCustomData = devSystemInfo.customInfo.length > 0;
+  // CELIA-WIP: custom data card will use a dedicated hook
+  const hasCustomData = false;
 
   return (
     <Grid hasGutter>

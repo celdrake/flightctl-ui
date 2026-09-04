@@ -4,7 +4,6 @@ import TagIcon from '@patternfly/react-icons/dist/js/icons/tag-icon';
 
 import { type Device } from '@flightctl/types';
 import { useTranslation } from '../../../hooks/useTranslation';
-import { useDeviceSpecSystemInfo } from '../../../hooks/useDeviceSpecSystemInfo';
 import DetailsPageCard, { DetailsPageCardTitle } from '../../DetailsPage/DetailsPageCard';
 import SidebarSpecFieldList from './SidebarSpecFieldList';
 
@@ -12,13 +11,15 @@ import './DeviceDetailsTab.css';
 
 const DeviceCustomDataCard = ({ device }: { device: Required<Device> }) => {
   const { t } = useTranslation();
-  const devSystemInfo = useDeviceSpecSystemInfo(device.status, t);
 
-  if (devSystemInfo.customInfo.length === 0) {
+  // CELIA-WIP: custom data will use a dedicated hook
+  const customInfo: { title: string; value: React.ReactNode }[] = [];
+
+  if (customInfo.length === 0) {
     return null;
   }
 
-  const customDataFields = devSystemInfo.customInfo.map((entry) => ({
+  const customDataFields = customInfo.map((entry) => ({
     key: entry.title,
     term: entry.title,
     description: entry.value,
