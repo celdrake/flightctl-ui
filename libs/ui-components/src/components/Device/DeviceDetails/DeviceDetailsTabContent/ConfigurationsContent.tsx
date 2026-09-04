@@ -1,8 +1,6 @@
 import * as React from 'react';
 import {
   Alert,
-  CardBody,
-  CardTitle,
   DescriptionListDescription,
   DescriptionListGroup,
   DescriptionListTerm,
@@ -19,7 +17,6 @@ import { useDeviceOwnerFleet } from '../../../../hooks/useDeviceOwnerFleet';
 import { hasPackageModeCapability } from '../../../../utils/capabilities';
 import RepositorySourceList from '../../../Repository/RepositoryDetails/RepositorySourceList';
 import ConfigurationSourcesHeader from '../../../Repository/RepositoryDetails/ConfigurationSourcesHeader';
-import DetailsPageCard from '../../../DetailsPage/DetailsPageCard';
 import DeviceOs from '../DeviceOs';
 import SidebarDescriptionList from '../SidebarDescriptionList';
 
@@ -63,12 +60,10 @@ const DeviceOsImageSection = ({
   device,
   ownerFleet,
   ownerFleetError,
-  embedded,
 }: {
   device: Required<Device>;
   ownerFleet?: Fleet;
   ownerFleetError: unknown;
-  embedded?: boolean;
 }) => {
   const { t } = useTranslation();
   const osSpec = ownerFleet?.spec?.template?.spec?.os || device.spec?.os;
@@ -97,36 +92,21 @@ const DeviceOsImageSection = ({
     return null;
   }
 
-  if (embedded) {
-    return (
-      <SidebarDescriptionList>
-        <DescriptionListGroup>
-          <DescriptionListTerm>{t('System image (running)')}</DescriptionListTerm>
-          <DescriptionListDescription>{content}</DescriptionListDescription>
-        </DescriptionListGroup>
-      </SidebarDescriptionList>
-    );
-  }
-
   return (
-    <>
-      <Stack hasGutter>
-        <StackItem className="pf-v6-u-text-color-subtle">{t('System image (running)')}</StackItem>
-        <StackItem>{content}</StackItem>
-      </Stack>
-      <Divider />
-    </>
+    <SidebarDescriptionList>
+      <DescriptionListGroup>
+        <DescriptionListTerm>{t('System image (running)')}</DescriptionListTerm>
+        <DescriptionListDescription>{content}</DescriptionListDescription>
+      </DescriptionListGroup>
+    </SidebarDescriptionList>
   );
 };
 
 type ConfigurationsContentProps = {
   device: Required<Device>;
-  embedded?: boolean;
 };
 
-const ConfigurationsContent = ({ device, embedded = false }: ConfigurationsContentProps) => {
-  const { t } = useTranslation();
-
+export const ConfigurationsContentBody = ({ device }: ConfigurationsContentProps) => {
   const configs = device.spec?.config || [];
   const [hasOwnerFleet, ownerFleet, ownerFleetLoading, ownerFleetError] = useDeviceOwnerFleet(device.metadata.owner);
 
@@ -147,36 +127,28 @@ const ConfigurationsContent = ({ device, embedded = false }: ConfigurationsConte
       </>
     ) : null;
 
-  const body = (
+  return (
     <Stack hasGutter>
-      <DeviceOsImageSection
-        device={device}
-        ownerFleet={ownerFleet}
-        ownerFleetError={ownerFleetError}
-        embedded={embedded}
-      />
+      <DeviceOsImageSection device={device} ownerFleet={ownerFleet} ownerFleetError={ownerFleetError} />
       {sourcesSection && <StackItem>{sourcesSection}</StackItem>}
     </Stack>
   );
+};
 
-  if (embedded) {
-    return (
-      <Stack hasGutter style={{ border: '2px solid lime' }}>
-        <StackItem>
-          <Title headingLevel="h3" size="md">
-            {t('Configurations')}
-          </Title>
-        </StackItem>
-        <StackItem>{body}</StackItem>
-      </Stack>
-    );
-  }
+const ConfigurationsContent = ({ device }: ConfigurationsContentProps) => {
+  const { t } = useTranslation();
 
   return (
-    <DetailsPageCard style={{ border: '2px solid purple' }}>
-      <CardTitle>{t('Configurations')}</CardTitle>
-      <CardBody>{body}</CardBody>
-    </DetailsPageCard>
+    <Stack hasGutter>
+      <StackItem>
+        <Title headingLevel="h3" size="md">
+          {t('Configurations')}
+        </Title>
+      </StackItem>
+      <StackItem>
+        <ConfigurationsContentBody device={device} />
+      </StackItem>
+    </Stack>
   );
 };
 

@@ -72,7 +72,7 @@ const DeviceSpecificationsCard = ({ device }: { device: Required<Device> }) => {
             <Divider />
           </StackItem>
           <StackItem>
-            <ConfigurationsContent device={device} embedded />
+            <ConfigurationsContent device={device} />
           </StackItem>
         </Stack>
       </CardBody>

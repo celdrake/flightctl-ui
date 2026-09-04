@@ -16,7 +16,6 @@ import DeviceDetailsStatusAccent from '../DeviceDetailsStatusAccent';
 
 type StatusContentProps = {
   device: Required<Device>;
-  embedded?: boolean;
 };
 
 const StatusContent = ({ device }: StatusContentProps) => {

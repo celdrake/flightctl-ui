@@ -19,7 +19,7 @@ import ResourceLink from '../../common/ResourceLink';
 import LabelWithHelperText from '../../common/WithHelperText';
 import DetailsPageCard from '../../DetailsPage/DetailsPageCard';
 import DeviceLifecycleStatus from '../../Status/DeviceLifecycleStatus';
-import ConfigurationsContent from './DeviceDetailsTabContent/ConfigurationsContent';
+import { ConfigurationsContentBody } from './DeviceDetailsTabContent/ConfigurationsContent';
 import DeviceOverviewLayout from './DeviceOverviewLayout';
 
 import './DeviceDetailsTab.css';
@@ -76,7 +76,12 @@ const DecommissionedDeviceDetails = ({ device, children }: React.PropsWithChildr
       </GridItem>
 
       <GridItem md={12} lg={6}>
-        <ConfigurationsContent device={device} />
+        <DetailsPageCard>
+          <CardTitle>{t('Configurations')}</CardTitle>
+          <CardBody>
+            <ConfigurationsContentBody device={device} />
+          </CardBody>
+        </DetailsPageCard>
       </GridItem>
       <GridItem md={12} lg={6}>
         <DetailsPageCard>
