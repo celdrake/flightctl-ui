@@ -11,6 +11,11 @@ import { Vulnerability } from '@flightctl/types/alpha';
 import { type StatusItem } from './common';
 import { VULNERABILITY_SEVERITY_COLOR } from '../vulnerabilities';
 
+// CELIA-WIP: EDM-3863 Open questions
+// Kebab menu in table: keep
+// Layout for the cards, a bit weird in Dark mode
+// Clicking severity tiles --> debounce or do accumulate. If latter, then the dropdown filter may be unnecessary.
+// Border colors for tiles in Dark mode --> need to adjust.
 export const defaultVulnerabilitySeverityStatusItem = (t: TFunction): StatusItem<Vulnerability.severity> => ({
   id: Vulnerability.severity.UNKNOWN,
   label: t('Undefined'),

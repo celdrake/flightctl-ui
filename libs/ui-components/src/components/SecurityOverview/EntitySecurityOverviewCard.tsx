@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { CardBody, ExpandableSection, Stack, StackItem } from '@patternfly/react-core';
+import { CardBody, CardExpandableContent, CardHeader } from '@patternfly/react-core';
 import { type OnSort } from '@patternfly/react-table';
 import ShieldAltIcon from '@patternfly/react-icons/dist/js/icons/shield-alt-icon';
 import {
@@ -18,6 +18,7 @@ import ListPageBody from '../ListPage/ListPageBody';
 import DetailsPageCard, { DetailsPageCardTitle } from '../DetailsPage/DetailsPageCard';
 import SecurityOverviewSummary from './SecurityOverviewSummary';
 import VulnerabilitiesTable from './VulnerabilitiesTable';
+import './EntitySecurityOverviewCard.css';
 
 type Severity = Vulnerability.severity;
 
@@ -96,61 +97,61 @@ const EntitySecurityOverviewCard = ({
   };
 
   return (
-    <DetailsPageCard>
-      <DetailsPageCardTitle icon={<ShieldAltIcon />}>{t('Security overview')}</DetailsPageCardTitle>
+    <DetailsPageCard className="fctl-entity-security-overview-card" isExpanded={isTableExpanded} isFullHeight={false}>
+      <CardHeader
+        onExpand={() => setIsTableExpanded((prev) => !prev)}
+        toggleButtonProps={{
+          'aria-label': t('Toggle security details'),
+          'aria-expanded': isTableExpanded,
+        }}
+      >
+        <DetailsPageCardTitle icon={<ShieldAltIcon />}>{t('Security overview')}</DetailsPageCardTitle>
+      </CardHeader>
       <CardBody>
-        <Stack hasGutter>
-          <StackItem>
-            <SecurityOverviewSummary
-              variant="entityDetail"
-              counts={counts}
-              selectedSeverity={tileSelectedSeverity}
-              onSeverityToggle={handleSeverityToggle}
-              isLoading={isSummaryLoading}
-            />
-          </StackItem>
-          <StackItem>
-            <ExpandableSection
-              toggleText={isTableExpanded ? t('Hide vulnerability table') : t('Show vulnerability table')}
-              onToggle={(_event, isExpanded) => setIsTableExpanded(isExpanded)}
-              isExpanded={isTableExpanded}
-            >
-              <ListPageBody error={error} loading={isLoading}>
-                {scopeProps.isSingleDevice ? (
-                  <VulnerabilitiesTable
-                    isSingleDevice
-                    isUpdating={isUpdating}
-                    vulnerabilities={vulnerabilities as Vulnerability[]}
-                    selectedSeverities={selectedSeverities}
-                    setSelectedSeverities={setSelectedSeverities}
-                    search={search}
-                    setSearch={setSearch}
-                    sortBy={sortBy}
-                    sortDirection={sortDirection}
-                    onSort={onSort}
-                    pagination={pagination}
-                  />
-                ) : (
-                  <VulnerabilitiesTable
-                    isSingleDevice={false}
-                    fleetName={scopeProps.fleetName}
-                    isUpdating={isUpdating}
-                    vulnerabilities={vulnerabilities as VulnerabilityGroup[]}
-                    selectedSeverities={selectedSeverities}
-                    setSelectedSeverities={setSelectedSeverities}
-                    search={search}
-                    setSearch={setSearch}
-                    sortBy={sortBy}
-                    sortDirection={sortDirection}
-                    onSort={onSort}
-                    pagination={pagination}
-                  />
-                )}
-              </ListPageBody>
-            </ExpandableSection>
-          </StackItem>
-        </Stack>
+        <SecurityOverviewSummary
+          variant="entityDetail"
+          counts={counts}
+          selectedSeverity={tileSelectedSeverity}
+          onSeverityToggle={handleSeverityToggle}
+          isLoading={isSummaryLoading}
+        />
       </CardBody>
+      <CardExpandableContent>
+        <CardBody>
+          <ListPageBody error={error} loading={isLoading}>
+            {scopeProps.isSingleDevice ? (
+              <VulnerabilitiesTable
+                isSingleDevice
+                isUpdating={isUpdating}
+                vulnerabilities={vulnerabilities as Vulnerability[]}
+                selectedSeverities={selectedSeverities}
+                setSelectedSeverities={setSelectedSeverities}
+                search={search}
+                setSearch={setSearch}
+                sortBy={sortBy}
+                sortDirection={sortDirection}
+                onSort={onSort}
+                pagination={pagination}
+              />
+            ) : (
+              <VulnerabilitiesTable
+                isSingleDevice={false}
+                fleetName={scopeProps.fleetName}
+                isUpdating={isUpdating}
+                vulnerabilities={vulnerabilities as VulnerabilityGroup[]}
+                selectedSeverities={selectedSeverities}
+                setSelectedSeverities={setSelectedSeverities}
+                search={search}
+                setSearch={setSearch}
+                sortBy={sortBy}
+                sortDirection={sortDirection}
+                onSort={onSort}
+                pagination={pagination}
+              />
+            )}
+          </ListPageBody>
+        </CardBody>
+      </CardExpandableContent>
     </DetailsPageCard>
   );
 };
