@@ -106,12 +106,9 @@ const FleetDetailsContent = ({ fleet }: { fleet: Fleet }) => {
         </Card>
 
         {showVulnerabilities && (
-          <Card className="pf-v6-u-mt-md">
-            <CardTitle>{t('Security overview')}</CardTitle>
-            <CardBody>
-              <FleetVulnerabilities fleetId={fleetId} />
-            </CardBody>
-          </Card>
+          <div className="pf-v6-u-mt-md">
+            <FleetVulnerabilities fleetId={fleetId} />
+          </div>
         )}
 
         {devicesSummary && (

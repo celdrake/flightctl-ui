@@ -1,0 +1,158 @@
+import * as React from 'react';
+import { CardBody, ExpandableSection, Stack, StackItem } from '@patternfly/react-core';
+import { type OnSort } from '@patternfly/react-table';
+import ShieldAltIcon from '@patternfly/react-icons/dist/js/icons/shield-alt-icon';
+import {
+  type CveCountsBySeverity,
+  type Vulnerability,
+  type VulnerabilityGroup,
+  type VulnerabilityGroupList,
+  type VulnerabilityList,
+} from '@flightctl/types/alpha';
+
+import { useTranslation } from '../../hooks/useTranslation';
+import { type VulnerabilitySortDirection, type VulnerabilitySortField } from '../../hooks/useVulnerabilities';
+import { type PaginationDetails } from '../../hooks/useTablePagination';
+import { getSeverityToggleResult, getTileSelectedSeverity } from '../../utils/entitySecurityOverviewState';
+import ListPageBody from '../ListPage/ListPageBody';
+import DetailsPageCard, { DetailsPageCardTitle } from '../DetailsPage/DetailsPageCard';
+import SecurityOverviewSummary from './SecurityOverviewSummary';
+import VulnerabilitiesTable from './VulnerabilitiesTable';
+
+type Severity = Vulnerability.severity;
+
+type EntitySecurityOverviewCardCommonProps = {
+  counts: CveCountsBySeverity;
+  isSummaryLoading: boolean;
+  vulnerabilities: Vulnerability[] | VulnerabilityGroup[];
+  currentPage: number;
+  setCurrentPage: (page: number) => void;
+  itemCount: number;
+  search: string;
+  setSearch: React.Dispatch<React.SetStateAction<string>>;
+  selectedSeverities: Severity[];
+  setSelectedSeverities: React.Dispatch<React.SetStateAction<Severity[]>>;
+  sortBy: VulnerabilitySortField;
+  sortDirection: VulnerabilitySortDirection;
+  onSort: OnSort;
+  isLoading: boolean;
+  isUpdating: boolean;
+  error: unknown;
+};
+
+type EntitySecurityOverviewCardDeviceProps = EntitySecurityOverviewCardCommonProps & {
+  isSingleDevice: true;
+};
+
+type EntitySecurityOverviewCardFleetProps = EntitySecurityOverviewCardCommonProps & {
+  isSingleDevice: false;
+  fleetName: string;
+};
+
+type EntitySecurityOverviewCardProps = EntitySecurityOverviewCardDeviceProps | EntitySecurityOverviewCardFleetProps;
+
+const EntitySecurityOverviewCard = ({
+  counts,
+  isSummaryLoading,
+  vulnerabilities,
+  currentPage,
+  setCurrentPage,
+  itemCount,
+  search,
+  setSearch,
+  selectedSeverities,
+  setSelectedSeverities,
+  sortBy,
+  sortDirection,
+  onSort,
+  isLoading,
+  isUpdating,
+  error,
+  ...scopeProps
+}: EntitySecurityOverviewCardProps) => {
+  const { t } = useTranslation();
+  const [isTableExpanded, setIsTableExpanded] = React.useState(false);
+
+  const tileSelectedSeverity = getTileSelectedSeverity(selectedSeverities);
+
+  const handleSeverityToggle = React.useCallback(
+    (severity: Severity) => {
+      const { selectedSeverities: nextSeverities, expandTable } = getSeverityToggleResult(severity, selectedSeverities);
+      setSelectedSeverities(nextSeverities);
+      if (expandTable) {
+        setIsTableExpanded(true);
+      }
+    },
+    [selectedSeverities, setSelectedSeverities],
+  );
+
+  const pagination: Pick<
+    PaginationDetails<VulnerabilityGroupList | VulnerabilityList>,
+    'currentPage' | 'setCurrentPage' | 'itemCount'
+  > = {
+    currentPage,
+    setCurrentPage,
+    itemCount,
+  };
+
+  return (
+    <DetailsPageCard>
+      <DetailsPageCardTitle icon={<ShieldAltIcon />}>{t('Security overview')}</DetailsPageCardTitle>
+      <CardBody>
+        <Stack hasGutter>
+          <StackItem>
+            <SecurityOverviewSummary
+              variant="entityDetail"
+              counts={counts}
+              selectedSeverity={tileSelectedSeverity}
+              onSeverityToggle={handleSeverityToggle}
+              isLoading={isSummaryLoading}
+            />
+          </StackItem>
+          <StackItem>
+            <ExpandableSection
+              toggleText={isTableExpanded ? t('Hide vulnerability table') : t('Show vulnerability table')}
+              onToggle={(_event, isExpanded) => setIsTableExpanded(isExpanded)}
+              isExpanded={isTableExpanded}
+            >
+              <ListPageBody error={error} loading={isLoading}>
+                {scopeProps.isSingleDevice ? (
+                  <VulnerabilitiesTable
+                    isSingleDevice
+                    isUpdating={isUpdating}
+                    vulnerabilities={vulnerabilities as Vulnerability[]}
+                    selectedSeverities={selectedSeverities}
+                    setSelectedSeverities={setSelectedSeverities}
+                    search={search}
+                    setSearch={setSearch}
+                    sortBy={sortBy}
+                    sortDirection={sortDirection}
+                    onSort={onSort}
+                    pagination={pagination}
+                  />
+                ) : (
+                  <VulnerabilitiesTable
+                    isSingleDevice={false}
+                    fleetName={scopeProps.fleetName}
+                    isUpdating={isUpdating}
+                    vulnerabilities={vulnerabilities as VulnerabilityGroup[]}
+                    selectedSeverities={selectedSeverities}
+                    setSelectedSeverities={setSelectedSeverities}
+                    search={search}
+                    setSearch={setSearch}
+                    sortBy={sortBy}
+                    sortDirection={sortDirection}
+                    onSort={onSort}
+                    pagination={pagination}
+                  />
+                )}
+              </ListPageBody>
+            </ExpandableSection>
+          </StackItem>
+        </Stack>
+      </CardBody>
+    </DetailsPageCard>
+  );
+};
+
+export default EntitySecurityOverviewCard;
