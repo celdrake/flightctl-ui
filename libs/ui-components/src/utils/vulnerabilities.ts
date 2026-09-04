@@ -68,7 +68,9 @@ export const getSeverityCountValue = (severity: Severity, counts: CveCountsBySev
   }
 };
 
-export type SeverityTileColumnSpan = 3 | 4;
+export type SeverityTileColumnSpan = 2 | 3 | 4;
+
+export type SeverityTilesLayout = 'overview' | 'entityDetail';
 
 export type VisibleSeverityTilesConfig = {
   severities: Severity[];
@@ -77,6 +79,7 @@ export type VisibleSeverityTilesConfig = {
 
 export const getVisibleSeverityTilesConfig = (
   counts: Pick<CveCountsBySeverity, 'none' | 'unknown'>,
+  layout: SeverityTilesLayout = 'overview',
 ): VisibleSeverityTilesConfig => {
   const hasAllSeverities = counts.none > 0 || counts.unknown > 0;
   const severityThresholdIndex = VULNERABILITY_SEVERITY_ORDER.indexOf(Vulnerability.severity.LOW);
@@ -88,9 +91,12 @@ export const getVisibleSeverityTilesConfig = (
     return true;
   });
 
+  const columnSpan: SeverityTileColumnSpan =
+    layout === 'entityDetail' && hasAllSeverities ? 2 : hasAllSeverities ? 4 : 3;
+
   return {
     severities,
-    columnSpan: hasAllSeverities ? 4 : 3,
+    columnSpan,
   };
 };
 

@@ -18,6 +18,7 @@ import { useTranslation } from '../../hooks/useTranslation';
 import { useVulnerabilitySummary } from '../../hooks/useVulnerabilitySummary';
 import { type StatusItem } from '../../utils/status/common';
 import {
+  type SeverityTilesLayout,
   getSeverityCountValue,
   getSeverityLabel,
   getVisibleSeverityTilesConfig,
@@ -124,6 +125,7 @@ const SeverityStat = ({
 
 type SeverityTilesGridProps = {
   counts: CveCountsBySeverity;
+  layout?: SeverityTilesLayout;
   interactive?: boolean;
   selectedSeverity?: Severity | null;
   onSeverityToggle?: (severity: Severity) => void;
@@ -132,6 +134,7 @@ type SeverityTilesGridProps = {
 
 const SeverityTilesGrid = ({
   counts,
+  layout = 'overview',
   interactive = false,
   selectedSeverity = null,
   onSeverityToggle,
@@ -139,7 +142,7 @@ const SeverityTilesGrid = ({
 }: SeverityTilesGridProps) => {
   const { t } = useTranslation();
   const statusItems = getVulnerabilitySeverityStatusItems(t);
-  const { severities, columnSpan } = getVisibleSeverityTilesConfig(counts);
+  const { severities, columnSpan } = getVisibleSeverityTilesConfig(counts, layout);
 
   if (isLoading) {
     return (
@@ -227,6 +230,7 @@ const SecurityOverviewSummary = (props: SecurityOverviewSummaryProps) => {
     return (
       <SeverityTilesGrid
         counts={counts}
+        layout="entityDetail"
         interactive
         selectedSeverity={selectedSeverity}
         onSeverityToggle={onSeverityToggle}
