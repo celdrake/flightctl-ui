@@ -26,10 +26,7 @@ const DeviceInformationCard = ({
 }: React.PropsWithChildren<DeviceInformationCardProps>) => {
   const { t } = useTranslation();
 
-  // CELIA-WIP: EDM-3863 design uses "Device ID" for metadata.name (not "Name").
-  // CELIA-WIP: EDM-3863 design uses label term "Fleet" (we use "Fleet" below; was "Fleet name").
-  // CELIA-WIP: EDM-3863 labels — blue compact chips, "Add label" link on its own row below chips,
-  // full-width key=value (no textMaxWidth). We did not change Label/LabelsField components here.
+  // CELIA-WIP: EDM-3863 Open question --> Blue or Grey labels. COnsider elsewhere where we use labels
 
   const identityFields: SidebarSpecField[] = [
     {
