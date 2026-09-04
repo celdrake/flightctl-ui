@@ -22,11 +22,12 @@ const excludedKnownProps = [
 ];
 
 const getInfoDataKnownKeys = (t: TFunction) => ({
-  architecture: t('Architecture'),
-  operatingSystem: t('Operating system'),
   agentVersion: t('Agent version'),
-  distroName: t('Distro'),
+  operatingSystem: t('Operating system'),
   hostname: t('Hostname'),
+  tpmVendorInfo: t('TPM vendor info'),
+  architecture: t('Architecture'),
+  distroName: t('Distro'),
   bootID: t('Boot ID'),
   kernel: t('Kernel'),
   netInterfaceDefault: t('Net interface default'),
@@ -35,7 +36,6 @@ const getInfoDataKnownKeys = (t: TFunction) => ({
   productName: t('Product name'),
   productSerial: t('Product serial'),
   productUuid: t('Product UUID'),
-  tpmVendorInfo: t('TPM vendor info'),
 });
 
 const getSystemInfoValue = (systemInfo: DeviceSystemInfo, infoKey: string) => {

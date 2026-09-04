@@ -27,9 +27,8 @@ const DeviceOverviewLayout = ({
 }: React.PropsWithChildren<DeviceOverviewLayoutProps>) => {
   const [vulnerabilitiesEnabled, canListVulnerabilities] = useVulnerabilitiesEnabled();
   const showVulnerabilities = vulnerabilitiesEnabled && canListVulnerabilities;
-  // CELIA-WIP: custom data card will use a dedicated hook
-  const hasCustomData = false;
 
+  const customInfo = Object.entries<string>(device.status?.systemInfo?.customInfo || {});
   return (
     <Grid hasGutter>
       <GridItem lg={8}>
@@ -60,9 +59,9 @@ const DeviceOverviewLayout = ({
           <StackItem>
             <DeviceSpecificationsCard device={device} />
           </StackItem>
-          {hasCustomData && (
+          {customInfo.length > 0 && (
             <StackItem>
-              <DeviceCustomDataCard device={device} />
+              <DeviceCustomDataCard customInfo={customInfo} />
             </StackItem>
           )}
         </Stack>

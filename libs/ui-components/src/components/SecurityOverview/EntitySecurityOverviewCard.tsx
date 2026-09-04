@@ -18,7 +18,6 @@ import ListPageBody from '../ListPage/ListPageBody';
 import DetailsPageCard, { DetailsPageCardTitle } from '../DetailsPage/DetailsPageCard';
 import SecurityOverviewSummary from './SecurityOverviewSummary';
 import VulnerabilitiesTable from './VulnerabilitiesTable';
-import './EntitySecurityOverviewCard.css';
 
 type Severity = Vulnerability.severity;
 
@@ -97,7 +96,7 @@ const EntitySecurityOverviewCard = ({
   };
 
   return (
-    <DetailsPageCard className="fctl-entity-security-overview-card" isExpanded={isTableExpanded} isFullHeight={false}>
+    <DetailsPageCard isExpanded={isTableExpanded} isFullHeight={false}>
       <CardHeader
         onExpand={() => setIsTableExpanded((prev) => !prev)}
         toggleButtonProps={{

@@ -1,5 +1,17 @@
 import * as React from 'react';
-import { Alert, CardBody, CardTitle, Divider, Spinner, Stack, StackItem, Title } from '@patternfly/react-core';
+import {
+  Alert,
+  CardBody,
+  CardTitle,
+  DescriptionListDescription,
+  DescriptionListGroup,
+  DescriptionListTerm,
+  Divider,
+  Spinner,
+  Stack,
+  StackItem,
+  Title,
+} from '@patternfly/react-core';
 
 import type { Device, Fleet, ImageOrCatalogItemRefSpec } from '@flightctl/types';
 import { useTranslation } from '../../../../hooks/useTranslation';
@@ -9,7 +21,7 @@ import RepositorySourceList from '../../../Repository/RepositoryDetails/Reposito
 import ConfigurationSourcesHeader from '../../../Repository/RepositoryDetails/ConfigurationSourcesHeader';
 import DetailsPageCard from '../../../DetailsPage/DetailsPageCard';
 import DeviceOs from '../DeviceOs';
-import SidebarSpecFieldList from '../SidebarSpecFieldList';
+import SidebarDescriptionList from '../SidebarDescriptionList';
 
 const DevicePackageModeOsImage = () => {
   const { t } = useTranslation();
@@ -87,15 +99,12 @@ const DeviceOsImageSection = ({
 
   if (embedded) {
     return (
-      <SidebarSpecFieldList
-        fields={[
-          {
-            key: 'systemImage',
-            term: t('System image (running)'),
-            description: content,
-          },
-        ]}
-      />
+      <SidebarDescriptionList>
+        <DescriptionListGroup>
+          <DescriptionListTerm>{t('System image (running)')}</DescriptionListTerm>
+          <DescriptionListDescription>{content}</DescriptionListDescription>
+        </DescriptionListGroup>
+      </SidebarDescriptionList>
     );
   }
 
@@ -152,7 +161,7 @@ const ConfigurationsContent = ({ device, embedded = false }: ConfigurationsConte
 
   if (embedded) {
     return (
-      <Stack hasGutter>
+      <Stack hasGutter style={{ border: '2px solid lime' }}>
         <StackItem>
           <Title headingLevel="h3" size="md">
             {t('Configurations')}
@@ -164,7 +173,7 @@ const ConfigurationsContent = ({ device, embedded = false }: ConfigurationsConte
   }
 
   return (
-    <DetailsPageCard>
+    <DetailsPageCard style={{ border: '2px solid purple' }}>
       <CardTitle>{t('Configurations')}</CardTitle>
       <CardBody>{body}</CardBody>
     </DetailsPageCard>

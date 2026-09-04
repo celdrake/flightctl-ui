@@ -1,43 +1,38 @@
 import * as React from 'react';
-import { CardBody, Divider, ExpandableSection, Stack, StackItem } from '@patternfly/react-core';
-import AddressCardIcon from '@patternfly/react-icons/dist/js/icons/address-card-icon';
+import { CardBody, Divider, ExpandableSection, Stack, StackItem, Title } from '@patternfly/react-core';
+import { AddressCardIcon } from '@patternfly/react-icons/dist/js/icons/address-card-icon';
 
 import { type Device } from '@flightctl/types';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useDeviceSpecSystemInfo } from '../../../hooks/useDeviceSpecSystemInfo';
 import DetailsPageCard, { DetailsPageCardTitle } from '../../DetailsPage/DetailsPageCard';
 import ConfigurationsContent from './DeviceDetailsTabContent/ConfigurationsContent';
-import SidebarSpecFieldList, { type SidebarSpecField } from './SidebarSpecFieldList';
+import { CapabilitiesFieldsList, SystemInfoFieldsList } from './SidebarDescriptionList';
 
 import './DeviceDetailsTab.css';
 
+// By default only show the first 4 fields, with the rest shown in an expandable section
+// However, if there are less than 8 fields, show all of them without needing to expand
+const EXPAND_SYSTEM_INFO_COUNT = 4;
 const MIN_SYSTEM_INFO_FIELDS_FOR_EXPAND = 8;
-const PRIMARY_SYSTEM_INFO_VISIBLE_COUNT = 4;
 
 const DeviceSpecificationsCard = ({ device }: { device: Required<Device> }) => {
   const { t } = useTranslation();
   const systemInfoFields = useDeviceSpecSystemInfo(device.status?.systemInfo, t);
+
   const [showMoreSystemInfo, setShowMoreSystemInfo] = React.useState(false);
 
   const { visibleSystemInfoFields, expandableSystemInfoFields } = React.useMemo(() => {
-    const toField = (entry: { title: string; value: React.ReactNode }): SidebarSpecField => ({
-      key: entry.title,
-      term: entry.title,
-      description: entry.value,
-    });
-
-    // CELIA-WIP: EDM-3863 design primary order is Agent version → Operating system → Hostname →
-    // TPM vendor info (then API/baseInfo order backfill). We keep useDeviceSpecSystemInfo order here.
     if (systemInfoFields.length < MIN_SYSTEM_INFO_FIELDS_FOR_EXPAND) {
       return {
-        visibleSystemInfoFields: systemInfoFields.map(toField),
-        expandableSystemInfoFields: [] as SidebarSpecField[],
+        visibleSystemInfoFields: systemInfoFields,
+        expandableSystemInfoFields: [],
       };
     }
 
     return {
-      visibleSystemInfoFields: systemInfoFields.slice(0, PRIMARY_SYSTEM_INFO_VISIBLE_COUNT).map(toField),
-      expandableSystemInfoFields: systemInfoFields.slice(PRIMARY_SYSTEM_INFO_VISIBLE_COUNT).map(toField),
+      visibleSystemInfoFields: systemInfoFields.slice(0, EXPAND_SYSTEM_INFO_COUNT),
+      expandableSystemInfoFields: systemInfoFields.slice(EXPAND_SYSTEM_INFO_COUNT),
     };
   }, [systemInfoFields]);
 
@@ -48,7 +43,7 @@ const DeviceSpecificationsCard = ({ device }: { device: Required<Device> }) => {
         <Stack hasGutter>
           {visibleSystemInfoFields.length > 0 && (
             <StackItem>
-              <SidebarSpecFieldList fields={visibleSystemInfoFields} />
+              <SystemInfoFieldsList fields={visibleSystemInfoFields} />
             </StackItem>
           )}
           {expandableSystemInfoFields.length > 0 && (
@@ -58,10 +53,21 @@ const DeviceSpecificationsCard = ({ device }: { device: Required<Device> }) => {
                 onToggle={(_event, expanded) => setShowMoreSystemInfo(expanded)}
                 isExpanded={showMoreSystemInfo}
               >
-                <SidebarSpecFieldList fields={expandableSystemInfoFields} className="pf-v6-u-mt-md" />
+                <SystemInfoFieldsList fields={expandableSystemInfoFields} />
               </ExpandableSection>
             </StackItem>
           )}
+          <StackItem>
+            <Divider />
+          </StackItem>
+          <StackItem>
+            <Title headingLevel="h3" size="md">
+              {t('Capabilities')}
+            </Title>
+          </StackItem>
+          <StackItem>
+            <CapabilitiesFieldsList capabilities={device.status?.capabilities} />
+          </StackItem>
           <StackItem>
             <Divider />
           </StackItem>
