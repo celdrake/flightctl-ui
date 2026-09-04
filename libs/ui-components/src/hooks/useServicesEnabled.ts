@@ -5,7 +5,6 @@ import { usePermissionsContext } from '../components/common/PermissionsContext';
 import { useFetch } from './useFetch';
 
 const alertManagerDisabledStatusCodes = [501, 500, 401];
-const vulnerabilityDisabledStatusCodes = [501];
 
 type ServiceEnabledConfig = {
   canList: boolean;
@@ -74,13 +73,7 @@ export const useAlertsEnabled = (): ServiceEnabledResult => {
 };
 
 export const useVulnerabilitiesEnabled = (): ServiceEnabledResult => {
-  const { checkPermissions, loading } = usePermissionsContext();
-  const [canListVulnerabilities] = checkPermissions([{ kind: RESOURCE.VULNERABILITY, verb: VERB.LIST }]);
+  const { loading } = usePermissionsContext();
 
-  return useServiceEnabled({
-    canList: canListVulnerabilities,
-    loading,
-    endpoint: 'vulnerabilities/summary',
-    disabledStatusCodes: vulnerabilityDisabledStatusCodes,
-  });
+  return [true, true, loading];
 };
