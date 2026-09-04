@@ -9,7 +9,11 @@ import {
 } from '@flightctl/types';
 
 import { useTranslation } from '../../hooks/useTranslation';
-import { getIntegrityStatusItems, integrityCheckToSummaryType } from '../../utils/status/integrity';
+import {
+  getIntegrityStatusItems,
+  getIntegrityStatusLevel,
+  integrityCheckToSummaryType,
+} from '../../utils/status/integrity';
 import { type StatusItem, getDefaultStatusColor } from '../../utils/status/common';
 import { getDefaultStatusIcon } from '../../utils/status/common';
 import { getDateDisplay } from '../../utils/dates';
@@ -22,25 +26,22 @@ const getIntegrityCheckItem = (
   key: string,
 ): React.ReactNode => {
   const statusType = integrityCheckToSummaryType(statusField.status);
-  const levelItem = statusItems.find((statusItem) => statusItem.id === statusType) || {
-    id: DeviceIntegrityStatusSummaryType.DeviceIntegrityStatusUnknown,
-    label: t('Unknown'),
-    level: 'unknown' as const,
-  };
+  const level = getIntegrityStatusLevel(statusType);
+  const statusLabel = statusItems.find((statusItem) => statusItem.id === statusType)?.label ?? t('Unknown');
 
-  const IconComponent = levelItem.customIcon || getDefaultStatusIcon(levelItem.level);
-  const iconStatus = levelItem.level === 'unknown' ? undefined : levelItem.level;
+  const IconComponent = getDefaultStatusIcon(level);
+  const iconStatus = level === 'unknown' ? undefined : level;
 
   const label =
     key === 'device-identity'
-      ? t('Device identity - {{ status }}', { status: levelItem.label })
-      : t('TPM - {{ status }}', { status: levelItem.label });
+      ? t('Device identity - {{ status }}', { status: statusLabel })
+      : t('TPM - {{ status }}', { status: statusLabel });
 
   return (
     <StackItem key={key}>
       <Icon
         status={iconStatus}
-        style={{ '--pf-v6-c-icon__content--Color': getDefaultStatusColor(levelItem.level) } as React.CSSProperties}
+        style={{ '--pf-v6-c-icon__content--Color': getDefaultStatusColor(level) } as React.CSSProperties}
       >
         <IconComponent />
       </Icon>{' '}

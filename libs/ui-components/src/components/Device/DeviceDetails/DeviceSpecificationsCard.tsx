@@ -1,12 +1,5 @@
 import * as React from 'react';
-import {
-  CardBody,
-  Divider,
-  ExpandableSection,
-  Stack,
-  StackItem,
-  Title,
-} from '@patternfly/react-core';
+import { CardBody, Divider, ExpandableSection, Stack, StackItem, Title } from '@patternfly/react-core';
 import AddressCardIcon from '@patternfly/react-icons/dist/js/icons/address-card-icon';
 
 import { type Device } from '@flightctl/types';

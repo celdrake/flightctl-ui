@@ -143,11 +143,7 @@ const DeviceDetailsPage = ({ children }: React.PropsWithChildren) => {
       breadcrumbTitle={deviceAlias}
       titleDataTestId="device-details-title"
       title={
-        <Flex
-          alignItems={{ default: 'alignItemsBaseline' }}
-          gap={{ default: 'gapSm' }}
-          flexWrap={{ default: 'wrap' }}
-        >
+        <Flex alignItems={{ default: 'alignItemsBaseline' }} gap={{ default: 'gapSm' }} flexWrap={{ default: 'wrap' }}>
           <FlexItem>
             {canEdit ? (
               /* key={deviceAlias} is needed for the input field to be initialized with the alias as its value */

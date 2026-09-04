@@ -129,11 +129,7 @@ const DeviceAliasEdit = ({ deviceId, hasLabels, alias: originalAlias = '', onAli
   );
 
   return (
-    <Flex
-      direction={{ default: 'column' }}
-      alignItems={{ default: 'alignItemsFlexStart' }}
-      gap={{ default: 'gapSm' }}
-    >
+    <Flex direction={{ default: 'column' }} alignItems={{ default: 'alignItemsFlexStart' }} gap={{ default: 'gapSm' }}>
       <Formik<DeviceAliasEditValues>
         initialValues={{
           alias: originalAlias,
@@ -153,7 +149,11 @@ const DeviceAliasEdit = ({ deviceId, hasLabels, alias: originalAlias = '', onAli
               toggleIsEditing={toggleIsEditing}
             />
           ) : (
-            <Flex alignItems={{ default: 'alignItemsCenter' }} gap={{ default: 'gapSm' }} flexWrap={{ default: 'nowrap' }}>
+            <Flex
+              alignItems={{ default: 'alignItemsCenter' }}
+              gap={{ default: 'gapSm' }}
+              flexWrap={{ default: 'nowrap' }}
+            >
               <FlexItem>{originalAlias || t('Untitled')}</FlexItem>
               <FlexItem>
                 <Button

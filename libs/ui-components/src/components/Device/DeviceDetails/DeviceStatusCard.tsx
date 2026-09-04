@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { CardBody, Stack, StackItem } from '@patternfly/react-core';
+import { CardBody, Stack, StackItem, Title } from '@patternfly/react-core';
 import TachometerAltIcon from '@patternfly/react-icons/dist/js/icons/tachometer-alt-icon';
 
 import { type Device } from '@flightctl/types';
@@ -19,10 +19,28 @@ const DeviceStatusCard = ({ device }: { device: Required<Device> }) => {
       <CardBody>
         <Stack hasGutter>
           <StackItem>
-            <StatusContent device={device} embedded />
+            <Stack hasGutter>
+              <StackItem>
+                <Title headingLevel="h3" size="md">
+                  {t('System status')}
+                </Title>
+              </StackItem>
+              <StackItem>
+                <StatusContent device={device} />
+              </StackItem>
+            </Stack>
           </StackItem>
           <StackItem>
-            <SystemResourcesContent device={device} embedded />
+            <Stack hasGutter>
+              <StackItem>
+                <Title headingLevel="h3" size="md">
+                  {t('Resource status')}
+                </Title>
+              </StackItem>
+              <StackItem>
+                <SystemResourcesContent device={device} />
+              </StackItem>
+            </Stack>
           </StackItem>
         </Stack>
       </CardBody>

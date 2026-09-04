@@ -51,12 +51,7 @@ type RepositorySourceListProps = {
   className?: string;
 };
 
-const RepositorySourceList = ({
-  configs,
-  dependencyStatus,
-  layout = 'list',
-  className,
-}: RepositorySourceListProps) => {
+const RepositorySourceList = ({ configs, dependencyStatus, layout = 'list', className }: RepositorySourceListProps) => {
   const { get } = useFetch();
   const repoConfigs = configs.filter(isRepoConfig);
 
@@ -102,12 +97,7 @@ const RepositorySourceList = ({
 
   if (layout === 'horizontalDescriptionList') {
     return (
-      <DescriptionList
-        isHorizontal
-        isCompact
-        horizontalTermWidthModifier={{ default: '12ch' }}
-        className={className}
-      >
+      <DescriptionList isHorizontal isCompact horizontalTermWidthModifier={{ default: '12ch' }} className={className}>
         {configs.map((config) => {
           let extraArgs = {};
           if (isRepoConfig(config)) {

@@ -13,12 +13,7 @@ export type SidebarSpecField = {
 };
 
 const SidebarSpecFieldList = ({ fields, className }: { fields: SidebarSpecField[]; className?: string }) => (
-  <DescriptionList
-    isHorizontal
-    isCompact
-    horizontalTermWidthModifier={{ default: '12ch' }}
-    className={className}
-  >
+  <DescriptionList isHorizontal isCompact horizontalTermWidthModifier={{ default: '12ch' }} className={className}>
     {fields.map((field) => (
       <DescriptionListGroup key={field.key}>
         <DescriptionListTerm>{field.term}</DescriptionListTerm>

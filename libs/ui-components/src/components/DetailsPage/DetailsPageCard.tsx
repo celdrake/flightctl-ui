@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Card, CardTitle, Flex, FlexItem, Icon, type CardProps } from '@patternfly/react-core';
+import { Card, type CardProps, CardTitle, Flex, FlexItem, Icon } from '@patternfly/react-core';
 
 export const DetailsPageCardTitle = ({ icon, children }: React.PropsWithChildren<{ icon: React.ReactNode }>) => (
   <CardTitle>

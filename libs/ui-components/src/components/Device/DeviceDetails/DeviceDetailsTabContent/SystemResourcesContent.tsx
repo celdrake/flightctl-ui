@@ -1,52 +1,37 @@
 import * as React from 'react';
-import {
-  CardBody,
-  CardTitle,
-  DescriptionList,
-  Title,
-} from '@patternfly/react-core';
+import { DescriptionList } from '@patternfly/react-core';
 
 import { type Device } from '@flightctl/types';
 import { useTranslation } from '../../../../hooks/useTranslation';
-import DetailsPageCard from '../../../DetailsPage/DetailsPageCard';
-import {
-  DeviceStatusFieldGroup,
-  useDeviceOverviewStatusFields,
-} from '../deviceOverviewStatusFields';
+import { getDeviceResourceStatusLevel } from '../../../../utils/status/resources';
+import DeviceDetailsStatusAccent from '../DeviceDetailsStatusAccent';
+import DeviceResourceStatus, { MonitorType } from '../../../Status/DeviceResourceStatus';
 
 type SystemResourcesContentProps = {
   device: Required<Device>;
-  embedded?: boolean;
 };
 
-const SystemResourcesContent = ({ device, embedded = false }: SystemResourcesContentProps) => {
+const SystemResourcesContent = ({ device }: SystemResourcesContentProps) => {
   const { t } = useTranslation();
-  const { resourceFields } = useDeviceOverviewStatusFields(device, t);
-
-  const descriptionList = (
-    <DescriptionList isCompact className="pf-v6-u-mt-sm fctl-device-status-fields">
-      {resourceFields.map((field) => (
-        <DeviceStatusFieldGroup key={field.id} field={field} />
-      ))}
-    </DescriptionList>
-  );
-
-  if (embedded) {
-    return (
-      <>
-        <Title headingLevel="h3" size="md" className="pf-v6-u-mt-md">
-          {t('Resource status')}
-        </Title>
-        {descriptionList}
-      </>
-    );
-  }
 
   return (
-    <DetailsPageCard>
-      <CardTitle>{t('Resource status')}</CardTitle>
-      <CardBody>{descriptionList}</CardBody>
-    </DetailsPageCard>
+    <DescriptionList isCompact className="fctl-device-status-fields">
+      <DeviceDetailsStatusAccent
+        level={getDeviceResourceStatusLevel(device.status.resources.cpu)}
+        statusLabel={t('CPU pressure')}
+        statusContent={<DeviceResourceStatus device={device} monitorType={MonitorType.cpu} />}
+      />
+      <DeviceDetailsStatusAccent
+        level={getDeviceResourceStatusLevel(device.status.resources.disk)}
+        statusLabel={t('Disk pressure')}
+        statusContent={<DeviceResourceStatus device={device} monitorType={MonitorType.disk} />}
+      />
+      <DeviceDetailsStatusAccent
+        level={getDeviceResourceStatusLevel(device.status.resources.memory)}
+        statusLabel={t('Memory pressure')}
+        statusContent={<DeviceResourceStatus device={device} monitorType={MonitorType.memory} />}
+      />
+    </DescriptionList>
   );
 };
 
