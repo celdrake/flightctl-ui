@@ -34,6 +34,7 @@ const StatusContent = ({ device }: StatusContentProps) => {
           <LabelWithHelperText
             label={t('Application status')}
             content={t('Indicates the overall status of application workloads on the device.')}
+            isInline
           />
         }
         statusContent={<ApplicationSummaryStatus statusSummary={appStatus} />}
@@ -44,6 +45,7 @@ const StatusContent = ({ device }: StatusContentProps) => {
           <LabelWithHelperText
             label={t('Device status')}
             content={t('Indicates the overall status of the device hardware and operating system.')}
+            isInline
           />
         }
         statusContent={<DeviceStatus summaryStatus={deviceStatus} />}
@@ -56,6 +58,7 @@ const StatusContent = ({ device }: StatusContentProps) => {
             content={t(
               'Indicates whether a system is running the latest target configuration or is updating towards it.',
             )}
+            isInline
           />
         }
         statusContent={<SystemUpdateStatus updateStatus={updateStatus} />}
@@ -67,6 +70,7 @@ const StatusContent = ({ device }: StatusContentProps) => {
           <LabelWithHelperText
             label={t('Integrity status')}
             content={t('Indicates whether the device has been verified as secure and authentic.')}
+            isInline
           />
         }
         statusContent={<IntegrityStatus integrityStatus={integrityStatus} />}
