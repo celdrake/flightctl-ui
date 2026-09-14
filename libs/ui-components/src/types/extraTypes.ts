@@ -32,7 +32,12 @@ export interface ApiQuery {
   timeout?: number;
 }
 
-export type FleetConditionType = ConditionType.FleetValid | 'Invalid' | 'SyncPending';
+export type FleetConditionType =
+  | ConditionType.FleetValid
+  | ConditionType.FleetRolloutInProgress
+  | ConditionType.FleetDeltaPreparing
+  | 'Invalid'
+  | 'SyncPending';
 
 export enum DeviceAnnotation {
   TemplateVersion = 'fleet-controller/templateVersion',

@@ -17,9 +17,9 @@ import {
   type SshConfig,
 } from '@flightctl/types';
 
-import { type BaseImage, type RepositoryFormValues, type ResourceSyncFormValue } from './types';
+import { type BaseImage, type OciPlacementMode, type RepositoryFormValues, type ResourceSyncFormValue } from './types';
 import { getErrorMessage } from '../../../utils/error';
-import { appendJSONPatch } from '../../../utils/patch';
+import { appendJSONPatch } from '../../../utils/patches/patch';
 import {
   GIT_TARGET_REVISION_REGEX,
   MAX_TARGET_REVISION_LENGTH,
@@ -48,6 +48,144 @@ export const isGitRepoSpec = (repoSpec: RepositorySpec): repoSpec is GitRepoSpec
   repoSpec.type === RepoSpecType.RepoSpecTypeGit;
 export const isOciRepoSpec = (repoSpec: RepositorySpec): repoSpec is OciRepoSpec =>
   repoSpec.type === RepoSpecType.RepoSpecTypeOci;
+
+export const getOciPlacementModeFromSpec = (spec: OciRepoSpec): OciPlacementMode => {
+  if (spec.repository) {
+    return 'repository';
+  }
+  if (spec.namespace) {
+    return 'namespace';
+  }
+  return 'registry';
+};
+
+export const getOciRepoDisplayPath = (spec: OciRepoSpec): string => {
+  const registry = spec.registry || '';
+  if (spec.repository) {
+    return `${registry}/${spec.repository}`;
+  }
+  if (spec.namespace) {
+    return `${registry}/${spec.namespace}`;
+  }
+  return registry;
+};
+
+export const isDeltaStorageTargetRepo = (repoSpec: RepositorySpec): boolean =>
+  isOciRepoSpec(repoSpec) && Boolean(repoSpec.deltaStorageTarget);
+
+export const PUSH_PREVIEW_APP = 'example/app';
+
+const trimRegistry = (registry: string): string => registry.replace(/\/+$/, '');
+const trimPath = (path: string): string => path.replace(/^\/+/, '');
+
+const getImagePathLastSegment = (imagePath: string): string => {
+  const lastSlash = imagePath.lastIndexOf('/');
+  return lastSlash >= 0 ? imagePath.slice(lastSlash + 1) : imagePath;
+};
+
+/** Mirrors backend oci.RegistryObjectRef / ResolveDeltaPushPath for the example image path. */
+export const getDeltaPushPathPreview = (
+  ociConfig: NonNullable<RepositoryFormValues['ociConfig']>,
+): string | undefined => {
+  if (!ociConfig.registry) {
+    return undefined;
+  }
+
+  const host = trimRegistry(ociConfig.registry);
+  const repositoryPath = ociConfig.repository ? trimPath(ociConfig.repository) : '';
+  const namespacePath = ociConfig.namespace ? trimPath(ociConfig.namespace) : '';
+
+  if (ociConfig.placementMode === 'repository') {
+    if (!repositoryPath) {
+      return undefined;
+    }
+    return `${host}/${repositoryPath}`;
+  }
+
+  const imagePath = trimPath(PUSH_PREVIEW_APP);
+
+  if (ociConfig.placementMode === 'namespace') {
+    if (!namespacePath) {
+      return undefined;
+    }
+    return `${host}/${namespacePath}/${getImagePathLastSegment(imagePath)}`;
+  }
+
+  return `${host}/${imagePath}`;
+};
+
+// CELIA-WIP: needs chck with backend
+export const isDuplicateDeltaStorageTargetError = (error: unknown): boolean => {
+  const message = getErrorMessage(error);
+  return message.includes('409') && message.includes('deltaStorageTarget');
+};
+
+const defaultOciConfig = (writeAccessOnly?: boolean): NonNullable<RepositoryFormValues['ociConfig']> => ({
+  registry: '',
+  scheme: OciRepoSpec.scheme.HTTPS,
+  accessMode: writeAccessOnly ? OciRepoSpec.accessMode.READ_WRITE : OciRepoSpec.accessMode.READ,
+  baseImages: [],
+  deltaStorageTarget: false,
+  placementMode: 'registry',
+  repository: '',
+  namespace: '',
+});
+
+const applyOciDeltaFieldsToSpec = (
+  ociRepoSpec: OciRepoSpec,
+  ociConfig: NonNullable<RepositoryFormValues['ociConfig']>,
+): void => {
+  if (ociConfig.deltaStorageTarget) {
+    ociRepoSpec.deltaStorageTarget = true;
+    ociRepoSpec.accessMode = OciRepoSpec.accessMode.READ_WRITE;
+  }
+
+  if (!ociConfig.deltaStorageTarget) {
+    return;
+  }
+
+  if (ociConfig.placementMode === 'repository' && ociConfig.repository) {
+    ociRepoSpec.repository = ociConfig.repository;
+  } else if (ociConfig.placementMode === 'namespace' && ociConfig.namespace) {
+    ociRepoSpec.namespace = ociConfig.namespace;
+  }
+};
+
+const appendOptionalStringPatch = (
+  patches: PatchRequest,
+  path: string,
+  newValue: string | undefined,
+  originalValue: string | undefined,
+) => {
+  if (newValue) {
+    appendJSONPatch({
+      patches,
+      newValue,
+      originalValue,
+      path,
+    });
+    return;
+  }
+  if (originalValue) {
+    patches.push({ op: 'remove', path });
+  }
+};
+
+const appendDeltaStorageTargetPatch = (
+  patches: PatchRequest,
+  deltaStorageTarget: boolean | undefined,
+  originalValue: boolean | undefined,
+) => {
+  if (deltaStorageTarget) {
+    if (!originalValue) {
+      patches.push({ op: 'add', path: '/spec/deltaStorageTarget', value: true });
+    }
+    return;
+  }
+  if (originalValue) {
+    patches.push({ op: 'remove', path: '/spec/deltaStorageTarget' });
+  }
+};
 
 export const hasCredentialsSettings = (repoSpec: RepositorySpec): boolean => {
   // The credentials settings can be in different fields depending on the repository type
@@ -271,6 +409,22 @@ const getOciRepositoryPatches = (values: RepositoryFormValues, repoSpec: OciRepo
     path: '/spec/accessMode',
   });
 
+  if (values.allowDeltaStorage) {
+    appendDeltaStorageTargetPatch(patches, formOciConfig.deltaStorageTarget, repoSpec.deltaStorageTarget);
+
+    const targetRepository =
+      formOciConfig.deltaStorageTarget && formOciConfig.placementMode === 'repository'
+        ? formOciConfig.repository
+        : undefined;
+    const targetNamespace =
+      formOciConfig.deltaStorageTarget && formOciConfig.placementMode === 'namespace'
+        ? formOciConfig.namespace
+        : undefined;
+
+    appendOptionalStringPatch(patches, '/spec/repository', targetRepository, repoSpec.repository);
+    appendOptionalStringPatch(patches, '/spec/namespace', targetNamespace, repoSpec.namespace);
+  }
+
   if (!formOciConfig.baseImages?.length) {
     if (repoSpec.baseImages?.length) {
       patches.push({ op: 'remove', path: '/spec/baseImages' });
@@ -486,10 +640,23 @@ export const httpConfigToFormValues = (httpConfig?: HttpConfig): RepositoryFormV
 };
 
 export const getRepoUrlOrRegistry = (repoSpec: RepositorySpec): string => {
-  if (repoSpec.type === RepoSpecType.RepoSpecTypeOci) {
-    return repoSpec.registry || '';
+  if (isOciRepoSpec(repoSpec)) {
+    return getOciRepoDisplayPath(repoSpec);
   }
   return repoSpec.url || '';
+};
+
+export const getDeltaStoragePlacementLabel = (t: TFunction, spec: OciRepoSpec): string => {
+  if (!spec.deltaStorageTarget) {
+    return t('No');
+  }
+  if (spec.repository) {
+    return t('Repository path: {{ path }}', { path: spec.repository });
+  }
+  if (spec.namespace) {
+    return t('Namespace: {{ namespace }}', { namespace: spec.namespace });
+  }
+  return t('Registry only');
 };
 
 export const getRepoTypeLabel = (t: TFunction, repoType: RepositorySpec['type']): string => {
@@ -515,6 +682,7 @@ export const getInitValues = ({
     allowedRepoTypes?: RepoSpecType[];
     showRepoTypes?: boolean;
     writeAccessOnly?: boolean;
+    allowDeltaStorage?: boolean;
     defaultRSType?: ResourceSyncType;
   };
 }): RepositoryFormValues => {
@@ -530,6 +698,7 @@ export const getInitValues = ({
       repoType: selectedRepoType,
       allowedRepoTypes: options?.allowedRepoTypes,
       showRepoTypes: options?.showRepoTypes ?? true,
+      allowDeltaStorage: options?.allowDeltaStorage ?? true,
       name: '',
       url: '',
       useAdvancedConfig: false,
@@ -547,12 +716,7 @@ export const getInitValues = ({
     };
 
     if (selectedRepoType === RepoSpecType.RepoSpecTypeOci) {
-      initValues.ociConfig = {
-        registry: '',
-        scheme: OciRepoSpec.scheme.HTTPS,
-        accessMode: options?.writeAccessOnly ? OciRepoSpec.accessMode.READ_WRITE : OciRepoSpec.accessMode.READ,
-        baseImages: [],
-      };
+      initValues.ociConfig = defaultOciConfig(options?.writeAccessOnly);
     }
 
     return initValues;
@@ -568,6 +732,7 @@ export const getInitValues = ({
     validationSuffix: 'validationSuffix' in repository.spec ? repository.spec.validationSuffix : '',
     allowedRepoTypes: options?.allowedRepoTypes,
     showRepoTypes: options?.showRepoTypes ?? true,
+    allowDeltaStorage: options?.allowDeltaStorage ?? true,
     useAdvancedConfig: false,
     configType: 'http',
     canUseResourceSyncs: canUseRSs,
@@ -605,6 +770,10 @@ export const getInitValues = ({
       caCrt: repository.spec['ca.crt'] ? atob(repository.spec['ca.crt']) : undefined,
       skipServerVerification: repository.spec.skipServerVerification,
       baseImages: repository.spec.baseImages,
+      deltaStorageTarget: repository.spec.deltaStorageTarget,
+      placementMode: getOciPlacementModeFromSpec(repository.spec),
+      repository: repository.spec.repository || '',
+      namespace: repository.spec.namespace || '',
     };
   } else if (repository.spec.type === RepoSpecType.RepoSpecTypeHttp) {
     formValues.configType = 'http';
@@ -777,6 +946,38 @@ export const repositorySchema =
             .required(t('Registry hostname is required')),
           scheme: Yup.string().oneOf([OciRepoSpec.scheme.HTTP, OciRepoSpec.scheme.HTTPS]),
           accessMode: Yup.string().oneOf([OciRepoSpec.accessMode.READ, OciRepoSpec.accessMode.READ_WRITE]),
+          deltaStorageTarget: Yup.boolean(),
+          placementMode: Yup.string().oneOf(['registry', 'repository', 'namespace']),
+          repository: Yup.string().when(['deltaStorageTarget', 'placementMode'], {
+            is: (deltaStorageTarget: boolean, placementMode: OciPlacementMode) =>
+              deltaStorageTarget && placementMode === 'repository',
+            then: () =>
+              Yup.string()
+                .required(t('Repository path is required'))
+                .test('oci-repository-path', function (value) {
+                  if (!value) {
+                    return true;
+                  }
+                  const error = getImageNameValidationError(value, t);
+                  return error ? this.createError({ message: error }) : true;
+                }),
+            otherwise: () => Yup.string(),
+          }),
+          namespace: Yup.string().when(['deltaStorageTarget', 'placementMode'], {
+            is: (deltaStorageTarget: boolean, placementMode: OciPlacementMode) =>
+              deltaStorageTarget && placementMode === 'namespace',
+            then: () =>
+              Yup.string()
+                .required(t('Namespace is required'))
+                .test('oci-namespace-path', function (value) {
+                  if (!value) {
+                    return true;
+                  }
+                  const error = getImageNameValidationError(value, t);
+                  return error ? this.createError({ message: error }) : true;
+                }),
+            otherwise: () => Yup.string(),
+          }),
           ociAuth: Yup.object({
             use: Yup.boolean(),
             username: values.ociConfig?.ociAuth?.use ? Yup.string().required(t('Username is required')) : Yup.string(),
@@ -833,6 +1034,30 @@ export const repositorySchema =
             ),
           ),
         }),
+      }).test('delta-storage-access-mode', function (value) {
+        const ociConfig = value?.ociConfig;
+        if (
+          values.allowDeltaStorage &&
+          ociConfig?.deltaStorageTarget &&
+          ociConfig.accessMode !== OciRepoSpec.accessMode.READ_WRITE
+        ) {
+          return this.createError({
+            path: 'ociConfig.accessMode',
+            message: t('Access mode must be read and write when storing generated deltas'),
+          });
+        }
+        if (
+          values.allowDeltaStorage &&
+          ociConfig?.deltaStorageTarget &&
+          ociConfig?.repository &&
+          ociConfig?.namespace
+        ) {
+          return this.createError({
+            path: 'ociConfig.namespace',
+            message: t('Repository path and namespace are mutually exclusive'),
+          });
+        }
+        return true;
       });
     }
 
@@ -895,8 +1120,12 @@ export const getRepository = (values: Omit<RepositoryFormValues, 'useResourceSyn
       accessMode: values.ociConfig.accessMode || OciRepoSpec.accessMode.READ,
     };
 
-    if (values.ociConfig.baseImages?.length) {
+    if (values.ociConfig.baseImages?.length && !values.ociConfig.deltaStorageTarget) {
       ociRepoSpec.baseImages = values.ociConfig.baseImages;
+    }
+
+    if (values.allowDeltaStorage) {
+      applyOciDeltaFieldsToSpec(ociRepoSpec, values.ociConfig);
     }
 
     if (values.ociConfig.skipServerVerification) {

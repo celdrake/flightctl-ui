@@ -2,7 +2,7 @@ import { type TFunction } from 'i18next';
 import { type Condition, ConditionStatus, ConditionType, type Repository, type ResourceSync } from '@flightctl/types';
 import { timeSinceText } from '../dates';
 import { getConditionMessage } from '../error';
-import { getCondition } from '../api';
+import { getTrueCondition } from '../api';
 
 export type RepositorySyncStatus =
   | ConditionType.ResourceSyncSynced
@@ -25,8 +25,7 @@ const repositoryStatusLabels = (t: TFunction) => ({
 
 export const isAccessibleRepository = (repository: Repository): boolean => {
   const conditions = repository.status?.conditions;
-  // By default it checks for true condition
-  return getCondition(conditions, ConditionType.RepositoryAccessible) !== undefined;
+  return getTrueCondition(conditions, ConditionType.RepositoryAccessible) !== undefined;
 };
 
 const getRepositorySyncStatus = (

@@ -1,37 +1,88 @@
 import { type TFunction } from 'i18next';
 
 import { type Condition, ConditionStatus, ConditionType, type Fleet } from '@flightctl/types';
-import { type FleetConditionType } from '../../types/extraTypes';
 import { getConditionMessage } from '../error';
+import { type StatusItem, type StatusLevel, getStatusLevelFromMap } from './common';
+
+export type FleetStatusType =
+  // Status types referring to Fleet validation status
+  | ConditionType.FleetValid
+  | 'Invalid'
+  | 'SyncPending'
+  // Other status types
+  | ConditionType.FleetRolloutInProgress
+  | ConditionType.FleetDeltaPreparing;
 
 const FLEET_ROLLOUT_FAILED_REASON = 'Suspended';
 
-export const fleetStatusLabels = (t: TFunction) => ({
-  [ConditionType.FleetValid]: t('Valid'),
-  Invalid: t('Invalid'),
-  SyncPending: t('Sync pending'),
-});
+const FLEET_STATUS_LEVELS: Record<FleetStatusType, StatusLevel> = {
+  Invalid: 'danger',
+  [ConditionType.FleetRolloutInProgress]: 'info',
+  [ConditionType.FleetDeltaPreparing]: 'info',
+  SyncPending: 'info',
+  [ConditionType.FleetValid]: 'success',
+};
 
-export const getFleetSyncStatus = (
-  fleet: Fleet,
-  t: TFunction,
-): {
-  status: FleetConditionType;
-  message: string | undefined;
-} => {
-  const validCondition = (fleet.status?.conditions || []).find((c) => c.type === ConditionType.FleetValid);
-  if (validCondition) {
-    const isOK = validCondition.status === ConditionStatus.ConditionStatusTrue;
-    const message = isOK ? '' : getConditionMessage(validCondition);
+export const getFleetStatusLevel = (status?: FleetStatusType) => getStatusLevelFromMap(status, FLEET_STATUS_LEVELS);
+
+export const getFleetStatusItems = (t: TFunction): StatusItem<FleetStatusType>[] => [
+  {
+    id: 'Invalid',
+    label: t('Invalid'),
+    level: FLEET_STATUS_LEVELS.Invalid,
+  },
+  {
+    id: 'SyncPending',
+    label: t('Sync pending'),
+    level: FLEET_STATUS_LEVELS.SyncPending,
+  },
+  {
+    id: ConditionType.FleetDeltaPreparing,
+    label: t('Preparing updates'),
+    level: FLEET_STATUS_LEVELS[ConditionType.FleetDeltaPreparing],
+  },
+  {
+    id: ConditionType.FleetRolloutInProgress,
+    label: t('Rollout in progress'),
+    level: FLEET_STATUS_LEVELS[ConditionType.FleetRolloutInProgress],
+  },
+  {
+    id: ConditionType.FleetValid,
+    label: t('Valid'),
+    level: FLEET_STATUS_LEVELS[ConditionType.FleetValid],
+  },
+];
+
+// Mimics the API shape for Device status fields
+type FleetStatus = {
+  type: FleetStatusType;
+  info: string | undefined;
+};
+
+export const getFleetStatus = (t: TFunction, fleet: Fleet): FleetStatus => {
+  const fleetConditions = fleet.status?.conditions || [];
+
+  const validCondition = fleetConditions.find((c) => c.type === ConditionType.FleetValid);
+  if (!validCondition) {
+    return { type: 'SyncPending', info: t('Fleet has not been validated yet') };
+  } else if (validCondition.status !== ConditionStatus.ConditionStatusTrue) {
+    return { type: 'Invalid', info: getConditionMessage(validCondition) };
+  }
+
+  const rolloutCondition = fleetConditions.find((c) => c.type === ConditionType.FleetRolloutInProgress);
+  if (rolloutCondition && rolloutCondition.status === ConditionStatus.ConditionStatusTrue) {
     return {
-      message,
-      status: isOK ? ConditionType.FleetValid : 'Invalid',
+      type: ConditionType.FleetRolloutInProgress,
+      info: getConditionMessage(rolloutCondition),
     };
   }
-  return {
-    status: 'SyncPending',
-    message: t('Awaiting first sync'),
-  };
+
+  const deltaUpdatesCondition = fleetConditions.find((c) => c.type === ConditionType.FleetDeltaPreparing);
+  if (deltaUpdatesCondition && deltaUpdatesCondition.status === ConditionStatus.ConditionStatusTrue) {
+    return { type: ConditionType.FleetDeltaPreparing, info: getConditionMessage(deltaUpdatesCondition) };
+  }
+
+  return { type: ConditionType.FleetValid, info: t('Fleet validated successfully') };
 };
 
 const isFleetRolloutFailedCondition = (condition: Condition) =>

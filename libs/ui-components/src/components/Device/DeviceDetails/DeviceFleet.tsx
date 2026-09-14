@@ -6,7 +6,7 @@ import { ExclamationTriangleIcon } from '@patternfly/react-icons/dist/js/icons/e
 import { ConditionType, type Device } from '@flightctl/types';
 import { type GenericCondition } from '../../../types/extraTypes';
 import { getDeviceFleet } from '../../../utils/devices';
-import { getCondition } from '../../../utils/api';
+import { getTrueCondition } from '../../../utils/api';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { Link, ROUTE } from '../../../hooks/useNavigate';
 import ResourceLink from '../../common/ResourceLink';
@@ -80,7 +80,7 @@ const DeviceFleet = ({ device }: { device?: Device }) => {
     return '-';
   }
 
-  const multipleOwnersCondition = getCondition(device.status?.conditions, ConditionType.DeviceMultipleOwners);
+  const multipleOwnersCondition = getTrueCondition(device.status?.conditions, ConditionType.DeviceMultipleOwners);
   let fleetNameEl: React.ReactNode = null;
   const fleetName = getDeviceFleet(device.metadata);
   if (fleetName) {

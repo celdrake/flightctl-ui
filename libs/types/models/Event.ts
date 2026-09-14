@@ -108,6 +108,9 @@ export namespace Event {
     ENCRYPTION_MIGRATION_STARTED = 'EncryptionMigrationStarted',
     ENCRYPTION_MIGRATION_COMPLETED = 'EncryptionMigrationCompleted',
     APPLICATION_LIFECYCLE_CHANGED = 'ApplicationLifecycleChanged',
+    PREPARE_DELTAS = 'PrepareDeltas',
+    DELTA_GENERATION_PROGRESS = 'DeltaGenerationProgress',
+    DELTA_GENERATION_COMPLETED = 'DeltaGenerationCompleted',
   }
   /**
    * The type of the event. One of Normal, Warning.

@@ -5,13 +5,12 @@ import {
   Button,
   ButtonVariant,
   Checkbox,
+  Content,
   Flex,
   FlexItem,
   FormGroup,
   FormSection,
   Grid,
-  Label,
-  LabelGroup,
   ModalBody,
   ModalFooter,
   ModalHeader,
@@ -21,15 +20,17 @@ import {
 } from '@patternfly/react-core';
 import FlightCtlModal from '@flightctl/ui-components/src/components/common/FlightCtlModal';
 
-import { FieldArray, Formik, useField, useFormikContext } from 'formik';
+import { Formik, useFormikContext } from 'formik';
 import * as Yup from 'yup';
 import { Trans } from 'react-i18next';
-import { MinusCircleIcon, OutlinedQuestionCircleIcon, PlusCircleIcon } from '@patternfly/react-icons/dist/js/icons';
+import { OutlinedQuestionCircleIcon } from '@patternfly/react-icons/dist/js/icons';
 
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useFetch } from '../../../hooks/useFetch';
 import { type RepositoryFormValues } from './types';
 import CreateResourceSyncsForm from './CreateResourceSyncsForm';
+import DeltaStorageCheckbox from './DeltaStorageCheckbox';
+import OciBaseImagesSection from './OciBaseImagesSection';
 
 import {
   getInitValues,
@@ -39,9 +40,10 @@ import {
   getResourceSync,
   getResourceSyncEditPatch,
   handlePromises,
+  isDuplicateDeltaStorageTargetError,
   repositorySchema,
 } from './utils';
-import { OciRepoSpec, RepoSpecType, type Repository, type ResourceSync } from '@flightctl/types';
+import { OciRepoSpec, RepoSpecType, type Repository, type RepositoryList, type ResourceSync } from '@flightctl/types';
 import { getErrorMessage } from '../../../utils/error';
 import LeaveFormConfirmation from '../../common/LeaveFormConfirmation';
 import LabelWithHelperText, { FormGroupWithHelperText } from '../../common/WithHelperText';
@@ -56,9 +58,6 @@ import { DEMO_REPOSITORY_URL } from '../../../hooks/useAppLinks';
 import WithTooltip from '../../common/WithTooltip';
 import { usePermissionsContext } from '../../common/PermissionsContext';
 import { RESOURCE, VERB } from '../../../types/rbac';
-import ExpandableFormSection from '../../form/ExpandableFormSection';
-import EditableLabelControl from '../../common/EditableLabelControl';
-import ErrorHelperText from '../../form/FieldHelperText';
 
 import './CreateRepositoryForm.css';
 
@@ -246,6 +245,11 @@ const RepositoryType = ({
           registry: '',
           scheme: OciRepoSpec.scheme.HTTPS,
           accessMode: OciRepoSpec.accessMode.READ,
+          baseImages: [],
+          deltaStorageTarget: false,
+          placementMode: 'registry',
+          repository: '',
+          namespace: '',
         });
       }
     }
@@ -329,42 +333,71 @@ const RepositoryType = ({
   );
 };
 
-const TagsField = ({
-  index,
-  onAdd,
-  onRemove,
-  onEdit,
-}: {
-  index: number;
-  onAdd: (tag: string) => void;
-  onRemove: (idx: number) => void;
-  onEdit: (idx: number, tag: string) => void;
-}) => {
+const DeltaStorageSection = ({ currentRepoName, isEdit }: { currentRepoName?: string; isEdit?: boolean }) => {
   const { t } = useTranslation();
-  const [{ value }, meta] = useField<string[] | undefined>(`ociConfig.baseImages.${index}.tags`);
+  const { get } = useFetch();
+  const { values, setFieldValue } = useFormikContext<RepositoryFormValues>();
+  const [existingDeltaTargetName, setExistingDeltaTargetName] = React.useState<string>();
+
+  const ociConfig = values.ociConfig as NonNullable<RepositoryFormValues['ociConfig']>;
+  const deltaStorageTarget = ociConfig.deltaStorageTarget;
+  const isDeltaStorageBlocked = Boolean(existingDeltaTargetName);
+
+  React.useEffect(() => {
+    // CELIA-WIP: CHECK
+    if (!deltaStorageTarget) {
+      return;
+    }
+    void setFieldValue('ociConfig.accessMode', OciRepoSpec.accessMode.READ_WRITE);
+  }, [deltaStorageTarget, setFieldValue]);
+
+  React.useEffect(() => {
+    const abortController = new AbortController();
+
+    const loadExistingDeltaRepo = async () => {
+      try {
+        const repoList = await get<RepositoryList>(
+          'repositories?fieldSelector=spec.deltaStorageTarget=true&limit=1',
+          abortController.signal,
+        );
+        const deltaStorageRepo = repoList.items.find((repo) => repo.metadata.name !== currentRepoName);
+        if (!abortController.signal.aborted) {
+          setExistingDeltaTargetName(deltaStorageRepo?.metadata.name);
+        }
+      } catch {
+        if (!abortController.signal.aborted) {
+          setExistingDeltaTargetName(undefined);
+        }
+      }
+    };
+
+    void loadExistingDeltaRepo();
+    return () => {
+      abortController.abort();
+    };
+  }, [currentRepoName, get]);
+
+  React.useEffect(() => {
+    if (isDeltaStorageBlocked && deltaStorageTarget) {
+      void setFieldValue('ociConfig.deltaStorageTarget', false);
+    }
+  }, [isDeltaStorageBlocked, deltaStorageTarget, setFieldValue]);
+
   return (
-    <>
-      <LabelGroup
-        numLabels={5}
-        isEditable
-        addLabelControl={<EditableLabelControl defaultLabel="tag" addButtonText={t('Add tag')} onAddLabel={onAdd} />}
-      >
-        {value?.map((tag, idx) => (
-          <Label
-            key={idx}
-            title={tag}
-            isEditable
-            onClose={() => onRemove(idx)}
-            onEditComplete={(_, newText) => {
-              onEdit(idx, newText);
-            }}
-          >
-            {tag}
-          </Label>
-        ))}
-      </LabelGroup>
-      <ErrorHelperText meta={meta} touchRequired={false} />
-    </>
+    <FormSection title={t('Delta storage')}>
+      <DeltaStorageCheckbox isDisabled={isDeltaStorageBlocked} isEdit={isEdit} />
+
+      {isDeltaStorageBlocked && existingDeltaTargetName && (
+        <Alert isInline variant="warning" title={t('Delta storage target already exists')} className="pf-v6-u-mt-md">
+          <Trans t={t} values={{ name: existingDeltaTargetName }}>
+            <Content>
+              Your organization already has a delta storage repository configured at{' '}
+              <strong>{existingDeltaTargetName}</strong>. Only one repository can have this role in your organization.
+            </Content>
+          </Trans>
+        </Alert>
+      )}
+    </FormSection>
   );
 };
 
@@ -372,15 +405,18 @@ export const RepositoryForm = ({
   isEdit,
   accessModeDisabledReason,
   enforcedRepoTypeMessage,
+  currentRepoName,
 }: {
   isEdit?: boolean;
   accessModeDisabledReason?: string;
   enforcedRepoTypeMessage?: string;
+  currentRepoName?: string;
 }) => {
   const { t } = useTranslation();
   const { values } = useFormikContext<RepositoryFormValues>();
   const isOciRepo = values.repoType === RepoSpecType.RepoSpecTypeOci;
-  const isAccessModeDisabled = Boolean(accessModeDisabledReason);
+  const isDeltaStorageTarget = values.allowDeltaStorage && values.ociConfig?.deltaStorageTarget;
+  const isAccessModeDisabled = Boolean(accessModeDisabledReason) || Boolean(isDeltaStorageTarget);
 
   return (
     <>
@@ -457,81 +493,8 @@ export const RepositoryForm = ({
               </Flex>
             </WithTooltip>
           </FormGroup>
-          <FieldArray name="ociConfig.baseImages">
-            {(arrayHelpers) => (
-              <>
-                <FormGroup label={t('Base images')}>
-                  {values.ociConfig?.baseImages?.map((baseImage, index) => (
-                    <Split hasGutter key={index}>
-                      <SplitItem isFilled>
-                        <ExpandableFormSection
-                          title={
-                            baseImage.displayName ||
-                            baseImage.imageName ||
-                            t('Base image {{ idx }}', { idx: index + 1 })
-                          }
-                          fieldName={`ociConfig.baseImages.${index}`}
-                        >
-                          <Grid hasGutter>
-                            <FormGroup label={t('Display name')}>
-                              <TextField
-                                name={`ociConfig.baseImages.${index}.displayName`}
-                                aria-label={t('Display name')}
-                              />
-                            </FormGroup>
-                            <FormGroup label={t('Image name')} isRequired>
-                              <TextField
-                                name={`ociConfig.baseImages.${index}.imageName`}
-                                aria-label={t('Image name')}
-                                isRequired
-                              />
-                            </FormGroup>
-                            <FormGroup label={t('Tags')} isRequired>
-                              <FieldArray name={`ociConfig.baseImages.${index}.tags`}>
-                                {(arrayHelpers) => (
-                                  <TagsField
-                                    index={index}
-                                    onAdd={(tag) => arrayHelpers.push(tag)}
-                                    onEdit={(idx, tag) => arrayHelpers.replace(idx, tag)}
-                                    onRemove={(idx) => arrayHelpers.remove(idx)}
-                                  />
-                                )}
-                              </FieldArray>
-                            </FormGroup>
-                          </Grid>
-                        </ExpandableFormSection>
-                      </SplitItem>
-                      <SplitItem>
-                        <Button
-                          aria-label={t('Remove base image')}
-                          variant="link"
-                          icon={<MinusCircleIcon />}
-                          iconPosition="start"
-                          onClick={() => arrayHelpers.remove(index)}
-                        />
-                      </SplitItem>
-                    </Split>
-                  ))}
-                </FormGroup>
-                <FormGroup>
-                  <Button
-                    variant="link"
-                    icon={<PlusCircleIcon />}
-                    iconPosition="start"
-                    onClick={() =>
-                      arrayHelpers.push({
-                        displayName: '',
-                        imageName: '',
-                        tags: [],
-                      })
-                    }
-                  >
-                    {t('Add base image')}
-                  </Button>
-                </FormGroup>
-              </>
-            )}
-          </FieldArray>
+          {values.allowDeltaStorage && <DeltaStorageSection currentRepoName={currentRepoName} isEdit={isEdit} />}
+          {!isDeltaStorageTarget && <OciBaseImagesSection />}
         </FormSection>
       )}
       <CheckboxField name="useAdvancedConfig" label={t('Use advanced configurations')} body={<AdvancedSection />} />
@@ -544,7 +507,13 @@ type CreateRepositoryFormContentProps = React.PropsWithChildren &
     isEdit: boolean;
   };
 
-const CreateRepositoryFormContent = ({ isEdit, onClose, options, children }: CreateRepositoryFormContentProps) => {
+const CreateRepositoryFormContent = ({
+  isEdit,
+  onClose,
+  options,
+  children,
+  currentRepoName,
+}: CreateRepositoryFormContentProps & { currentRepoName?: string }) => {
   const { t } = useTranslation();
   const { values, setFieldValue, isValid, dirty, submitForm, isSubmitting } = useFormikContext<RepositoryFormValues>();
   const isSubmitDisabled = isSubmitting || !dirty || !isValid;
@@ -559,11 +528,14 @@ const CreateRepositoryFormContent = ({ isEdit, onClose, options, children }: Cre
         <Grid hasGutter>
           <RepositoryForm
             isEdit={isEdit}
+            currentRepoName={currentRepoName}
             enforcedRepoTypeMessage={options?.enforcedRepoTypeMessage}
             accessModeDisabledReason={
-              options?.writeAccessOnly
-                ? t('Access mode must be set to read and write for this repository type')
-                : undefined
+              values.ociConfig?.deltaStorageTarget
+                ? t('Access mode must be read and write when storing generated deltas')
+                : options?.writeAccessOnly
+                  ? t('Access mode must be set to read and write for this repository type')
+                  : undefined
             }
           />
           {showResourceSyncs && canCreateRS && (
@@ -621,6 +593,7 @@ export type CreateRepositoryFormProps = {
     // Message to display when a single repository type is enforced
     enforcedRepoTypeMessage?: string;
     writeAccessOnly?: boolean;
+    allowDeltaStorage?: boolean;
   };
 };
 
@@ -687,7 +660,11 @@ const CreateRepositoryForm = ({
             }
             onSuccess(repository);
           } catch (e) {
-            setErrors([getErrorMessage(e)]);
+            setErrors([
+              isDuplicateDeltaStorageTargetError(e)
+                ? t('This organization already has a delta storage repository. Edit or remove the existing one first.')
+                : getErrorMessage(e),
+            ]);
           }
         } else {
           const repoToCreate = getRepository(values);
@@ -705,12 +682,21 @@ const CreateRepositoryForm = ({
             }
             onSuccess(repo);
           } catch (e) {
-            setErrors([getErrorMessage(e)]);
+            setErrors([
+              isDuplicateDeltaStorageTargetError(e)
+                ? t('This organization already has a delta storage repository. Edit or remove the existing one first.')
+                : getErrorMessage(e),
+            ]);
           }
         }
       }}
     >
-      <CreateRepositoryFormContent isEdit={!!repository} onClose={onClose} options={options}>
+      <CreateRepositoryFormContent
+        isEdit={!!repository}
+        currentRepoName={repository?.metadata.name}
+        onClose={onClose}
+        options={options}
+      >
         {errors?.length && (
           <Alert isInline variant="danger" title={t('Repository could not be saved')}>
             {errors.map((e, index) => (

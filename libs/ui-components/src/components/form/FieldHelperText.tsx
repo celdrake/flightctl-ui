@@ -16,7 +16,7 @@ type DefaultHelperTextProps = {
 
 export const DefaultHelperText = ({ helperText }: DefaultHelperTextProps) => {
   return helperText ? (
-    <FormHelperText>
+    <FormHelperText className="pf-v6-u-mt-xs">
       <HelperText>
         <HelperTextItem variant="default">{helperText}</HelperTextItem>
       </HelperText>

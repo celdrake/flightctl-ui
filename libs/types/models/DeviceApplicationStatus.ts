@@ -2,9 +2,11 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { ApplicationImageDigest } from './ApplicationImageDigest';
 import type { ApplicationStatusType } from './ApplicationStatusType';
 import type { ApplicationVolumeStatus } from './ApplicationVolumeStatus';
 import type { AppType } from './AppType';
+import type { DeviceDeltaApplyStatus } from './DeviceDeltaApplyStatus';
 export type DeviceApplicationStatus = {
   /**
    * Human readable name of the application.
@@ -32,5 +34,10 @@ export type DeviceApplicationStatus = {
    * Status of volumes used by this application.
    */
   volumes?: Array<ApplicationVolumeStatus>;
+  lastDelta?: DeviceDeltaApplyStatus;
+  /**
+   * Image references this application uses and their digests in local storage. image is the ref from the current rendered spec (tag or digest). digest is what is in storage. When image is already a digest ref it matches digest.
+   */
+  imageDigests?: Array<ApplicationImageDigest>;
 };
 
