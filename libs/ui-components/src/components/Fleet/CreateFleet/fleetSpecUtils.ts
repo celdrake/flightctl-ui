@@ -96,10 +96,6 @@ export const getUpdatePolicyValues = (updateSpec?: DeviceUpdatePolicySpec): Upda
   };
 };
 
-// CELIA-WIP Confirm which are the actual values
-export const DEFAULT_DELTA_GENERATION_MAX_WAIT = '30m';
-export const DEFAULT_DELTA_GENERATION_TIMEOUT = '15m';
-
 /** True when the user customized rollout hold and/or per-job timeout (non-empty inputs). */
 export const hasCustomDeltaTiming = (deltaGeneration?: DeltaGenerationForm): boolean =>
   Boolean(deltaGeneration?.isCustomized && (deltaGeneration.maxWaitForDelta || deltaGeneration.deltaGenerationTimeout));

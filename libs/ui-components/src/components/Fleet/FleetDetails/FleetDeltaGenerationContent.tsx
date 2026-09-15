@@ -3,90 +3,102 @@ import {
   DescriptionListDescription,
   DescriptionListGroup,
   DescriptionListTerm,
+  Flex,
+  FlexItem,
   Icon,
   Label,
 } from '@patternfly/react-core';
+import CheckCircleIcon from '@patternfly/react-icons/dist/js/icons/check-circle-icon';
+import MinusCircleIcon from '@patternfly/react-icons/dist/js/icons/minus-circle-icon';
 import InProgressIcon from '@patternfly/react-icons/dist/js/icons/in-progress-icon';
 
 import { ConditionType, type DeltaGenerationStatus, type Fleet } from '@flightctl/types';
 import { useTranslation } from '../../../hooks/useTranslation';
 import LabelWithHelperText from '../../common/WithHelperText';
 import { getTrueCondition } from '../../../utils/api';
+import DeltaGenerationHelpContent from '../CreateFleet/DeltaGenerationHelpContent';
 
-const ProgressMessage = ({ deltaStatus }: { deltaStatus?: DeltaGenerationStatus }) => {
-  const { t } = useTranslation();
-
-  let message: string;
-  if (deltaStatus) {
-    message = t('{{ completed }}/{{ total }} delta pairs', {
-      completed: deltaStatus.completed,
-      total: deltaStatus.total,
-    });
-  } else {
-    message = t('Progress unknown');
-  }
-
+const DeltaLabel = ({ icon, text }: { icon: React.ReactNode; text: string }) => {
   return (
     <Label
+      style={{ '--pf-v6-c-label__content--Gap': 'var(--pf-t--global--spacer--sm)' } as React.CSSProperties}
       variant="outline"
-      icon={
-        <Icon>
-          <InProgressIcon />
-        </Icon>
-      }
+      icon={icon}
     >
-      {message}
+      {text}
     </Label>
   );
 };
 
-const FleetDeltaGenerationProgress = ({ fleet }: { fleet: Fleet }) => {
-  const { t } = useTranslation();
-
+const getDeltaProgressStatus = (fleet: Fleet) => {
   const deltaPreparingCondition = getTrueCondition(fleet.status?.conditions, ConditionType.FleetDeltaPreparing);
   if (!deltaPreparingCondition) {
     return null;
   }
 
   const deltaStatus = fleet.status?.deltaGeneration;
+  if (!deltaStatus) {
+    return null;
+  }
 
-  return (
-    <DescriptionListGroup>
-      <DescriptionListTerm>
-        <LabelWithHelperText
-          label={t('Delta generation progress')}
-          content={t(
-            'Incremental update artifacts are being generated before rollout continues. Fleet rollout may be held until generation completes or the configured deadline is reached.',
-          )}
-        />
-      </DescriptionListTerm>
-      <DescriptionListDescription>
-        <ProgressMessage deltaStatus={deltaStatus} />
-      </DescriptionListDescription>
-    </DescriptionListGroup>
-  );
+  return fleet.status?.deltaGeneration || { completed: 0, total: 0 };
+};
+
+const FleetDeltaGenerationProgress = ({ deltaStatus }: { deltaStatus: DeltaGenerationStatus }) => {
+  const { t } = useTranslation();
+
+  if (deltaStatus.completed === 0 && deltaStatus.total === 0) {
+    return t('Progress unknown');
+  }
+
+  const message = t('Generating {{ completed }} of {{ total }} artifacts', {
+    completed: deltaStatus.completed,
+    total: deltaStatus.total,
+  });
+  return <DeltaLabel icon={<InProgressIcon />} text={message} />;
 };
 
 const FleetDeltaGenerationContent = ({ fleet }: { fleet: Fleet }) => {
   const { t } = useTranslation();
 
   const rolloutPolicy = fleet.spec.rolloutPolicy;
-  const isDeltaDisabled = rolloutPolicy?.generateDelta === false;
+  const isDeltaEnabled = rolloutPolicy?.generateDelta !== false;
+  const deltaStatus = getDeltaProgressStatus(fleet);
+
   return (
     <>
       <DescriptionListGroup>
         <DescriptionListTerm>
-          <LabelWithHelperText
-            label={t('Delta generation')}
-            content={t(
-              'Fleet-level setting for server-side incremental update artifacts. Configured in fleet update policy; view or edit in fleet configurations.',
-            )}
-          />
+          <LabelWithHelperText label={t('Delta generation')} content={<DeltaGenerationHelpContent />} />
         </DescriptionListTerm>
-        <DescriptionListDescription>{isDeltaDisabled ? t('Disabled') : t('Enabled')}</DescriptionListDescription>
+        <DescriptionListDescription>
+          <Flex
+            direction={{ default: 'column' }}
+            spaceItems={{ default: 'spaceItemsSm' }}
+            alignItems={{ default: 'alignItemsFlexStart' }}
+          >
+            <FlexItem>
+              {isDeltaEnabled ? (
+                <DeltaLabel
+                  text={t('Enabled')}
+                  icon={
+                    <Icon status="success">
+                      <CheckCircleIcon />
+                    </Icon>
+                  }
+                />
+              ) : (
+                <DeltaLabel text={t('Disabled')} icon={<MinusCircleIcon />} />
+              )}
+            </FlexItem>
+            {deltaStatus && (
+              <FlexItem>
+                <FleetDeltaGenerationProgress deltaStatus={deltaStatus} />
+              </FlexItem>
+            )}
+          </Flex>
+        </DescriptionListDescription>
       </DescriptionListGroup>
-
-      <FleetDeltaGenerationProgress fleet={fleet} />
     </>
   );
 };

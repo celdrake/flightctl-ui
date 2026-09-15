@@ -1,14 +1,17 @@
 import * as React from 'react';
-import { Alert, FormGroup, Stack, StackItem, Title } from '@patternfly/react-core';
+import { Alert, Content, ContentVariants, FormGroup, Stack, StackItem } from '@patternfly/react-core';
 import { useFormikContext } from 'formik';
 
 import { useTranslation } from '../../../../hooks/useTranslation';
 import type { DeltaGenerationForm, FleetFormValues } from '../../../../types/deviceSpec';
-import { DEFAULT_DELTA_GENERATION_MAX_WAIT, DEFAULT_DELTA_GENERATION_TIMEOUT } from '../fleetSpecUtils';
 import SwitchField from '../../../form/SwitchField';
 import RadioField from '../../../form/RadioField';
 import TextField from '../../../form/TextField';
-import ErrorHelperText, { DefaultHelperText } from '../../../form/FieldHelperText';
+import ErrorHelperText from '../../../form/FieldHelperText';
+import { FormGroupWithHelperText } from '../../../common/WithHelperText';
+import LearnMoreLink from '../../../common/LearnMoreLink';
+import { useAppLinks } from '../../../../hooks/useAppLinks';
+import DeltaGenerationHelpContent from '../DeltaGenerationHelpContent';
 
 const DeltaGenerationSettings = ({ isReadOnly }: { isReadOnly: boolean }) => {
   const { t } = useTranslation();
@@ -20,10 +23,9 @@ const DeltaGenerationSettings = ({ isReadOnly }: { isReadOnly: boolean }) => {
           <TextField
             name="deltaGeneration.maxWaitForDelta"
             label={t('Rollout hold deadline')}
-            placeholder={DEFAULT_DELTA_GENERATION_MAX_WAIT}
+            placeholder={t('e.g. 30m, 1h, 5h')}
             helperText={t(
-              'How long rollout waits on the server for delta generation to finish. If this deadline is reached, rollout continues without deltas for any unfinished pairs. Consider your maintenance window — if generation takes longer than the window allows, devices may miss the update. Leave empty to use the deployment default ({{ default }}).',
-              { default: DEFAULT_DELTA_GENERATION_MAX_WAIT },
+              'How long rollout waits on the server for delta generation to finish. If this deadline is reached, rollout continues without deltas for any unfinished artifacts. Leave empty to use the deployment default.',
             )}
             isDisabled={isReadOnly}
           />
@@ -34,21 +36,13 @@ const DeltaGenerationSettings = ({ isReadOnly }: { isReadOnly: boolean }) => {
           <TextField
             name="deltaGeneration.deltaGenerationTimeout"
             label={t('Per-job generation timeout')}
-            placeholder={DEFAULT_DELTA_GENERATION_TIMEOUT}
+            placeholder={t('e.g. 30m, 1h, 5h')}
             helperText={t(
-              'Maximum time allowed for each individual delta generation job on the server. Jobs that exceed this deadline are cancelled and marked failed. Leave empty to use the deployment default ({{ default }}).',
-              { default: DEFAULT_DELTA_GENERATION_TIMEOUT },
+              'Maximum time allowed for each individual delta generation job on the server. Jobs that exceed this deadline are cancelled. Leave empty to use the deployment default.',
             )}
             isDisabled={isReadOnly}
           />
         </FormGroup>
-      </StackItem>
-      <StackItem>
-        <DefaultHelperText
-          helperText={t(
-            'Duration format: a positive number followed by s (seconds), m (minutes), or h (hours). Examples: 30m, 1h, 45s.',
-          )}
-        />
       </StackItem>
     </Stack>
   );
@@ -76,6 +70,8 @@ const UpdateStepDeltaGeneration = ({ isReadOnly }: { isReadOnly: boolean }) => {
     touched,
   } = useFormikContext<FleetFormValues>();
 
+  const deltaUpdatesDocLink = useAppLinks('deltaGeneration');
+
   const [hasCustomFieldsError, setHasCustomFieldsError] = React.useState(false);
 
   React.useEffect(() => {
@@ -83,63 +79,70 @@ const UpdateStepDeltaGeneration = ({ isReadOnly }: { isReadOnly: boolean }) => {
   }, [deltaGeneration, touched]);
 
   return (
-    <Stack hasGutter>
-      <StackItem>
-        <Title headingLevel="h2">{t('Delta generation')}</Title>
-        <DefaultHelperText
-          helperText={t('Generate smaller incremental updates during fleet rollouts. Enabled by default.')}
-        />
-      </StackItem>
-
-      <StackItem>
-        <SwitchField
-          name="deltaGeneration.generateDelta"
-          label={t('Generate deltas for this fleet')}
-          isDisabled={isReadOnly}
-        />
-      </StackItem>
-
-      {deltaGeneration.generateDelta ? (
+    <FormGroupWithHelperText label={t('Delta generation')} content={<DeltaGenerationHelpContent />}>
+      <Stack hasGutter>
         <StackItem>
-          <FormGroup label={t('Timing')} role="radiogroup" isStack>
-            <RadioField
-              id="delta-settings-default"
-              name="deltaGeneration.isCustomized"
-              label={t('Default settings')}
-              description={t('Use system defaults for rollout hold and per-job generation timeout.')}
-              checkedValue={false}
-              isDisabled={isReadOnly}
-            />
-            <RadioField
-              id="delta-settings-customize"
-              name="deltaGeneration.isCustomized"
-              label={t('Customize delta generation settings')}
-              description={t('Set custom rollout hold and per-job generation timeouts.')}
-              checkedValue={true}
-              isDisabled={isReadOnly}
-              body={deltaGeneration.isCustomized ? <DeltaGenerationSettings isReadOnly={isReadOnly} /> : undefined}
-            />
-            {hasCustomFieldsError && (
-              <div className="pf-v6-u-ml-md">
+          <SwitchField
+            name="deltaGeneration.generateDelta"
+            label={t('Generate deltas for this fleet')}
+            helperText={
+              <Content component={ContentVariants.small}>
+                {t('Reduce download size during rollouts by generating incremental update artifacts on the server.')}{' '}
+                {deltaUpdatesDocLink && <LearnMoreLink text={t('View documentation')} link={deltaUpdatesDocLink} />}
+              </Content>
+            }
+            isDisabled={isReadOnly}
+          />
+        </StackItem>
+
+        <StackItem>
+          {deltaGeneration.generateDelta ? (
+            <FormGroup
+              label={t('Delta generation timing')}
+              role="radiogroup"
+              className="fctl-update-policy--customize-options"
+              isStack
+            >
+              <RadioField
+                id="delta-settings-default"
+                name="deltaGeneration.isCustomized"
+                label={t('Use default settings')}
+                description={t('Apply deployment defaults for rollout hold and generation timeout.')}
+                checkedValue={false}
+                isDisabled={isReadOnly}
+              />
+              <RadioField
+                id="delta-settings-customize"
+                name="deltaGeneration.isCustomized"
+                label={t('Customize timing')}
+                description={t('Set fleet-specific rollout hold and per-job generation timeout values.')}
+                checkedValue={true}
+                isDisabled={isReadOnly}
+                body={deltaGeneration.isCustomized ? <DeltaGenerationSettings isReadOnly={isReadOnly} /> : undefined}
+              />
+              {hasCustomFieldsError && (
                 <ErrorHelperText
                   error={t(
                     'To use custom settings, enter at least one of rollout hold deadline or per-job generation timeout.',
                   )}
                 />
-              </div>
-            )}
-          </FormGroup>
+              )}
+            </FormGroup>
+          ) : (
+            <Alert
+              isInline
+              variant="info"
+              className="fctl-update-delta-generation__opt-out-alert"
+              title={t('Delta generation disabled for this fleet')}
+            >
+              {t(
+                'You chose to disable server-side delta generation for this fleet. Devices may still apply deltas published in container images when available.',
+              )}
+            </Alert>
+          )}
         </StackItem>
-      ) : (
-        <StackItem>
-          <Alert isInline isPlain variant="info" title={t('Delta generation disabled for this fleet')}>
-            {t(
-              'Rollout will not wait for server-generated deltas. Devices may still apply CI-published deltas when available.',
-            )}
-          </Alert>
-        </StackItem>
-      )}
-    </Stack>
+      </Stack>
+    </FormGroupWithHelperText>
   );
 };
 
