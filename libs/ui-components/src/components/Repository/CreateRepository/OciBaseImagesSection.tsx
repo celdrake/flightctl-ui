@@ -105,22 +105,21 @@ const OciBaseImagesSection = () => {
               </Split>
             ))}
           </FormGroup>
-          <FormGroup>
-            <Button
-              variant="link"
-              icon={<PlusCircleIcon />}
-              iconPosition="start"
-              onClick={() =>
-                arrayHelpers.push({
-                  displayName: '',
-                  imageName: '',
-                  tags: [],
-                })
-              }
-            >
-              {t('Add base image')}
-            </Button>
-          </FormGroup>
+          <Button
+            style={{ marginRight: 'auto' }}
+            variant="link"
+            icon={<PlusCircleIcon />}
+            iconPosition="start"
+            onClick={() =>
+              arrayHelpers.push({
+                displayName: '',
+                imageName: '',
+                tags: [],
+              })
+            }
+          >
+            {t('Add base image')}
+          </Button>
         </>
       )}
     </FieldArray>

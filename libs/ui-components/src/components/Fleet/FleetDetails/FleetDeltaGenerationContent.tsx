@@ -36,11 +36,6 @@ const getDeltaProgressStatus = (fleet: Fleet) => {
     return null;
   }
 
-  const deltaStatus = fleet.status?.deltaGeneration;
-  if (!deltaStatus) {
-    return null;
-  }
-
   return fleet.status?.deltaGeneration || { completed: 0, total: 0 };
 };
 
@@ -51,7 +46,7 @@ const FleetDeltaGenerationProgress = ({ deltaStatus }: { deltaStatus: DeltaGener
     return t('Progress unknown');
   }
 
-  const message = t('Generating {{ completed }} of {{ total }} artifacts', {
+  const message = t('Completed {{ completed }} of {{ total }} artifacts', {
     completed: deltaStatus.completed,
     total: deltaStatus.total,
   });

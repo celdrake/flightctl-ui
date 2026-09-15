@@ -14,7 +14,11 @@ export type BaseImage = {
   tags: string[];
 };
 
-export type OciPlacementMode = 'registry' | 'repository' | 'namespace';
+export enum OciPlacementMode {
+  Registry = 'registry',
+  Repository = 'repository',
+  Namespace = 'namespace',
+}
 
 export type RepositoryFormValues = {
   exists: boolean;

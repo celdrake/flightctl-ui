@@ -3,16 +3,14 @@ import { describe, expect, it } from 'vitest';
 import { ApiVersion, OciRepoSpec, RepoSpecType, type Repository } from '@flightctl/types';
 
 import {
-  getDeltaPushPathPreview,
   getInitValues,
   getOciPlacementModeFromSpec,
   getOciRepoDisplayPath,
   getRepository,
-  getRepositoryPatches,
   isDuplicateDeltaStorageTargetError,
   repositorySchema,
 } from './utils';
-import { type RepositoryFormValues } from './types';
+import { OciPlacementMode, type RepositoryFormValues } from './types';
 
 type DefinedOciConfig = NonNullable<RepositoryFormValues['ociConfig']>;
 
@@ -40,7 +38,7 @@ const getOciFormValues = (ociConfigOverrides?: Partial<DefinedOciConfig>): Repos
     accessMode: OciRepoSpec.accessMode.READ_WRITE,
     baseImages: [],
     deltaStorageTarget: true,
-    placementMode: 'registry',
+    placementMode: OciPlacementMode.Registry,
     repository: '',
     namespace: '',
     ...ociConfigOverrides,
@@ -60,7 +58,7 @@ const existingDeltaRepository = (): Repository => ({
   },
 });
 
-describe('OCI delta repository utils', () => {
+describe('OCI repository utils', () => {
   it('derives placement mode from stored spec', () => {
     expect(
       getOciPlacementModeFromSpec({
@@ -68,23 +66,23 @@ describe('OCI delta repository utils', () => {
         registry: testRegistry,
         repository: testRepo,
       }),
-    ).toBe('repository');
+    ).toBe(OciPlacementMode.Repository);
     expect(
       getOciPlacementModeFromSpec({
         type: RepoSpecType.RepoSpecTypeOci,
         registry: testRegistry,
         namespace: testNs,
       }),
-    ).toBe('namespace');
+    ).toBe(OciPlacementMode.Namespace);
     expect(
       getOciPlacementModeFromSpec({
         type: RepoSpecType.RepoSpecTypeOci,
         registry: testRegistry,
       }),
-    ).toBe('registry');
+    ).toBe(OciPlacementMode.Registry);
   });
 
-  it('builds OCI display paths and delta push previews', () => {
+  it('builds OCI display paths', () => {
     expect(
       getOciRepoDisplayPath({
         type: RepoSpecType.RepoSpecTypeOci,
@@ -92,43 +90,6 @@ describe('OCI delta repository utils', () => {
         repository: testRepo,
       }),
     ).toBe('my-registry.com/my-org/diffs');
-
-    expect(
-      getDeltaPushPathPreview({
-        registry: testRegistry,
-        placementMode: 'registry',
-      } as DefinedOciConfig),
-    ).toBe('my-registry.com/example/app');
-
-    expect(
-      getDeltaPushPathPreview({
-        registry: testRegistry,
-        placementMode: 'repository',
-        repository: testRepo,
-      } as DefinedOciConfig),
-    ).toBe('my-registry.com/my-org/diffs');
-
-    expect(
-      getDeltaPushPathPreview({
-        registry: testRegistry,
-        placementMode: 'namespace',
-        namespace: testNs,
-      } as DefinedOciConfig),
-    ).toBe('my-registry.com/my-org/app');
-
-    expect(
-      getDeltaPushPathPreview({
-        registry: testRegistry,
-        placementMode: 'repository',
-      } as DefinedOciConfig),
-    ).toBeUndefined();
-
-    expect(
-      getDeltaPushPathPreview({
-        registry: testRegistry,
-        placementMode: 'namespace',
-      } as DefinedOciConfig),
-    ).toBeUndefined();
   });
 
   it('maps delta target create payload for each placement mode', () => {
@@ -143,7 +104,7 @@ describe('OCI delta repository utils', () => {
     expect(
       getRepository(
         getOciFormValues({
-          placementMode: 'repository',
+          placementMode: OciPlacementMode.Repository,
           repository: testRepo,
         }),
       ).spec,
@@ -154,7 +115,7 @@ describe('OCI delta repository utils', () => {
     expect(
       getRepository(
         getOciFormValues({
-          placementMode: 'namespace',
+          placementMode: OciPlacementMode.Namespace,
           namespace: testNs,
         }),
       ).spec,
@@ -163,9 +124,9 @@ describe('OCI delta repository utils', () => {
     });
   });
 
-  it('omits delta fields from getRepository when allowDeltaStorage is false', () => {
+  it('omits delta storage target from getRepository when allowDeltaStorage is false', () => {
     const baseFormValues = getOciFormValues({
-      placementMode: 'repository',
+      placementMode: OciPlacementMode.Repository,
       repository: testRepo,
     });
     const spec = getRepository({
@@ -176,9 +137,24 @@ describe('OCI delta repository utils', () => {
     expect(spec).toMatchObject({
       registry: testRegistry,
       accessMode: OciRepoSpec.accessMode.READ_WRITE,
+      repository: testRepo,
     });
     expect(spec).not.toHaveProperty('deltaStorageTarget');
-    expect(spec).not.toHaveProperty('repository');
+  });
+
+  it('includes push placement for OCI repos that are not delta storage targets', () => {
+    const spec = getRepository(
+      getOciFormValues({
+        deltaStorageTarget: false,
+        placementMode: OciPlacementMode.Repository,
+        repository: testRepo,
+      }),
+    ).spec;
+
+    expect(spec).toMatchObject({
+      repository: testRepo,
+    });
+    expect(spec).not.toHaveProperty('deltaStorageTarget');
   });
 
   it('round-trips delta fields in getInitValues', () => {
@@ -186,54 +162,9 @@ describe('OCI delta repository utils', () => {
     const values = getInitValues({ repository });
     expect(values.ociConfig).toMatchObject({
       deltaStorageTarget: true,
-      placementMode: 'repository',
+      placementMode: OciPlacementMode.Repository,
       repository: testRepo,
     });
-  });
-
-  it('patches delta storage fields on edit', () => {
-    const repository = existingDeltaRepository();
-    const values = getInitValues({ repository });
-    const updatedValues = {
-      ...values,
-      ociConfig: {
-        ...values.ociConfig!,
-        placementMode: 'namespace' as const,
-        repository: '',
-        namespace: 'team-a',
-      },
-    };
-
-    const patches = getRepositoryPatches(updatedValues, repository);
-    expect(patches).toEqual(
-      expect.arrayContaining([
-        { op: 'remove', path: '/spec/repository' },
-        { op: 'add', path: '/spec/namespace', value: 'team-a' },
-      ]),
-    );
-  });
-
-  it('removes delta storage target and path fields when disabled', () => {
-    const repository = existingDeltaRepository();
-    const values = getInitValues({ repository });
-    const updatedValues = {
-      ...values,
-      ociConfig: {
-        ...values.ociConfig!,
-        deltaStorageTarget: false,
-        placementMode: 'registry' as const,
-        repository: '',
-        namespace: '',
-      },
-    };
-
-    const patches = getRepositoryPatches(updatedValues, repository);
-    expect(patches).toEqual(
-      expect.arrayContaining([
-        { op: 'remove', path: '/spec/deltaStorageTarget' },
-        { op: 'remove', path: '/spec/repository' },
-      ]),
-    );
   });
 
   it('detects duplicate delta storage target API errors', () => {
@@ -251,7 +182,8 @@ describe('OCI delta repository utils', () => {
 
   it('requires repository path when placement mode is repository', async () => {
     const values = getOciFormValues({
-      placementMode: 'repository',
+      deltaStorageTarget: false,
+      placementMode: OciPlacementMode.Repository,
       repository: '',
     });
     const schema = repositorySchema(t, undefined)(values);

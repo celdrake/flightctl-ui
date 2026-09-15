@@ -19,7 +19,7 @@ import { getLastTransitionTimeText } from '../../../utils/status/repository';
 import { useTranslation } from '../../../hooks/useTranslation';
 import RepositoryStatus from '../../Status/RepositoryStatus';
 import {
-  getDeltaStoragePlacementLabel,
+  getOciImagePlacementLabel,
   getRepoTypeLabel,
   getRepoUrlOrRegistry,
   hasCredentialsSettings,
@@ -94,14 +94,12 @@ const DetailsTab = ({ repoDetails }: { repoDetails: Repository }) => {
                   </Label>
                 </DescriptionListDescription>
               </DescriptionListGroup>
-              {isDeltaStorageTarget && (
-                <DescriptionListGroup>
-                  <DescriptionListTerm>{t('Push placement')}</DescriptionListTerm>
-                  <DescriptionListDescription>
-                    {getDeltaStoragePlacementLabel(t, repoDetails.spec as OciRepoSpec)}
-                  </DescriptionListDescription>
-                </DescriptionListGroup>
-              )}
+              <DescriptionListGroup>
+                <DescriptionListTerm>{t('Where images are stored')}</DescriptionListTerm>
+                <DescriptionListDescription>
+                  {getOciImagePlacementLabel(t, repoDetails.spec as OciRepoSpec)}
+                </DescriptionListDescription>
+              </DescriptionListGroup>
             </>
           )}
           <DescriptionListGroup>

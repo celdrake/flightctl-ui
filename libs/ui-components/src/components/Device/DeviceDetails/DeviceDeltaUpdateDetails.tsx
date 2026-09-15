@@ -98,7 +98,7 @@ const DeviceDeltaUpdateProgress = ({ deltaGeneration }: { deltaGeneration: Delta
             </Icon>
           }
         >
-          {t('{{ completed }}/{{ total }} delta pairs', {
+          {t('Completed {{ completed }} of {{ total }} artifacts', {
             completed: deltaGeneration.completed,
             total: deltaGeneration.total,
           })}

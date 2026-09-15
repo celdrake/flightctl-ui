@@ -5,7 +5,6 @@ import {
   Button,
   ButtonVariant,
   Checkbox,
-  Content,
   Flex,
   FlexItem,
   FormGroup,
@@ -29,8 +28,9 @@ import { useTranslation } from '../../../hooks/useTranslation';
 import { useFetch } from '../../../hooks/useFetch';
 import { type RepositoryFormValues } from './types';
 import CreateResourceSyncsForm from './CreateResourceSyncsForm';
-import DeltaStorageCheckbox from './DeltaStorageCheckbox';
+import DeltaStorageSelection from './DeltaStorageSelection';
 import OciBaseImagesSection from './OciBaseImagesSection';
+import OciPushPlacementSection from './OciPushPlacementSection';
 
 import {
   getInitValues,
@@ -344,7 +344,6 @@ const DeltaStorageSection = ({ currentRepoName, isEdit }: { currentRepoName?: st
   const isDeltaStorageBlocked = Boolean(existingDeltaTargetName);
 
   React.useEffect(() => {
-    // CELIA-WIP: CHECK
     if (!deltaStorageTarget) {
       return;
     }
@@ -384,20 +383,19 @@ const DeltaStorageSection = ({ currentRepoName, isEdit }: { currentRepoName?: st
   }, [isDeltaStorageBlocked, deltaStorageTarget, setFieldValue]);
 
   return (
-    <FormSection title={t('Delta storage')}>
-      <DeltaStorageCheckbox isDisabled={isDeltaStorageBlocked} isEdit={isEdit} />
-
+    <>
+      <FormGroup label={t('Delta storage')}>
+        <DeltaStorageSelection isDisabled={isDeltaStorageBlocked} isEdit={isEdit} />
+      </FormGroup>
       {isDeltaStorageBlocked && existingDeltaTargetName && (
-        <Alert isInline variant="warning" title={t('Delta storage target already exists')} className="pf-v6-u-mt-md">
+        <Alert isInline variant="info" title={t('This organization already has a repository for delta storage')}>
           <Trans t={t} values={{ name: existingDeltaTargetName }}>
-            <Content>
-              Your organization already has a delta storage repository configured at{' '}
-              <strong>{existingDeltaTargetName}</strong>. Only one repository can have this role in your organization.
-            </Content>
+            The repository <strong>{existingDeltaTargetName}</strong> is currently configured as the delta storage
+            repository for this organization.
           </Trans>
         </Alert>
       )}
-    </FormSection>
+    </>
   );
 };
 
@@ -448,7 +446,7 @@ export const RepositoryForm = ({
 
       <RepositoryType isEdit={isEdit} enforcedRepoTypeMessage={enforcedRepoTypeMessage} />
       {isOciRepo && (
-        <FormSection>
+        <>
           <FormGroup label={t('Scheme')}>
             <Split hasGutter>
               <SplitItem>
@@ -493,9 +491,10 @@ export const RepositoryForm = ({
               </Flex>
             </WithTooltip>
           </FormGroup>
+          <OciPushPlacementSection />
           {values.allowDeltaStorage && <DeltaStorageSection currentRepoName={currentRepoName} isEdit={isEdit} />}
           {!isDeltaStorageTarget && <OciBaseImagesSection />}
-        </FormSection>
+        </>
       )}
       <CheckboxField name="useAdvancedConfig" label={t('Use advanced configurations')} body={<AdvancedSection />} />
     </>
