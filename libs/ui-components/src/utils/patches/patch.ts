@@ -273,6 +273,8 @@ const appendRolloutSchedulingRemovalPatches = (patches: PatchRequest, currentPol
       path: `${ROLLOUT_POLICY_PATH}/deviceSelection`,
       op: 'remove',
     });
+  }
+  if (currentPolicy?.defaultUpdateTimeout !== undefined) {
     patches.push({
       path: `${ROLLOUT_POLICY_PATH}/defaultUpdateTimeout`,
       op: 'remove',
@@ -343,15 +345,19 @@ const appendRolloutSchedulingPatches = (
         value: toApiDeviceSelection(updatedPolicy),
       });
     }
-  } else if (currentBatches.length > 0) {
-    patches.push({
-      path: `${ROLLOUT_POLICY_PATH}/deviceSelection`,
-      op: 'remove',
-    });
-    patches.push({
-      path: `${ROLLOUT_POLICY_PATH}/defaultUpdateTimeout`,
-      op: 'remove',
-    });
+  } else {
+    if (currentBatches.length > 0) {
+      patches.push({
+        path: `${ROLLOUT_POLICY_PATH}/deviceSelection`,
+        op: 'remove',
+      });
+    }
+    if (currentPolicy?.defaultUpdateTimeout !== undefined) {
+      patches.push({
+        path: `${ROLLOUT_POLICY_PATH}/defaultUpdateTimeout`,
+        op: 'remove',
+      });
+    }
   }
 
   if (fleetValues.disruptionBudget.isCustomized) {

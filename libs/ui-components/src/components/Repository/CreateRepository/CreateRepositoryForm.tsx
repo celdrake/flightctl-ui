@@ -338,6 +338,7 @@ const DeltaStorageSection = ({ currentRepoName, isEdit }: { currentRepoName?: st
   const { get } = useFetch();
   const { values, setFieldValue } = useFormikContext<RepositoryFormValues>();
   const [existingDeltaTargetName, setExistingDeltaTargetName] = React.useState<string>();
+  const [isLoadingDeltaTarget, setIsLoadingDeltaTarget] = React.useState(true);
 
   const ociConfig = values.ociConfig as NonNullable<RepositoryFormValues['ociConfig']>;
   const deltaStorageTarget = ociConfig.deltaStorageTarget;
@@ -352,6 +353,7 @@ const DeltaStorageSection = ({ currentRepoName, isEdit }: { currentRepoName?: st
 
   React.useEffect(() => {
     const abortController = new AbortController();
+    setIsLoadingDeltaTarget(true);
 
     const loadExistingDeltaRepo = async () => {
       try {
@@ -366,6 +368,10 @@ const DeltaStorageSection = ({ currentRepoName, isEdit }: { currentRepoName?: st
       } catch {
         if (!abortController.signal.aborted) {
           setExistingDeltaTargetName(undefined);
+        }
+      } finally {
+        if (!abortController.signal.aborted) {
+          setIsLoadingDeltaTarget(false);
         }
       }
     };
@@ -385,13 +391,13 @@ const DeltaStorageSection = ({ currentRepoName, isEdit }: { currentRepoName?: st
   return (
     <>
       <FormGroup label={t('Delta storage')}>
-        <DeltaStorageSelection isDisabled={isDeltaStorageBlocked} isEdit={isEdit} />
+        <DeltaStorageSelection isDisabled={isDeltaStorageBlocked || isLoadingDeltaTarget} isEdit={isEdit} />
       </FormGroup>
       {isDeltaStorageBlocked && existingDeltaTargetName && (
         <Alert isInline variant="info" title={t('This organization already has a repository for delta storage')}>
           <Trans t={t} values={{ name: existingDeltaTargetName }}>
-            The repository <strong>{existingDeltaTargetName}</strong> is currently configured as the delta storage
-            repository for this organization.
+            The repository <strong>{'{{name}}'}</strong> is currently configured as the delta storage repository for
+            this organization.
           </Trans>
         </Alert>
       )}

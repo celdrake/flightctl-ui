@@ -263,6 +263,50 @@ describe('getRolloutPolicyPatches', () => {
       ]);
     });
 
+    it('removes deviceSelection only when defaultUpdateTimeout is absent', () => {
+      const currentPolicy: RolloutPolicy = {
+        deviceSelection: deviceSelectionApi,
+        disruptionBudget: { groupBy: ['rack'], minAvailable: 2 },
+        generateDelta: true,
+        maxWaitForDelta: '45m',
+        deltaGenerationTimeout: '10m',
+      };
+      const fleetValues = withFleetBlocks(getInitialValues(), {
+        rolloutPolicy: { ...customizedRolloutPolicy, isCustomized: false },
+        disruptionBudget: customizedDisruptionBudget,
+        deltaGeneration: customizedDeltaGeneration,
+      });
+
+      expect(getRolloutPolicyPatches(currentPolicy, fleetValues)).toEqual([
+        {
+          op: 'remove',
+          path: `${ROLLOUT_POLICY_PATH}/deviceSelection`,
+        },
+      ]);
+    });
+
+    it('removes defaultUpdateTimeout only when deviceSelection is absent', () => {
+      const currentPolicy: RolloutPolicy = {
+        defaultUpdateTimeout: '2h',
+        disruptionBudget: { groupBy: ['rack'], minAvailable: 2 },
+        generateDelta: true,
+        maxWaitForDelta: '45m',
+        deltaGenerationTimeout: '10m',
+      };
+      const fleetValues = withFleetBlocks(getInitialValues(), {
+        rolloutPolicy: { ...customizedRolloutPolicy, isCustomized: false },
+        disruptionBudget: customizedDisruptionBudget,
+        deltaGeneration: customizedDeltaGeneration,
+      });
+
+      expect(getRolloutPolicyPatches(currentPolicy, fleetValues)).toEqual([
+        {
+          op: 'remove',
+          path: `${ROLLOUT_POLICY_PATH}/defaultUpdateTimeout`,
+        },
+      ]);
+    });
+
     it('removes custom delta timing while keeping deviceSelection and disruptionBudget', () => {
       const currentPolicy = fullRolloutPolicyApi();
       const fleetValues = withFleetBlocks(getInitialValues(), {
