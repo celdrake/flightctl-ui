@@ -7,7 +7,7 @@ import {
   getOciPlacementModeFromSpec,
   getOciRepoDisplayPath,
   getRepository,
-  isDuplicateDeltaStorageTargetError,
+  isDuplicateDeltaTargetError,
   repositorySchema,
 } from './utils';
 import { OciPlacementMode, type RepositoryFormValues } from './types';
@@ -168,8 +168,13 @@ describe('OCI repository utils', () => {
   });
 
   it('detects duplicate delta storage target API errors', () => {
-    expect(isDuplicateDeltaStorageTargetError(new Error('Error 409: deltaStorageTarget already exists'))).toBe(true);
-    expect(isDuplicateDeltaStorageTargetError(new Error('Error 400: bad request'))).toBe(false);
+    expect(
+      isDuplicateDeltaTargetError(
+        'Error 409: an OCI repository with deltaStorageTarget already exists in this organization',
+      ),
+    ).toBe(true);
+    expect(isDuplicateDeltaTargetError('Error 409: some other reason')).toBe(false);
+    expect(isDuplicateDeltaTargetError('Error 400: bad request')).toBe(false);
   });
 
   it('rejects read-only access mode with delta storage target', async () => {

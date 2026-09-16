@@ -40,7 +40,7 @@ import {
   getResourceSync,
   getResourceSyncEditPatch,
   handlePromises,
-  isDuplicateDeltaStorageTargetError,
+  isDuplicateDeltaTargetError,
   repositorySchema,
 } from './utils';
 import { OciRepoSpec, RepoSpecType, type Repository, type RepositoryList, type ResourceSync } from '@flightctl/types';
@@ -505,7 +505,7 @@ export const RepositoryForm = ({
 };
 
 type CreateRepositoryFormContentProps = React.PropsWithChildren &
-  Pick<CreateRepositoryFormProps, 'onClose' | 'options'> & {
+  Pick<CreateRepositoryFormProps, 'onClose' | 'options' | 'repository' | 'resourceSyncs'> & {
     isEdit: boolean;
   };
 
@@ -607,6 +607,20 @@ const CreateRepositoryForm = ({
   const [errors, setErrors] = React.useState<string[]>();
   const { patch, remove, post } = useFetch();
   const { t } = useTranslation();
+
+  const storeSubmitError = (error: unknown) => {
+    const errorMessage = getErrorMessage(error);
+    setErrors(
+      isDuplicateDeltaTargetError(errorMessage)
+        ? [
+            t(
+              'This organization already has an OCI registry used for delta storage. Edit or remove the existing one first.',
+            ),
+          ]
+        : [errorMessage],
+    );
+  };
+
   return (
     <Formik<RepositoryFormValues>
       initialValues={getInitValues({
@@ -660,11 +674,7 @@ const CreateRepositoryForm = ({
             }
             onSuccess(repository);
           } catch (e) {
-            setErrors([
-              isDuplicateDeltaStorageTargetError(e)
-                ? t('This organization already has a delta storage repository. Edit or remove the existing one first.')
-                : getErrorMessage(e),
-            ]);
+            storeSubmitError(e);
           }
         } else {
           const repoToCreate = getRepository(values);
@@ -682,11 +692,7 @@ const CreateRepositoryForm = ({
             }
             onSuccess(repo);
           } catch (e) {
-            setErrors([
-              isDuplicateDeltaStorageTargetError(e)
-                ? t('This organization already has a delta storage repository. Edit or remove the existing one first.')
-                : getErrorMessage(e),
-            ]);
+            storeSubmitError(e);
           }
         }
       }}

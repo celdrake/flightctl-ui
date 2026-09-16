@@ -71,29 +71,22 @@ export const getOciRepoDisplayPath = (spec: OciRepoSpec): string => {
 };
 
 export const getOciRepoPushDisplayPath = (
-  ociConfig: NonNullable<RepositoryFormValues['ociConfig']>,
-  exampleImage: string,
+  ociRepo: Pick<OciRepoSpec, 'registry' | 'repository' | 'namespace'>,
 ): string => {
-  switch (ociConfig.placementMode) {
-    case OciPlacementMode.Repository:
-      return ociConfig.repository ? `${ociConfig.registry}/${ociConfig.repository}` : '';
-    case OciPlacementMode.Namespace:
-      return ociConfig.namespace ? `${ociConfig.registry}/${ociConfig.namespace}/${exampleImage}` : '';
-    case OciPlacementMode.Registry:
-      return ociConfig.registry ? `${ociConfig.registry}/${exampleImage}` : '';
-    default:
-      return '';
+  if (ociRepo.repository) {
+    return `${ociRepo.registry}/${ociRepo.repository}`;
   }
+  if (ociRepo.namespace) {
+    return `${ociRepo.registry}/${ociRepo.namespace}/my-org/my-app`;
+  }
+  return `${ociRepo.registry}/my-org/my-app`;
 };
 
 export const isDeltaStorageTargetRepo = (repoSpec: RepositorySpec): boolean =>
   isOciRepoSpec(repoSpec) && Boolean(repoSpec.deltaStorageTarget);
 
-// CELIA-WIP: needs chck with backend
-export const isDuplicateDeltaStorageTargetError = (error: unknown): boolean => {
-  const message = getErrorMessage(error);
-  return message.includes('409') && message.includes('deltaStorageTarget');
-};
+export const isDuplicateDeltaTargetError = (errorMessage: string): boolean =>
+  errorMessage.includes('409') && errorMessage.includes('deltaStorageTarget');
 
 const defaultOciConfig = (writeAccessOnly?: boolean): NonNullable<RepositoryFormValues['ociConfig']> => ({
   registry: '',

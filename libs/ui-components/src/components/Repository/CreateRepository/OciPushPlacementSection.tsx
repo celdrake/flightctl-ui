@@ -12,8 +12,6 @@ import { OciPlacementMode, type RepositoryFormValues } from './types';
 import { getOciRepoPushDisplayPath } from './utils';
 import { FormGroupWithHelperText } from '../../common/WithHelperText';
 
-const exampleImage = 'my-org/my-app';
-
 const PushPlacementPathPreview = ({ ociConfig }: { ociConfig: NonNullable<RepositoryFormValues['ociConfig']> }) => {
   const { t } = useTranslation();
 
@@ -32,7 +30,7 @@ const PushPlacementPathPreview = ({ ociConfig }: { ociConfig: NonNullable<Reposi
     missingDetailsContent = <Content>{t('Enter the namespace to preview where images will be pushed.')}</Content>;
   }
 
-  const pushPreviewPath = getOciRepoPushDisplayPath(ociConfig, exampleImage);
+  const pushPreviewPath = getOciRepoPushDisplayPath(ociConfig);
   return (
     <Flex gap={{ default: 'gapSm' }}>
       <FlexItem>
@@ -44,8 +42,8 @@ const PushPlacementPathPreview = ({ ociConfig }: { ociConfig: NonNullable<Reposi
       <FlexItem>
         {missingDetailsContent || (
           <Content>
-            <Trans t={t} values={{ exampleImage, path: pushPreviewPath }}>
-              For this repository, an image named &quot;{{ exampleImage }}&quot; would be stored at{' '}
+            <Trans t={t} values={{ path: pushPreviewPath }}>
+              For this repository, an image named &quot;my-org/my-app&quot; would be stored at{' '}
               <strong>{pushPreviewPath}</strong>
             </Trans>
           </Content>

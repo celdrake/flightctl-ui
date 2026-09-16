@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+  Button,
   Card,
   CardBody,
   CardTitle,
@@ -9,21 +10,21 @@ import {
   DescriptionListTerm,
   Icon,
   Label,
+  Popover,
 } from '@patternfly/react-core';
 import { LockIcon } from '@patternfly/react-icons/dist/js/icons/lock-icon';
 import { LockOpenIcon } from '@patternfly/react-icons/dist/js/icons/lock-open-icon';
 
-import { type OciRepoSpec, type Repository } from '@flightctl/types';
+import type { OciRepoSpec, Repository } from '@flightctl/types';
 
 import { getLastTransitionTimeText } from '../../../utils/status/repository';
 import { useTranslation } from '../../../hooks/useTranslation';
 import RepositoryStatus from '../../Status/RepositoryStatus';
 import {
-  getOciImagePlacementLabel,
+  getOciRepoPushDisplayPath,
   getRepoTypeLabel,
   getRepoUrlOrRegistry,
   hasCredentialsSettings,
-  isDeltaStorageTargetRepo,
   isHttpRepoSpec,
   isOciRepoSpec,
 } from '../CreateRepository/utils';
@@ -62,12 +63,29 @@ const RegistryOrUrl = ({ repo }: { repo: Repository }) => {
   return <GitRepositoryLink url={urlOrRegistry} />;
 };
 
+const ImagePlacementDetails = ({ spec }: { spec: OciRepoSpec }) => {
+  const { t } = useTranslation();
+
+  const { repository, namespace } = spec;
+  return (
+    <>
+      <span className="pf-v6-u-font-weight-bold">{spec.namespace ? t('Namespace') : t('Repository')}</span>:{' '}
+      {spec.namespace ? namespace : repository}
+      <p className="pf-v6-u-mt-md">
+        {t('Example: An image named "my-org/my-app" would be stored at {{path}}.', {
+          path: getOciRepoPushDisplayPath(spec),
+        })}
+      </p>
+    </>
+  );
+};
+
 const DetailsTab = ({ repoDetails }: { repoDetails: Repository }) => {
   const { t } = useTranslation();
 
-  const repoLabel = getRepoTypeLabel(t, repoDetails.spec.type);
-  const isOci = isOciRepoSpec(repoDetails.spec);
-  const isDeltaStorageTarget = isDeltaStorageTargetRepo(repoDetails.spec);
+  const spec = repoDetails.spec;
+  const repoLabel = getRepoTypeLabel(t, spec.type);
+  const isOciRepo = isOciRepoSpec(spec);
 
   return (
     <Card>
@@ -79,28 +97,35 @@ const DetailsTab = ({ repoDetails }: { repoDetails: Repository }) => {
             <DescriptionListDescription>{repoLabel}</DescriptionListDescription>
           </DescriptionListGroup>
           <DescriptionListGroup>
-            <DescriptionListTerm>{isOci ? t('Registry') : t('URL')}</DescriptionListTerm>
+            <DescriptionListTerm>{isOciRepo ? t('Registry') : t('URL')}</DescriptionListTerm>
             <DescriptionListDescription>
               <RegistryOrUrl repo={repoDetails} />
             </DescriptionListDescription>
           </DescriptionListGroup>
-          {isOci && (
-            <>
-              <DescriptionListGroup>
-                <DescriptionListTerm>{t('Delta storage')}</DescriptionListTerm>
-                <DescriptionListDescription>
-                  <Label color={isDeltaStorageTarget ? 'blue' : 'grey'}>
-                    {isDeltaStorageTarget ? t('Yes') : t('No')}
-                  </Label>
-                </DescriptionListDescription>
-              </DescriptionListGroup>
-              <DescriptionListGroup>
-                <DescriptionListTerm>{t('Where images are stored')}</DescriptionListTerm>
-                <DescriptionListDescription>
-                  {getOciImagePlacementLabel(t, repoDetails.spec as OciRepoSpec)}
-                </DescriptionListDescription>
-              </DescriptionListGroup>
-            </>
+          {isOciRepo && spec.deltaStorageTarget && (
+            <DescriptionListGroup>
+              <DescriptionListTerm>{t('Delta repository')}</DescriptionListTerm>
+              <DescriptionListDescription>
+                <Label isCompact variant="outline" color="blue">
+                  {t('Enabled')}
+                </Label>
+              </DescriptionListDescription>
+            </DescriptionListGroup>
+          )}
+          {isOciRepo && (
+            <DescriptionListGroup>
+              <DescriptionListTerm>{t('Image placement')}</DescriptionListTerm>
+              <DescriptionListDescription>
+                <Popover
+                  headerContent={t('Placement configuration')}
+                  bodyContent={<ImagePlacementDetails spec={spec} />}
+                >
+                  <Button variant="link" isInline>
+                    {t('View details')}
+                  </Button>
+                </Popover>
+              </DescriptionListDescription>
+            </DescriptionListGroup>
           )}
           <DescriptionListGroup>
             <DescriptionListTerm>{t('Status')}</DescriptionListTerm>

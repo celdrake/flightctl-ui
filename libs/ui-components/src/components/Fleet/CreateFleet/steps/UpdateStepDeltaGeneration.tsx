@@ -90,7 +90,7 @@ const UpdateStepDeltaGeneration = ({ isReadOnly }: { isReadOnly: boolean }) => {
                 {t(
                   'Generates incremental update artifacts during rollouts so your devices download only what changed for operating systems and applications.',
                 )}{' '}
-                {!deltaUpdatesDocLink && <LearnMoreLink text={t('View documentation')} link={deltaUpdatesDocLink} />}
+                {deltaUpdatesDocLink && <LearnMoreLink text={t('View documentation')} link={deltaUpdatesDocLink} />}
               </Content>
             }
             isDisabled={isReadOnly}

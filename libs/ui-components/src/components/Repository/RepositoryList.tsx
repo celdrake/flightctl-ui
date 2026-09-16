@@ -140,8 +140,8 @@ const RepositoryTableRow = ({
         <ResourceLink id={repoName} routeLink={ROUTE.REPO_DETAILS} data-testid={`repository-name-link-${repoName}`} />
         {isDeltaStorageTargetRepo(repository.spec) && (
           <Tooltip content={t("This is the organization's repository for delta update artifacts.")}>
-            <Label color="blue" className="pf-v6-u-ml-sm">
-              {t('Delta storage')}
+            <Label color="blue" variant="outline" isCompact className="pf-v6-u-ml-sm">
+              {t('Delta repository')}
             </Label>
           </Tooltip>
         )}
