@@ -70,7 +70,7 @@ const UpdateStepDeltaGeneration = ({ isReadOnly }: { isReadOnly: boolean }) => {
     touched,
   } = useFormikContext<FleetFormValues>();
 
-  const deltaUpdatesDocLink = useAppLinks('deltaGeneration');
+  const deltaUpdatesDocLink = useAppLinks('deltaGenerationBasics');
 
   const [hasCustomFieldsError, setHasCustomFieldsError] = React.useState(false);
 

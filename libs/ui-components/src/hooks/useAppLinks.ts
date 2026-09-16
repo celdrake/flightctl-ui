@@ -16,7 +16,8 @@ type AppLink =
   | 'createAcmRepo'
   | 'provisionDevice'
   | 'catalog'
-  | 'deltaGeneration';
+  | 'deltaGenerationBasics'
+  | 'deltaTargetRepo';
 
 const upstreamLinks: Record<AppLink, string> = {
   createApp: `${baseUpstreamDocs}/user/using/managing-devices.md#creating-applications`,
@@ -25,7 +26,8 @@ const upstreamLinks: Record<AppLink, string> = {
   createAcmRepo: `${baseUpstreamDocs}/user/using/registering-microshift-devices-acm.md#auto-registering-devices-with-microshift-into-acm`,
   provisionDevice: `${baseUpstreamDocs}/user/using/provisioning-devices.md#provisioning-physical-devices`,
   catalog: `${baseUpstreamDocs}/user/using/managing-catalogs.md`,
-  deltaGeneration: '',
+  deltaGenerationBasics: '',
+  deltaTargetRepo: '',
 };
 
 const baseDownstreamDocs = `https://docs.redhat.com/en/documentation/red_hat_edge_manager/${RHEM_VERSION}/html`;
@@ -36,7 +38,8 @@ const downstreamLinks: Record<AppLink, string> = {
   createAcmRepo: `${baseDownstreamDocs}/managing_devices/manage-devices-intro_managing-devices#manage-git-repository_managing-devices`,
   provisionDevice: `${baseDownstreamDocs}/provisioning_devices/provision-devices-intro_provisioning-devices`,
   catalog: `${baseDownstreamDocs}/managing_devices/manage-devices-intro_managing-devices#software-catalog_managing-devices`,
-  deltaGeneration: '',
+  deltaGenerationBasics: '',
+  deltaTargetRepo: '',
 };
 
 export const useAppLinks = (link: AppLink) => {

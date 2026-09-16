@@ -4,7 +4,9 @@ import FlightCtlModal from '../../common/FlightCtlModal';
 import { useFormikContext } from 'formik';
 
 import { useTranslation } from '../../../hooks/useTranslation';
-import SwitchField from '../../form/SwitchField';
+import { useAppLinks } from '../../../hooks/useAppLinks';
+import LearnMoreLink from '../../common/LearnMoreLink';
+import CheckboxField from '../../form/CheckboxField';
 import type { RepositoryFormValues } from './types';
 
 type DeltaStorageSelectionProps = {
@@ -15,9 +17,11 @@ type DeltaStorageSelectionProps = {
 const DeltaStorageSelection = ({ isDisabled, isEdit }: DeltaStorageSelectionProps) => {
   const { t } = useTranslation();
   const { values, setFieldValue, initialValues } = useFormikContext<RepositoryFormValues>();
-  const ociConfig = values.ociConfig as NonNullable<RepositoryFormValues['ociConfig']>;
-  const wasDeltaStorageTarget = Boolean(initialValues.ociConfig?.deltaStorageTarget);
   const [showConfirmUnsetDeltaStorage, setShowConfirmUnsetDeltaStorage] = React.useState(false);
+  const ociConfig = values.ociConfig as NonNullable<RepositoryFormValues['ociConfig']>;
+  const deltaTargetDocLink = useAppLinks('deltaTargetRepo');
+
+  const wasDeltaStorageTarget = Boolean(initialValues.ociConfig?.deltaStorageTarget);
 
   const onDeltaStorageTargetChange = (checked: boolean) => {
     if (isEdit && wasDeltaStorageTarget && !checked && ociConfig.deltaStorageTarget) {
@@ -36,12 +40,17 @@ const DeltaStorageSelection = ({ isDisabled, isEdit }: DeltaStorageSelectionProp
     <>
       <Stack hasGutter>
         <StackItem>
-          <SwitchField
+          <CheckboxField
             name="ociConfig.deltaStorageTarget"
-            label={t('Store generated deltas in this registry')}
-            helperText={t(
-              'When enabled, this repository is the write target for server-generated deltas in your organization. Only one repository can have this role.',
-            )}
+            label={t('Use as delta repository')}
+            helperText={
+              <>
+                {t(
+                  'Mark this OCI registry for storing generated delta artifacts. Only one delta repository is allowed per organization and it must have read and write access.',
+                )}{' '}
+                <LearnMoreLink link={deltaTargetDocLink} text={t('View documentation')} />
+              </>
+            }
             isDisabled={isDisabled}
             noDefaultOnChange
             onChangeCustom={onDeltaStorageTargetChange}
