@@ -104,6 +104,9 @@ const getEventReasonTitles = (t: TFunction, kindType: string): Record<Event.reas
     [Event.reason.FLEET_ROLLOUT_BATCH_DISPATCHED]: t('Fleet rollout batch dispatched'),
     [Event.reason.FLEET_ROLLOUT_DEVICE_SELECTED]: t('Fleet rollout device selected'),
     [Event.reason.FLEET_ROLLOUT_BATCH_COMPLETED]: t('Fleet rollout batch completed'),
+    [Event.reason.PREPARE_DELTAS]: t('Preparing delta updates'),
+    [Event.reason.DELTA_GENERATION_PROGRESS]: t('Delta updates are being generated'),
+    [Event.reason.DELTA_GENERATION_COMPLETED]: t('Delta updates generation complete'),
     // Resource sync events
     [Event.reason.RESOURCE_SYNC_SYNCED]: t('Resourcesync synchronization completed'),
     [Event.reason.RESOURCE_SYNC_SYNC_FAILED]: t('Resourcesync synchronization failed'),

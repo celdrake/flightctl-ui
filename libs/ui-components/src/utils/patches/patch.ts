@@ -9,8 +9,13 @@ import {
 import isNil from 'lodash/isNil';
 import isEqual from 'lodash/isEqual';
 
-import { type FlightCtlLabel } from '../types/extraTypes';
-import { toAPILabel } from './labels';
+import { type FlightCtlLabel } from '../../types/extraTypes';
+import { toAPILabel } from '../labels';
+import {
+  deltaGenerationToApiFields,
+  rolloutPolicyHasSchedulingFields,
+  shouldIncludeRolloutPolicy,
+} from '../../components/Fleet/CreateFleet/fleetSpecUtils';
 import {
   type BatchForm,
   BatchLimitType,
@@ -19,8 +24,8 @@ import {
   type RolloutPolicyForm,
   UpdateMode,
   type UpdatePolicyForm,
-} from '../types/deviceSpec';
-import { getUpdateCronExpression, localDeviceTimezone } from './time';
+} from '../../types/deviceSpec';
+import { getUpdateCronExpression, localDeviceTimezone, schedulesAreEqual } from '../time';
 
 export const appendJSONPatch = <V = unknown>({
   patches,
@@ -139,21 +144,7 @@ const toApiDisruptionBudget = (disruptionValues: DisruptionBudgetForm) => {
   return data;
 };
 
-export const schedulesAreEqual = (a: UpdateSchedule | undefined, b: UpdateSchedule | undefined) => {
-  if (!a && !b) {
-    return true;
-  }
-  if (!a || !b) {
-    return false;
-  }
-  if (a.at !== b.at) {
-    return false;
-  }
-  if ((a.timeZone || localDeviceTimezone) !== (b.timeZone || localDeviceTimezone)) {
-    return false;
-  }
-  return (a.startGraceDuration || '0s') === (b.startGraceDuration || '0s');
-};
+const ROLLOUT_POLICY_PATH = '/spec/rolloutPolicy';
 
 export const updatePolicyFormToApi = (form: Required<UpdatePolicyForm>) => {
   const downloadSchedule = {
@@ -245,50 +236,74 @@ export const getUpdatePolicyPatches = (
   return updatePatches;
 };
 
-export const getRolloutPolicyData = ({ rolloutPolicy, disruptionBudget }: FleetFormValues) => {
+const formWantsRolloutScheduling = (fleetValues: FleetFormValues): boolean =>
+  fleetValues.updateMode === UpdateMode.Customized &&
+  (fleetValues.rolloutPolicy.isCustomized || fleetValues.disruptionBudget.isCustomized);
+
+const getRolloutSchedulingPolicyData = ({
+  rolloutPolicy,
+  disruptionBudget,
+  updateMode,
+}: FleetFormValues): RolloutPolicy => {
   const newRolloutPolicy: RolloutPolicy = {};
-  if (rolloutPolicy.isCustomized) {
-    newRolloutPolicy.defaultUpdateTimeout = toApiDuration(rolloutPolicy.updateTimeout);
-    newRolloutPolicy.deviceSelection = toApiDeviceSelection(rolloutPolicy);
-  }
-  if (disruptionBudget.isCustomized) {
-    newRolloutPolicy.disruptionBudget = toApiDisruptionBudget(disruptionBudget);
+  if (updateMode === UpdateMode.Customized) {
+    if (rolloutPolicy.isCustomized) {
+      newRolloutPolicy.defaultUpdateTimeout = toApiDuration(rolloutPolicy.updateTimeout);
+      newRolloutPolicy.deviceSelection = toApiDeviceSelection(rolloutPolicy);
+    }
+    if (disruptionBudget.isCustomized) {
+      newRolloutPolicy.disruptionBudget = toApiDisruptionBudget(disruptionBudget);
+    }
   }
   return newRolloutPolicy;
 };
 
-export const getRolloutPolicyPatches = (
+export const getRolloutPolicyData = (fleetValues: FleetFormValues): RolloutPolicy => {
+  const schedulingPolicy = getRolloutSchedulingPolicyData(fleetValues);
+  return {
+    ...schedulingPolicy,
+    ...deltaGenerationToApiFields(fleetValues.deltaGeneration, rolloutPolicyHasSchedulingFields(schedulingPolicy)),
+  };
+};
+
+const appendRolloutSchedulingRemovalPatches = (patches: PatchRequest, currentPolicy?: RolloutPolicy) => {
+  const currentBatches = currentPolicy?.deviceSelection?.sequence || [];
+  if (currentBatches.length > 0) {
+    patches.push({
+      path: `${ROLLOUT_POLICY_PATH}/deviceSelection`,
+      op: 'remove',
+    });
+  }
+  if (currentPolicy?.defaultUpdateTimeout !== undefined) {
+    patches.push({
+      path: `${ROLLOUT_POLICY_PATH}/defaultUpdateTimeout`,
+      op: 'remove',
+    });
+  }
+  if (currentPolicy?.disruptionBudget) {
+    patches.push({
+      path: `${ROLLOUT_POLICY_PATH}/disruptionBudget`,
+      op: 'remove',
+    });
+  }
+};
+
+const appendRolloutSchedulingPatches = (
+  patches: PatchRequest,
   currentPolicy: RolloutPolicy | undefined,
   fleetValues: FleetFormValues,
-): PatchRequest => {
+) => {
   const currentBatches = currentPolicy?.deviceSelection?.sequence || [];
   const currentDisruption = currentPolicy?.disruptionBudget;
-
-  const hadCustomSettings =
-    currentPolicy?.defaultUpdateTimeout !== undefined || currentBatches.length > 0 || !!currentDisruption;
-  const wantsCustomSettings =
-    fleetValues.updateMode === UpdateMode.Customized &&
-    (fleetValues.rolloutPolicy.isCustomized || fleetValues.disruptionBudget.isCustomized);
   const updatedPolicy = fleetValues.rolloutPolicy;
 
-  if (hadCustomSettings !== wantsCustomSettings) {
-    return wantsCustomSettings
-      ? [
-          {
-            op: 'add',
-            path: '/spec/rolloutPolicy',
-            value: getRolloutPolicyData(fleetValues),
-          },
-        ]
-      : [
-          {
-            op: 'remove',
-            path: '/spec/rolloutPolicy',
-          },
-        ];
+  if (!formWantsRolloutScheduling(fleetValues)) {
+    if (rolloutPolicyHasSchedulingFields(currentPolicy)) {
+      appendRolloutSchedulingRemovalPatches(patches, currentPolicy);
+    }
+    return;
   }
 
-  const patches: PatchRequest = [];
   if (fleetValues.rolloutPolicy.isCustomized) {
     // The timeout will be always expressed in minutes
     if ((currentPolicy?.defaultUpdateTimeout || '') !== (updatedPolicy.updateTimeout || '')) {
@@ -296,7 +311,7 @@ export const getRolloutPolicyPatches = (
         patches,
         originalValue: currentPolicy?.defaultUpdateTimeout,
         newValue: toApiDuration(updatedPolicy.updateTimeout),
-        path: '/spec/rolloutPolicy/defaultUpdateTimeout',
+        path: `${ROLLOUT_POLICY_PATH}/defaultUpdateTimeout`,
       });
     }
     if (currentBatches.length === updatedPolicy.batches.length) {
@@ -318,27 +333,31 @@ export const getRolloutPolicyPatches = (
       });
       if (hasBatchChanges) {
         patches.push({
-          path: '/spec/rolloutPolicy/deviceSelection',
+          path: `${ROLLOUT_POLICY_PATH}/deviceSelection`,
           op: 'replace',
           value: toApiDeviceSelection(updatedPolicy),
         });
       }
     } else {
       patches.push({
-        path: '/spec/rolloutPolicy/deviceSelection',
+        path: `${ROLLOUT_POLICY_PATH}/deviceSelection`,
         op: 'replace',
         value: toApiDeviceSelection(updatedPolicy),
       });
     }
-  } else if (currentBatches.length > 0) {
-    patches.push({
-      path: '/spec/rolloutPolicy/deviceSelection',
-      op: 'remove',
-    });
-    patches.push({
-      path: '/spec/rolloutPolicy/defaultUpdateTimeout',
-      op: 'remove',
-    });
+  } else {
+    if (currentBatches.length > 0) {
+      patches.push({
+        path: `${ROLLOUT_POLICY_PATH}/deviceSelection`,
+        op: 'remove',
+      });
+    }
+    if (currentPolicy?.defaultUpdateTimeout !== undefined) {
+      patches.push({
+        path: `${ROLLOUT_POLICY_PATH}/defaultUpdateTimeout`,
+        op: 'remove',
+      });
+    }
   }
 
   if (fleetValues.disruptionBudget.isCustomized) {
@@ -353,20 +372,92 @@ export const getRolloutPolicyPatches = (
 
     if (hasChanges) {
       appendJSONPatch({
-        path: '/spec/rolloutPolicy/disruptionBudget',
+        path: `${ROLLOUT_POLICY_PATH}/disruptionBudget`,
         patches,
         originalValue: currentDisruption,
-        newValue: fleetValues.disruptionBudget.isCustomized
-          ? toApiDisruptionBudget(fleetValues.disruptionBudget)
-          : undefined,
+        newValue: toApiDisruptionBudget(fleetValues.disruptionBudget),
       });
     }
   } else if (currentDisruption?.minAvailable || currentDisruption?.maxUnavailable) {
     patches.push({
-      path: '/spec/rolloutPolicy/disruptionBudget',
+      path: `${ROLLOUT_POLICY_PATH}/disruptionBudget`,
       op: 'remove',
     });
   }
+};
+
+const rolloutPolicyDeltaFieldsMatch = (
+  current: RolloutPolicy,
+  target: Pick<RolloutPolicy, 'generateDelta' | 'maxWaitForDelta' | 'deltaGenerationTimeout'>,
+): boolean =>
+  current.generateDelta === target.generateDelta &&
+  (current.maxWaitForDelta ?? undefined) === (target.maxWaitForDelta ?? undefined) &&
+  (current.deltaGenerationTimeout ?? undefined) === (target.deltaGenerationTimeout ?? undefined);
+
+const appendDeltaGenerationPatches = (
+  patches: PatchRequest,
+  currentPolicy: RolloutPolicy,
+  fleetValues: FleetFormValues,
+) => {
+  const schedulingFields = rolloutPolicyHasSchedulingFields(currentPolicy);
+  const targetDelta = deltaGenerationToApiFields(fleetValues.deltaGeneration, schedulingFields);
+
+  if (rolloutPolicyDeltaFieldsMatch(currentPolicy, targetDelta)) {
+    return;
+  }
+
+  appendJSONPatch({
+    patches,
+    originalValue: currentPolicy.generateDelta,
+    newValue: targetDelta.generateDelta,
+    path: `${ROLLOUT_POLICY_PATH}/generateDelta`,
+  });
+  appendJSONPatch({
+    patches,
+    originalValue: currentPolicy.maxWaitForDelta,
+    newValue: targetDelta.maxWaitForDelta,
+    path: `${ROLLOUT_POLICY_PATH}/maxWaitForDelta`,
+  });
+  appendJSONPatch({
+    patches,
+    originalValue: currentPolicy.deltaGenerationTimeout,
+    newValue: targetDelta.deltaGenerationTimeout,
+    path: `${ROLLOUT_POLICY_PATH}/deltaGenerationTimeout`,
+  });
+};
+
+export const getRolloutPolicyPatches = (
+  currentPolicy: RolloutPolicy | undefined,
+  fleetValues: FleetFormValues,
+): PatchRequest => {
+  const shouldExist = shouldIncludeRolloutPolicy(fleetValues);
+
+  if (!currentPolicy && shouldExist) {
+    return [
+      {
+        op: 'add',
+        path: ROLLOUT_POLICY_PATH,
+        value: getRolloutPolicyData(fleetValues),
+      },
+    ];
+  }
+
+  if (currentPolicy && !shouldExist) {
+    return [
+      {
+        op: 'remove',
+        path: ROLLOUT_POLICY_PATH,
+      },
+    ];
+  }
+
+  if (!currentPolicy) {
+    return [];
+  }
+
+  const patches: PatchRequest = [];
+  appendRolloutSchedulingPatches(patches, currentPolicy, fleetValues);
+  appendDeltaGenerationPatches(patches, currentPolicy, fleetValues);
   return patches;
 };
 

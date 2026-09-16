@@ -1,8 +1,10 @@
 import * as React from 'react';
 import {
+  Alert,
   DescriptionListDescription,
   DescriptionListGroup,
   DescriptionListTerm,
+  Divider,
   Icon,
   Spinner,
   Stack,
@@ -21,7 +23,7 @@ import WithTooltip from '../../../common/WithTooltip';
 import WarningTriangleIcon from '@patternfly/react-icons/dist/js/icons/warning-triangle-icon';
 
 const DeviceOsImageWarning = ({ content }: { content: string }) => (
-  <WithTooltip showTooltip={true} content={content}>
+  <WithTooltip showTooltip content={content}>
     <Icon status="warning">
       <WarningTriangleIcon />
     </Icon>
@@ -82,6 +84,26 @@ const DeviceOsImageSection = ({
   );
 };
 
+const DeltaGenerationInfo = ({ fleetName }: { fleetName: string }) => {
+  const { t } = useTranslation();
+
+  return (
+    <Stack hasGutter>
+      <StackItem>
+        <Divider />
+      </StackItem>
+      <StackItem>
+        <Alert isInline variant="info" title={t('Delta generation is fleet-level only')}>
+          {t(
+            'This device is managed by fleet {{ fleetName }}. Delta generation is configured on the fleet and can be viewed in fleet configurations.',
+            { fleetName },
+          )}
+        </Alert>
+      </StackItem>
+    </Stack>
+  );
+};
+
 type ConfigurationsContentProps = {
   device: Required<Device>;
 };
@@ -98,6 +120,7 @@ const ConfigurationsContent = ({ device }: ConfigurationsContentProps) => {
     <DeviceOsImageSection device={device} ownerFleet={ownerFleet} ownerFleetError={ownerFleetError} />
   );
 
+  const fleetName = ownerFleet?.metadata.name;
   return (
     <Stack hasGutter>
       {osImageSection && <StackItem>{osImageSection}</StackItem>}
@@ -107,6 +130,11 @@ const ConfigurationsContent = ({ device }: ConfigurationsContentProps) => {
       {configs.length > 0 && (
         <StackItem>
           <RepositorySourceDescriptionList configs={configs} dependencyStatus={device.status.dependencySync} />
+        </StackItem>
+      )}
+      {!ownerFleetError && fleetName && (
+        <StackItem>
+          <DeltaGenerationInfo fleetName={fleetName} />
         </StackItem>
       )}
     </Stack>

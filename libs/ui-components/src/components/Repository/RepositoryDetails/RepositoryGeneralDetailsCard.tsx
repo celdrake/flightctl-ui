@@ -8,19 +8,22 @@ import {
   DescriptionListGroup,
   DescriptionListTerm,
   Icon,
+  Label,
 } from '@patternfly/react-core';
 import { LockIcon } from '@patternfly/react-icons/dist/js/icons/lock-icon';
 import { LockOpenIcon } from '@patternfly/react-icons/dist/js/icons/lock-open-icon';
 
-import { type Repository } from '@flightctl/types';
+import { type OciRepoSpec, type Repository } from '@flightctl/types';
 
 import { getLastTransitionTimeText } from '../../../utils/status/repository';
 import { useTranslation } from '../../../hooks/useTranslation';
 import RepositoryStatus from '../../Status/RepositoryStatus';
 import {
+  getOciImagePlacementLabel,
   getRepoTypeLabel,
   getRepoUrlOrRegistry,
   hasCredentialsSettings,
+  isDeltaStorageTargetRepo,
   isHttpRepoSpec,
   isOciRepoSpec,
 } from '../CreateRepository/utils';
@@ -63,6 +66,8 @@ const DetailsTab = ({ repoDetails }: { repoDetails: Repository }) => {
   const { t } = useTranslation();
 
   const repoLabel = getRepoTypeLabel(t, repoDetails.spec.type);
+  const isOci = isOciRepoSpec(repoDetails.spec);
+  const isDeltaStorageTarget = isDeltaStorageTargetRepo(repoDetails.spec);
 
   return (
     <Card>
@@ -70,16 +75,33 @@ const DetailsTab = ({ repoDetails }: { repoDetails: Repository }) => {
       <CardBody>
         <DescriptionList columnModifier={{ lg: '3Col' }}>
           <DescriptionListGroup>
-            <DescriptionListTerm>{isOciRepoSpec(repoDetails.spec) ? t('Registry') : t('URL')}</DescriptionListTerm>
+            <DescriptionListTerm>{t('Type')}</DescriptionListTerm>
+            <DescriptionListDescription>{repoLabel}</DescriptionListDescription>
+          </DescriptionListGroup>
+          <DescriptionListGroup>
+            <DescriptionListTerm>{isOci ? t('Registry') : t('URL')}</DescriptionListTerm>
             <DescriptionListDescription>
               <RegistryOrUrl repo={repoDetails} />
             </DescriptionListDescription>
           </DescriptionListGroup>
-          <DescriptionListGroup>
-            <DescriptionListTerm>{t('Type')}</DescriptionListTerm>
-            <DescriptionListDescription>{repoLabel}</DescriptionListDescription>
-          </DescriptionListGroup>
-          <DescriptionListGroup />
+          {isOci && (
+            <>
+              <DescriptionListGroup>
+                <DescriptionListTerm>{t('Delta storage')}</DescriptionListTerm>
+                <DescriptionListDescription>
+                  <Label color={isDeltaStorageTarget ? 'blue' : 'grey'}>
+                    {isDeltaStorageTarget ? t('Yes') : t('No')}
+                  </Label>
+                </DescriptionListDescription>
+              </DescriptionListGroup>
+              <DescriptionListGroup>
+                <DescriptionListTerm>{t('Where images are stored')}</DescriptionListTerm>
+                <DescriptionListDescription>
+                  {getOciImagePlacementLabel(t, repoDetails.spec as OciRepoSpec)}
+                </DescriptionListDescription>
+              </DescriptionListGroup>
+            </>
+          )}
           <DescriptionListGroup>
             <DescriptionListTerm>{t('Status')}</DescriptionListTerm>
             <DescriptionListDescription>
