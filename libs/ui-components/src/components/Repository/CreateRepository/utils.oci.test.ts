@@ -177,7 +177,23 @@ describe('OCI repository utils', () => {
       accessMode: OciRepoSpec.accessMode.READ,
     });
     const schema = repositorySchema(t, undefined)(values);
-    await expect(schema.validate(values)).rejects.toThrow();
+    await expect(schema.validate(values)).rejects.toMatchObject({
+      path: 'ociConfig.accessMode',
+      message: 'Access mode must be read and write when storing generated deltas',
+    });
+  });
+
+  it('does not override access mode in getRepository for delta storage target', () => {
+    const spec = getRepository(
+      getOciFormValues({
+        accessMode: OciRepoSpec.accessMode.READ,
+      }),
+    ).spec;
+
+    expect(spec).toMatchObject({
+      deltaStorageTarget: true,
+      accessMode: OciRepoSpec.accessMode.READ,
+    });
   });
 
   it('requires repository path when placement mode is repository', async () => {

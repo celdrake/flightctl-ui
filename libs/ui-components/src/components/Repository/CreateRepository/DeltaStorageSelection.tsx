@@ -16,7 +16,7 @@ type DeltaStorageSelectionProps = {
 
 const DeltaStorageSelection = ({ isDisabled, isEdit }: DeltaStorageSelectionProps) => {
   const { t } = useTranslation();
-  const { values, setFieldValue, initialValues } = useFormikContext<RepositoryFormValues>();
+  const { values, setFieldValue, setFieldTouched, initialValues } = useFormikContext<RepositoryFormValues>();
   const [showConfirmUnsetDeltaStorage, setShowConfirmUnsetDeltaStorage] = React.useState(false);
   const ociConfig = values.ociConfig as NonNullable<RepositoryFormValues['ociConfig']>;
   const deltaTargetDocLink = useAppLinks('deltaTargetRepo');
@@ -28,6 +28,9 @@ const DeltaStorageSelection = ({ isDisabled, isEdit }: DeltaStorageSelectionProp
       setShowConfirmUnsetDeltaStorage(true);
     } else {
       void setFieldValue('ociConfig.deltaStorageTarget', checked);
+      if (checked) {
+        void setFieldTouched('ociConfig.accessMode', true, false);
+      }
     }
   };
 

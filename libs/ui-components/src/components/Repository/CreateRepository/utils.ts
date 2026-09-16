@@ -1065,7 +1065,6 @@ export const getRepository = (values: Omit<RepositoryFormValues, 'useResourceSyn
 
     if (values.allowDeltaStorage && values.ociConfig.deltaStorageTarget) {
       ociRepoSpec.deltaStorageTarget = true;
-      ociRepoSpec.accessMode = OciRepoSpec.accessMode.READ_WRITE;
     }
 
     if (values.ociConfig.skipServerVerification) {

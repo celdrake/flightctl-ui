@@ -345,13 +345,6 @@ const DeltaStorageSection = ({ currentRepoName, isEdit }: { currentRepoName?: st
   const isDeltaStorageBlocked = Boolean(existingDeltaTargetName);
 
   React.useEffect(() => {
-    if (!deltaStorageTarget) {
-      return;
-    }
-    void setFieldValue('ociConfig.accessMode', OciRepoSpec.accessMode.READ_WRITE);
-  }, [deltaStorageTarget, setFieldValue]);
-
-  React.useEffect(() => {
     const abortController = new AbortController();
     setIsLoadingDeltaTarget(true);
 
@@ -420,7 +413,7 @@ export const RepositoryForm = ({
   const { values } = useFormikContext<RepositoryFormValues>();
   const isOciRepo = values.repoType === RepoSpecType.RepoSpecTypeOci;
   const isDeltaStorageTarget = values.allowDeltaStorage && values.ociConfig?.deltaStorageTarget;
-  const isAccessModeDisabled = Boolean(accessModeDisabledReason) || Boolean(isDeltaStorageTarget);
+  const isAccessModeDisabled = Boolean(accessModeDisabledReason);
 
   return (
     <>
@@ -536,11 +529,9 @@ const CreateRepositoryFormContent = ({
             currentRepoName={currentRepoName}
             enforcedRepoTypeMessage={options?.enforcedRepoTypeMessage}
             accessModeDisabledReason={
-              values.ociConfig?.deltaStorageTarget
-                ? t('Access mode must be read and write when storing generated deltas')
-                : options?.writeAccessOnly
-                  ? t('Access mode must be set to read and write for this repository type')
-                  : undefined
+              options?.writeAccessOnly
+                ? t('Access mode must be set to read and write for this repository type')
+                : undefined
             }
           />
           {showResourceSyncs && canCreateRS && (
