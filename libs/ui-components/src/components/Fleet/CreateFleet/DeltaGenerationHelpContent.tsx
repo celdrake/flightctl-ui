@@ -5,17 +5,18 @@ import { useTranslation } from '../../../hooks/useTranslation';
 
 const DeltaGenerationHelpContent = () => {
   const { t } = useTranslation();
+  // CELIA-WIP: Repositories link
   return (
     <Content>
       <Content component="p">
         {t(
-          'Delta updates are smaller incremental OS artifacts generated before rollout. Devices download only what changed instead of a full system image.',
+          'Delta updates create smaller incremental artifacts for operating system and application rollouts. Your devices download only what changed instead of full images.',
         )}
       </Content>
-      <Content component="p">{t('This saves bandwidth across large fleets and constrained networks.')}</Content>
+      <Content component="p">{t('This reduces bandwidth use across large fleets and constrained networks.')}</Content>
       <Content component="p">
         {t(
-          'Devices must have the OCI delta package installed on their OS image. Without it, they download full system images even when delta generation is enabled.',
+          'Deltas are stored in an OCI registry marked as a delta repository. Your administrator may have configured one at deployment. If not, mark an existing OCI registry in Repositories.',
         )}
       </Content>
     </Content>

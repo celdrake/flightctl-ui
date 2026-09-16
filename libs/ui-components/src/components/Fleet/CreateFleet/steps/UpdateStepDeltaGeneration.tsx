@@ -25,7 +25,7 @@ const DeltaGenerationSettings = ({ isReadOnly }: { isReadOnly: boolean }) => {
             label={t('Rollout hold deadline')}
             placeholder={t('e.g. 30m, 1h, 5h')}
             helperText={t(
-              'How long rollout waits on the server for delta generation to finish. If this deadline is reached, rollout continues without deltas for any unfinished artifacts. Leave empty to use the deployment default.',
+              'Maximum time to wait for delta generation before rollout continues without unfinished artifacts. Leave empty to use the deployment default.',
             )}
             isDisabled={isReadOnly}
           />
@@ -38,7 +38,7 @@ const DeltaGenerationSettings = ({ isReadOnly }: { isReadOnly: boolean }) => {
             label={t('Per-job generation timeout')}
             placeholder={t('e.g. 30m, 1h, 5h')}
             helperText={t(
-              'Maximum time allowed for each individual delta generation job on the server. Jobs that exceed this deadline are cancelled. Leave empty to use the deployment default.',
+              'Maximum time allowed for each delta generation job. Jobs that exceed this deadline are cancelled. Leave empty to use the deployment default.',
             )}
             isDisabled={isReadOnly}
           />
@@ -86,9 +86,11 @@ const UpdateStepDeltaGeneration = ({ isReadOnly }: { isReadOnly: boolean }) => {
             name="deltaGeneration.generateDelta"
             label={t('Generate deltas for this fleet')}
             helperText={
-              <Content component={ContentVariants.small}>
-                {t('Reduce download size during rollouts by generating incremental update artifacts on the server.')}{' '}
-                {deltaUpdatesDocLink && <LearnMoreLink text={t('View documentation')} link={deltaUpdatesDocLink} />}
+              <Content component={ContentVariants.p} style={{ color: 'var(--pf-t--global--text--color--subtle)' }}>
+                {t(
+                  'Generates incremental update artifacts during rollouts so your devices download only what changed for operating systems and applications.',
+                )}{' '}
+                {!deltaUpdatesDocLink && <LearnMoreLink text={t('View documentation')} link={deltaUpdatesDocLink} />}
               </Content>
             }
             isDisabled={isReadOnly}
@@ -98,7 +100,7 @@ const UpdateStepDeltaGeneration = ({ isReadOnly }: { isReadOnly: boolean }) => {
         <StackItem>
           {deltaGeneration.generateDelta ? (
             <FormGroup
-              label={t('Delta generation timing')}
+              label={t('Generation timeouts')}
               role="radiogroup"
               className="fctl-update-policy--customize-options"
               isStack
@@ -106,15 +108,26 @@ const UpdateStepDeltaGeneration = ({ isReadOnly }: { isReadOnly: boolean }) => {
               <RadioField
                 id="delta-settings-default"
                 name="deltaGeneration.isCustomized"
-                label={t('Use default settings')}
-                description={t('Apply deployment defaults for rollout hold and generation timeout.')}
+                label={t("Use admin's settings")}
+                description={t(
+                  'Use timeout values set by your administrator at deployment. Fleet settings do not override these unless you customize below.',
+                )}
                 checkedValue={false}
                 isDisabled={isReadOnly}
+                body={
+                  !deltaGeneration.isCustomized && (
+                    <Content component={ContentVariants.p}>
+                      {t(
+                        'Deployment timeout values are not shown here. If you are unsure which values apply, ask your administrator or check your deployment configuration.',
+                      )}
+                    </Content>
+                  )
+                }
               />
               <RadioField
                 id="delta-settings-customize"
                 name="deltaGeneration.isCustomized"
-                label={t('Customize timing')}
+                label={t('Customize timeouts')}
                 description={t('Set fleet-specific rollout hold and per-job generation timeout values.')}
                 checkedValue={true}
                 isDisabled={isReadOnly}
