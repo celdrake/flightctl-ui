@@ -1,10 +1,11 @@
-import {
-  type BatchSequence,
-  type DeviceUpdatePolicySpec,
-  type DisruptionBudget,
-  type PatchRequest,
-  type RolloutPolicy,
-  type UpdateSchedule,
+import type {
+  BatchSequence,
+  DeviceUpdatePolicySpec,
+  DisruptionBudget,
+  PatchRequest,
+  RolloutPolicy,
+  RolloutPolicyDeltaGeneration,
+  UpdateSchedule,
 } from '@flightctl/types';
 import isNil from 'lodash/isNil';
 import isEqual from 'lodash/isEqual';
@@ -12,9 +13,9 @@ import isEqual from 'lodash/isEqual';
 import { type FlightCtlLabel } from '../../types/extraTypes';
 import { toAPILabel } from '../labels';
 import {
-  deltaGenerationToApiFields,
   rolloutPolicyHasSchedulingFields,
   shouldIncludeRolloutPolicy,
+  toApiDeltaGeneration,
 } from '../../components/Fleet/CreateFleet/fleetSpecUtils';
 import {
   type BatchForm,
@@ -145,6 +146,7 @@ const toApiDisruptionBudget = (disruptionValues: DisruptionBudgetForm) => {
 };
 
 const ROLLOUT_POLICY_PATH = '/spec/rolloutPolicy';
+const DELTA_GENERATION_PATH = `${ROLLOUT_POLICY_PATH}/deltaGeneration`;
 
 export const updatePolicyFormToApi = (form: Required<UpdatePolicyForm>) => {
   const downloadSchedule = {
@@ -240,11 +242,8 @@ const formWantsRolloutScheduling = (fleetValues: FleetFormValues): boolean =>
   fleetValues.updateMode === UpdateMode.Customized &&
   (fleetValues.rolloutPolicy.isCustomized || fleetValues.disruptionBudget.isCustomized);
 
-const getRolloutSchedulingPolicyData = ({
-  rolloutPolicy,
-  disruptionBudget,
-  updateMode,
-}: FleetFormValues): RolloutPolicy => {
+export const getRolloutPolicyData = (fleetValues: FleetFormValues): RolloutPolicy => {
+  const { rolloutPolicy, disruptionBudget, deltaGeneration, updateMode } = fleetValues;
   const newRolloutPolicy: RolloutPolicy = {};
   if (updateMode === UpdateMode.Customized) {
     if (rolloutPolicy.isCustomized) {
@@ -255,15 +254,8 @@ const getRolloutSchedulingPolicyData = ({
       newRolloutPolicy.disruptionBudget = toApiDisruptionBudget(disruptionBudget);
     }
   }
+  newRolloutPolicy.deltaGeneration = toApiDeltaGeneration(deltaGeneration);
   return newRolloutPolicy;
-};
-
-export const getRolloutPolicyData = (fleetValues: FleetFormValues): RolloutPolicy => {
-  const schedulingPolicy = getRolloutSchedulingPolicyData(fleetValues);
-  return {
-    ...schedulingPolicy,
-    ...deltaGenerationToApiFields(fleetValues.deltaGeneration, rolloutPolicyHasSchedulingFields(schedulingPolicy)),
-  };
 };
 
 const appendRolloutSchedulingRemovalPatches = (patches: PatchRequest, currentPolicy?: RolloutPolicy) => {
@@ -293,16 +285,16 @@ const appendRolloutSchedulingPatches = (
   currentPolicy: RolloutPolicy | undefined,
   fleetValues: FleetFormValues,
 ) => {
-  const currentBatches = currentPolicy?.deviceSelection?.sequence || [];
-  const currentDisruption = currentPolicy?.disruptionBudget;
-  const updatedPolicy = fleetValues.rolloutPolicy;
-
   if (!formWantsRolloutScheduling(fleetValues)) {
     if (rolloutPolicyHasSchedulingFields(currentPolicy)) {
       appendRolloutSchedulingRemovalPatches(patches, currentPolicy);
     }
     return;
   }
+
+  const currentBatches = currentPolicy?.deviceSelection?.sequence || [];
+  const currentDisruption = currentPolicy?.disruptionBudget;
+  const updatedPolicy = fleetValues.rolloutPolicy;
 
   if (fleetValues.rolloutPolicy.isCustomized) {
     // The timeout will be always expressed in minutes
@@ -386,43 +378,71 @@ const appendRolloutSchedulingPatches = (
   }
 };
 
-const rolloutPolicyDeltaFieldsMatch = (
-  current: RolloutPolicy,
-  target: Pick<RolloutPolicy, 'generateDelta' | 'maxWaitForDelta' | 'deltaGenerationTimeout'>,
-): boolean =>
-  current.generateDelta === target.generateDelta &&
-  (current.maxWaitForDelta ?? undefined) === (target.maxWaitForDelta ?? undefined) &&
-  (current.deltaGenerationTimeout ?? undefined) === (target.deltaGenerationTimeout ?? undefined);
+const deltaGenerationFieldsMatch = (
+  current: RolloutPolicyDeltaGeneration | undefined,
+  target: RolloutPolicyDeltaGeneration | undefined,
+): boolean => {
+  if (!current && !target) {
+    return true;
+  }
+  if (!current || !target) {
+    return false;
+  }
+  return (
+    current.generateDelta === target.generateDelta &&
+    (current.maxWaitForDelta ?? undefined) === (target.maxWaitForDelta ?? undefined) &&
+    (current.deltaGenerationTimeout ?? undefined) === (target.deltaGenerationTimeout ?? undefined)
+  );
+};
 
 const appendDeltaGenerationPatches = (
   patches: PatchRequest,
   currentPolicy: RolloutPolicy,
   fleetValues: FleetFormValues,
 ) => {
-  const schedulingFields = rolloutPolicyHasSchedulingFields(currentPolicy);
-  const targetDelta = deltaGenerationToApiFields(fleetValues.deltaGeneration, schedulingFields);
+  const targetDelta = toApiDeltaGeneration(fleetValues.deltaGeneration);
+  const currentDelta = currentPolicy.deltaGeneration;
 
-  if (rolloutPolicyDeltaFieldsMatch(currentPolicy, targetDelta)) {
+  if (deltaGenerationFieldsMatch(currentDelta, targetDelta)) {
+    return;
+  }
+
+  if (!targetDelta) {
+    if (currentDelta !== undefined) {
+      patches.push({
+        op: 'remove',
+        path: DELTA_GENERATION_PATH,
+      });
+    }
+    return;
+  }
+
+  if (!currentDelta) {
+    patches.push({
+      op: 'add',
+      path: DELTA_GENERATION_PATH,
+      value: targetDelta,
+    });
     return;
   }
 
   appendJSONPatch({
     patches,
-    originalValue: currentPolicy.generateDelta,
+    originalValue: currentDelta.generateDelta,
     newValue: targetDelta.generateDelta,
-    path: `${ROLLOUT_POLICY_PATH}/generateDelta`,
+    path: `${DELTA_GENERATION_PATH}/generateDelta`,
   });
   appendJSONPatch({
     patches,
-    originalValue: currentPolicy.maxWaitForDelta,
+    originalValue: currentDelta.maxWaitForDelta,
     newValue: targetDelta.maxWaitForDelta,
-    path: `${ROLLOUT_POLICY_PATH}/maxWaitForDelta`,
+    path: `${DELTA_GENERATION_PATH}/maxWaitForDelta`,
   });
   appendJSONPatch({
     patches,
-    originalValue: currentPolicy.deltaGenerationTimeout,
+    originalValue: currentDelta.deltaGenerationTimeout,
     newValue: targetDelta.deltaGenerationTimeout,
-    path: `${ROLLOUT_POLICY_PATH}/deltaGenerationTimeout`,
+    path: `${DELTA_GENERATION_PATH}/deltaGenerationTimeout`,
   });
 };
 

@@ -13,6 +13,7 @@ import {
 import { getRolloutPolicyPatches } from './patch';
 
 const ROLLOUT_POLICY_PATH = '/spec/rolloutPolicy';
+const DELTA_GENERATION_PATH = `${ROLLOUT_POLICY_PATH}/deltaGeneration`;
 
 const defaultBatch = {
   limit: 25,
@@ -85,9 +86,11 @@ const fullRolloutPolicyApi = (): RolloutPolicy => ({
   defaultUpdateTimeout: '2h',
   deviceSelection: deviceSelectionApi,
   disruptionBudget: { groupBy: ['rack'], minAvailable: 2 },
-  generateDelta: true,
-  maxWaitForDelta: '45m',
-  deltaGenerationTimeout: '10m',
+  deltaGeneration: {
+    generateDelta: true,
+    maxWaitForDelta: '45m',
+    deltaGenerationTimeout: '10m',
+  },
 });
 
 describe('getRolloutPolicyPatches', () => {
@@ -103,12 +106,12 @@ describe('getRolloutPolicyPatches', () => {
         updateMode: UpdateMode.Default,
         deltaGeneration: { ...defaultDeltaGeneration, generateDelta: false },
       });
-      const currentPolicy: RolloutPolicy = { generateDelta: true };
+      const currentPolicy: RolloutPolicy = { deltaGeneration: { generateDelta: true } };
 
       expect(getRolloutPolicyPatches(currentPolicy, fleetValues)).toEqual([
         {
           op: 'replace',
-          path: `${ROLLOUT_POLICY_PATH}/generateDelta`,
+          path: `${DELTA_GENERATION_PATH}/generateDelta`,
           value: false,
         },
       ]);
@@ -119,18 +122,17 @@ describe('getRolloutPolicyPatches', () => {
         updateMode: UpdateMode.Default,
         deltaGeneration: customizedDeltaGeneration,
       });
-      const currentPolicy: RolloutPolicy = { generateDelta: true };
+      const currentPolicy: RolloutPolicy = {};
 
       expect(getRolloutPolicyPatches(currentPolicy, fleetValues)).toEqual([
         {
           op: 'add',
-          path: `${ROLLOUT_POLICY_PATH}/maxWaitForDelta`,
-          value: '45m',
-        },
-        {
-          op: 'add',
-          path: `${ROLLOUT_POLICY_PATH}/deltaGenerationTimeout`,
-          value: '10m',
+          path: DELTA_GENERATION_PATH,
+          value: {
+            generateDelta: true,
+            maxWaitForDelta: '45m',
+            deltaGenerationTimeout: '10m',
+          },
         },
       ]);
     });
@@ -156,9 +158,11 @@ describe('getRolloutPolicyPatches', () => {
       const currentPolicy: RolloutPolicy = {
         defaultUpdateTimeout: '2h',
         deviceSelection: deviceSelectionApi,
-        generateDelta: true,
-        maxWaitForDelta: '45m',
-        deltaGenerationTimeout: '10m',
+        deltaGeneration: {
+          generateDelta: true,
+          maxWaitForDelta: '45m',
+          deltaGenerationTimeout: '10m',
+        },
       };
       const fleetValues = withFleetBlocks(getInitialValues(), {
         rolloutPolicy: customizedRolloutPolicy,
@@ -178,9 +182,11 @@ describe('getRolloutPolicyPatches', () => {
     it('adds deviceSelection to an existing policy with disruptionBudget and custom delta timing', () => {
       const currentPolicy: RolloutPolicy = {
         disruptionBudget: { groupBy: ['rack'], minAvailable: 2 },
-        generateDelta: true,
-        maxWaitForDelta: '45m',
-        deltaGenerationTimeout: '10m',
+        deltaGeneration: {
+          generateDelta: true,
+          maxWaitForDelta: '45m',
+          deltaGenerationTimeout: '10m',
+        },
       };
       const fleetValues = withFleetBlocks(getInitialValues(), {
         rolloutPolicy: customizedRolloutPolicy,
@@ -213,16 +219,16 @@ describe('getRolloutPolicyPatches', () => {
       expect(getRolloutPolicyPatches(currentPolicy, fleetValues)).toEqual([
         {
           op: 'replace',
-          path: `${ROLLOUT_POLICY_PATH}/generateDelta`,
+          path: `${DELTA_GENERATION_PATH}/generateDelta`,
           value: false,
         },
         {
           op: 'remove',
-          path: `${ROLLOUT_POLICY_PATH}/maxWaitForDelta`,
+          path: `${DELTA_GENERATION_PATH}/maxWaitForDelta`,
         },
         {
           op: 'remove',
-          path: `${ROLLOUT_POLICY_PATH}/deltaGenerationTimeout`,
+          path: `${DELTA_GENERATION_PATH}/deltaGenerationTimeout`,
         },
       ]);
     });
@@ -267,9 +273,11 @@ describe('getRolloutPolicyPatches', () => {
       const currentPolicy: RolloutPolicy = {
         deviceSelection: deviceSelectionApi,
         disruptionBudget: { groupBy: ['rack'], minAvailable: 2 },
-        generateDelta: true,
-        maxWaitForDelta: '45m',
-        deltaGenerationTimeout: '10m',
+        deltaGeneration: {
+          generateDelta: true,
+          maxWaitForDelta: '45m',
+          deltaGenerationTimeout: '10m',
+        },
       };
       const fleetValues = withFleetBlocks(getInitialValues(), {
         rolloutPolicy: { ...customizedRolloutPolicy, isCustomized: false },
@@ -289,9 +297,11 @@ describe('getRolloutPolicyPatches', () => {
       const currentPolicy: RolloutPolicy = {
         defaultUpdateTimeout: '2h',
         disruptionBudget: { groupBy: ['rack'], minAvailable: 2 },
-        generateDelta: true,
-        maxWaitForDelta: '45m',
-        deltaGenerationTimeout: '10m',
+        deltaGeneration: {
+          generateDelta: true,
+          maxWaitForDelta: '45m',
+          deltaGenerationTimeout: '10m',
+        },
       };
       const fleetValues = withFleetBlocks(getInitialValues(), {
         rolloutPolicy: { ...customizedRolloutPolicy, isCustomized: false },
@@ -318,11 +328,7 @@ describe('getRolloutPolicyPatches', () => {
       expect(getRolloutPolicyPatches(currentPolicy, fleetValues)).toEqual([
         {
           op: 'remove',
-          path: `${ROLLOUT_POLICY_PATH}/maxWaitForDelta`,
-        },
-        {
-          op: 'remove',
-          path: `${ROLLOUT_POLICY_PATH}/deltaGenerationTimeout`,
+          path: DELTA_GENERATION_PATH,
         },
       ]);
     });
@@ -332,7 +338,6 @@ describe('getRolloutPolicyPatches', () => {
         defaultUpdateTimeout: '2h',
         deviceSelection: deviceSelectionApi,
         disruptionBudget: { groupBy: ['rack'], minAvailable: 2 },
-        generateDelta: true,
       };
       const fleetValues = withFleetBlocks(getInitialValues(), {
         rolloutPolicy: customizedRolloutPolicy,
@@ -343,13 +348,12 @@ describe('getRolloutPolicyPatches', () => {
       expect(getRolloutPolicyPatches(currentPolicy, fleetValues)).toEqual([
         {
           op: 'add',
-          path: `${ROLLOUT_POLICY_PATH}/maxWaitForDelta`,
-          value: '45m',
-        },
-        {
-          op: 'add',
-          path: `${ROLLOUT_POLICY_PATH}/deltaGenerationTimeout`,
-          value: '10m',
+          path: DELTA_GENERATION_PATH,
+          value: {
+            generateDelta: true,
+            maxWaitForDelta: '45m',
+            deltaGenerationTimeout: '10m',
+          },
         },
       ]);
     });
@@ -366,7 +370,7 @@ describe('getRolloutPolicyPatches', () => {
         {
           op: 'add',
           path: ROLLOUT_POLICY_PATH,
-          value: { generateDelta: false },
+          value: { deltaGeneration: { generateDelta: false } },
         },
       ]);
     });
@@ -382,9 +386,11 @@ describe('getRolloutPolicyPatches', () => {
           op: 'add',
           path: ROLLOUT_POLICY_PATH,
           value: {
-            generateDelta: true,
-            maxWaitForDelta: '45m',
-            deltaGenerationTimeout: '10m',
+            deltaGeneration: {
+              generateDelta: true,
+              maxWaitForDelta: '45m',
+              deltaGenerationTimeout: '10m',
+            },
           },
         },
       ]);
@@ -402,7 +408,6 @@ describe('getRolloutPolicyPatches', () => {
           value: {
             defaultUpdateTimeout: '2h',
             deviceSelection: deviceSelectionApi,
-            generateDelta: true,
           },
         },
       ]);
@@ -419,7 +424,6 @@ describe('getRolloutPolicyPatches', () => {
           path: ROLLOUT_POLICY_PATH,
           value: {
             disruptionBudget: { groupBy: ['rack'], minAvailable: 2 },
-            generateDelta: true,
           },
         },
       ]);
@@ -440,9 +444,11 @@ describe('getRolloutPolicyPatches', () => {
             defaultUpdateTimeout: '2h',
             deviceSelection: deviceSelectionApi,
             disruptionBudget: { groupBy: ['rack'], minAvailable: 2 },
-            generateDelta: true,
-            maxWaitForDelta: '45m',
-            deltaGenerationTimeout: '10m',
+            deltaGeneration: {
+              generateDelta: true,
+              maxWaitForDelta: '45m',
+              deltaGenerationTimeout: '10m',
+            },
           },
         },
       ]);
@@ -461,7 +467,7 @@ describe('getRolloutPolicyPatches', () => {
           value: {
             defaultUpdateTimeout: '2h',
             deviceSelection: deviceSelectionApi,
-            generateDelta: false,
+            deltaGeneration: { generateDelta: false },
           },
         },
       ]);
@@ -470,7 +476,7 @@ describe('getRolloutPolicyPatches', () => {
 
   describe('when rollout policy is deleted', () => {
     it('removes rolloutPolicy when reverting a delta opt-out to defaults', () => {
-      const currentPolicy: RolloutPolicy = { generateDelta: false };
+      const currentPolicy: RolloutPolicy = { deltaGeneration: { generateDelta: false } };
 
       expect(getRolloutPolicyPatches(currentPolicy, getInitialValues())).toEqual([
         {
@@ -482,9 +488,11 @@ describe('getRolloutPolicyPatches', () => {
 
     it('removes rolloutPolicy when clearing custom delta timing back to defaults', () => {
       const currentPolicy: RolloutPolicy = {
-        generateDelta: true,
-        maxWaitForDelta: '45m',
-        deltaGenerationTimeout: '10m',
+        deltaGeneration: {
+          generateDelta: true,
+          maxWaitForDelta: '45m',
+          deltaGenerationTimeout: '10m',
+        },
       };
 
       expect(getRolloutPolicyPatches(currentPolicy, getInitialValues())).toEqual([

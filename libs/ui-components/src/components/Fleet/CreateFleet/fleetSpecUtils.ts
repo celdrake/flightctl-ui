@@ -1,4 +1,10 @@
-import { type DeviceUpdatePolicySpec, type FleetSpec, type Percentage, type RolloutPolicy } from '@flightctl/types';
+import type {
+  DeviceUpdatePolicySpec,
+  FleetSpec,
+  Percentage,
+  RolloutPolicy,
+  RolloutPolicyDeltaGeneration,
+} from '@flightctl/types';
 
 import {
   type BatchForm,
@@ -106,38 +112,31 @@ export const rolloutPolicyHasSchedulingFields = (policy?: RolloutPolicy): boolea
   Boolean(policy?.disruptionBudget);
 
 /**
- * Maps deltaGeneration form → RolloutPolicy delta fields.
+ * Maps deltaGeneration form → RolloutPolicyDeltaGeneration.
  *
- * | Form state                         | generateDelta                         | maxWait / timeout        |
- * | ---------------------------------- | ------------------------------------- | ------------------------ |
- * | Disabled                           | false                                 | omitted                  |
- * | Enabled + default timing           | omitted (or true if scheduling exists)| omitted                  |
- * | Enabled + custom timing            | true                                  | set for non-empty fields |
+ * | Form state                | API output                                              |
+ * | ------------------------- | ------------------------------------------------------- |
+ * | Disabled                  | { generateDelta: false }                                |
+ * | Enabled + default timing  | undefined (omit deltaGeneration block)                  |
+ * | Enabled + custom timing   | { generateDelta: true, maxWait?, timeout? }             |
  */
-export const deltaGenerationToApiFields = (
-  deltaForm: DeltaGenerationForm,
-  policyHasSchedulingFields: boolean,
-): Pick<RolloutPolicy, 'generateDelta' | 'maxWaitForDelta' | 'deltaGenerationTimeout'> => {
-  const result: Pick<RolloutPolicy, 'generateDelta' | 'maxWaitForDelta' | 'deltaGenerationTimeout'> = {};
-
+export const toApiDeltaGeneration = (deltaForm: DeltaGenerationForm): RolloutPolicyDeltaGeneration | undefined => {
   if (!deltaForm.generateDelta) {
-    result.generateDelta = false;
-    return result;
+    return { generateDelta: false };
   }
 
   if (hasCustomDeltaTiming(deltaForm)) {
-    result.generateDelta = true;
+    const deltaGeneration: RolloutPolicyDeltaGeneration = { generateDelta: true };
     if (deltaForm.maxWaitForDelta) {
-      result.maxWaitForDelta = deltaForm.maxWaitForDelta;
+      deltaGeneration.maxWaitForDelta = deltaForm.maxWaitForDelta;
     }
     if (deltaForm.deltaGenerationTimeout) {
-      result.deltaGenerationTimeout = deltaForm.deltaGenerationTimeout;
+      deltaGeneration.deltaGenerationTimeout = deltaForm.deltaGenerationTimeout;
     }
-  } else if (policyHasSchedulingFields) {
-    result.generateDelta = true;
+    return deltaGeneration;
   }
 
-  return result;
+  return undefined;
 };
 
 /** Whether the fleet spec should include rolloutPolicy (scheduling, delta opt-out, or custom timing). */
@@ -154,15 +153,13 @@ export const shouldIncludeRolloutPolicy = (fleetValues: FleetFormValues): boolea
 };
 
 export const getDeltaGenerationValues = (fleetSpec?: FleetSpec): DeltaGenerationForm => {
-  const rolloutPolicy = fleetSpec?.rolloutPolicy;
-  const generateDelta = rolloutPolicy?.generateDelta ?? true;
-  const maxWaitForDelta = rolloutPolicy?.maxWaitForDelta;
-  const deltaGenerationTimeout = rolloutPolicy?.deltaGenerationTimeout;
-  const hasCustomTiming = Boolean(maxWaitForDelta || deltaGenerationTimeout);
+  const deltaGeneration = fleetSpec?.rolloutPolicy?.deltaGeneration;
+  const maxWaitForDelta = deltaGeneration?.maxWaitForDelta;
+  const deltaGenerationTimeout = deltaGeneration?.deltaGenerationTimeout;
 
   return {
-    isCustomized: hasCustomTiming,
-    generateDelta,
+    isCustomized: Boolean(maxWaitForDelta || deltaGenerationTimeout),
+    generateDelta: deltaGeneration?.generateDelta ?? true,
     maxWaitForDelta: maxWaitForDelta || '',
     deltaGenerationTimeout: deltaGenerationTimeout || '',
   };

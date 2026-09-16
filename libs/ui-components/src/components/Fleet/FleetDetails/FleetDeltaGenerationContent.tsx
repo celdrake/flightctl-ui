@@ -56,8 +56,7 @@ const FleetDeltaGenerationProgress = ({ deltaStatus }: { deltaStatus: DeltaGener
 const FleetDeltaGenerationContent = ({ fleet }: { fleet: Fleet }) => {
   const { t } = useTranslation();
 
-  const rolloutPolicy = fleet.spec.rolloutPolicy;
-  const isDeltaEnabled = rolloutPolicy?.generateDelta !== false;
+  const isDeltaEnabled = fleet.spec.rolloutPolicy?.deltaGeneration?.generateDelta !== false;
   const deltaStatus = getDeltaProgressStatus(fleet);
 
   return (
