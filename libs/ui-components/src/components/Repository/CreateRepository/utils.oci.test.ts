@@ -179,7 +179,7 @@ describe('OCI repository utils', () => {
     const schema = repositorySchema(t, undefined)(values);
     await expect(schema.validate(values)).rejects.toMatchObject({
       path: 'ociConfig.accessMode',
-      message: 'Access mode must be read and write when storing generated deltas',
+      message: 'To use this registry as a delta storage target, the repository must have read and write access',
     });
   });
 

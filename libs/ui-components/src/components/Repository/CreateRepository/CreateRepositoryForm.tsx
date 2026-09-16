@@ -47,6 +47,7 @@ import { OciRepoSpec, RepoSpecType, type Repository, type RepositoryList, type R
 import { getErrorMessage } from '../../../utils/error';
 import LeaveFormConfirmation from '../../common/LeaveFormConfirmation';
 import LabelWithHelperText, { FormGroupWithHelperText } from '../../common/WithHelperText';
+import ErrorHelperText from '../../form/FieldHelperText';
 import NameField from '../../form/NameField';
 import TextAreaField from '../../form/TextAreaField';
 import CheckboxField from '../../form/CheckboxField';
@@ -383,9 +384,8 @@ const DeltaStorageSection = ({ currentRepoName, isEdit }: { currentRepoName?: st
 
   return (
     <>
-      <FormGroup label={t('Delta storage')}>
-        <DeltaStorageSelection isDisabled={isDeltaStorageBlocked || isLoadingDeltaTarget} isEdit={isEdit} />
-      </FormGroup>
+      <DeltaStorageSelection isDisabled={isDeltaStorageBlocked || isLoadingDeltaTarget} isEdit={isEdit} />
+
       {isDeltaStorageBlocked && existingDeltaTargetName && (
         <Alert isInline variant="info" title={t('This organization already has a repository for delta storage')}>
           <Trans t={t} values={{ name: existingDeltaTargetName }}>
@@ -410,11 +410,12 @@ export const RepositoryForm = ({
   currentRepoName?: string;
 }) => {
   const { t } = useTranslation();
-  const { values } = useFormikContext<RepositoryFormValues>();
+  const { values, errors } = useFormikContext<RepositoryFormValues>();
   const isOciRepo = values.repoType === RepoSpecType.RepoSpecTypeOci;
   const isDeltaStorageTarget = values.allowDeltaStorage && values.ociConfig?.deltaStorageTarget;
   const isAccessModeDisabled = Boolean(accessModeDisabledReason);
 
+  const accessModeError = (errors.ociConfig as unknown as RepositoryFormValues['ociConfig'])?.accessMode;
   return (
     <>
       <NameField
@@ -476,6 +477,7 @@ export const RepositoryForm = ({
                     label={t('Read only')}
                     checkedValue={OciRepoSpec.accessMode.READ}
                     isDisabled={isAccessModeDisabled}
+                    showGlobalError={false}
                   />
                 </FlexItem>
                 <FlexItem>
@@ -485,10 +487,12 @@ export const RepositoryForm = ({
                     label={t('Read and write')}
                     checkedValue={OciRepoSpec.accessMode.READ_WRITE}
                     isDisabled={isAccessModeDisabled}
+                    showGlobalError={false}
                   />
                 </FlexItem>
               </Flex>
             </WithTooltip>
+            {accessModeError && <ErrorHelperText error={accessModeError} />}
           </FormGroup>
           <OciPushPlacementSection />
           {values.allowDeltaStorage && <DeltaStorageSection currentRepoName={currentRepoName} isEdit={isEdit} />}

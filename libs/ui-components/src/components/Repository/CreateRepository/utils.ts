@@ -985,7 +985,9 @@ export const repositorySchema =
         ) {
           return this.createError({
             path: 'ociConfig.accessMode',
-            message: t('Access mode must be read and write when storing generated deltas'),
+            message: t(
+              'To use this registry as a delta storage target, the repository must have read and write access',
+            ),
           });
         }
         if (ociConfig?.repository && ociConfig?.namespace) {

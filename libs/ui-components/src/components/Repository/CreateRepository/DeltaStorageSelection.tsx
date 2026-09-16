@@ -46,7 +46,7 @@ const DeltaStorageSelection = ({ isDisabled, isEdit }: DeltaStorageSelectionProp
           <CheckboxField
             name="ociConfig.deltaStorageTarget"
             label={t('Use as delta repository')}
-            helperText={
+            description={
               <>
                 {t(
                   'Mark this OCI registry for storing generated delta artifacts. Only one delta repository is allowed per organization and it must have read and write access.',
