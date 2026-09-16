@@ -3,23 +3,16 @@ import { type TFunction } from 'i18next';
 import { type Condition, ConditionStatus, ConditionType, type Fleet } from '@flightctl/types';
 import { getConditionMessage } from '../error';
 import { type StatusItem, type StatusLevel, getStatusLevelFromMap } from './common';
-
-export type FleetStatusType =
-  // Status types referring to Fleet validation status
-  | ConditionType.FleetValid
-  | 'Invalid'
-  | 'SyncPending'
-  // Other status types
-  | ConditionType.FleetRolloutInProgress
-  | ConditionType.FleetDeltaPreparing;
+import type { FleetStatusType } from '../../types/extraTypes';
+import { getTrueCondition } from '../api';
 
 const FLEET_ROLLOUT_FAILED_REASON = 'Suspended';
 
 const FLEET_STATUS_LEVELS: Record<FleetStatusType, StatusLevel> = {
   Invalid: 'danger',
+  SyncPending: 'info',
   [ConditionType.FleetRolloutInProgress]: 'info',
   [ConditionType.FleetDeltaPreparing]: 'info',
-  SyncPending: 'info',
   [ConditionType.FleetValid]: 'success',
 };
 
@@ -69,17 +62,17 @@ export const getFleetStatus = (t: TFunction, fleet: Fleet): FleetStatus => {
     return { type: 'Invalid', info: getConditionMessage(validCondition) };
   }
 
-  const rolloutCondition = fleetConditions.find((c) => c.type === ConditionType.FleetRolloutInProgress);
+  const rolloutCondition = getTrueCondition(fleetConditions, ConditionType.FleetRolloutInProgress);
   if (rolloutCondition && rolloutCondition.status === ConditionStatus.ConditionStatusTrue) {
     return {
       type: ConditionType.FleetRolloutInProgress,
-      info: getConditionMessage(rolloutCondition),
+      info: getConditionMessage(rolloutCondition as Condition),
     };
   }
 
-  const deltaUpdatesCondition = fleetConditions.find((c) => c.type === ConditionType.FleetDeltaPreparing);
-  if (deltaUpdatesCondition && deltaUpdatesCondition.status === ConditionStatus.ConditionStatusTrue) {
-    return { type: ConditionType.FleetDeltaPreparing, info: getConditionMessage(deltaUpdatesCondition) };
+  const deltaUpdatesCondition = getTrueCondition(fleetConditions, ConditionType.FleetDeltaPreparing);
+  if (deltaUpdatesCondition) {
+    return { type: ConditionType.FleetDeltaPreparing, info: getConditionMessage(deltaUpdatesCondition as Condition) };
   }
 
   return { type: ConditionType.FleetValid, info: t('Fleet validated successfully') };

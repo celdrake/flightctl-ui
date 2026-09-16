@@ -412,7 +412,6 @@ export const RepositoryForm = ({
   const { t } = useTranslation();
   const { values, errors } = useFormikContext<RepositoryFormValues>();
   const isOciRepo = values.repoType === RepoSpecType.RepoSpecTypeOci;
-  const isDeltaStorageTarget = values.allowDeltaStorage && values.ociConfig?.deltaStorageTarget;
   const isAccessModeDisabled = Boolean(accessModeDisabledReason);
 
   const accessModeError = (errors.ociConfig as unknown as RepositoryFormValues['ociConfig'])?.accessMode;
@@ -496,7 +495,7 @@ export const RepositoryForm = ({
           </FormGroup>
           <OciPushPlacementSection />
           {values.allowDeltaStorage && <DeltaStorageSection currentRepoName={currentRepoName} isEdit={isEdit} />}
-          {!isDeltaStorageTarget && <OciBaseImagesSection />}
+          <OciBaseImagesSection />
         </>
       )}
       <CheckboxField name="useAdvancedConfig" label={t('Use advanced configurations')} body={<AdvancedSection />} />

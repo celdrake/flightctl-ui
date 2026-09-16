@@ -298,14 +298,16 @@ const appendRolloutSchedulingPatches = (
 
   if (fleetValues.rolloutPolicy.isCustomized) {
     // The timeout will be always expressed in minutes
-    if ((currentPolicy?.defaultUpdateTimeout || '') !== (updatedPolicy.updateTimeout || '')) {
+    const updatedTimeout = updatedPolicy.updateTimeout ? toApiDuration(updatedPolicy.updateTimeout) : '';
+    if ((currentPolicy?.defaultUpdateTimeout || '') !== updatedTimeout) {
       appendJSONPatch({
         patches,
         originalValue: currentPolicy?.defaultUpdateTimeout,
-        newValue: toApiDuration(updatedPolicy.updateTimeout),
+        newValue: updatedTimeout,
         path: `${ROLLOUT_POLICY_PATH}/defaultUpdateTimeout`,
       });
     }
+
     if (currentBatches.length === updatedPolicy.batches.length) {
       const hasBatchChanges = currentBatches.some((batch, index) => {
         // The format of the numbers is different, we must convert them for comparison
@@ -313,10 +315,11 @@ const appendRolloutSchedulingPatches = (
         if ((batch.limit || 0) !== (toApiLimit(updatedBatch) || 0)) {
           return true;
         }
-        const updatedThreshold = updatedBatch.successThreshold ? `${updatedBatch.successThreshold}%` : 0;
-        if (updatedThreshold !== (batch.successThreshold || 0)) {
+        const updatedThreshold = updatedBatch.successThreshold ? `${updatedBatch.successThreshold}%` : '';
+        if (updatedThreshold !== (batch.successThreshold || '')) {
           return true;
         }
+
         const labelPatches = getLabelPatches('labels', batch.selector?.matchLabels || {}, updatedBatch.selector);
         if (labelPatches.length > 0) {
           return true;
@@ -326,14 +329,14 @@ const appendRolloutSchedulingPatches = (
       if (hasBatchChanges) {
         patches.push({
           path: `${ROLLOUT_POLICY_PATH}/deviceSelection`,
-          op: 'replace',
+          op: currentPolicy?.deviceSelection ? 'replace' : 'add',
           value: toApiDeviceSelection(updatedPolicy),
         });
       }
     } else {
       patches.push({
         path: `${ROLLOUT_POLICY_PATH}/deviceSelection`,
-        op: 'replace',
+        op: currentPolicy?.deviceSelection ? 'replace' : 'add',
         value: toApiDeviceSelection(updatedPolicy),
       });
     }
@@ -370,7 +373,7 @@ const appendRolloutSchedulingPatches = (
         newValue: toApiDisruptionBudget(fleetValues.disruptionBudget),
       });
     }
-  } else if (currentDisruption?.minAvailable || currentDisruption?.maxUnavailable) {
+  } else if (currentDisruption) {
     patches.push({
       path: `${ROLLOUT_POLICY_PATH}/disruptionBudget`,
       op: 'remove',

@@ -66,11 +66,31 @@ const RegistryOrUrl = ({ repo }: { repo: Repository }) => {
 const ImagePlacementDetails = ({ spec }: { spec: OciRepoSpec }) => {
   const { t } = useTranslation();
 
-  const { repository, namespace } = spec;
+  let content: React.ReactNode;
+  if (spec.namespace) {
+    content = (
+      <>
+        <span className="pf-v6-u-font-weight-bold">{t('Namespace')}</span>: {spec.namespace}
+      </>
+    );
+  } else if (spec.repository) {
+    content = (
+      <>
+        <span className="pf-v6-u-font-weight-bold">{t('Repository')}</span>: {spec.repository}
+      </>
+    );
+    content = spec.repository;
+  } else {
+    content = (
+      <>
+        <span>{t('Images are stored mirroring their image paths')}</span>
+      </>
+    );
+  }
+
   return (
     <>
-      <span className="pf-v6-u-font-weight-bold">{spec.namespace ? t('Namespace') : t('Repository')}</span>:{' '}
-      {spec.namespace ? namespace : repository}
+      {content}
       <p className="pf-v6-u-mt-md">
         {t('Example: An image named "my-org/my-app" would be stored at {{path}}.', {
           path: getOciRepoPushDisplayPath(spec),

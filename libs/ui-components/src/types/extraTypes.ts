@@ -32,7 +32,7 @@ export interface ApiQuery {
   timeout?: number;
 }
 
-export type FleetConditionType =
+export type FleetStatusType =
   | ConditionType.FleetValid
   | ConditionType.FleetRolloutInProgress
   | ConditionType.FleetDeltaPreparing

@@ -350,13 +350,13 @@ export const getOciRepositoryPatches = (values: RepositoryFormValues, repoSpec: 
     path: '/spec/namespace',
   });
 
-  const wasDeltaStorage = Boolean(repoSpec.deltaStorageTarget);
+  const originalDeltaStorage = repoSpec.deltaStorageTarget;
   const isNewDeltaStorage = Boolean(values.allowDeltaStorage && formOciConfig.deltaStorageTarget);
-  if (wasDeltaStorage !== isNewDeltaStorage) {
+  if (Boolean(originalDeltaStorage) !== isNewDeltaStorage) {
     appendJSONPatch({
       patches,
       newValue: isNewDeltaStorage,
-      originalValue: wasDeltaStorage,
+      originalValue: originalDeltaStorage,
       path: '/spec/deltaStorageTarget',
     });
   }

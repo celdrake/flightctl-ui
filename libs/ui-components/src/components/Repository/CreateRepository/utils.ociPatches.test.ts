@@ -143,7 +143,7 @@ describe('getOciRepositoryPatches', () => {
       );
     });
 
-    it('adds push placement for read-only repos that are not delta storage targets', () => {
+    it('adds push placement for read-only repos that are not deltaStorageTargets', () => {
       const repoSpec = baseRepoSpec({ accessMode: OciRepoSpec.accessMode.READ });
       const values = baseFormValues({
         ociConfig: {
@@ -160,9 +160,22 @@ describe('getOciRepositoryPatches', () => {
     });
   });
 
-  describe('delta storage target', () => {
-    it('enables delta storage target', () => {
+  describe('deltaStorageTarget', () => {
+    it('sets deltaStorageTarget initially', () => {
       const repoSpec = baseRepoSpec();
+      const values = baseFormValues({
+        ociConfig: {
+          ...baseFormValues().ociConfig!,
+          deltaStorageTarget: true,
+        },
+      });
+
+      expect(getOciRepositoryPatches(values, repoSpec)).toEqual(
+        expect.arrayContaining([{ op: 'add', path: '/spec/deltaStorageTarget', value: true }]),
+      );
+    });
+    it('toggles deltaStorageTarget on', () => {
+      const repoSpec = baseRepoSpec({ deltaStorageTarget: false });
       const values = baseFormValues({
         ociConfig: {
           ...baseFormValues().ociConfig!,
@@ -175,7 +188,7 @@ describe('getOciRepositoryPatches', () => {
       );
     });
 
-    it('disables delta storage target', () => {
+    it('toggles deltaStorageTarget off', () => {
       const repoSpec = baseRepoSpec({ deltaStorageTarget: true });
       const values = baseFormValues({
         ociConfig: {
@@ -189,7 +202,7 @@ describe('getOciRepositoryPatches', () => {
       );
     });
 
-    it('sets delta storage target to false when allowDeltaStorage is disabled', () => {
+    it('sets deltaStorageTarget to false when allowDeltaStorage is disabled', () => {
       const repoSpec = baseRepoSpec({ deltaStorageTarget: true });
       const values = baseFormValues({
         allowDeltaStorage: false,
@@ -204,7 +217,7 @@ describe('getOciRepositoryPatches', () => {
       );
     });
 
-    it('disables delta storage target and removes placement paths', () => {
+    it('disables deltaStorageTarget and removes placement paths', () => {
       const repoSpec = baseRepoSpec({ deltaStorageTarget: true, repository: testRepo });
       const values = baseFormValues({
         ociConfig: {

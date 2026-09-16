@@ -201,7 +201,7 @@ describe('getRolloutPolicyPatches', () => {
           value: '2h',
         },
         {
-          op: 'replace',
+          op: 'add',
           path: `${ROLLOUT_POLICY_PATH}/deviceSelection`,
           value: deviceSelectionApi,
         },
