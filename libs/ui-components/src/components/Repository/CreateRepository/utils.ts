@@ -59,27 +59,17 @@ export const getOciPlacementModeFromSpec = (spec: OciRepoSpec): OciPlacementMode
   return OciPlacementMode.Registry;
 };
 
-export const getOciRepoDisplayPath = (spec: OciRepoSpec): string => {
-  const registry = spec.registry || '';
-  if (spec.repository) {
-    return `${registry}/${spec.repository}`;
-  }
-  if (spec.namespace) {
-    return `${registry}/${spec.namespace}`;
-  }
-  return registry;
-};
-
-export const getOciRepoPushDisplayPath = (
-  ociRepo: Pick<OciRepoSpec, 'registry' | 'repository' | 'namespace'>,
+export const getOciRepoDisplayPath = (
+  spec: Pick<OciRepoSpec, 'registry' | 'repository' | 'namespace'>,
+  exampleImage?: string,
 ): string => {
-  if (ociRepo.repository) {
-    return `${ociRepo.registry}/${ociRepo.repository}`;
+  let path = spec.registry || '';
+  if (spec.repository) {
+    path = `${path}/${spec.repository}`;
+  } else if (spec.namespace) {
+    path = `${path}/${spec.namespace}`;
   }
-  if (ociRepo.namespace) {
-    return `${ociRepo.registry}/${ociRepo.namespace}/my-org/my-app`;
-  }
-  return `${ociRepo.registry}/my-org/my-app`;
+  return exampleImage ? `${path}/${exampleImage}` : path;
 };
 
 export const isDeltaStorageTargetRepo = (repoSpec: RepositorySpec): boolean =>
