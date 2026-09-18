@@ -31,6 +31,7 @@ import FormSelect from '../../../form/FormSelect';
 import RadioField from '../../../form/RadioField';
 import { FormGroupWithHelperText } from '../../../common/WithHelperText';
 import { appTypeOptions, getAppTypeLabel } from '../../../../utils/apps';
+import DeleteModal from '../../../modals/DeleteModal/DeleteModal';
 import ApplicationImageForm from './ApplicationImageForm';
 import ApplicationInlineForm from './ApplicationInlineForm';
 import ApplicationContainerForm from './ApplicationContainerForm';
@@ -204,6 +205,7 @@ const ApplicationSection = ({ index, isReadOnly: isReadOnlyForm }: { index: numb
 const ApplicationTemplates = ({ isReadOnly, isEdit = false }: { isReadOnly?: boolean; isEdit?: boolean }) => {
   const { t } = useTranslation();
   const { values } = useFormikContext<DeviceSpecConfigFormValues>();
+  const [appIndexToDelete, setAppIndexToDelete] = React.useState<number | undefined>(undefined);
 
   if (isReadOnly && values.applications.length === 0) {
     return null;
@@ -226,34 +228,50 @@ const ApplicationTemplates = ({ isReadOnly, isEdit = false }: { isReadOnly?: boo
 
               return (
                 <FormSection key={index}>
-                  {isCatalogApp && catalogItemRef ? (
-                    <Split hasGutter>
-                      <SplitItem isFilled>
+                  <Split hasGutter>
+                    <SplitItem isFilled>
+                      {isCatalogApp && catalogItemRef ? (
                         <CatalogRefCardFromRef
                           catalogItemRef={catalogItemRef}
                           headerTitle={app.name}
                           showUpdateStatus={isEdit}
                         />
-                      </SplitItem>
-                    </Split>
-                  ) : (
-                    <Split hasGutter>
-                      <SplitItem isFilled>
+                      ) : (
                         <ApplicationSection index={index} isReadOnly={isReadOnly} />
-                      </SplitItem>
-                      {!isReadOnly && (
-                        <SplitItem>
-                          <Button
-                            aria-label={t('Delete application')}
-                            variant="link"
-                            isDanger
-                            icon={<MinusCircleIcon />}
-                            iconPosition="start"
-                            onClick={() => arrayHelpers.remove(index)}
-                          />
-                        </SplitItem>
                       )}
-                    </Split>
+                    </SplitItem>
+                    {!isReadOnly && (
+                      <SplitItem>
+                        <Button
+                          aria-label={t('Delete application')}
+                          variant="link"
+                          isDanger
+                          icon={<MinusCircleIcon />}
+                          iconPosition="start"
+                          onClick={() => {
+                            if (isEdit) {
+                              setAppIndexToDelete(index);
+                            } else {
+                              arrayHelpers.remove(index);
+                            }
+                          }}
+                        />
+                      </SplitItem>
+                    )}
+                  </Split>
+                  {appIndexToDelete !== undefined && (
+                    <DeleteModal
+                      onClose={() => setAppIndexToDelete(undefined)}
+                      onDelete={() => {
+                        arrayHelpers.remove(appIndexToDelete);
+                        setAppIndexToDelete(undefined);
+                        return Promise.resolve();
+                      }}
+                      resourceType="application"
+                      confirmText={t(
+                        'This removes the application from the template. You can add it again from the catalog or manually.',
+                      )}
+                    />
                   )}
                 </FormSection>
               );

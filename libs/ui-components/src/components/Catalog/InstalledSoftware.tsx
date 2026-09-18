@@ -11,6 +11,7 @@ import {
   Stack,
 } from '@patternfly/react-core';
 import { CubeIcon } from '@patternfly/react-icons/dist/js/icons/cube-icon';
+import { Trans } from 'react-i18next';
 
 import { type SpecCatalogItemId, formatCatalogItemRef } from '../../utils/catalog';
 import { useTranslation } from '../../hooks/useTranslation';
@@ -88,10 +89,18 @@ const InstalledSoftware = ({ onDeleteItem, onEdit, canEdit, hasPackageMode }: In
             await onDeleteItem(itemToDelete);
             setItemToDelete(undefined);
           }}
-          resourceName={
-            itemToDelete.type === 'os' ? formatCatalogItemRef(itemToDelete.ref) : (itemToDelete.appName as string)
+          resourceType={itemToDelete.type === 'os' ? 'os' : 'application'}
+          confirmText={
+            itemToDelete.type === 'os' ? (
+              <Trans t={t}>
+                Are you sure you want to delete operating system <b>{formatCatalogItemRef(itemToDelete.ref)}</b>?
+              </Trans>
+            ) : (
+              <Trans t={t}>
+                Are you sure you want to delete application <b>{itemToDelete.appName as string}</b>?
+              </Trans>
+            )
           }
-          resourceType={itemToDelete.type === 'os' ? t('operating system') : t('application')}
         />
       )}
     </>

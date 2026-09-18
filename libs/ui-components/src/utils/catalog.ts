@@ -11,7 +11,6 @@ import {
   type CatalogItem,
   type CatalogItemArtifact,
   CatalogItemArtifactType,
-  CatalogItemCategory,
   CatalogItemType,
   type CatalogItemVersion,
 } from '@flightctl/types/alpha';
@@ -22,9 +21,6 @@ import semver from 'semver';
 import { type FullAppVolume, buildApiVolume } from './volumes';
 import type { ArtifactFormValue } from '../components/Catalog/AddCatalogItemWizard/types';
 import { RUN_AS_ROOT_USER, isComposeAppSpec, isContainerAppSpec, isQuadletAppSpec } from '../types/deviceSpec';
-
-import appIcon from '../../assets/application.svg';
-import osIcon from '../../assets/os.svg';
 
 export type CatalogItemId = { catalog: string; item: string };
 
@@ -191,32 +187,6 @@ export const resolveCatalogRef = (item: CatalogItem, ref: CatalogItemRefSpec): R
     channel: ref.channel || '',
     imageUri,
   };
-};
-
-export const getCatalogItemBadge = (itemType: CatalogItemType | undefined, t: TFunction) => {
-  switch (itemType) {
-    case CatalogItemType.CatalogItemTypeCompose: {
-      return t('Compose');
-    }
-    case CatalogItemType.CatalogItemTypeContainer: {
-      return t('Container');
-    }
-    case CatalogItemType.CatalogItemTypeData: {
-      return t('Data');
-    }
-    case CatalogItemType.CatalogItemTypeHelm: {
-      return t('Helm');
-    }
-    case CatalogItemType.CatalogItemTypeQuadlet: {
-      return t('Quadlet');
-    }
-    case CatalogItemType.CatalogItemTypeOS: {
-      return t('OS image');
-    }
-    default: {
-      return t('Unknown');
-    }
-  }
 };
 
 export const getRemoveOsPatches = ({ specPath }: { specPath: string }) => {
@@ -415,10 +385,6 @@ export const getUpdates = (catalogItem: CatalogItem, currentChannel: string, cur
   // only versions which have container
   return updateVersions.filter((v) => !!getFullContainerURI(catalogItem.spec.artifacts, v));
 };
-
-export const getCatalogItemIcon = (catalogItem: CatalogItem): string =>
-  catalogItem.spec.icon ||
-  ((catalogItem.spec.category === CatalogItemCategory.CatalogItemCategorySystem ? osIcon : appIcon) as string);
 
 export const getArtifactLabel = (t: TFunction, artifact: ArtifactFormValue | CatalogItemArtifact) => {
   const { type, name } = artifact;

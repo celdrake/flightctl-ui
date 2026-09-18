@@ -8,13 +8,13 @@ import {
   Spinner,
 } from '@patternfly/react-core';
 import type { CatalogItemRefSpec } from '@flightctl/types';
-import { CatalogItemCategory } from '@flightctl/types/alpha';
 
 import { useTranslation } from '../../hooks/useTranslation';
-import { getCatalogItemBadge, getCatalogRefDisplayName, getUpdates } from '../../utils/catalog';
+import { getCatalogRefDisplayName, getUpdates } from '../../utils/catalog';
 import { useResolvedCatalogRef } from '../Catalog/useResolvedCatalogRef';
 import CatalogRefDescriptionGroups from './CatalogRefDescriptionGroups';
 import { catalogItemHasConfigSchema } from './catalogRefUtils';
+import { CatalogItemTypeBadge } from '../Catalog/CatalogItemBadges';
 
 type CatalogRefReviewDetailsProps = {
   catalogItemRef: CatalogItemRefSpec;
@@ -37,9 +37,7 @@ const CatalogRefReviewDetails = ({
   const channel = catalogItemRef.channel || resolved?.channel || '';
   const imageUri = resolved?.imageUri;
   const displayName = name || getCatalogRefDisplayName(catalogItemRef, item);
-  const isSystem = item?.spec.category === CatalogItemCategory.CatalogItemCategorySystem;
   const isDeployFlow = !isTemplateManaged && Boolean(item && catalogItemHasConfigSchema(item));
-  const typeLabelColor = isSystem ? 'teal' : 'purple';
 
   const hasUpdates =
     showUpdateStatus &&
@@ -71,9 +69,7 @@ const CatalogRefReviewDetails = ({
         <DescriptionListGroup>
           <DescriptionListTerm>{t('Type')}</DescriptionListTerm>
           <DescriptionListDescription>
-            <Label isCompact variant="filled" color={typeLabelColor}>
-              {getCatalogItemBadge(item.spec.type, t)}
-            </Label>
+            <CatalogItemTypeBadge itemSpec={item.spec} />
           </DescriptionListDescription>
         </DescriptionListGroup>
       )}
