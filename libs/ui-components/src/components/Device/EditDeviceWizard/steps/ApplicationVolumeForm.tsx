@@ -108,6 +108,7 @@ const ApplicationVolumeForm = ({
                         <Button
                           aria-label={t('Delete volume')}
                           variant="link"
+                          isDanger
                           icon={<MinusCircleIcon />}
                           iconPosition="start"
                           onClick={() => arrayHelpers.remove(volumeIndex)}

@@ -13,9 +13,9 @@ export interface ImageOrCatalogRefFieldProps extends TextInputProps {
   helperText?: React.ReactNode;
 }
 
-// Field for an OCI image or catalog item reference
-// Currently the Form only allows editing the image field.
-// If the value is set as a catalog item reference, the field is read-only.
+// Field for an OCI image or catalog item reference on volume imageSpecs (hybrid refs).
+// Application and OS image entry use plain TextField / catalog cards instead — catalog vs manual
+// is chosen upstream. If the value is set as a catalog item reference, the field is read-only.
 const ImageOrCatalogRefField = ({ name, helperText, ...props }: ImageOrCatalogRefFieldProps) => {
   const { t } = useTranslation();
   const [field, meta, { setValue }] = useField<ImageOrCatalogItemRefSpec>({

@@ -2,13 +2,12 @@ import * as React from 'react';
 import { Wizard, WizardStep, type WizardStepType } from '@patternfly/react-core';
 import { Formik, type FormikErrors, useFormikContext } from 'formik';
 import * as Yup from 'yup';
-import semver from 'semver';
 
 import type { CatalogItem, CatalogItemVersion } from '@flightctl/types/alpha';
 import { useTranslation } from '../../../hooks/useTranslation';
 import type { InstallSpecFormik } from '../InstallWizard/types';
 import FlightCtlWizardFooter from '../../common/FlightCtlWizardFooter';
-import { getUpdates } from '../../../utils/catalog';
+import { getSortedUpdates } from '../../../utils/catalog';
 import UpdateStep, { isUpdateStepValid } from './steps/UpdateStep';
 import { getErrorMessage } from '../../../utils/error';
 import ReviewStep from './steps/ReviewStep';
@@ -73,7 +72,13 @@ const WizardContent: React.FC<WizardContentProps> = ({ currentVersion, catalogIt
       >
         <WizardStep name={t('Version')} id={versionStepId}>
           {(!currentStep || currentStep?.id === versionStepId) && (
-            <UpdateStep catalogItem={catalogItem} currentVersion={currentVersion} isEdit={isEdit} />
+            <UpdateStep
+              mode="update"
+              catalogItem={catalogItem}
+              currentVersion={currentVersion}
+              isEdit={isEdit}
+              requiresAdvancedConfig={false}
+            />
           )}
         </WizardStep>
         <WizardStep
@@ -114,9 +119,7 @@ const EditOsWizard: React.FC<EditOsWizardProps> = ({
     version: Yup.string().required(t('Version must be selected')),
   });
 
-  const latestVersion = getUpdates(catalogItem, currentChannel, currentVersion.version).sort((a, b) =>
-    semver.rcompare(a.version, b.version),
-  )[0]?.version;
+  const latestVersion = getSortedUpdates(catalogItem, currentChannel, currentVersion.version)[0]?.version;
 
   return (
     <Formik<InstallSpecFormik>
