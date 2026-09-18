@@ -4,7 +4,7 @@ import type { CatalogItemRefSpec } from '@flightctl/types';
 import { CatalogItemCategory } from '@flightctl/types/alpha';
 
 import { useTranslation } from '../../hooks/useTranslation';
-import { getCatalogItemBadge, getCatalogItemIcon, getUpdates } from '../../utils/catalog';
+import { getCatalogItemBadge, getCatalogItemIcon, getCatalogRefDisplayName, getUpdates } from '../../utils/catalog';
 import { useResolvedCatalogRef } from '../Catalog/useResolvedCatalogRef';
 import CatalogRefCard, { CatalogRefTitle } from './CatalogRefCard';
 import CatalogRefCardDetails from './CatalogRefCardDetails';
@@ -31,12 +31,7 @@ const CatalogRefCardFromRef = ({
   const isSystem = item?.spec.category === CatalogItemCategory.CatalogItemCategorySystem;
   // CELIA-WIP: Deploy-flow vs template label heuristic — confirm against backend semantics.
   const isDeployFlow = Boolean(item && catalogItemHasConfigSchema(item));
-
-  const displayName =
-    headerTitle ||
-    (item
-      ? item.spec.displayName || item.metadata.name || catalogItemRef.item
-      : `${catalogItemRef.catalog}/${catalogItemRef.item}`);
+  const displayName = headerTitle || getCatalogRefDisplayName(catalogItemRef, item);
 
   const hasUpdates =
     showUpdateStatus &&
