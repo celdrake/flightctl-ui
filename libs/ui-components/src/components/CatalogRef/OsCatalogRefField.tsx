@@ -4,7 +4,7 @@ import { useFormikContext } from 'formik';
 import CatalogIcon from '@patternfly/react-icons/dist/js/icons/catalog-icon';
 
 import { useTranslation } from '../../hooks/useTranslation';
-import ImageOrCatalogRefField from '../form/ImageOrCatalogRefField';
+import TextField from '../form/TextField';
 import { type DeviceSpecConfigFormValues } from '../../types/deviceSpec';
 import CatalogRefCardFromRef from './CatalogRefCardFromRef';
 
@@ -14,37 +14,43 @@ type OsCatalogRefFieldProps = {
   showUpdateStatus: boolean;
 };
 
+// CELIA-WIP: Implement missing functionality for catalog selection slice.
+
 const OsCatalogRefField = ({ isReadOnly, isOsPackageMode, showUpdateStatus }: OsCatalogRefFieldProps) => {
   const { t } = useTranslation();
   const { values } = useFormikContext<DeviceSpecConfigFormValues>();
 
   const catalogRef = values.osSpec?.catalogItemRef;
-
-  // CELIA-WIP: Button is visual-only until catalog selection slice is implemented.
-  const catalogButton = (
-    <Button variant="secondary" icon={<CatalogIcon />} isDisabled>
-      {t('Add from software catalog')}
-    </Button>
-  );
-
   if (catalogRef) {
     return <CatalogRefCardFromRef catalogItemRef={catalogRef} showUpdateStatus={showUpdateStatus} />;
   }
 
-  // CELIA-WIP: Ad-hoc Flex layout around unchanged ImageOrCatalogRefField; revisit when trailingControl is added to that field.
+  const canUpdateOs = !isReadOnly && !isOsPackageMode;
+
   return (
-    <Flex alignItems={{ default: 'alignItemsFlexStart' }} gap={{ default: 'gapSm' }} flexWrap={{ default: 'wrap' }}>
+    <Flex
+      alignItems={{ default: 'alignItemsFlexStart' }}
+      gap={{ default: 'gapSm' }}
+      flexWrap={{ default: 'wrap' }}
+      style={{ border: '2px solid lime' }}
+    >
       <FlexItem flex={{ default: 'flex_1' }}>
-        <ImageOrCatalogRefField
+        <TextField
           aria-label={t('System image')}
-          name="osSpec"
-          isDisabled={isReadOnly || isOsPackageMode}
+          name="osSpec.image"
+          isDisabled={!canUpdateOs}
           helperText={t(
             'Must be a reference to a bootable container image (such as "quay.io/<my-org>/my-rhel-with-fc-agent:<version>"). If you do not want to manage your OS from Edge management, leave this field empty.',
           )}
         />
       </FlexItem>
-      {!isReadOnly && !isOsPackageMode && <FlexItem>{catalogButton}</FlexItem>}
+      {canUpdateOs && (
+        <FlexItem>
+          <Button variant="secondary" icon={<CatalogIcon />} isDisabled>
+            {t('Add from software catalog')}
+          </Button>
+        </FlexItem>
+      )}
     </Flex>
   );
 };

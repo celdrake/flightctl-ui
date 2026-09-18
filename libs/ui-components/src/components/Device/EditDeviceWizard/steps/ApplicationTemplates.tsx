@@ -19,12 +19,12 @@ import CatalogIcon from '@patternfly/react-icons/dist/js/icons/catalog-icon';
 
 import { AppType } from '@flightctl/types';
 import {
-  type AppForm,
   AppSpecType,
   type DeviceSpecConfigFormValues,
-  isCatalogAppForm,
+  type ManualAppForm,
+  isCatalogAppEntry,
 } from '../../../../types/deviceSpec';
-import { createInitialAppForm } from '../deviceSpecUtils';
+import { createInitialAppForm, createInitialManualAppEntry } from '../deviceSpecUtils';
 import { useTranslation } from '../../../../hooks/useTranslation';
 import TextField from '../../../form/TextField';
 import FormSelect from '../../../form/FormSelect';
@@ -45,21 +45,20 @@ import ApplicationWorkloadCard from './ApplicationWorkloadCard';
 
 import './ApplicationsForm.css';
 
-const ApplicationSection = ({ index, isReadOnly: isReadOnlyForm }: { index: number; isReadOnly?: boolean }) => {
+const ApplicationSection = ({ index, isReadOnly }: { index: number; isReadOnly?: boolean }) => {
   const { t } = useTranslation();
   const { setFieldTouched } = useFormikContext<DeviceSpecConfigFormValues>();
-  const appFieldName = `applications[${index}]`;
-  const [{ value: app }, , { setValue }] = useField<AppForm>(appFieldName);
-  const [, { error }, { setTouched }] = useField(appFieldName);
-  const [isExpanded, setIsExpanded] = React.useState(true);
+  const appFieldName = `applications[${index}].app`;
+  const [{ value: app }, , { setValue }] = useField<ManualAppForm>(appFieldName);
   const { appType, specType, name: appName } = app;
+  const [, { error }, { setTouched }] = useField(appFieldName);
+  const [isExpanded, setIsExpanded] = React.useState(!appName); // Expand an app when it was just created
 
   const isContainer = app.appType === AppType.AppTypeContainer;
   const isHelm = app.appType === AppType.AppTypeHelm;
   const isQuadlet = app.appType === AppType.AppTypeQuadlet;
   const isCompose = app.appType === AppType.AppTypeCompose;
   const isVm = app.appType === AppType.AppTypeVm;
-  const isReadOnly = isReadOnlyForm;
 
   const isContainerIncomplete = isContainer && !('ports' in app);
   const isHelmIncomplete = isHelm && !('valuesFiles' in app);
@@ -221,19 +220,17 @@ const ApplicationTemplates = ({ isReadOnly, isEdit = false }: { isReadOnly?: boo
       <FieldArray name="applications">
         {(arrayHelpers) => (
           <>
-            {values.applications.map((app, index) => {
-              const isCatalogApp = isCatalogAppForm(app);
-              const catalogItemRef =
-                'imageSpec' in app && app.imageSpec?.catalogItemRef ? app.imageSpec.catalogItemRef : undefined;
+            {values.applications.map((entry, index) => {
+              const isCatalogApp = isCatalogAppEntry(entry);
 
               return (
                 <FormSection key={index}>
                   <Split hasGutter>
                     <SplitItem isFilled>
-                      {isCatalogApp && catalogItemRef ? (
+                      {isCatalogApp ? (
                         <CatalogRefCardFromRef
-                          catalogItemRef={catalogItemRef}
-                          headerTitle={app.name}
+                          catalogItemRef={entry.app.catalogItemRef}
+                          headerTitle={entry.app.name}
                           showUpdateStatus={isEdit}
                         />
                       ) : (
@@ -293,7 +290,7 @@ const ApplicationTemplates = ({ isReadOnly, isEdit = false }: { isReadOnly?: boo
                     icon={<PlusCircleIcon />}
                     iconPosition="start"
                     onClick={() => {
-                      arrayHelpers.push(createInitialAppForm(AppType.AppTypeContainer));
+                      arrayHelpers.push(createInitialManualAppEntry(AppType.AppTypeContainer));
                     }}
                   >
                     {t('Add application manually')}
