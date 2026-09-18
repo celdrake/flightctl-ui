@@ -9,7 +9,7 @@ import { useTranslation } from '../../hooks/useTranslation';
 import TextField from '../form/TextField';
 import { type DeviceSpecConfigFormValues } from '../../types/deviceSpec';
 import DeleteModal from '../modals/DeleteModal/DeleteModal';
-import CatalogRefCardFromRef from './CatalogRefCardFromRef';
+import CatalogRefCard from './CatalogRefCard';
 
 type OsCatalogRefFieldProps = {
   isReadOnly?: boolean;
@@ -38,7 +38,7 @@ const CatalogRefField = ({
     <>
       <Split hasGutter>
         <SplitItem isFilled>
-          <CatalogRefCardFromRef catalogItemRef={refSpec} showUpdateStatus={showUpdateStatus} />
+          <CatalogRefCard catalogItemRef={refSpec} showUpdateStatus={showUpdateStatus} canCollapse={false} />
         </SplitItem>
         {!isReadOnly && (
           <SplitItem>
@@ -102,12 +102,7 @@ const OsCatalogRefField = ({ isReadOnly, isOsPackageMode, isEdit, showUpdateStat
 
   const canUpdateOs = !isReadOnly && !isOsPackageMode;
   return (
-    <Flex
-      alignItems={{ default: 'alignItemsFlexStart' }}
-      gap={{ default: 'gapSm' }}
-      flexWrap={{ default: 'wrap' }}
-      style={{ border: '2px solid lime' }}
-    >
+    <Flex alignItems={{ default: 'alignItemsFlexStart' }} gap={{ default: 'gapSm' }} flexWrap={{ default: 'wrap' }}>
       <FlexItem flex={{ default: 'flex_1' }}>
         <TextField
           aria-label={t('System image')}

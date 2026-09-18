@@ -3,21 +3,18 @@ import { Alert, DescriptionList, Stack, StackItem } from '@patternfly/react-core
 import type { CatalogItemRefSpec } from '@flightctl/types';
 
 import { useTranslation } from '../../hooks/useTranslation';
-import { useResolvedCatalogRef } from '../Catalog/useResolvedCatalogRef';
 import CatalogRefDescriptionGroups from './CatalogRefDescriptionGroups';
+import { UseResolvedCatalogRefResult } from '../Catalog/useResolvedCatalogRef';
 
-const CatalogRefCardDetails = ({ catalogItemRef }: { catalogItemRef: CatalogItemRefSpec }) => {
+type CatalogRefCardDetailsProps = {
+  catalogItemRef: CatalogItemRefSpec;
+  resolvedRef?: UseResolvedCatalogRefResult;
+};
+
+const CatalogRefCardDetails = ({ catalogItemRef, resolvedRef }: CatalogRefCardDetailsProps) => {
   const { t } = useTranslation();
-  const resolved = useResolvedCatalogRef(catalogItemRef);
-  const item = resolved?.item;
-  const isLoading = resolved?.isLoading;
-  const channel = catalogItemRef.channel || resolved?.channel || '';
-  const imageUri = resolved?.imageUri;
 
-  if (isLoading) {
-    return null;
-  }
-
+  const channel = catalogItemRef.channel || resolvedRef?.channel || '';
   return (
     <Stack hasGutter>
       <StackItem>
@@ -25,13 +22,13 @@ const CatalogRefCardDetails = ({ catalogItemRef }: { catalogItemRef: CatalogItem
           <CatalogRefDescriptionGroups
             catalogItemRef={catalogItemRef}
             channel={channel}
-            imageUri={imageUri}
-            item={item}
+            imageUri={resolvedRef?.imageUri}
+            item={resolvedRef?.item}
           />
         </DescriptionList>
       </StackItem>
 
-      {!item && !isLoading && (
+      {!resolvedRef?.item && (
         <StackItem>
           <Alert isInline variant="warning" title={t('Catalog item could not be resolved')}>
             {t(
