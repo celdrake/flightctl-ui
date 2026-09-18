@@ -12,10 +12,11 @@ import {
   Title,
 } from '@patternfly/react-core';
 import * as React from 'react';
-import { type CatalogItem, CatalogItemCategory } from '@flightctl/types/alpha';
+import { type CatalogItem } from '@flightctl/types/alpha';
 
 import { useTranslation } from '../../hooks/useTranslation';
-import { getCatalogItemBadge, getCatalogItemIcon } from '../../utils/catalog';
+import CatalogItemIcon from './CatalogItemIcon';
+import { CatalogItemTypeBadge } from './CatalogItemBadges';
 
 export type CatalogItemCardProps = {
   catalogItem: CatalogItem;
@@ -37,19 +38,10 @@ const CatalogItemCard: React.FC<CatalogItemCardProps> = ({ catalogItem, onSelect
       >
         <Split>
           <SplitItem isFilled>
-            <img
-              src={getCatalogItemIcon(catalogItem)}
-              alt={`${catalogItem.metadata.name} icon`}
-              style={{ maxWidth: '40px' }}
-            />
+            <CatalogItemIcon catalogItem={catalogItem} />
           </SplitItem>
           <SplitItem>
-            <Label
-              variant="filled"
-              color={catalogItem.spec.category === CatalogItemCategory.CatalogItemCategorySystem ? 'teal' : 'purple'}
-            >
-              {getCatalogItemBadge(catalogItem.spec.type, t)}
-            </Label>
+            <CatalogItemTypeBadge itemSpec={catalogItem.spec} />
           </SplitItem>
         </Split>
       </CardHeader>

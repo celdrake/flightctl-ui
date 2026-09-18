@@ -1,9 +1,5 @@
 import * as React from 'react';
-import {
-  DescriptionListDescription,
-  DescriptionListGroup,
-  DescriptionListTerm,
-} from '@patternfly/react-core';
+import { DescriptionListDescription, DescriptionListGroup, DescriptionListTerm } from '@patternfly/react-core';
 import type { CatalogItemRefSpec } from '@flightctl/types';
 import type { CatalogItem } from '@flightctl/types/alpha';
 
@@ -18,12 +14,7 @@ type CatalogRefDescriptionGroupsProps = {
   item?: CatalogItem;
 };
 
-const CatalogRefDescriptionGroups = ({
-  catalogItemRef,
-  channel,
-  imageUri,
-  item,
-}: CatalogRefDescriptionGroupsProps) => {
+const CatalogRefDescriptionGroups = ({ catalogItemRef, channel, imageUri, item }: CatalogRefDescriptionGroupsProps) => {
   const { t } = useTranslation();
   const pinnedVersion = catalogItemRef.version;
 
