@@ -154,7 +154,7 @@ const EditDeviceWizard = () => {
                     id={deviceTemplateStepId}
                     isDisabled={isWizardStepDisabled(deviceTemplateStepId, orderedIds, validStepIds) || !isFleetless}
                   >
-                    <DeviceTemplateStep isFleet={false} isOsPackageMode={isOsPackageMode} />
+                    <DeviceTemplateStep isFleet={false} isOsPackageMode={isOsPackageMode} isEdit />
                   </WizardStep>
                   <WizardStep
                     name={t('Updates')}
@@ -170,7 +170,7 @@ const EditDeviceWizard = () => {
                     id={reviewDeviceStepId}
                     isDisabled={isWizardStepDisabled(reviewDeviceStepId, orderedIds, validStepIds)}
                   >
-                    <ReviewDeviceStep error={submitError} />
+                    <ReviewDeviceStep error={submitError} showUpdateStatus />
                   </WizardStep>
                 </Wizard>
               </>

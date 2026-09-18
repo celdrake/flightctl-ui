@@ -1,13 +1,12 @@
 import * as React from 'react';
 
 import {
-  Alert,
   Button,
-  Content,
+  Flex,
   FormGroup,
   FormSection,
   Grid,
-  GridItem,
+  Label,
   Split,
   SplitItem,
   Stack,
@@ -16,6 +15,7 @@ import {
 import { FieldArray, useField, useFormikContext } from 'formik';
 import { MinusCircleIcon } from '@patternfly/react-icons/dist/js/icons/minus-circle-icon';
 import { PlusCircleIcon } from '@patternfly/react-icons/dist/js/icons/plus-circle-icon';
+import CatalogIcon from '@patternfly/react-icons/dist/js/icons/catalog-icon';
 
 import { AppType } from '@flightctl/types';
 import {
@@ -29,9 +29,8 @@ import { useTranslation } from '../../../../hooks/useTranslation';
 import TextField from '../../../form/TextField';
 import FormSelect from '../../../form/FormSelect';
 import RadioField from '../../../form/RadioField';
-import ExpandableFormSection from '../../../form/ExpandableFormSection';
 import { FormGroupWithHelperText } from '../../../common/WithHelperText';
-import { appTypeOptions } from '../../../../utils/apps';
+import { appTypeOptions, getAppTypeLabel } from '../../../../utils/apps';
 import ApplicationImageForm from './ApplicationImageForm';
 import ApplicationInlineForm from './ApplicationInlineForm';
 import ApplicationContainerForm from './ApplicationContainerForm';
@@ -40,21 +39,18 @@ import ApplicationVmForm from './ApplicationVmForm';
 import ApplicationVolumeForm from './ApplicationVolumeForm';
 import ApplicationVariablesForm from './ApplicationVariablesForm';
 import ApplicationIntegritySettings from './ApplicationIntegritySettings';
+import CatalogRefCardFromRef from '../../../CatalogRef/CatalogRefCardFromRef';
+import ApplicationWorkloadCard from './ApplicationWorkloadCard';
 
 import './ApplicationsForm.css';
 
-const ApplicationSection = ({
-  index,
-  isReadOnly: isReadOnlyForm,
-  isCatalogApp,
-}: {
-  index: number;
-  isReadOnly?: boolean;
-  isCatalogApp: boolean;
-}) => {
+const ApplicationSection = ({ index, isReadOnly: isReadOnlyForm }: { index: number; isReadOnly?: boolean }) => {
   const { t } = useTranslation();
+  const { setFieldTouched } = useFormikContext<DeviceSpecConfigFormValues>();
   const appFieldName = `applications[${index}]`;
   const [{ value: app }, , { setValue }] = useField<AppForm>(appFieldName);
+  const [, { error }, { setTouched }] = useField(appFieldName);
+  const [isExpanded, setIsExpanded] = React.useState(true);
   const { appType, specType, name: appName } = app;
 
   const isContainer = app.appType === AppType.AppTypeContainer;
@@ -62,10 +58,8 @@ const ApplicationSection = ({
   const isQuadlet = app.appType === AppType.AppTypeQuadlet;
   const isCompose = app.appType === AppType.AppTypeCompose;
   const isVm = app.appType === AppType.AppTypeVm;
-  const isReadOnly = isReadOnlyForm || isCatalogApp;
+  const isReadOnly = isReadOnlyForm;
 
-  // Each AppForm type has all data structures it needs initialized with safe defaults (eg. empty arrays, etc).
-  // However, when the user switches to a type that doesn't have those fields, we must reset the app to define the missing fields.
   const isContainerIncomplete = isContainer && !('ports' in app);
   const isHelmIncomplete = isHelm && !('valuesFiles' in app);
   const isQuadletComposeIncomplete = (isQuadlet || isCompose) && !('volumes' in app);
@@ -82,17 +76,31 @@ const ApplicationSection = ({
     }
   }, [shouldResetApp, appType, appName, setValue]);
 
+  const applicationTitle =
+    appName?.trim() || t('Application {{ appNum }}', { appNum: index + 1 }) || `Application ${index + 1}`;
+
+  const handleToggle = () => {
+    setTouched(true);
+    Object.keys((error as unknown as object) || {}).forEach((key) => {
+      setFieldTouched(`${appFieldName}.${key}`, true);
+    });
+    setIsExpanded((expanded) => !expanded);
+  };
+
   return (
-    <ExpandableFormSection
-      title={app.name || t('Application {{ appNum }}', { appNum: index + 1 })}
-      fieldName={appFieldName}
+    <ApplicationWorkloadCard
+      title={applicationTitle}
+      isExpanded={isExpanded}
+      onToggle={handleToggle}
+      hasError={!isExpanded && !!error}
+      errorLabel={applicationTitle}
+      headerActions={
+        <Label isCompact variant="filled" color="purple">
+          {getAppTypeLabel(appType, t)}
+        </Label>
+      }
     >
       <Grid span={12} hasGutter>
-        {isCatalogApp && (
-          <GridItem>
-            <Alert isInline variant="info" title={t('Application is managed by Software Catalog')} />
-          </GridItem>
-        )}
         <FormGroup label={t('Application type')} isRequired>
           <FormSelect
             items={appTypesOptions}
@@ -158,11 +166,11 @@ const ApplicationSection = ({
             <FormGroupWithHelperText
               label={t('Application name')}
               content={
-                isCatalogApp || specType === AppSpecType.INLINE
+                specType === AppSpecType.INLINE
                   ? t('The unique identifier for this application.')
                   : t('If not specified, the image name will be used. Application name must be unique.')
               }
-              isRequired={isCatalogApp || specType === AppSpecType.INLINE}
+              isRequired={specType === AppSpecType.INLINE}
             >
               <TextField aria-label={t('Application name')} name={`${appFieldName}.name`} isDisabled={isReadOnly} />
             </FormGroupWithHelperText>
@@ -189,13 +197,14 @@ const ApplicationSection = ({
           </>
         )}
       </Grid>
-    </ExpandableFormSection>
+    </ApplicationWorkloadCard>
   );
 };
 
-const ApplicationTemplates = ({ isReadOnly }: { isReadOnly?: boolean }) => {
+const ApplicationTemplates = ({ isReadOnly, isEdit = false }: { isReadOnly?: boolean; isEdit?: boolean }) => {
   const { t } = useTranslation();
   const { values } = useFormikContext<DeviceSpecConfigFormValues>();
+
   if (isReadOnly && values.applications.length === 0) {
     return null;
   }
@@ -203,30 +212,41 @@ const ApplicationTemplates = ({ isReadOnly }: { isReadOnly?: boolean }) => {
   return (
     <FormGroupWithHelperText
       label={t('Application workloads')}
-      content={t('Define the application workloads that shall run on the device.')}
+      content={t(
+        'Add workloads from the Software Catalog or define them manually. Catalog items pin a channel and version in this template.',
+      )}
     >
-      <>
-        <Content>
-          {t(
-            'Configure containerized applications and services that will run on your fleet devices. You can deploy single containers, Quadlet applications for advanced container orchestration or inline applications with custom files.',
-          )}
-        </Content>
-        <FieldArray name="applications">
-          {(arrayHelpers) => (
-            <>
-              {values.applications.map((app, index) => {
-                const isCatalogApp = isCatalogAppForm(app);
-                return (
-                  <FormSection key={index}>
+      <FieldArray name="applications">
+        {(arrayHelpers) => (
+          <>
+            {values.applications.map((app, index) => {
+              const isCatalogApp = isCatalogAppForm(app);
+              const catalogItemRef =
+                'imageSpec' in app && app.imageSpec?.catalogItemRef ? app.imageSpec.catalogItemRef : undefined;
+
+              return (
+                <FormSection key={index}>
+                  {isCatalogApp && catalogItemRef ? (
                     <Split hasGutter>
                       <SplitItem isFilled>
-                        <ApplicationSection index={index} isReadOnly={isReadOnly} isCatalogApp={isCatalogApp} />
+                        <CatalogRefCardFromRef
+                          catalogItemRef={catalogItemRef}
+                          headerTitle={app.name}
+                          showUpdateStatus={isEdit}
+                        />
                       </SplitItem>
-                      {!isReadOnly && !isCatalogApp && (
+                    </Split>
+                  ) : (
+                    <Split hasGutter>
+                      <SplitItem isFilled>
+                        <ApplicationSection index={index} isReadOnly={isReadOnly} />
+                      </SplitItem>
+                      {!isReadOnly && (
                         <SplitItem>
                           <Button
                             aria-label={t('Delete application')}
                             variant="link"
+                            isDanger
                             icon={<MinusCircleIcon />}
                             iconPosition="start"
                             onClick={() => arrayHelpers.remove(index)}
@@ -234,30 +254,38 @@ const ApplicationTemplates = ({ isReadOnly }: { isReadOnly?: boolean }) => {
                         </SplitItem>
                       )}
                     </Split>
-                  </FormSection>
-                );
-              })}
-
-              {!isReadOnly && (
-                <FormSection>
-                  <FormGroup>
-                    <Button
-                      variant="link"
-                      icon={<PlusCircleIcon />}
-                      iconPosition="start"
-                      onClick={() => {
-                        arrayHelpers.push(createInitialAppForm(AppType.AppTypeContainer));
-                      }}
-                    >
-                      {t('Add application')}
-                    </Button>
-                  </FormGroup>
+                  )}
                 </FormSection>
-              )}
-            </>
-          )}
-        </FieldArray>
-      </>
+              );
+            })}
+
+            {!isReadOnly && (
+              <FormSection>
+                {/* CELIA-WIP: Button is visual-only until catalog selection slice is implemented. */}
+                <Flex
+                  alignItems={{ default: 'alignItemsCenter' }}
+                  gap={{ default: 'gapSm' }}
+                  flexWrap={{ default: 'wrap' }}
+                >
+                  <Button variant="secondary" icon={<CatalogIcon />} isDisabled>
+                    {t('Add from software catalog')}
+                  </Button>
+                  <Button
+                    variant="link"
+                    icon={<PlusCircleIcon />}
+                    iconPosition="start"
+                    onClick={() => {
+                      arrayHelpers.push(createInitialAppForm(AppType.AppTypeContainer));
+                    }}
+                  >
+                    {t('Add application manually')}
+                  </Button>
+                </Flex>
+              </FormSection>
+            )}
+          </>
+        )}
+      </FieldArray>
     </FormGroupWithHelperText>
   );
 };
