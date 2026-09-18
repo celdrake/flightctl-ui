@@ -1,32 +1,106 @@
 import * as React from 'react';
-import { Button, Flex, FlexItem } from '@patternfly/react-core';
+import { Button, Flex, FlexItem, Split, SplitItem } from '@patternfly/react-core';
 import { useFormikContext } from 'formik';
-import CatalogIcon from '@patternfly/react-icons/dist/js/icons/catalog-icon';
+import { CatalogIcon } from '@patternfly/react-icons/dist/js/icons/catalog-icon';
+import { MinusCircleIcon } from '@patternfly/react-icons/dist/js/icons/minus-circle-icon';
 
+import { type CatalogItemRefSpec } from '@flightctl/types';
 import { useTranslation } from '../../hooks/useTranslation';
 import TextField from '../form/TextField';
 import { type DeviceSpecConfigFormValues } from '../../types/deviceSpec';
+import DeleteModal from '../modals/DeleteModal/DeleteModal';
 import CatalogRefCardFromRef from './CatalogRefCardFromRef';
 
 type OsCatalogRefFieldProps = {
   isReadOnly?: boolean;
   isOsPackageMode?: boolean;
+  isEdit?: boolean;
   showUpdateStatus: boolean;
+};
+
+const CatalogRefField = ({
+  refSpec,
+  showUpdateStatus,
+  isReadOnly,
+  needsDeleteConfirm,
+  onDelete,
+}: {
+  refSpec: CatalogItemRefSpec;
+  showUpdateStatus: boolean;
+  needsDeleteConfirm?: boolean;
+  isReadOnly?: boolean;
+  onDelete: VoidFunction;
+}) => {
+  const { t } = useTranslation();
+  const [showRemoveConfirm, setShowRemoveConfirm] = React.useState(false);
+
+  return (
+    <>
+      <Split hasGutter>
+        <SplitItem isFilled>
+          <CatalogRefCardFromRef catalogItemRef={refSpec} showUpdateStatus={showUpdateStatus} />
+        </SplitItem>
+        {!isReadOnly && (
+          <SplitItem>
+            <Button
+              aria-label={t('Delete system image')}
+              variant="link"
+              isDanger
+              icon={<MinusCircleIcon />}
+              iconPosition="start"
+              onClick={() => {
+                if (needsDeleteConfirm) {
+                  setShowRemoveConfirm(true);
+                } else {
+                  onDelete();
+                }
+              }}
+            />
+          </SplitItem>
+        )}
+      </Split>
+      {showRemoveConfirm && (
+        <DeleteModal
+          onClose={() => setShowRemoveConfirm(false)}
+          onDelete={() => {
+            onDelete();
+            setShowRemoveConfirm(false);
+            return Promise.resolve();
+          }}
+          resourceType="os"
+          confirmText={t(
+            'This removes the system image from the template. You can add it again from the catalog or manually.',
+          )}
+        />
+      )}
+    </>
+  );
 };
 
 // CELIA-WIP: Implement missing functionality for catalog selection slice.
 
-const OsCatalogRefField = ({ isReadOnly, isOsPackageMode, showUpdateStatus }: OsCatalogRefFieldProps) => {
+const OsCatalogRefField = ({ isReadOnly, isOsPackageMode, isEdit, showUpdateStatus }: OsCatalogRefFieldProps) => {
   const { t } = useTranslation();
-  const { values } = useFormikContext<DeviceSpecConfigFormValues>();
+  const { values, setFieldValue } = useFormikContext<DeviceSpecConfigFormValues>();
+
+  const clearOsSpec = () => {
+    void setFieldValue('osSpec', { image: '' });
+  };
 
   const catalogRef = values.osSpec?.catalogItemRef;
   if (catalogRef) {
-    return <CatalogRefCardFromRef catalogItemRef={catalogRef} showUpdateStatus={showUpdateStatus} />;
+    return (
+      <CatalogRefField
+        refSpec={catalogRef}
+        showUpdateStatus={showUpdateStatus}
+        isReadOnly={isReadOnly}
+        needsDeleteConfirm={isEdit}
+        onDelete={clearOsSpec}
+      />
+    );
   }
 
   const canUpdateOs = !isReadOnly && !isOsPackageMode;
-
   return (
     <Flex
       alignItems={{ default: 'alignItemsFlexStart' }}

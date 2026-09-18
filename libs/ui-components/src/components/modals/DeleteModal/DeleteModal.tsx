@@ -23,6 +23,8 @@ export const getDeleteLabel = (t: TFunction, resourceType: DeleteModalResourceTy
       return t('Delete catalog item?');
     case 'application':
       return t('Delete application?');
+    case 'os':
+      return t('Remove system image?');
     case ResourceKind.DEVICE:
       return t('Delete device?');
     case ResourceKind.ENROLLMENT_REQUEST:

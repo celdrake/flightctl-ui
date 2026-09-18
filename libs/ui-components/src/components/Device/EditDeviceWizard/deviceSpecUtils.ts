@@ -740,6 +740,7 @@ export const getApplicationPatches = (
  *
  * Supported use cases:
  * - Any modification when the spec uses an image (or it has an unset value): initially defining it, replacing it, or removing it
+ * - Removing a catalogItemRef-defined OS (clearing it from the template)
  *
  * Unsupported use cases:
  * - Changing from Image to CatalogItemRef or vice versa
@@ -756,6 +757,12 @@ export const getFormOsSpecPatches = (
   formOsSpec: ImageOrCatalogItemRefSpec | undefined,
 ): PatchRequest => {
   if (currentOsSpec?.catalogItemRef) {
+    const formHasCatalogRef = Boolean(formOsSpec?.catalogItemRef);
+    const formHasImage = Boolean(formOsSpec?.image);
+    // Allow clearing a catalog-defined OS from the template; other catalog mutations stay unsupported.
+    if (!formHasCatalogRef && !formHasImage) {
+      return [{ path: osPath, op: 'remove' }];
+    }
     return [];
   }
 
