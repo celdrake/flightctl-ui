@@ -8,7 +8,7 @@ import { useTranslation } from '../../../../hooks/useTranslation';
 import LabelWithHelperText, { FormGroupWithHelperText } from '../../../common/WithHelperText';
 import LearnMoreLink from '../../../common/LearnMoreLink';
 import FlightCtlForm from '../../../form/FlightCtlForm';
-import ImageOrCatalogRefField from '../../../form/ImageOrCatalogRefField';
+import OsCatalogRefField from '../../../CatalogRef/OsCatalogRefField';
 import { type DeviceSpecConfigFormValues } from '../../../../types/deviceSpec';
 import ConfigurationTemplates from './ConfigurationTemplates';
 import ApplicationsForm from './ApplicationTemplates';
@@ -107,24 +107,26 @@ const DeviceTemplateStep = ({
   isFleet,
   isReadOnly,
   isOsPackageMode,
+  isEdit = false,
 }: {
   isFleet: boolean;
   isReadOnly?: boolean;
   isOsPackageMode?: boolean;
+  isEdit?: boolean;
 }) => {
   const { appType } = useAppContext();
   const { t } = useTranslation();
-  const { values } = useFormikContext<DeviceSpecConfigFormValues>();
   const useTemplateVarsLink = useAppLinks('useTemplateVars');
-
-  // Os image cannot be edited when:
-  // - The form is read only (viewing configurations for a fleet)
-  // - The OS image is defined via the catalog (for fleets or fleetless devices)
-  // - The OS is in package mode (for fleetless devices only)
-  const osCatalogRef = values.osSpec?.catalogItemRef;
 
   return (
     <FlightCtlForm>
+      {isReadOnly && (
+        <Alert isInline variant="info" title={t('Template is read-only')}>
+          {isFleet
+            ? t('This fleet template is read-only. Catalog references and update availability are shown for review.')
+            : t('This device template is read-only. Catalog references and update availability are shown for review.')}
+        </Alert>
+      )}
       {isFleet && !isReadOnly && (
         <Alert isInline variant="info" title={t('Using template variables')} isExpandable>
           <Trans t={t}>
@@ -156,27 +158,14 @@ const DeviceTemplateStep = ({
               </Alert>
             </StackItem>
           )}
-          {osCatalogRef && (
-            <StackItem>
-              <Alert isInline variant="info" title={t('System image is managed by Software Catalog')} />
-            </StackItem>
-          )}
           <StackItem>
-            <ImageOrCatalogRefField
-              label={t('System image')}
-              aria-label={t('System image')}
-              name="osSpec"
-              isDisabled={isReadOnly || isOsPackageMode}
-              helperText={t(
-                'Must be a reference to a bootable container image (such as "quay.io/<my-org>/my-rhel-with-fc-agent:<version>"). If you do not want to manage your OS from Edge management, leave this field empty.',
-              )}
-            />
+            <OsCatalogRefField isReadOnly={isReadOnly} isOsPackageMode={isOsPackageMode} showUpdateStatus={isEdit} />
           </StackItem>
         </Stack>
       </FormGroupWithHelperText>
 
       <ConfigurationTemplates isReadOnly={isReadOnly} />
-      <ApplicationsForm isReadOnly={isReadOnly} />
+      <ApplicationsForm isReadOnly={isReadOnly} isEdit={isEdit} />
       <SystemdUnitsForm isReadOnly={isReadOnly} />
       {appType === FlightCtlApp.OCP && <MicroShiftCheckbox isFleet={isFleet} isReadOnly={isReadOnly} />}
     </FlightCtlForm>
