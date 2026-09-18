@@ -141,7 +141,6 @@ const ApplicationWorkloadsReviewCard = ({
                   catalogItemRef={entry.app.catalogItemRef}
                   name={entry.app.name}
                   showUpdateStatus={showUpdateStatus}
-                  isTemplateManaged
                 />
               ) : (
                 <ManualApplicationReviewDetails app={entry.app} />
