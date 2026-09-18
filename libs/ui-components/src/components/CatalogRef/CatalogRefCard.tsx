@@ -50,12 +50,7 @@ type CatalogRefCardProps = {
 };
 
 /** Shared collapsible card shell for catalog OS and application refs in the template wizard. */
-const CatalogRefCard = ({
-  title,
-  headerBadges,
-  children,
-  footer,
-}: React.PropsWithChildren<CatalogRefCardProps>) => {
+const CatalogRefCard = ({ title, headerBadges, footer, children }: React.PropsWithChildren<CatalogRefCardProps>) => {
   const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = React.useState(true);
 

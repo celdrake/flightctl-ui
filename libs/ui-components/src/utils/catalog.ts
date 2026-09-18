@@ -170,9 +170,19 @@ export const getFullContainerURI = (artifacts: CatalogItemArtifact[], version: C
   return getFullArtifactURI(containerArtifact, version);
 };
 
+export const getCatalogRefDisplayName = (
+  ref: Pick<CatalogItemRefSpec, 'catalog' | 'item'>,
+  item?: CatalogItem | null,
+): string => {
+  if (item) {
+    return item.spec.displayName || item.metadata.name || ref.item;
+  }
+  return `${ref.catalog}/${ref.item}`;
+};
+
 export const resolveCatalogRef = (item: CatalogItem, ref: CatalogItemRefSpec): ResolvedCatalogRef => {
   const version = getCurrentVersion(item, ref.version, ref);
-  const displayName = item.spec.displayName || item.metadata.name || ref.item;
+  const displayName = getCatalogRefDisplayName(ref, item);
   const imageUri = version ? getFullContainerURI(item.spec.artifacts, version) : undefined;
   return {
     item,

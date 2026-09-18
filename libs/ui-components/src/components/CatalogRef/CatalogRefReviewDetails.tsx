@@ -11,7 +11,7 @@ import type { CatalogItemRefSpec } from '@flightctl/types';
 import { CatalogItemCategory } from '@flightctl/types/alpha';
 
 import { useTranslation } from '../../hooks/useTranslation';
-import { getCatalogItemBadge, getUpdates } from '../../utils/catalog';
+import { getCatalogItemBadge, getCatalogRefDisplayName, getUpdates } from '../../utils/catalog';
 import { useResolvedCatalogRef } from '../Catalog/useResolvedCatalogRef';
 import CatalogRefDescriptionGroups from './CatalogRefDescriptionGroups';
 import { catalogItemHasConfigSchema } from './catalogRefUtils';
@@ -36,8 +36,7 @@ const CatalogRefReviewDetails = ({
   const isLoading = resolved?.isLoading;
   const channel = catalogItemRef.channel || resolved?.channel || '';
   const imageUri = resolved?.imageUri;
-  const displayName =
-    name || (item ? item.spec.displayName || item.metadata.name : `${catalogItemRef.catalog}/${catalogItemRef.item}`);
+  const displayName = name || getCatalogRefDisplayName(catalogItemRef, item);
   const isSystem = item?.spec.category === CatalogItemCategory.CatalogItemCategorySystem;
   const isDeployFlow = !isTemplateManaged && Boolean(item && catalogItemHasConfigSchema(item));
   const typeLabelColor = isSystem ? 'teal' : 'purple';
