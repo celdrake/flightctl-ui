@@ -1,87 +1,11 @@
 import * as React from 'react';
-import { useFormikContext } from 'formik';
-import {
-  Alert,
-  DescriptionList,
-  DescriptionListDescription,
-  DescriptionListGroup,
-  DescriptionListTerm,
-  Stack,
-  StackItem,
-} from '@patternfly/react-core';
 
-import { type EditDeviceFormValues } from '../../../../types/deviceSpec';
-import { useTranslation } from '../../../../hooks/useTranslation';
-import LabelsView from '../../../common/LabelsView';
-import { toAPILabel } from '../../../../utils/labels';
-import { getErrorMessage } from '../../../../utils/error';
-import { RepositorySourcePlainList } from '../../../Repository/RepositoryDetails/RepositorySourceList';
-import { getApiConfig } from '../deviceSpecUtils';
-import ReviewApplications from './ReviewApplications';
-import SystemImage from '../SystemImageDescriptionGroup';
+import DeviceSpecReviewCards from '../DeviceSpecReviewCards';
 
 export const reviewDeviceStepId = 'review-device';
 
-const ReviewStep = ({ error }: { error?: string }) => {
-  const { t } = useTranslation();
-  const { values } = useFormikContext<EditDeviceFormValues>();
+const ReviewDeviceStep = ({ error, showUpdateStatus }: { error?: string; showUpdateStatus?: boolean }) => (
+  <DeviceSpecReviewCards variant="device" showUpdateStatus={showUpdateStatus} error={error} />
+);
 
-  return (
-    <Stack hasGutter>
-      <StackItem isFilled>
-        <DescriptionList
-          isHorizontal
-          horizontalTermWidthModifier={{
-            default: '25ch',
-          }}
-        >
-          <DescriptionListGroup>
-            <DescriptionListTerm>{t('Device alias')}</DescriptionListTerm>
-            <DescriptionListDescription>{values.deviceAlias || t('Untitled')}</DescriptionListDescription>
-          </DescriptionListGroup>
-          {values.labels.length > 0 && (
-            <DescriptionListGroup>
-              <DescriptionListTerm>{t('Device labels')}</DescriptionListTerm>
-              <DescriptionListDescription>
-                <LabelsView prefix="device" labels={toAPILabel(values.labels)} />
-              </DescriptionListDescription>
-            </DescriptionListGroup>
-          )}
-
-          {values.fleetMatch && (
-            <DescriptionListGroup>
-              <DescriptionListTerm>{t('Device fleet')}</DescriptionListTerm>
-              <DescriptionListDescription>{values.fleetMatch}</DescriptionListDescription>
-            </DescriptionListGroup>
-          )}
-          <SystemImage osSpec={values.osSpec} isFleet={false} />
-          {values.configTemplates.length > 0 && (
-            <DescriptionListGroup>
-              <DescriptionListTerm>{t('Configurations')}</DescriptionListTerm>
-              <DescriptionListDescription>
-                <RepositorySourcePlainList configs={values.configTemplates.map(getApiConfig)} />
-              </DescriptionListDescription>
-            </DescriptionListGroup>
-          )}
-          {values.applications.length > 0 && (
-            <DescriptionListGroup>
-              <DescriptionListTerm>{t('Applications')}</DescriptionListTerm>
-              <DescriptionListDescription>
-                <ReviewApplications apps={values.applications} />
-              </DescriptionListDescription>
-            </DescriptionListGroup>
-          )}
-        </DescriptionList>
-      </StackItem>
-      {!!error && (
-        <StackItem>
-          <Alert isInline variant="danger" title={t('An error occurred')}>
-            {getErrorMessage(error)}
-          </Alert>
-        </StackItem>
-      )}
-    </Stack>
-  );
-};
-
-export default ReviewStep;
+export default ReviewDeviceStep;

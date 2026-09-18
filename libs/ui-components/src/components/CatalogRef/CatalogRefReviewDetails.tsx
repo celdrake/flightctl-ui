@@ -1,0 +1,96 @@
+import * as React from 'react';
+import {
+  DescriptionList,
+  DescriptionListDescription,
+  DescriptionListGroup,
+  DescriptionListTerm,
+  Label,
+  Spinner,
+} from '@patternfly/react-core';
+import type { CatalogItemRefSpec } from '@flightctl/types';
+import { CatalogItemCategory } from '@flightctl/types/alpha';
+
+import { useTranslation } from '../../hooks/useTranslation';
+import { getCatalogItemBadge, getUpdates } from '../../utils/catalog';
+import { useResolvedCatalogRef } from '../Catalog/useResolvedCatalogRef';
+import CatalogRefDescriptionGroups from './CatalogRefDescriptionGroups';
+import { catalogItemHasConfigSchema } from './catalogRefUtils';
+
+type CatalogRefReviewDetailsProps = {
+  catalogItemRef: CatalogItemRefSpec;
+  name?: string;
+  showUpdateStatus?: boolean;
+  /** When true, always show Software Catalog source (not Catalog deploy) for template-managed items. */
+  isTemplateManaged?: boolean;
+};
+
+const CatalogRefReviewDetails = ({
+  catalogItemRef,
+  name,
+  showUpdateStatus,
+  isTemplateManaged = false,
+}: CatalogRefReviewDetailsProps) => {
+  const { t } = useTranslation();
+  const resolved = useResolvedCatalogRef(catalogItemRef);
+  const item = resolved?.item;
+  const isLoading = resolved?.isLoading;
+  const channel = catalogItemRef.channel || resolved?.channel || '';
+  const imageUri = resolved?.imageUri;
+  const displayName =
+    name || (item ? item.spec.displayName || item.metadata.name : `${catalogItemRef.catalog}/${catalogItemRef.item}`);
+  const isSystem = item?.spec.category === CatalogItemCategory.CatalogItemCategorySystem;
+  const isDeployFlow = !isTemplateManaged && Boolean(item && catalogItemHasConfigSchema(item));
+  const typeLabelColor = isSystem ? 'teal' : 'purple';
+
+  const hasUpdates =
+    showUpdateStatus &&
+    !isDeployFlow &&
+    item &&
+    resolved?.version &&
+    channel &&
+    getUpdates(item, channel, resolved.version.version).length > 0;
+
+  if (isLoading) {
+    return <Spinner size="sm" />;
+  }
+
+  return (
+    <DescriptionList isHorizontal isCompact>
+      <DescriptionListGroup>
+        <DescriptionListTerm>{t('Name')}</DescriptionListTerm>
+        <DescriptionListDescription>{displayName}</DescriptionListDescription>
+      </DescriptionListGroup>
+      <DescriptionListGroup>
+        <DescriptionListTerm>{t('Source')}</DescriptionListTerm>
+        <DescriptionListDescription>
+          <Label isCompact variant="outline">
+            {isDeployFlow ? t('Catalog deploy') : t('Software Catalog')}
+          </Label>
+        </DescriptionListDescription>
+      </DescriptionListGroup>
+      {item && (
+        <DescriptionListGroup>
+          <DescriptionListTerm>{t('Type')}</DescriptionListTerm>
+          <DescriptionListDescription>
+            <Label isCompact variant="filled" color={typeLabelColor}>
+              {getCatalogItemBadge(item.spec.type, t)}
+            </Label>
+          </DescriptionListDescription>
+        </DescriptionListGroup>
+      )}
+      <CatalogRefDescriptionGroups catalogItemRef={catalogItemRef} channel={channel} imageUri={imageUri} item={item} />
+      {hasUpdates && (
+        <DescriptionListGroup>
+          <DescriptionListTerm>{t('Updates')}</DescriptionListTerm>
+          <DescriptionListDescription>
+            <Label isCompact variant="outline" color="blue">
+              {t('Update available')}
+            </Label>
+          </DescriptionListDescription>
+        </DescriptionListGroup>
+      )}
+    </DescriptionList>
+  );
+};
+
+export default CatalogRefReviewDetails;
