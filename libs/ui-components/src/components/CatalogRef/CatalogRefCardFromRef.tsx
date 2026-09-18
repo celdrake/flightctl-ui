@@ -1,14 +1,15 @@
 import * as React from 'react';
-import { Flex, FlexItem, Label, Spinner } from '@patternfly/react-core';
+import { Spinner } from '@patternfly/react-core';
 import type { CatalogItemRefSpec } from '@flightctl/types';
-import { CatalogItemCategory } from '@flightctl/types/alpha';
 
 import { useTranslation } from '../../hooks/useTranslation';
-import { getCatalogItemBadge, getCatalogItemIcon, getCatalogRefDisplayName, getUpdates } from '../../utils/catalog';
+import { getCatalogRefDisplayName, getUpdates } from '../../utils/catalog';
 import { useResolvedCatalogRef } from '../Catalog/useResolvedCatalogRef';
 import CatalogRefCard, { CatalogRefTitle } from './CatalogRefCard';
 import CatalogRefCardDetails from './CatalogRefCardDetails';
 import { catalogItemHasConfigSchema } from './catalogRefUtils';
+import CatalogItemIcon from '../Catalog/CatalogItemIcon';
+import CatalogItemBadges from '../Catalog/CatalogItemBadges';
 
 type CatalogRefCardFromRefProps = {
   catalogItemRef: CatalogItemRefSpec;
@@ -28,61 +29,27 @@ const CatalogRefCardFromRef = ({
   const isLoading = resolved?.isLoading;
   const version = resolved?.version;
   const channel = catalogItemRef.channel || resolved?.channel || '';
-  const isSystem = item?.spec.category === CatalogItemCategory.CatalogItemCategorySystem;
   // CELIA-WIP: Deploy-flow vs template label heuristic — confirm against backend semantics.
   const isDeployFlow = Boolean(item && catalogItemHasConfigSchema(item));
   const displayName = headerTitle || getCatalogRefDisplayName(catalogItemRef, item);
 
-  const hasUpdates =
+  const hasUpdates = Boolean(
     showUpdateStatus &&
-    !isDeployFlow &&
-    item &&
-    version &&
-    channel &&
-    getUpdates(item, channel, version.version).length > 0;
-
-  const icon = item ? (
-    <img src={getCatalogItemIcon(item)} alt="" style={{ width: '2rem', height: '2rem', objectFit: 'contain' }} />
-  ) : isLoading ? (
-    <Spinner size="md" />
-  ) : null;
-
-  const headerBadges = (
-    <Flex alignItems={{ default: 'alignItemsCenter' }} gap={{ default: 'gapSm' }}>
-      <FlexItem>
-        <Label isCompact variant="outline">
-          {isDeployFlow ? t('Catalog deploy') : t('Software Catalog')}
-        </Label>
-      </FlexItem>
-      {item ? (
-        <FlexItem>
-          <Label isCompact variant="filled" color={isSystem ? 'teal' : 'purple'}>
-            {getCatalogItemBadge(item.spec.type, t)}
-          </Label>
-        </FlexItem>
-      ) : (
-        <FlexItem>
-          <Label isCompact variant="outline" color="blue">
-            {isLoading ? t('Loading') : t('Catalog item')}
-          </Label>
-        </FlexItem>
-      )}
-      {hasUpdates && (
-        <FlexItem>
-          <Label isCompact variant="outline" color="blue">
-            {t('Update available')}
-          </Label>
-        </FlexItem>
-      )}
-    </Flex>
+      !isDeployFlow &&
+      item &&
+      version &&
+      channel &&
+      getUpdates(item, channel, version.version).length > 0,
   );
+
+  const icon = item ? <CatalogItemIcon catalogItem={item} size="sm" /> : isLoading ? <Spinner size="md" /> : null;
 
   const subtitle = item?.spec.provider ? t('Provided by {{provider}}', { provider: item.spec.provider }) : undefined;
 
   return (
     <CatalogRefCard
       title={<CatalogRefTitle title={displayName} icon={icon} subtitle={subtitle} />}
-      headerBadges={headerBadges}
+      headerBadges={<CatalogItemBadges itemSpec={item?.spec} hasUpdates={hasUpdates} />}
     >
       {children ?? <CatalogRefCardDetails catalogItemRef={catalogItemRef} />}
     </CatalogRefCard>

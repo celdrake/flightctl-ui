@@ -6,7 +6,7 @@ import type { TFunction } from 'i18next';
 import type { CatalogItemRefSpec } from '@flightctl/types';
 import type { CatalogItem } from '@flightctl/types/alpha';
 import { useTranslation } from '../../hooks/useTranslation';
-import { getCatalogItemIcon } from '../../utils/catalog';
+import CatalogItemIcon from './CatalogItemIcon';
 
 const formatVersionLine = (t: TFunction, version?: string, channel?: string) => {
   if (!version) {
@@ -101,7 +101,7 @@ const CatalogItemTitle = ({
   channel?: string;
 }) => (
   <CatalogTitleLayout
-    icon={<img src={getCatalogItemIcon(item)} alt={`${item.metadata.name} icon`} style={{ maxWidth: '40px' }} />}
+    icon={<CatalogItemIcon catalogItem={item} />}
     title={item.spec.displayName || item.metadata.name || ''}
     description={description}
     version={version}
