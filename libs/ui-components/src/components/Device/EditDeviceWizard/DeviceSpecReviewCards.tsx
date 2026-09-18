@@ -17,12 +17,13 @@ import {
 import { useFormikContext } from 'formik';
 
 import {
-  type AppForm,
+  type ApplicationEntry,
   type DeviceSpecConfigFormValues,
   type EditDeviceFormValues,
   type FleetFormValues,
+  type ManualAppForm,
   UpdateMode,
-  isCatalogAppForm,
+  isCatalogAppEntry,
 } from '../../../types/deviceSpec';
 import { useTranslation } from '../../../hooks/useTranslation';
 import LabelsView from '../../common/LabelsView';
@@ -52,10 +53,10 @@ const ReviewCard = ({ title, children }: React.PropsWithChildren<{ title: string
   </StackItem>
 );
 
-const ManualApplicationReviewDetails = ({ app }: { app: AppForm }) => {
+const ManualApplicationReviewDetails = ({ app }: { app: ManualAppForm }) => {
   const { t } = useTranslation();
   const name = app.name || t('Unnamed application');
-  const imageRef = 'imageSpec' in app && app.imageSpec?.image ? app.imageSpec.image : undefined;
+  const imageRef = 'image' in app && app.image ? app.image : undefined;
 
   return (
     <DescriptionList isHorizontal isCompact>
@@ -119,7 +120,7 @@ const ApplicationWorkloadsReviewCard = ({
   apps,
   showUpdateStatus,
 }: {
-  apps: AppForm[];
+  apps: ApplicationEntry[];
   showUpdateStatus?: boolean;
 }) => {
   const { t } = useTranslation();
@@ -131,22 +132,19 @@ const ApplicationWorkloadsReviewCard = ({
   return (
     <ReviewCard title={t('Application workloads')}>
       <Stack hasGutter>
-        {apps.map((app, index) => {
-          const catalogItemRef =
-            'imageSpec' in app && app.imageSpec?.catalogItemRef ? app.imageSpec.catalogItemRef : undefined;
-
+        {apps.map((entry, index) => {
           return (
             <StackItem key={`review-app-${index}`}>
               {index > 0 && <Divider />}
-              {isCatalogAppForm(app) && catalogItemRef ? (
+              {isCatalogAppEntry(entry) ? (
                 <CatalogRefReviewDetails
-                  catalogItemRef={catalogItemRef}
-                  name={app.name}
+                  catalogItemRef={entry.app.catalogItemRef}
+                  name={entry.app.name}
                   showUpdateStatus={showUpdateStatus}
                   isTemplateManaged
                 />
               ) : (
-                <ManualApplicationReviewDetails app={app} />
+                <ManualApplicationReviewDetails app={entry.app} />
               )}
             </StackItem>
           );
