@@ -159,7 +159,12 @@ const DeviceTemplateStep = ({
             </StackItem>
           )}
           <StackItem>
-            <OsCatalogRefField isReadOnly={isReadOnly} isOsPackageMode={isOsPackageMode} showUpdateStatus={isEdit} />
+            <OsCatalogRefField
+              isReadOnly={isReadOnly}
+              isOsPackageMode={isOsPackageMode}
+              isEdit={isEdit}
+              showUpdateStatus={isEdit}
+            />
           </StackItem>
         </Stack>
       </FormGroupWithHelperText>

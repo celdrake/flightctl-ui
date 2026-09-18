@@ -1,7 +1,6 @@
 import * as React from 'react';
-import { ArrowCircleUpIcon } from '@patternfly/react-icons/dist/js/icons/arrow-circle-up-icon';
 import { ActionsColumn, type IAction } from '@patternfly/react-table';
-import { Button, Flex, FlexItem, Label, Popover, StackItem } from '@patternfly/react-core';
+import { Flex, FlexItem, Label, Popover, StackItem } from '@patternfly/react-core';
 
 import type { SpecCatalogItemId } from '../../utils/catalog';
 import { getUpdates } from '../../utils/catalog';

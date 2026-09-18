@@ -40,7 +40,7 @@ import ApplicationVmForm from './ApplicationVmForm';
 import ApplicationVolumeForm from './ApplicationVolumeForm';
 import ApplicationVariablesForm from './ApplicationVariablesForm';
 import ApplicationIntegritySettings from './ApplicationIntegritySettings';
-import CatalogRefCardFromRef from '../../../CatalogRef/CatalogRefCardFromRef';
+import CatalogRefCard from '../../../CatalogRef/CatalogRefCard';
 import ApplicationWorkloadCard from './ApplicationWorkloadCard';
 
 import './ApplicationsForm.css';
@@ -229,7 +229,7 @@ const ApplicationTemplates = ({ isReadOnly, isEdit = false }: { isReadOnly?: boo
                   <Split hasGutter>
                     <SplitItem isFilled>
                       {isCatalogApp ? (
-                        <CatalogRefCardFromRef
+                        <CatalogRefCard
                           catalogItemRef={entry.app.catalogItemRef}
                           headerTitle={entry.app.name}
                           showUpdateStatus={isEdit}
