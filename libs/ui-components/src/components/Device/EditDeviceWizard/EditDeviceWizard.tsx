@@ -104,7 +104,7 @@ const EditDeviceWizard = () => {
         <Formik<EditDeviceFormValues>
           initialValues={{
             deviceAlias,
-            osSpec: device.spec?.os,
+            osSpec: device.spec?.os || { image: '' },
             labels: fromAPILabel(device.metadata.labels || {}).filter((label) => label.key !== 'alias'),
             configTemplates: getConfigTemplatesValues(device.spec, registerMicroShift),
             fleetMatch: '', // Initially this is always a fleetless device

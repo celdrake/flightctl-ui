@@ -28,8 +28,8 @@ import {
   type VmApplication,
 } from '@flightctl/types';
 import {
-  type AppForm,
   AppSpecType,
+  type ApplicationEntry,
   type ComposeAppForm,
   type ConfigSourceProvider,
   ConfigType,
@@ -39,6 +39,7 @@ import {
   type InlineConfigTemplate,
   type InlineFileForm,
   type KubeSecretTemplate,
+  type ManualAppForm,
   type PortMapping,
   type QuadletAppForm,
   RUN_AS_FLIGHTCTL_USER,
@@ -47,6 +48,7 @@ import {
   type SpecConfigTemplate,
   type SystemdUnitFormValue,
   type VmAppForm,
+  isCatalogItemRefVariantApp,
   isGitConfigTemplate,
   isGitProviderSpec,
   isHttpConfigTemplate,
@@ -464,14 +466,9 @@ const toFormFiles = (files: ApplicationContent[]) =>
     base64: file.contentEncoding === EncodingType.EncodingBase64,
   }));
 
-const imageSpecToApi = (
-  imageSpec: ImageOrCatalogItemRefSpec | undefined,
-): Partial<ImageApplicationProviderSpec & CatalogItemRefApplicationProviderSpec> => {
-  if (imageSpec?.image) {
-    return { image: imageSpec.image };
-  }
-  if (imageSpec?.catalogItemRef) {
-    return { catalogItemRef: imageSpec.catalogItemRef };
+const imageToApi = (image: string | undefined): Partial<ImageApplicationProviderSpec> => {
+  if (image) {
+    return { image };
   }
   return {};
 };
@@ -479,7 +476,7 @@ const imageSpecToApi = (
 const toApiHelmApp = (app: HelmAppForm): HelmApplication => {
   const helmApp: Partial<HelmApplication> = {
     appType: app.appType,
-    ...imageSpecToApi(app.imageSpec),
+    ...imageToApi(app.image),
   };
 
   if (app.name) {
@@ -510,7 +507,7 @@ const toApiContainerApp = (app: SingleContainerAppForm): ContainerApplication =>
     runAs: app.runAs || RUN_AS_ROOT_USER,
     envVars: variablesToEnvVars(app.variables || []),
     volumes: formVolumesToApi(app.volumes),
-    ...imageSpecToApi(app.imageSpec),
+    ...imageToApi(app.image),
   };
   if (app.name) {
     containerApp.name = app.name;
@@ -547,7 +544,7 @@ const toApiComposeApp = (app: ComposeAppForm): ComposeApplication => {
   }
 
   if (app.specType === AppSpecType.OCI_IMAGE) {
-    Object.assign(composeApp, imageSpecToApi(app.imageSpec));
+    Object.assign(composeApp, imageToApi(app.image));
   } else {
     (composeApp as InlineApplicationProviderSpec).inline = formFilesToApi(app.files);
   }
@@ -626,7 +623,7 @@ const toApiVmApp = (app: VmAppForm): VmApplication => {
   };
 };
 
-export const toApiApplication = (app: AppForm): ApplicationProviderSpec => {
+const toApiManualApplication = (app: ManualAppForm): ApplicationProviderSpec => {
   switch (app.appType) {
     case AppType.AppTypeHelm:
       return toApiHelmApp(app as HelmAppForm);
@@ -641,6 +638,13 @@ export const toApiApplication = (app: AppForm): ApplicationProviderSpec => {
     default:
       throw new Error('Unknown application type');
   }
+};
+
+export const toApiApplication = (entry: ApplicationEntry): ApplicationProviderSpec => {
+  if (entry.type === 'catalog') {
+    return entry.app.apiApp;
+  }
+  return toApiManualApplication(entry.app);
 };
 
 const toFormVariables = (envVars: Record<string, string>): { name: string; value: string }[] =>
@@ -696,27 +700,10 @@ const toVmAppForm = (vmApp: VmApplication | undefined): VmAppForm => {
   };
 };
 
-const toFormApps = (app: ApplicationProviderSpec): AppForm => {
-  switch (app.appType) {
-    case AppType.AppTypeContainer:
-      return toContainerAppForm(app as ContainerApplication);
-    case AppType.AppTypeHelm:
-      return toHelmAppForm(app as HelmApplication);
-    case AppType.AppTypeQuadlet:
-      return toQuadletAppForm(app as QuadletApplication);
-    case AppType.AppTypeCompose:
-      return toComposeAppForm(app as ComposeApplication);
-    case AppType.AppTypeVm:
-      return toVmAppForm(app as VmApplication);
-    default:
-      throw new Error('Unknown application type');
-  }
-};
-
 export const getApplicationPatches = (
   basePath: string,
   currentApps: ApplicationProviderSpec[],
-  updatedApps: AppForm[],
+  updatedApps: ApplicationEntry[],
 ): PatchRequest => {
   const patches: PatchRequest = [];
   const currentLen = currentApps.length;
@@ -876,17 +863,11 @@ export const toFormPortMapping = (portStr: string): PortMapping => {
   return { hostPort: hostPort || '', targetPort: targetPort || '' };
 };
 
-const getImageSpec = (
-  app: ImageApplicationProviderSpec | CatalogItemRefApplicationProviderSpec | undefined,
-): ImageOrCatalogItemRefSpec => {
+const getAppImage = (app: ImageApplicationProviderSpec | CatalogItemRefApplicationProviderSpec | undefined): string => {
   if (!app) {
-    return { image: '' };
+    return '';
   }
-  if ('catalogItemRef' in app && app.catalogItemRef) {
-    return { catalogItemRef: app.catalogItemRef };
-  }
-  const img = 'image' in app ? app.image : '';
-  return { image: img };
+  return 'image' in app ? app.image || '' : '';
 };
 
 const toContainerAppForm = (containerApp: ContainerApplication | undefined): SingleContainerAppForm => {
@@ -897,7 +878,7 @@ const toContainerAppForm = (containerApp: ContainerApplication | undefined): Sin
     appType: AppType.AppTypeContainer,
     specType: AppSpecType.OCI_IMAGE,
     name: containerApp?.name || '',
-    imageSpec: getImageSpec(containerApp),
+    image: getAppImage(containerApp),
     variables: toFormVariables(containerApp?.envVars || {}),
     volumes: toFormVolumes(containerApp?.volumes),
     ports,
@@ -917,7 +898,7 @@ const toHelmAppForm = (helmApp: HelmApplication | undefined): HelmAppForm => {
     appType: AppType.AppTypeHelm,
     specType: AppSpecType.OCI_IMAGE,
     name: helmApp?.name || '',
-    imageSpec: getImageSpec(helmApp),
+    image: getAppImage(helmApp),
     namespace: helmApp?.namespace || '',
     valuesYaml,
     valuesFiles,
@@ -938,9 +919,9 @@ const toComposeAppForm = (app: ComposeApplication | undefined): ComposeAppForm =
   // We want to have both fields initialized for the formik form
   if (isInlineVariant) {
     formApp.files = toFormFiles(app?.inline || []);
-    formApp.imageSpec = { image: '' };
+    formApp.image = '';
   } else {
-    formApp.imageSpec = getImageSpec(app);
+    formApp.image = getAppImage(app);
     formApp.files = [];
   }
   return formApp as ComposeAppForm;
@@ -956,8 +937,50 @@ const toQuadletAppForm = (app: QuadletApplication | undefined): QuadletAppForm =
   };
 };
 
-export const createInitialAppForm = (appType: AppType, name: string = ''): AppForm => {
-  let app: AppForm;
+const toFormApps = (app: ApplicationProviderSpec): ManualAppForm => {
+  switch (app.appType) {
+    case AppType.AppTypeContainer:
+      return toContainerAppForm(app as ContainerApplication);
+    case AppType.AppTypeHelm:
+      return toHelmAppForm(app as HelmApplication);
+    case AppType.AppTypeQuadlet:
+      return toQuadletAppForm(app as QuadletApplication);
+    case AppType.AppTypeCompose:
+      return toComposeAppForm(app as ComposeApplication);
+    case AppType.AppTypeVm:
+      return toVmAppForm(app as VmApplication);
+    default:
+      throw new Error('Unknown application type');
+  }
+};
+
+const toCatalogAppForm = (
+  app: ApplicationProviderSpec & { catalogItemRef: CatalogItemRefApplicationProviderSpec['catalogItemRef'] },
+): {
+  catalogItemRef: CatalogItemRefApplicationProviderSpec['catalogItemRef'];
+  name?: string;
+  apiApp: ApplicationProviderSpec;
+} => ({
+  catalogItemRef: app.catalogItemRef,
+  name: app.name,
+  apiApp: app,
+});
+
+const toApplicationEntry = (app: ApplicationProviderSpec): ApplicationEntry => {
+  if (isCatalogItemRefVariantApp(app)) {
+    return {
+      type: 'catalog',
+      app: toCatalogAppForm(app),
+    };
+  }
+  return {
+    type: 'manual',
+    app: toFormApps(app),
+  };
+};
+
+export const createInitialAppForm = (appType: AppType, name: string = ''): ManualAppForm => {
+  let app: ManualAppForm;
   switch (appType) {
     case AppType.AppTypeContainer:
       app = toContainerAppForm(undefined);
@@ -981,8 +1004,13 @@ export const createInitialAppForm = (appType: AppType, name: string = ''): AppFo
   return app;
 };
 
-export const getApplicationValues = (deviceSpec?: DeviceSpec): AppForm[] =>
-  (deviceSpec?.applications || []).map(toFormApps);
+export const createInitialManualAppEntry = (appType: AppType, name: string = ''): ApplicationEntry => ({
+  type: 'manual',
+  app: createInitialAppForm(appType, name),
+});
+
+export const getApplicationValues = (deviceSpec?: DeviceSpec): ApplicationEntry[] =>
+  (deviceSpec?.applications || []).map(toApplicationEntry);
 
 export const getSystemdUnitsValues = (deviceSpec?: DeviceSpec): SystemdUnitFormValue[] => {
   return (

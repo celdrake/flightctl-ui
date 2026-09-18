@@ -7,7 +7,6 @@ import { getCatalogRefDisplayName, getUpdates } from '../../utils/catalog';
 import { useResolvedCatalogRef } from '../Catalog/useResolvedCatalogRef';
 import CatalogRefCard, { CatalogRefTitle } from './CatalogRefCard';
 import CatalogRefCardDetails from './CatalogRefCardDetails';
-import { catalogItemHasConfigSchema } from './catalogRefUtils';
 import CatalogItemIcon from '../Catalog/CatalogItemIcon';
 import CatalogItemBadges from '../Catalog/CatalogItemBadges';
 
@@ -29,17 +28,10 @@ const CatalogRefCardFromRef = ({
   const isLoading = resolved?.isLoading;
   const version = resolved?.version;
   const channel = catalogItemRef.channel || resolved?.channel || '';
-  // CELIA-WIP: Deploy-flow vs template label heuristic — confirm against backend semantics.
-  const isDeployFlow = Boolean(item && catalogItemHasConfigSchema(item));
   const displayName = headerTitle || getCatalogRefDisplayName(catalogItemRef, item);
 
   const hasUpdates = Boolean(
-    showUpdateStatus &&
-      !isDeployFlow &&
-      item &&
-      version &&
-      channel &&
-      getUpdates(item, channel, version.version).length > 0,
+    showUpdateStatus && item && version && channel && getUpdates(item, channel, version.version).length > 0,
   );
 
   const icon = item ? <CatalogItemIcon catalogItem={item} size="sm" /> : isLoading ? <Spinner size="md" /> : null;

@@ -9,6 +9,7 @@ import { useTranslation } from '../../hooks/useTranslation';
 import { buildAllDropdownActions } from '../common/ActionsDropdownList';
 import type { ResolvedCatalogItemData } from './specCatalogItems';
 import CatalogItemTitle, { BrokenCatalogItemTitle } from './CatalogItemTitle';
+import { CatalogItemUpdateBadge } from './CatalogItemBadges';
 
 const SoftwareItemTitle = ({
   catalogItemId,
@@ -32,7 +33,7 @@ const SoftwareItemTitle = ({
   );
 };
 
-const SoftwareItemVersionInfo = ({
+const SoftwareItemUpdateBadge = ({
   data,
   onEdit,
   canEdit,
@@ -41,26 +42,13 @@ const SoftwareItemVersionInfo = ({
   onEdit: VoidFunction;
   canEdit: boolean;
 }) => {
-  const { t } = useTranslation();
   const { item, version, channel } = data;
   if (!version) {
     return null;
   }
 
   const updates = getUpdates(item, channel, version.version);
-  if (!updates.length) {
-    return null;
-  }
-
-  return canEdit ? (
-    <Button variant="link" isInline onClick={onEdit} icon={<ArrowCircleUpIcon />}>
-      {t('Update available')}
-    </Button>
-  ) : (
-    <Label variant="outline" color="blue">
-      {t('Update available')}
-    </Label>
-  );
+  return <CatalogItemUpdateBadge hasUpdates={updates.length > 0} onUpdate={canEdit ? onEdit : undefined} />;
 };
 
 const SoftwareItemDeprecation = ({ data }: { data: ResolvedCatalogItemData }) => {
@@ -128,7 +116,7 @@ const InstalledSoftwareItem = ({ catalogItemId, data, onEdit, onDelete, canEdit 
         {isValidCatalogItem && (
           <>
             <FlexItem>
-              <SoftwareItemVersionInfo data={data} onEdit={onEdit} canEdit={canEdit} />
+              <SoftwareItemUpdateBadge data={data} onEdit={onEdit} canEdit={canEdit} />
             </FlexItem>
             <FlexItem>
               <SoftwareItemDeprecation data={data} />

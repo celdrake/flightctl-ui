@@ -41,7 +41,7 @@ const CatalogItemCard: React.FC<CatalogItemCardProps> = ({ catalogItem, onSelect
             <CatalogItemIcon catalogItem={catalogItem} />
           </SplitItem>
           <SplitItem>
-            <CatalogItemTypeBadge itemSpec={catalogItem.spec} />
+            <CatalogItemTypeBadge itemSpec={catalogItem.spec} isCompact={false} />
           </SplitItem>
         </Split>
       </CardHeader>

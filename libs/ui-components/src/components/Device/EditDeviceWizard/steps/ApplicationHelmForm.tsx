@@ -13,7 +13,7 @@ import ApplicationImageForm from './ApplicationImageForm';
 
 const ApplicationHelmForm = ({ index, isReadOnly }: { index: number; isReadOnly?: boolean }) => {
   const { t } = useTranslation();
-  const appFieldName = `applications[${index}]`;
+  const appFieldName = `applications[${index}].app`;
   const [{ value: app }] = useField<HelmAppForm>(`${appFieldName}`);
   const valuesFiles = app.valuesFiles || [];
   const canAddValuesFile = valuesFiles && valuesFiles.every((file) => file && file.trim() !== '');

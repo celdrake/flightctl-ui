@@ -13,23 +13,15 @@ import { useTranslation } from '../../hooks/useTranslation';
 import { getCatalogRefDisplayName, getUpdates } from '../../utils/catalog';
 import { useResolvedCatalogRef } from '../Catalog/useResolvedCatalogRef';
 import CatalogRefDescriptionGroups from './CatalogRefDescriptionGroups';
-import { catalogItemHasConfigSchema } from './catalogRefUtils';
 import { CatalogItemTypeBadge } from '../Catalog/CatalogItemBadges';
 
 type CatalogRefReviewDetailsProps = {
   catalogItemRef: CatalogItemRefSpec;
   name?: string;
   showUpdateStatus?: boolean;
-  /** When true, always show Software Catalog source (not Catalog deploy) for template-managed items. */
-  isTemplateManaged?: boolean;
 };
 
-const CatalogRefReviewDetails = ({
-  catalogItemRef,
-  name,
-  showUpdateStatus,
-  isTemplateManaged = false,
-}: CatalogRefReviewDetailsProps) => {
+const CatalogRefReviewDetails = ({ catalogItemRef, name, showUpdateStatus }: CatalogRefReviewDetailsProps) => {
   const { t } = useTranslation();
   const resolved = useResolvedCatalogRef(catalogItemRef);
   const item = resolved?.item;
@@ -37,11 +29,9 @@ const CatalogRefReviewDetails = ({
   const channel = catalogItemRef.channel || resolved?.channel || '';
   const imageUri = resolved?.imageUri;
   const displayName = name || getCatalogRefDisplayName(catalogItemRef, item);
-  const isDeployFlow = !isTemplateManaged && Boolean(item && catalogItemHasConfigSchema(item));
 
   const hasUpdates =
     showUpdateStatus &&
-    !isDeployFlow &&
     item &&
     resolved?.version &&
     channel &&
@@ -61,7 +51,7 @@ const CatalogRefReviewDetails = ({
         <DescriptionListTerm>{t('Source')}</DescriptionListTerm>
         <DescriptionListDescription>
           <Label isCompact variant="outline">
-            {isDeployFlow ? t('Catalog deploy') : t('Software Catalog')}
+            {t('Software Catalog')}
           </Label>
         </DescriptionListDescription>
       </DescriptionListGroup>
