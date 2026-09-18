@@ -52,7 +52,8 @@ const ApplicationSection = ({ index, isReadOnly }: { index: number; isReadOnly?:
   const [{ value: app }, , { setValue }] = useField<ManualAppForm>(appFieldName);
   const { appType, specType, name: appName } = app;
   const [, { error }, { setTouched }] = useField(appFieldName);
-  const [isExpanded, setIsExpanded] = React.useState(!appName); // Expand an app when it was just created
+  // Initial expanded state: an app that have been just created is expanded, otherwise it's collapsed.
+  const [isExpanded, setIsExpanded] = React.useState(!appName);
 
   const isContainer = app.appType === AppType.AppTypeContainer;
   const isHelm = app.appType === AppType.AppTypeHelm;

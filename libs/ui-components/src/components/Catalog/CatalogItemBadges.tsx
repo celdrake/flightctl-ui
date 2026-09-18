@@ -1,9 +1,10 @@
 import * as React from 'react';
 import type { TFunction } from 'react-i18next';
-import { Flex, FlexItem, Label } from '@patternfly/react-core';
+import { Button, Flex, FlexItem, Label } from '@patternfly/react-core';
 
 import { CatalogItemCategory, type CatalogItemSpec, CatalogItemType } from '@flightctl/types/alpha';
 import { useTranslation } from '../../hooks/useTranslation';
+import ArrowCircleUpIcon from '@patternfly/react-icons/dist/js/icons/arrow-circle-up-icon';
 
 const getCatalogItemBadge = (itemType: CatalogItemType | undefined, t: TFunction) => {
   switch (itemType) {
@@ -31,14 +32,40 @@ const getCatalogItemBadge = (itemType: CatalogItemType | undefined, t: TFunction
   }
 };
 
-export const CatalogItemTypeBadge = ({ itemSpec }: { itemSpec: CatalogItemSpec }) => {
+export const CatalogItemTypeBadge = ({
+  itemSpec,
+  isCompact = true,
+}: {
+  itemSpec: CatalogItemSpec;
+  isCompact?: boolean;
+}) => {
   const { t } = useTranslation();
   return (
     <Label
       variant="filled"
+      isCompact={isCompact}
       color={itemSpec.category === CatalogItemCategory.CatalogItemCategorySystem ? 'teal' : 'purple'}
     >
       {getCatalogItemBadge(itemSpec.type, t)}
+    </Label>
+  );
+};
+
+export const CatalogItemUpdateBadge = ({ hasUpdates, onUpdate }: { hasUpdates: boolean; onUpdate?: VoidFunction }) => {
+  const { t } = useTranslation();
+  if (!hasUpdates) {
+    return null;
+  }
+  if (onUpdate) {
+    return (
+      <Button variant="link" isInline onClick={onUpdate} icon={<ArrowCircleUpIcon />}>
+        {t('Update available')}
+      </Button>
+    );
+  }
+  return (
+    <Label isCompact variant="outline" color="blue">
+      {t('Update available')}
     </Label>
   );
 };
@@ -71,9 +98,7 @@ const CatalogItemBadges = ({
       )}
       {hasUpdates && (
         <FlexItem>
-          <Label isCompact variant="outline" color="blue">
-            {t('Update available')}
-          </Label>
+          <CatalogItemUpdateBadge hasUpdates={hasUpdates} />
         </FlexItem>
       )}
     </Flex>
