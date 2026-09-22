@@ -54,7 +54,6 @@ import {
   getChannelVersions,
   getDefaultChannel,
   getUniqueApplicationName,
-  isApplicationCatalogItem,
 } from './catalogCompositionUtils';
 import { getCatalogItemBadge } from '../Catalog/CatalogItemBadges';
 import { validateApplicationName } from '../form/validations';
@@ -67,7 +66,6 @@ import CatalogApplicationNameField from './CatalogApplicationNameField';
 import './CatalogSelectionModal.css';
 
 type CatalogSelectionModalProps = {
-  isOpen: boolean;
   appName?: string;
   existingAppNames?: string[];
   onClose: () => void;
@@ -90,7 +88,6 @@ type ConfigureFormValues = {
 const applicationTypeOptions = appTypeIds.filter((type) => type !== CatalogItemType.CatalogItemTypeData);
 
 const CatalogSelectionModal = ({
-  isOpen,
   appName = '',
   existingAppNames = [],
   onClose,
@@ -109,7 +106,7 @@ const CatalogSelectionModal = ({
   const [advancedSchemaErrors, setAdvancedSchemaErrors] = React.useState<RJSFValidationError[] | undefined>();
 
   const itemTypeFilter = React.useMemo(
-    () => (selectedAppTypes.length > 0 ? selectedAppTypes : applicationTypeOptions),
+    () => (selectedAppTypes.length === 0 ? applicationTypeOptions : selectedAppTypes),
     [selectedAppTypes],
   );
 
@@ -163,25 +160,6 @@ const CatalogSelectionModal = ({
       setAppliedNameFilter('');
     }
   };
-
-  const eligibleItems = React.useMemo(
-    () => catalogItems.filter((item) => isApplicationCatalogItem(item)),
-    [catalogItems],
-  );
-
-  React.useEffect(() => {
-    if (!isOpen) {
-      setStep('browse');
-      setNameFilter('');
-      setSelectedItem(null);
-      setSelectedAppTypes([]);
-      setAppliedNameFilter('');
-      setAppliedAppTypes([]);
-      setPendingConfigureValues(null);
-      setPendingSelection(null);
-      setAdvancedSchemaErrors(undefined);
-    }
-  }, [isOpen]);
 
   const handleClose = () => {
     onClose();
@@ -247,12 +225,10 @@ const CatalogSelectionModal = ({
     }
   };
 
-  if (!isOpen) {
-    return null;
-  }
+  const hasCatalogItems = catalogItems.length > 0;
 
   return (
-    <FlightCtlModal variant="large" isOpen={isOpen} onClose={handleClose}>
+    <FlightCtlModal variant="large" isOpen onClose={handleClose}>
       <ModalHeader title={t('Add application from Software Catalog')}>
         {(step === 'configure' || step === 'advanced-config') && selectedItem && (
           <Title headingLevel="h2" size="md">
@@ -340,12 +316,12 @@ const CatalogSelectionModal = ({
                 <Alert variant="danger" title={t('Failed to load catalog items')} isInline />
               </StackItem>
             )}
-            {(loading || (isUpdating && eligibleItems.length === 0)) && (
+            {(loading || (isUpdating && !hasCatalogItems)) && (
               <StackItem>
                 <EmptyState titleText={t('Loading catalog items')} headingLevel="h4" icon={Spinner} />
               </StackItem>
             )}
-            {!loading && !isUpdating && eligibleItems.length === 0 && (
+            {!loading && !isUpdating && !hasCatalogItems && (
               <StackItem>
                 {hasFilters ? (
                   <EmptyState headingLevel="h4" icon={SearchIcon} titleText={t('No results found')} variant="full">
@@ -363,10 +339,10 @@ const CatalogSelectionModal = ({
                 )}
               </StackItem>
             )}
-            {!loading && eligibleItems.length > 0 && (
+            {!loading && !isUpdating && hasCatalogItems && (
               <StackItem>
                 <Gallery hasGutter minWidths={{ default: '220px' }} className="fctl-catalog-composition__gallery">
-                  {eligibleItems.map((item) => (
+                  {catalogItems.map((item) => (
                     <GalleryItem key={`${item.metadata.catalog}/${item.metadata.name}`}>
                       <CatalogItemCard
                         catalogItem={item}
