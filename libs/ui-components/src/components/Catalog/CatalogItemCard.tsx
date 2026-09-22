@@ -5,17 +5,14 @@ import {
   CardHeader,
   Flex,
   FlexItem,
-  Icon,
   Split,
   SplitItem,
   Stack,
   StackItem,
   Truncate,
 } from '@patternfly/react-core';
-import { ExclamationTriangleIcon } from '@patternfly/react-icons/dist/js/icons/exclamation-triangle-icon';
 
 import { type CatalogItem } from '@flightctl/types/alpha';
-import WithTooltip from '../common/WithTooltip';
 import { useTranslation } from '../../hooks/useTranslation';
 import CatalogItemIcon from './CatalogItemIcon';
 import { CatalogItemDeprecationBadge, CatalogItemTypeBadge } from './CatalogItemBadges';
@@ -34,13 +31,12 @@ const CatalogItemCard = ({ catalogItem, onSelect }: CatalogItemCardProps) => {
   const fullTitle = spec.displayName || metadata.name || '';
   const shortDescription = spec.shortDescription || '';
   const provider = spec.provider;
-  const hasProvider = !!provider;
 
   return (
     <Card
       isCompact
       isClickable
-      className={`fctl-catalog-item-card${hasProvider ? ' fctl-catalog-item-card--reduced' : ''}`}
+      className={`fctl-catalog-item-card${provider ? ' fctl-catalog-item-card--reduced' : ''}`}
     >
       <CardHeader
         selectableActions={{
@@ -74,7 +70,7 @@ const CatalogItemCard = ({ catalogItem, onSelect }: CatalogItemCardProps) => {
           <StackItem className="fctl-catalog-item-card__title">
             <Truncate content={fullTitle} position="middle" />
           </StackItem>
-          {hasProvider && (
+          {provider && (
             <StackItem className="fctl-catalog-item-card__provider">
               {t('Provided by {{provider}}', { provider })}
             </StackItem>

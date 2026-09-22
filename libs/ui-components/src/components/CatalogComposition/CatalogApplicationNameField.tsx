@@ -1,63 +1,77 @@
 import * as React from 'react';
-import {
-  Button,
-  Content,
-  ContentVariants,
-  Flex,
-  FlexItem,
-  FormGroup,
-  Icon,
-  Stack,
-  StackItem,
-} from '@patternfly/react-core';
+import { Button, Content, ContentVariants, Flex, FlexItem, FormGroup, Icon } from '@patternfly/react-core';
 import { PencilAltIcon } from '@patternfly/react-icons/dist/js/icons/pencil-alt-icon';
 import { useFormikContext } from 'formik';
 
 import { useTranslation } from '../../hooks/useTranslation';
 import TextField from '../form/TextField';
 
-type CatalogApplicationNameFieldProps = {
-  defaultAppName: string;
-};
-
-const CatalogApplicationNameField = ({ defaultAppName }: CatalogApplicationNameFieldProps) => {
+const CatalogApplicationNameField = () => {
   const { t } = useTranslation();
   const [isEditing, setIsEditing] = React.useState(false);
-  const { values, setFieldValue } = useFormikContext<{ applicationName: string }>();
+  const { values, errors, submitCount, setFieldValue } = useFormikContext<{ appName: string }>();
+  const [acceptedAppName, setAcceptedAppName] = React.useState(values.appName);
+
+  const updatedName = values.appName;
+  const hasError = !!errors.appName;
+
+  const cancelEditing = React.useCallback(() => {
+    if (!hasError && acceptedAppName) {
+      void setFieldValue('appName', acceptedAppName, false);
+      setIsEditing(false);
+    }
+  }, [hasError, acceptedAppName, setFieldValue]);
+
+  const acceptEditing = React.useCallback(() => {
+    if (!hasError && updatedName) {
+      setAcceptedAppName(updatedName);
+      setIsEditing(false);
+    }
+  }, [hasError, updatedName]);
 
   React.useEffect(() => {
-    setIsEditing(false);
-  }, [defaultAppName]);
+    if (submitCount > 0 && errors.appName) {
+      setIsEditing(true);
+    }
+  }, [submitCount, errors.appName]);
+
+  // Capture Escape before PatternFly Modal closes the dialog.
+  React.useEffect(() => {
+    if (!isEditing) {
+      return undefined;
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') {
+        return;
+      }
+      event.stopPropagation();
+      event.preventDefault();
+      cancelEditing();
+    };
+    document.addEventListener('keydown', onKeyDown, true);
+    return () => document.removeEventListener('keydown', onKeyDown, true);
+  }, [isEditing, cancelEditing]);
 
   return (
     <FormGroup label={t('Application name')} isRequired fieldId="catalog-app-name">
       {isEditing ? (
-        <Stack hasGutter>
-          <StackItem>
-            <TextField
-              name="applicationName"
-              aria-label={t('Application name')}
-              helperText={t('Must be unique within this template.')}
-            />
-          </StackItem>
-          <StackItem>
-            <Button
-              variant="link"
-              isInline
-              onClick={() => {
-                void setFieldValue('applicationName', defaultAppName, false);
-                setIsEditing(false);
-              }}
-            >
-              {t('Cancel')}
-            </Button>
-          </StackItem>
-        </Stack>
+        <TextField
+          name="appName"
+          aria-label={t('Application name')}
+          helperText={t('Must be unique within this template.')}
+          onBlur={acceptEditing}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              acceptEditing();
+            }
+          }}
+        />
       ) : (
         <>
           <Flex alignItems={{ default: 'alignItemsCenter' }} gap={{ default: 'gapSm' }}>
             <FlexItem>
-              <Content component={ContentVariants.p}>{values.applicationName}</Content>
+              <Content component={ContentVariants.p}>{updatedName}</Content>
             </FlexItem>
             <FlexItem>
               <Button

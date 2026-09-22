@@ -49,8 +49,6 @@ import CatalogAdvancedConfigEditModal from '../../../CatalogComposition/CatalogA
 import {
   createCatalogAppEntry,
   createCatalogAppEntryWithConfig,
-  getCatalogItemDefaultAppName,
-  getUniqueApplicationName,
 } from '../../../CatalogComposition/catalogCompositionUtils';
 import { useResolvedCatalogRef } from '../../../Catalog/useResolvedCatalogRef';
 
@@ -60,10 +58,12 @@ const CatalogManagedApplicationSection = ({
   index,
   isReadOnly,
   showUpdateStatus,
+  existingAppNames,
 }: {
   index: number;
   isReadOnly?: boolean;
   showUpdateStatus: boolean;
+  existingAppNames: string[];
 }) => {
   const appFieldName = `applications[${index}].app`;
   const [{ value: app }, , { setValue }] = useField<CatalogAppForm>(appFieldName);
@@ -78,12 +78,11 @@ const CatalogManagedApplicationSection = ({
         showUpdateStatus={showUpdateStatus}
         onEdit={isReadOnly || !resolved?.item ? undefined : () => setIsAdvancedEditOpen(true)}
       />
-      {resolved?.item && (
+      {resolved?.item && isAdvancedEditOpen && (
         <CatalogAdvancedConfigEditModal
-          isOpen={isAdvancedEditOpen}
           catalogItem={resolved.item}
-          catalogItemRef={app.catalogItemRef}
-          app={app}
+          appForm={app}
+          existingAppNames={existingAppNames}
           onClose={() => setIsAdvancedEditOpen(false)}
           onSave={(nextApp) => {
             void setValue(nextApp);
@@ -258,7 +257,7 @@ const ApplicationTemplates = ({ isReadOnly, isEdit = false }: { isReadOnly?: boo
   const [appIndexToDelete, setAppIndexToDelete] = React.useState<number | undefined>(undefined);
   const [isCatalogSelectOpen, setIsCatalogSelectOpen] = React.useState(false);
 
-  const existingApplicationNames = React.useMemo(
+  const existingAppNames = React.useMemo(
     () => values.applications.map((entry) => getAppIdentifier(entry)).filter(Boolean),
     [values.applications],
   );
@@ -289,6 +288,7 @@ const ApplicationTemplates = ({ isReadOnly, isEdit = false }: { isReadOnly?: boo
                           index={index}
                           isReadOnly={isReadOnly}
                           showUpdateStatus={isEdit}
+                          existingAppNames={existingAppNames}
                         />
                       ) : (
                         <ApplicationSection index={index} isReadOnly={isReadOnly} />
@@ -357,19 +357,13 @@ const ApplicationTemplates = ({ isReadOnly, isEdit = false }: { isReadOnly?: boo
 
             {isCatalogSelectOpen && (
               <CatalogSelectionModal
-                existingAppNames={existingApplicationNames}
+                existingAppNames={existingAppNames}
                 onClose={() => setIsCatalogSelectOpen(false)}
-                onConfirm={(selection, applicationName, advancedConfig) => {
-                  const name =
-                    applicationName.trim() ||
-                    getUniqueApplicationName(
-                      getCatalogItemDefaultAppName(selection.catalogItem),
-                      existingApplicationNames,
-                    );
+                onConfirm={(selection, appName, advancedConfig) => {
                   try {
                     const nextEntry = advancedConfig
-                      ? createCatalogAppEntryWithConfig({ selection, applicationName: name, advancedConfig })
-                      : createCatalogAppEntry(selection, name);
+                      ? createCatalogAppEntryWithConfig({ selection, appName, advancedConfig })
+                      : createCatalogAppEntry(selection, appName);
                     arrayHelpers.push(nextEntry);
                     setIsCatalogSelectOpen(false);
                   } catch {
