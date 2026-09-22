@@ -3,7 +3,7 @@ import { ApiVersion as ImageBuilderApiVersion } from '@flightctl/types/imagebuil
 import { ApiVersion as AlphaVersion } from '@flightctl/types/alpha';
 
 export const APP_TITLE = 'Edge Manager';
-export const PAGE_SIZE = 15;
+export const PAGE_SIZE = 5;
 export const EVENT_PAGE_SIZE = 200; // It's 500 in OCP console
 
 // Class used to apply global styles to the application.

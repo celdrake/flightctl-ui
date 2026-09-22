@@ -176,8 +176,8 @@ export type VmAppForm = {
 export type ManualAppForm = SingleContainerAppForm | HelmAppForm | QuadletAppForm | ComposeAppForm | VmAppForm;
 
 /**
- * Placeholder for catalog-sourced apps until CatalogAppForm / dynamic config is designed.
- * Holds the API application for round-trip load/save.
+ * Catalog-sourced application in the fleet/device template wizard.
+ * Holds the API application for round-trip load/save; channel/version stay pinned on catalogItemRef.
  */
 export type CatalogAppForm = {
   catalogItemRef: CatalogItemRefSpec;

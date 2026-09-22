@@ -5,13 +5,14 @@ import appIcon from '../../../assets/application.svg';
 import osIcon from '../../../assets/os.svg';
 
 const sizeStyles = {
+  xs: { width: '1.5rem', height: '1.5rem', objectFit: 'contain' as const },
   sm: { width: '2rem', height: '2rem', objectFit: 'contain' as const },
   md: { maxWidth: '40px' },
 };
 
 type CatalogItemIconProps = {
   catalogItem: CatalogItem;
-  /** `md` (default) for catalog cards/details; `sm` for compact ref headers. */
+  /** `md` (default) for details; `sm` for compact ref headers; `xs` for dense catalog cards. */
   size?: keyof typeof sizeStyles;
 };
 

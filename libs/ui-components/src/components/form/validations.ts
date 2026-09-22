@@ -246,6 +246,47 @@ export const validApplicationAndVolumeName = (t: TFunction) =>
     }),
   );
 
+export const requiredApplicationNameSchema = (t: TFunction) =>
+  validApplicationAndVolumeName(t).required(t('Application name is required.'));
+
+export const validateApplicationName = (name: string, t: TFunction): string | undefined => {
+  try {
+    requiredApplicationNameSchema(t).validateSync(name.trim());
+    return undefined;
+  } catch (error) {
+    return (error as Yup.ValidationError).message;
+  }
+};
+
+/** Normalize a display name into a DNS-safe application name. */
+export const toValidApplicationName = (rawName: string): string => {
+  const normalized = rawName
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  if (!normalized) {
+    return 'application';
+  }
+
+  if (GENERIC_NAME_REGEXP.test(normalized)) {
+    return normalized.slice(0, EXTENDED_MAX_LENGTH);
+  }
+
+  let fixed = normalized;
+  if (!/^[a-z0-9]/.test(fixed)) {
+    fixed = `a${fixed}`;
+  }
+  if (!/[a-z0-9]$/.test(fixed)) {
+    fixed = `${fixed}a`;
+  }
+  fixed = fixed.slice(0, EXTENDED_MAX_LENGTH);
+
+  return GENERIC_NAME_REGEXP.test(fixed) ? fixed : 'application';
+};
+
 export const validConfigName = (t: TFunction) =>
   Yup.string()
     .matches(
@@ -1103,7 +1144,7 @@ export const validApplicationsSchema = (t: TFunction) => {
     .of(
       Yup.lazy((value: ApplicationEntry) => {
         if (value?.type === 'catalog') {
-          // CatalogAppForm validation deferred until dynamic config form is designed
+          // Pinned catalog apps: channel/version are locked on catalogItemRef; config edits rebuild apiApp.
           return Yup.object().shape({
             type: Yup.string().oneOf(['catalog']).required(),
             app: Yup.object().shape({

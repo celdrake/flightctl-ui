@@ -4,7 +4,7 @@ import type { CatalogItemRefSpec } from '@flightctl/types';
 
 import { useTranslation } from '../../hooks/useTranslation';
 import CatalogRefDescriptionGroups from './CatalogRefDescriptionGroups';
-import { UseResolvedCatalogRefResult } from '../Catalog/useResolvedCatalogRef';
+import type { UseResolvedCatalogRefResult } from '../Catalog/useResolvedCatalogRef';
 
 type CatalogRefCardDetailsProps = {
   catalogItemRef: CatalogItemRefSpec;
