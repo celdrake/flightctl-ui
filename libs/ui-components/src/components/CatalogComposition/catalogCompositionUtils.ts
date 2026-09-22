@@ -50,9 +50,25 @@ const schemaHasRequiredFields = (schema: Record<string, unknown> | undefined): b
   return false;
 };
 
-/** True when the selected version defines required configuration fields. */
-export const catalogItemRequiresAdvancedConfig = (catalogItem: CatalogItem, version: string): boolean =>
-  schemaHasRequiredFields(getCatalogVersionConfigSchema(catalogItem, version));
+/**
+ * True when the selected version defines required configuration fields that are
+ * not already satisfied by the existing app (e.g. on first install, or when
+ * editing an incomplete config). If `existingApp` already validates against the
+ * schema, advanced config is optional so the user can leave it unchecked.
+ */
+export const catalogItemRequiresAdvancedConfig = (
+  catalogItem: CatalogItem,
+  version: string,
+  existingApp?: ApplicationProviderSpec,
+): boolean => {
+  if (!schemaHasRequiredFields(getCatalogVersionConfigSchema(catalogItem, version))) {
+    return false;
+  }
+  if (!existingApp) {
+    return true;
+  }
+  return !getInitialAppConfig(catalogItem, version, existingApp).dynamicFormValid;
+};
 
 export const isApplicationCatalogItem = (catalogItem: CatalogItem): boolean =>
   catalogItem.spec.category === CatalogItemCategory.CatalogItemCategoryApplication;
@@ -63,7 +79,7 @@ export const getCatalogItemDefaultAppName = (catalogItem: CatalogItem): string =
 /** Returns a DNS-safe application name unique within existingNames (e.g. nginx-demo-2). */
 export const getUniqueApplicationName = (baseName: string, existingNames: string[]): string => {
   const base = toValidApplicationName(baseName);
-  const normalizedExisting = new Set(existingNames.map((name) => name.trim().toLowerCase()).filter(Boolean));
+  const normalizedExisting = new Set(existingNames.map((name) => name.toLowerCase()).filter(Boolean));
   if (!normalizedExisting.has(base.toLowerCase())) {
     return base;
   }
@@ -106,13 +122,9 @@ const toCatalogAppForm = (apiApp: ApplicationProviderSpec, catalogItemRef: Catal
   apiApp,
 });
 
-export const createCatalogAppEntry = (
-  selection: CatalogSelectionConfirm,
-  applicationName: string,
-): ApplicationEntry => {
-  const name = toValidApplicationName(applicationName);
+export const createCatalogAppEntry = (selection: CatalogSelectionConfirm, appName: string): ApplicationEntry => {
   const apiApp = buildCatalogApplicationSpec({
-    appName: name,
+    appName,
     catalogItem: selection.catalogItem,
     catalogItemVersion: selection.version,
     channel: selection.channel,
@@ -123,21 +135,20 @@ export const createCatalogAppEntry = (
 
 export const createCatalogAppEntryWithConfig = ({
   selection,
-  applicationName,
+  appName,
   advancedConfig,
 }: {
   selection: CatalogSelectionConfirm;
-  applicationName: string;
+  appName: string;
   advancedConfig: CatalogAdvancedConfigValues;
 }): ApplicationEntry => {
-  const name = toValidApplicationName(applicationName);
   const formValues =
     advancedConfig.configureVia === 'editor'
       ? (load(advancedConfig.editorContent) as Record<string, unknown>)
       : advancedConfig.formValues;
 
   const apiApp = buildCatalogApplicationSpec({
-    appName: name,
+    appName,
     catalogItem: selection.catalogItem,
     catalogItemVersion: selection.version,
     channel: selection.channel,
@@ -148,8 +159,7 @@ export const createCatalogAppEntryWithConfig = ({
   return { type: 'catalog', app: toCatalogAppForm(apiApp, selection.catalogItemRef) };
 };
 
-export const renameCatalogAppForm = (app: CatalogAppForm, applicationName: string): CatalogAppForm => {
-  const name = toValidApplicationName(applicationName);
+export const renameCatalogAppForm = (app: CatalogAppForm, name: string): CatalogAppForm => {
   return {
     ...app,
     name,
@@ -158,29 +168,28 @@ export const renameCatalogAppForm = (app: CatalogAppForm, applicationName: strin
 };
 
 export const updateCatalogAppFormConfig = ({
-  app,
+  appForm,
   catalogItem,
-  applicationName,
+  appName,
   advancedConfig,
 }: {
-  app: CatalogAppForm;
+  appForm: CatalogAppForm;
   catalogItem: CatalogItem;
-  applicationName: string;
+  appName: string;
   advancedConfig: CatalogAdvancedConfigValues;
 }): CatalogAppForm => {
-  const name = toValidApplicationName(applicationName);
-  const versionEntry = catalogItem.spec.versions.find((entry) => entry.version === app.catalogItemRef.version);
+  const versionEntry = catalogItem.spec.versions.find((entry) => entry.version === appForm.catalogItemRef.version);
   if (!versionEntry) {
-    return renameCatalogAppForm(app, name);
+    return renameCatalogAppForm(appForm, appName);
   }
-  const channel = app.catalogItemRef.channel || getDefaultChannel(catalogItem);
+  const channel = appForm.catalogItemRef.channel || getDefaultChannel(catalogItem);
   const formValues =
     advancedConfig.configureVia === 'editor'
       ? (load(advancedConfig.editorContent) as Record<string, unknown>)
       : advancedConfig.formValues;
 
   const apiApp = buildCatalogApplicationSpec({
-    appName: name,
+    appName,
     catalogItem,
     catalogItemVersion: versionEntry,
     channel,
@@ -189,7 +198,7 @@ export const updateCatalogAppFormConfig = ({
   });
 
   // Version stays locked to the existing pin.
-  return toCatalogAppForm(apiApp, app.catalogItemRef);
+  return toCatalogAppForm(apiApp, appForm.catalogItemRef);
 };
 
 export const getAdvancedConfigInitialValues = (

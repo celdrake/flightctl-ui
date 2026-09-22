@@ -62,6 +62,7 @@ import { getInitialAppConfig } from '../Catalog/InstallWizard/utils';
 import type { DynamicFormConfigFormik } from '../Catalog/InstallWizard/types';
 import CatalogAdvancedConfigStep from './CatalogAdvancedConfigStep';
 import CatalogApplicationNameField from './CatalogApplicationNameField';
+import { isAppConfigStepValid } from '../Catalog/InstallWizard/steps/AppConfigStep';
 
 import './CatalogSelectionModal.css';
 
@@ -71,7 +72,7 @@ type CatalogSelectionModalProps = {
   onClose: () => void;
   onConfirm: (
     selection: CatalogSelectionConfirm,
-    applicationName: string,
+    appName: string,
     advancedConfig?: CatalogAdvancedConfigValues,
   ) => void;
 };
@@ -169,8 +170,7 @@ const CatalogSelectionModal = ({
     if (!selectedItem) {
       return appName;
     }
-    const defaultName = getCatalogItemDefaultAppName(selectedItem);
-    return appName.trim() || getUniqueApplicationName(defaultName, existingAppNames);
+    return appName || getUniqueApplicationName(getCatalogItemDefaultAppName(selectedItem), existingAppNames);
   }, [selectedItem, appName, existingAppNames]);
 
   const configureInitialValues = React.useMemo((): ConfigureFormValues => {
@@ -400,7 +400,7 @@ const CatalogSelectionModal = ({
               handleClose();
             }}
           >
-            {({ values, setFieldValue, submitForm, isSubmitting }) => {
+            {({ values, setFieldValue, submitForm, isSubmitting, isValid }) => {
               const requiresAdditionalInfo = catalogItemRequiresAdvancedConfig(selectedItem, values.version);
               const goToAdvancedConfig = requiresAdditionalInfo || values.wantAdvancedConfig;
               const channelVersions = getChannelVersions(selectedItem, values.channel).sort((a, b) =>
@@ -428,7 +428,7 @@ const CatalogSelectionModal = ({
                         </StackItem>
                       )}
                       <StackItem>
-                        <CatalogApplicationNameField defaultAppName={defaultAppName} />
+                        <CatalogApplicationNameField />
                       </StackItem>
                       <StackItem>
                         <FormGroup label={t('Channel')} fieldId="catalog-channel">
@@ -478,7 +478,11 @@ const CatalogSelectionModal = ({
                     <Button variant="link" onClick={() => setStep('browse')}>
                       {t('Back')}
                     </Button>
-                    <Button variant="primary" onClick={() => void submitForm()} isDisabled={isSubmitting}>
+                    <Button
+                      variant="primary"
+                      onClick={() => void submitForm()}
+                      isDisabled={isSubmitting || !isValid}
+                    >
                       {goToAdvancedConfig ? t('Next') : t('Add to template')}
                     </Button>
                   </ModalFooter>
@@ -506,9 +510,11 @@ const CatalogSelectionModal = ({
               }
             }}
           >
-            {({ submitForm, isSubmitting }) => (
+            {({ submitForm, isSubmitting, isValid, values, errors }) => (
               <>
-                <CatalogAdvancedConfigStep schemaErrors={advancedSchemaErrors} />
+                <FlightCtlForm>
+                  <CatalogAdvancedConfigStep schemaErrors={advancedSchemaErrors} />
+                </FlightCtlForm>
                 <ModalFooter>
                   <Button
                     variant="link"
@@ -519,7 +525,11 @@ const CatalogSelectionModal = ({
                   >
                     {t('Back')}
                   </Button>
-                  <Button variant="primary" onClick={() => void submitForm()} isDisabled={isSubmitting}>
+                  <Button
+                    variant="primary"
+                    onClick={() => void submitForm()}
+                    isDisabled={isSubmitting || !isValid || !isAppConfigStepValid(values, errors)}
+                  >
                     {t('Add to template')}
                   </Button>
                 </ModalFooter>
