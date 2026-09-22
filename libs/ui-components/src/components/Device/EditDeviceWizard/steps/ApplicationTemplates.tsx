@@ -355,28 +355,29 @@ const ApplicationTemplates = ({ isReadOnly, isEdit = false }: { isReadOnly?: boo
               </FormSection>
             )}
 
-            <CatalogSelectionModal
-              isOpen={isCatalogSelectOpen}
-              existingAppNames={existingApplicationNames}
-              onClose={() => setIsCatalogSelectOpen(false)}
-              onConfirm={(selection, applicationName, advancedConfig) => {
-                const name =
-                  applicationName.trim() ||
-                  getUniqueApplicationName(
-                    getCatalogItemDefaultAppName(selection.catalogItem),
-                    existingApplicationNames,
-                  );
-                try {
-                  const nextEntry = advancedConfig
-                    ? createCatalogAppEntryWithConfig({ selection, applicationName: name, advancedConfig })
-                    : createCatalogAppEntry(selection, name);
-                  arrayHelpers.push(nextEntry);
-                  setIsCatalogSelectOpen(false);
-                } catch {
-                  // Unsupported catalog item types are filtered in the modal; ignore unexpected failures.
-                }
-              }}
-            />
+            {isCatalogSelectOpen && (
+              <CatalogSelectionModal
+                existingAppNames={existingApplicationNames}
+                onClose={() => setIsCatalogSelectOpen(false)}
+                onConfirm={(selection, applicationName, advancedConfig) => {
+                  const name =
+                    applicationName.trim() ||
+                    getUniqueApplicationName(
+                      getCatalogItemDefaultAppName(selection.catalogItem),
+                      existingApplicationNames,
+                    );
+                  try {
+                    const nextEntry = advancedConfig
+                      ? createCatalogAppEntryWithConfig({ selection, applicationName: name, advancedConfig })
+                      : createCatalogAppEntry(selection, name);
+                    arrayHelpers.push(nextEntry);
+                    setIsCatalogSelectOpen(false);
+                  } catch {
+                    // Unsupported catalog item types are filtered in the modal; ignore unexpected failures.
+                  }
+                }}
+              />
+            )}
           </>
         )}
       </FieldArray>
