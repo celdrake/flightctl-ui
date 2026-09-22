@@ -20,8 +20,10 @@ import CatalogIcon from '@patternfly/react-icons/dist/js/icons/catalog-icon';
 import { AppType } from '@flightctl/types';
 import {
   AppSpecType,
+  type CatalogAppForm,
   type DeviceSpecConfigFormValues,
   type ManualAppForm,
+  getAppIdentifier,
   isCatalogAppEntry,
 } from '../../../../types/deviceSpec';
 import { createInitialAppForm, createInitialManualAppEntry } from '../deviceSpecUtils';
@@ -42,8 +44,56 @@ import ApplicationVariablesForm from './ApplicationVariablesForm';
 import ApplicationIntegritySettings from './ApplicationIntegritySettings';
 import CatalogRefCard from '../../../CatalogRef/CatalogRefCard';
 import ApplicationWorkloadCard from './ApplicationWorkloadCard';
+import CatalogSelectionModal from '../../../CatalogComposition/CatalogSelectionModal';
+import CatalogAdvancedConfigEditModal from '../../../CatalogComposition/CatalogAdvancedConfigEditModal';
+import {
+  createCatalogAppEntry,
+  createCatalogAppEntryWithConfig,
+  getCatalogItemDefaultAppName,
+  getUniqueApplicationName,
+} from '../../../CatalogComposition/catalogCompositionUtils';
+import { useResolvedCatalogRef } from '../../../Catalog/useResolvedCatalogRef';
 
 import './ApplicationsForm.css';
+
+const CatalogManagedApplicationSection = ({
+  index,
+  isReadOnly,
+  showUpdateStatus,
+}: {
+  index: number;
+  isReadOnly?: boolean;
+  showUpdateStatus: boolean;
+}) => {
+  const appFieldName = `applications[${index}].app`;
+  const [{ value: app }, , { setValue }] = useField<CatalogAppForm>(appFieldName);
+  const resolved = useResolvedCatalogRef(app.catalogItemRef);
+  const [isAdvancedEditOpen, setIsAdvancedEditOpen] = React.useState(false);
+
+  return (
+    <>
+      <CatalogRefCard
+        catalogItemRef={app.catalogItemRef}
+        headerTitle={app.name}
+        showUpdateStatus={showUpdateStatus}
+        onEdit={isReadOnly || !resolved?.item ? undefined : () => setIsAdvancedEditOpen(true)}
+      />
+      {resolved?.item && (
+        <CatalogAdvancedConfigEditModal
+          isOpen={isAdvancedEditOpen}
+          catalogItem={resolved.item}
+          catalogItemRef={app.catalogItemRef}
+          app={app}
+          onClose={() => setIsAdvancedEditOpen(false)}
+          onSave={(nextApp) => {
+            void setValue(nextApp);
+            setIsAdvancedEditOpen(false);
+          }}
+        />
+      )}
+    </>
+  );
+};
 
 const ApplicationSection = ({ index, isReadOnly }: { index: number; isReadOnly?: boolean }) => {
   const { t } = useTranslation();
@@ -206,6 +256,12 @@ const ApplicationTemplates = ({ isReadOnly, isEdit = false }: { isReadOnly?: boo
   const { t } = useTranslation();
   const { values } = useFormikContext<DeviceSpecConfigFormValues>();
   const [appIndexToDelete, setAppIndexToDelete] = React.useState<number | undefined>(undefined);
+  const [isCatalogSelectOpen, setIsCatalogSelectOpen] = React.useState(false);
+
+  const existingApplicationNames = React.useMemo(
+    () => values.applications.map((entry) => getAppIdentifier(entry)).filter(Boolean),
+    [values.applications],
+  );
 
   if (isReadOnly && values.applications.length === 0) {
     return null;
@@ -229,9 +285,9 @@ const ApplicationTemplates = ({ isReadOnly, isEdit = false }: { isReadOnly?: boo
                   <Split hasGutter>
                     <SplitItem isFilled>
                       {isCatalogApp ? (
-                        <CatalogRefCard
-                          catalogItemRef={entry.app.catalogItemRef}
-                          headerTitle={entry.app.name}
+                        <CatalogManagedApplicationSection
+                          index={index}
+                          isReadOnly={isReadOnly}
                           showUpdateStatus={isEdit}
                         />
                       ) : (
@@ -277,13 +333,12 @@ const ApplicationTemplates = ({ isReadOnly, isEdit = false }: { isReadOnly?: boo
 
             {!isReadOnly && (
               <FormSection>
-                {/* CELIA-WIP: Button is visual-only until catalog selection slice is implemented. */}
                 <Flex
                   alignItems={{ default: 'alignItemsCenter' }}
                   gap={{ default: 'gapSm' }}
                   flexWrap={{ default: 'wrap' }}
                 >
-                  <Button variant="secondary" icon={<CatalogIcon />} isDisabled>
+                  <Button variant="secondary" icon={<CatalogIcon />} onClick={() => setIsCatalogSelectOpen(true)}>
                     {t('Add from software catalog')}
                   </Button>
                   <Button
@@ -299,6 +354,29 @@ const ApplicationTemplates = ({ isReadOnly, isEdit = false }: { isReadOnly?: boo
                 </Flex>
               </FormSection>
             )}
+
+            <CatalogSelectionModal
+              isOpen={isCatalogSelectOpen}
+              existingAppNames={existingApplicationNames}
+              onClose={() => setIsCatalogSelectOpen(false)}
+              onConfirm={(selection, applicationName, advancedConfig) => {
+                const name =
+                  applicationName.trim() ||
+                  getUniqueApplicationName(
+                    getCatalogItemDefaultAppName(selection.catalogItem),
+                    existingApplicationNames,
+                  );
+                try {
+                  const nextEntry = advancedConfig
+                    ? createCatalogAppEntryWithConfig({ selection, applicationName: name, advancedConfig })
+                    : createCatalogAppEntry(selection, name);
+                  arrayHelpers.push(nextEntry);
+                  setIsCatalogSelectOpen(false);
+                } catch {
+                  // Unsupported catalog item types are filtered in the modal; ignore unexpected failures.
+                }
+              }}
+            />
           </>
         )}
       </FieldArray>

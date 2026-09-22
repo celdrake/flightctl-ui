@@ -13,6 +13,7 @@ import {
   StackItem,
 } from '@patternfly/react-core';
 import type { CatalogItemRefSpec } from '@flightctl/types';
+import { PencilAltIcon } from '@patternfly/react-icons/dist/js/icons/pencil-alt-icon';
 
 import type { CatalogItem } from '@flightctl/types/alpha';
 import { useTranslation } from '../../hooks/useTranslation';
@@ -29,6 +30,9 @@ type CatalogRefCardProps = {
   headerTitle?: string;
   showUpdateStatus: boolean;
   canCollapse?: boolean;
+  /** When updates are shown without an upgrade action, explain where to update. */
+  updateTooltip?: string;
+  onEdit?: VoidFunction;
 };
 
 const CatalogRefTitle = ({ item, title, isLoading }: { item?: CatalogItem; title: string; isLoading: boolean }) => {
@@ -57,7 +61,14 @@ const CatalogRefTitle = ({ item, title, isLoading }: { item?: CatalogItem; title
   );
 };
 
-const CatalogRefCard = ({ catalogItemRef, headerTitle, showUpdateStatus, canCollapse = true }: CatalogRefCardProps) => {
+const CatalogRefCard = ({
+  catalogItemRef,
+  headerTitle,
+  showUpdateStatus,
+  canCollapse = true,
+  updateTooltip,
+  onEdit,
+}: CatalogRefCardProps) => {
   const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = React.useState(!canCollapse);
 
@@ -103,7 +114,23 @@ const CatalogRefCard = ({ catalogItemRef, headerTitle, showUpdateStatus, canColl
               </FlexItem>
               <FlexItem shrink={{ default: 'shrink' }}>
                 <Flex alignItems={{ default: 'alignItemsCenter' }} gap={{ default: 'gapSm' }}>
-                  <CatalogItemBadges itemSpec={item?.spec} hasUpdates={hasUpdates} />
+                  <CatalogItemBadges
+                    itemSpec={item?.spec}
+                    hasUpdates={hasUpdates}
+                    updateTooltip={
+                      hasUpdates
+                        ? updateTooltip ||
+                          t(
+                            'A newer catalog version is available. Update this item from the Software Catalog tab on this fleet or device.',
+                          )
+                        : undefined
+                    }
+                  />
+                  {onEdit && (
+                    <FlexItem>
+                      <Button variant="plain" icon={<PencilAltIcon />} onClick={onEdit} aria-label={t('Edit')} />
+                    </FlexItem>
+                  )}
                 </Flex>
               </FlexItem>
             </Flex>

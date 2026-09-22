@@ -284,25 +284,21 @@ const sanitizePorts = (ports: unknown): string[] | undefined => {
   return cleaned.length > 0 ? cleaned : undefined;
 };
 
-export const getAppPatches = ({
+export const buildCatalogApplicationSpec = ({
   appName,
-  currentApps,
   catalogItem,
   catalogItemVersion,
   channel,
   formValues,
-  specPath,
-  volumeSelection,
+  volumeSelection = [],
 }: {
   appName: string;
-  currentApps: ApplicationProviderSpec[] | undefined;
   catalogItem: CatalogItem;
   catalogItemVersion: CatalogItemVersion;
   channel: string;
   formValues: Record<string, unknown> | undefined;
-  specPath: string;
-  volumeSelection: VolumeCatalogSelection[];
-}) => {
+  volumeSelection?: VolumeCatalogSelection[];
+}): ApplicationProviderSpec => {
   const appType = getAppType(catalogItem);
   if (!appType) {
     throw new Error('Unknown application type');
@@ -336,6 +332,37 @@ export const getAppPatches = ({
   if (isContainerOrQuadletApp || isComposeAppSpec(appSpec)) {
     appSpec.volumes = getCatalogApiVolumes(userVolumes, volumeSelection);
   }
+
+  return appSpec;
+};
+
+export const getAppPatches = ({
+  appName,
+  currentApps,
+  catalogItem,
+  catalogItemVersion,
+  channel,
+  formValues,
+  specPath,
+  volumeSelection,
+}: {
+  appName: string;
+  currentApps: ApplicationProviderSpec[] | undefined;
+  catalogItem: CatalogItem;
+  catalogItemVersion: CatalogItemVersion;
+  channel: string;
+  formValues: Record<string, unknown> | undefined;
+  specPath: string;
+  volumeSelection: VolumeCatalogSelection[];
+}) => {
+  const appSpec = buildCatalogApplicationSpec({
+    appName,
+    catalogItem,
+    catalogItemVersion,
+    channel,
+    formValues,
+    volumeSelection,
+  });
 
   const existingAppIndex = currentApps?.findIndex((app) => app.name === appSpec.name);
 

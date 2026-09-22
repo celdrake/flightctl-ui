@@ -1,12 +1,14 @@
 import * as React from 'react';
 import type { TFunction } from 'react-i18next';
-import { Button, Flex, FlexItem, Label } from '@patternfly/react-core';
+import { Button, Flex, FlexItem, Icon, Label } from '@patternfly/react-core';
+import { ArrowCircleUpIcon } from '@patternfly/react-icons/dist/js/icons/arrow-circle-up-icon';
+import { ExclamationTriangleIcon } from '@patternfly/react-icons/dist/js/icons/exclamation-triangle-icon';
 
 import { CatalogItemCategory, type CatalogItemSpec, CatalogItemType } from '@flightctl/types/alpha';
 import { useTranslation } from '../../hooks/useTranslation';
-import ArrowCircleUpIcon from '@patternfly/react-icons/dist/js/icons/arrow-circle-up-icon';
+import WithTooltip from '../common/WithTooltip';
 
-const getCatalogItemBadge = (itemType: CatalogItemType | undefined, t: TFunction) => {
+export const getCatalogItemBadge = (itemType: CatalogItemType | undefined, t: TFunction) => {
   switch (itemType) {
     case CatalogItemType.CatalogItemTypeCompose: {
       return t('Compose');
@@ -51,7 +53,27 @@ export const CatalogItemTypeBadge = ({
   );
 };
 
-export const CatalogItemUpdateBadge = ({ hasUpdates, onUpdate }: { hasUpdates: boolean; onUpdate?: VoidFunction }) => {
+export const CatalogItemDeprecationBadge = () => {
+  const { t } = useTranslation();
+  return (
+    <WithTooltip showTooltip content={t('This item is deprecated')}>
+      <Icon status="warning" size="sm">
+        <ExclamationTriangleIcon />
+      </Icon>
+    </WithTooltip>
+  );
+};
+
+export const CatalogItemUpdateBadge = ({
+  hasUpdates,
+  onUpdate,
+  updateTooltip,
+}: {
+  hasUpdates: boolean;
+  onUpdate?: VoidFunction;
+  /** When set (and no onUpdate), wraps the label in a tooltip — e.g. wizard redirect to Catalog tab. */
+  updateTooltip?: string;
+}) => {
   const { t } = useTranslation();
   if (!hasUpdates) {
     return null;
@@ -63,19 +85,29 @@ export const CatalogItemUpdateBadge = ({ hasUpdates, onUpdate }: { hasUpdates: b
       </Button>
     );
   }
-  return (
-    <Label isCompact variant="outline" color="blue">
+  const label = (
+    <Label isCompact variant="outline" color="blue" icon={<ArrowCircleUpIcon />}>
       {t('Update available')}
     </Label>
   );
+  if (updateTooltip) {
+    return (
+      <WithTooltip showTooltip content={updateTooltip}>
+        <span tabIndex={0}>{label}</span>
+      </WithTooltip>
+    );
+  }
+  return label;
 };
 
 const CatalogItemBadges = ({
   itemSpec,
   hasUpdates,
+  updateTooltip,
 }: {
   itemSpec: CatalogItemSpec | undefined;
   hasUpdates: boolean;
+  updateTooltip?: string;
 }) => {
   const { t } = useTranslation();
   return (
@@ -98,7 +130,12 @@ const CatalogItemBadges = ({
       )}
       {hasUpdates && (
         <FlexItem>
-          <CatalogItemUpdateBadge hasUpdates={hasUpdates} />
+          <CatalogItemUpdateBadge hasUpdates={hasUpdates} updateTooltip={updateTooltip} />
+        </FlexItem>
+      )}
+      {itemSpec?.deprecation && (
+        <FlexItem>
+          <CatalogItemDeprecationBadge />
         </FlexItem>
       )}
     </Flex>

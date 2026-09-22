@@ -1,0 +1,37 @@
+.fctl-catalog-composition__toolbar {
+  padding-block: 0;
+}
+
+.fctl-catalog-composition__gallery {
+  align-items: stretch;
+}
+
+.fctl-catalog-composition__gallery > .pf-v6-l-gallery__item {
+  display: flex;
+  height: auto;
+}
+
+.fctl-catalog-composition__gallery .fctl-catalog-item-card {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.fctl-catalog-composition__gallery .fctl-catalog-item-card .pf-v6-c-card__body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.fctl-catalog-composition__gallery .fctl-catalog-item-card__body-stack {
+  flex: 1 1 auto;
+}
+
+.fctl-catalog-composition__gallery .fctl-catalog-item-card__description-slot {
+  height: calc(2 * 1.4 * var(--pf-t--global--font--size--body--sm));
+}
+
+.fctl-catalog-composition__gallery .fctl-catalog-item-card--has-provider .fctl-catalog-item-card__description-slot {
+  height: calc(1.4 * var(--pf-t--global--font--size--body--sm));
+}
