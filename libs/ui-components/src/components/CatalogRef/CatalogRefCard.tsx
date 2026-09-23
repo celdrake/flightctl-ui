@@ -21,7 +21,7 @@ import { getCatalogRefDisplayName, getUpdates } from '../../utils/catalog';
 import { useResolvedCatalogRef } from '../Catalog/useResolvedCatalogRef';
 import CatalogRefCardDetails from './CatalogRefCardDetails';
 import CatalogItemIcon from '../Catalog/CatalogItemIcon';
-import CatalogItemBadges from '../Catalog/CatalogItemBadges';
+import CatalogItemViewBadges from '../Catalog/CatalogItemBadges';
 import AngleDownIcon from '@patternfly/react-icons/dist/js/icons/angle-down-icon';
 import AngleRightIcon from '@patternfly/react-icons/dist/js/icons/angle-right-icon';
 
@@ -29,9 +29,7 @@ type CatalogRefCardProps = {
   catalogItemRef: CatalogItemRefSpec;
   headerTitle?: string;
   showUpdateStatus: boolean;
-  canCollapse?: boolean;
-  /** When updates are shown without an upgrade action, explain where to update. */
-  updateTooltip?: string;
+  // CELIA-WIP REVIEW
   onEdit?: VoidFunction;
 };
 
@@ -61,16 +59,9 @@ const CatalogRefTitle = ({ item, title, isLoading }: { item?: CatalogItem; title
   );
 };
 
-const CatalogRefCard = ({
-  catalogItemRef,
-  headerTitle,
-  showUpdateStatus,
-  canCollapse = true,
-  updateTooltip,
-  onEdit,
-}: CatalogRefCardProps) => {
+const CatalogRefCard = ({ catalogItemRef, headerTitle, showUpdateStatus, onEdit }: CatalogRefCardProps) => {
   const { t } = useTranslation();
-  const [isExpanded, setIsExpanded] = React.useState(!canCollapse);
+  const [isExpanded, setIsExpanded] = React.useState(false);
 
   const resolved = useResolvedCatalogRef(catalogItemRef);
   const item = resolved?.item;
@@ -95,18 +86,16 @@ const CatalogRefCard = ({
             >
               <FlexItem grow={{ default: 'grow' }}>
                 <Flex alignItems={{ default: 'alignItemsCenter' }} gap={{ default: 'gapSm' }}>
-                  {canCollapse && (
-                    <FlexItem>
-                      <Button
-                        variant="plain"
-                        onClick={() => setIsExpanded((expanded) => !expanded)}
-                        aria-expanded={isExpanded}
-                        aria-label={isExpanded ? t('Collapse') : t('Expand')}
-                      >
-                        {isExpanded ? <AngleDownIcon /> : <AngleRightIcon />}
-                      </Button>
-                    </FlexItem>
-                  )}
+                  <FlexItem>
+                    <Button
+                      variant="plain"
+                      onClick={() => setIsExpanded((expanded) => !expanded)}
+                      aria-expanded={isExpanded}
+                      aria-label={isExpanded ? t('Collapse') : t('Expand')}
+                    >
+                      {isExpanded ? <AngleDownIcon /> : <AngleRightIcon />}
+                    </Button>
+                  </FlexItem>
                   <FlexItem>
                     <CatalogRefTitle item={item} isLoading={isLoading || false} title={displayName} />
                   </FlexItem>
@@ -114,18 +103,7 @@ const CatalogRefCard = ({
               </FlexItem>
               <FlexItem shrink={{ default: 'shrink' }}>
                 <Flex alignItems={{ default: 'alignItemsCenter' }} gap={{ default: 'gapSm' }}>
-                  <CatalogItemBadges
-                    itemSpec={item?.spec}
-                    hasUpdates={hasUpdates}
-                    updateTooltip={
-                      hasUpdates
-                        ? updateTooltip ||
-                          t(
-                            'A newer catalog version is available. Update this item from the Software Catalog tab on this fleet or device.',
-                          )
-                        : undefined
-                    }
-                  />
+                  <CatalogItemViewBadges itemSpec={item?.spec} hasUpdates={hasUpdates} />
                   {onEdit && (
                     <FlexItem>
                       <Button variant="plain" icon={<PencilAltIcon />} onClick={onEdit} aria-label={t('Edit')} />

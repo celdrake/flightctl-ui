@@ -10,7 +10,7 @@ import {
   Stack,
   StackItem,
 } from '@patternfly/react-core';
-import { Formik } from 'formik';
+import { Formik, type FormikErrors } from 'formik';
 import { load } from 'js-yaml';
 import validator from '@rjsf/validator-ajv8';
 import type { RJSFSchema, RJSFValidationError } from '@rjsf/utils';
@@ -34,12 +34,14 @@ import {
   updateCatalogAppFormConfig,
 } from './catalogCompositionUtils';
 
-type EditConfigureFormValues = {
-  appName: string;
+type EditAppFormValues = DynamicFormConfigFormik & {
   wantAdvancedConfig: boolean;
 };
 
-type Step = 'configure' | 'advanced-config';
+enum Step {
+  Configure = 'configure',
+  AdvancedConfig = 'advanced-config',
+}
 
 type CatalogAdvancedConfigEditModalProps = {
   catalogItem: CatalogItem;
@@ -57,31 +59,26 @@ const CatalogAdvancedConfigEditModal = ({
   onSave,
 }: CatalogAdvancedConfigEditModalProps) => {
   const { t } = useTranslation();
-  const [step, setStep] = React.useState<Step>('configure');
-  const [pendingAppName, setPendingAppName] = React.useState('');
+  const [step, setStep] = React.useState<Step>(Step.Configure);
   const [schemaErrors, setSchemaErrors] = React.useState<RJSFValidationError[] | undefined>();
 
-  const defaultAppName = appForm.name || '';
+  const isConfigureStep = step === Step.Configure;
+
   const requiresAdvancedConfig = catalogItemRequiresAdvancedConfig(
     catalogItem,
     appForm.catalogItemRef.version,
     appForm.apiApp,
   );
 
-  const configureInitialValues = React.useMemo<EditConfigureFormValues>(
+  const initialValues = React.useMemo<EditAppFormValues>(
     () => ({
-      appName: pendingAppName || defaultAppName,
+      ...getAdvancedConfigInitialValues(catalogItem, appForm),
       wantAdvancedConfig: true,
     }),
-    [defaultAppName, pendingAppName],
-  );
-
-  const advancedInitialValues = React.useMemo(
-    () => getAdvancedConfigInitialValues(catalogItem, appForm),
     [catalogItem, appForm],
   );
 
-  // TODO MOve to the name field
+  // TODO TO VALIDATION UTILS, OR IN THE NAME FIELD
   const validateAppName = (name: string): string | undefined => {
     if (!name) {
       return t('Application name is required');
@@ -96,58 +93,100 @@ const CatalogAdvancedConfigEditModal = ({
     return undefined;
   };
 
-  const validateAdvancedConfig = (values: DynamicFormConfigFormik) => {
+  // CELIA WIP MOVE TO VALIDATION UTILS
+  const validate = (values: EditAppFormValues): FormikErrors<EditAppFormValues> => {
+    const errors: FormikErrors<EditAppFormValues> = {};
+    const nameError = validateAppName(values.appName);
+    if (nameError) {
+      errors.appName = nameError;
+    }
+
+    if (!isConfigureStep) {
+      setSchemaErrors(undefined);
+      return errors;
+    }
+
     if (values.configureVia === 'form') {
       setSchemaErrors(undefined);
-      return values.dynamicFormValid ? undefined : { dynamicFormValid: t('Configuration is required') };
+      if (!values.dynamicFormValid) {
+        errors.dynamicFormValid = t('Configuration is required');
+      }
+      return errors;
     }
+
     try {
       const yamlContent = load(values.editorContent);
       if (values.configSchema) {
         const validationData = validator.validateFormData(yamlContent, values.configSchema as RJSFSchema);
         if (validationData.errors.length) {
           setSchemaErrors(validationData.errors);
-          return { editorContent: t('Configuration is not valid') };
+          errors.editorContent = t('Configuration is not valid');
+          return errors;
         }
       }
       setSchemaErrors(undefined);
-      return undefined;
+      return errors;
     } catch {
       setSchemaErrors(undefined);
-      return { editorContent: t('Not a valid configuration') };
+      errors.editorContent = t('Not a valid configuration');
+      return errors;
     }
   };
 
   const handleClose = () => {
-    setStep('configure');
+    setStep(Step.Configure);
     setSchemaErrors(undefined);
     onClose();
   };
 
-  // CELIA: unify both forms into one
+  // CELIA WIP DO WE NEED TO SET ERROR TO EMPTY ON BACK?
+  // CELIA-WIP REVIEW AGAIN NAME SETTING
+
   return (
     <FlightCtlModal variant="medium" isOpen onClose={handleClose}>
       <ModalHeader title={t('Edit application')} />
-      {step === 'configure' && (
-        <Formik<EditConfigureFormValues>
-          enableReinitialize
-          initialValues={configureInitialValues}
-          onSubmit={(values) => {
+      <Formik<EditAppFormValues>
+        enableReinitialize
+        initialValues={initialValues}
+        validate={validate}
+        onSubmit={(values) => {
+          if (isConfigureStep) {
             if (requiresAdvancedConfig || values.wantAdvancedConfig) {
-              setPendingAppName(values.appName);
-              setStep('advanced-config');
-              return;
+              setStep(Step.AdvancedConfig);
+            } else {
+              onSave(renameCatalogAppForm(appForm, values.appName));
+              handleClose();
             }
-            onSave(renameCatalogAppForm(appForm, values.appName));
-            handleClose();
-          }}
-        >
-          {({ values, submitForm, isSubmitting, isValid }) => {
-            const goToAdvancedConfig = requiresAdvancedConfig || values.wantAdvancedConfig;
-            return (
-              <>
-                <ModalBody>
-                  <FlightCtlForm>
+            return;
+          }
+
+          const advancedConfig: CatalogAdvancedConfigValues = {
+            configureVia: values.configureVia,
+            editorContent: values.editorContent,
+            volumeSelection: values.volumeSelection,
+            formValues: values.formValues,
+          };
+          onSave(
+            updateCatalogAppFormConfig({
+              appForm,
+              catalogItem,
+              appName: values.appName,
+              advancedConfig,
+            }),
+          );
+          handleClose();
+        }}
+      >
+        {({ values, submitForm, isSubmitting, errors, setErrors }) => {
+          const goToAdvancedConfig = requiresAdvancedConfig || values.wantAdvancedConfig;
+          const canProceedConfigure = !errors.appName;
+          const canSaveAdvanced = isAppConfigStepValid(values, errors);
+
+          return (
+            <>
+              <ModalBody>
+                <FlightCtlForm>
+                  {isConfigureStep ? (
                     <Stack hasGutter>
                       <StackItem>
                         <CatalogApplicationNameField />
@@ -163,93 +202,40 @@ const CatalogAdvancedConfigEditModal = ({
                         />
                       </StackItem>
                     </Stack>
-                  </FlightCtlForm>
-                </ModalBody>
-                <ModalFooter>
-                  <ActionList style={{ justifyContent: 'normal' }}>
-                    <ActionListGroup>
-                      <ActionListItem>
-                        <Button variant="secondary" isDisabled>
-                          {t('Back')}
-                        </Button>
-                      </ActionListItem>
-                      <ActionListItem>
-                        <Button
-                          variant="primary"
-                          onClick={() => void submitForm()}
-                          isDisabled={isSubmitting || !isValid}
-                        >
-                          {goToAdvancedConfig ? t('Next') : t('Save')}
-                        </Button>
-                      </ActionListItem>
-                    </ActionListGroup>
-                    <ActionListGroup>
-                      <ActionListItem>
-                        <Button variant="link" onClick={handleClose} isDisabled={isSubmitting}>
-                          {t('Cancel')}
-                        </Button>
-                      </ActionListItem>
-                    </ActionListGroup>
-                  </ActionList>
-                </ModalFooter>
-              </>
-            );
-          }}
-        </Formik>
-      )}
-
-      {step === 'advanced-config' && (
-        <Formik<DynamicFormConfigFormik>
-          enableReinitialize
-          initialValues={advancedInitialValues}
-          validate={validateAdvancedConfig}
-          onSubmit={(values) => {
-            const advancedConfig: CatalogAdvancedConfigValues = {
-              configureVia: values.configureVia,
-              editorContent: values.editorContent,
-              volumeSelection: values.volumeSelection,
-              formValues: values.formValues,
-            };
-            onSave(
-              updateCatalogAppFormConfig({
-                appForm,
-                catalogItem,
-                appName: pendingAppName,
-                advancedConfig,
-              }),
-            );
-            handleClose();
-          }}
-        >
-          {({ submitForm, isSubmitting, isValid, values, errors }) => (
-            <>
-              <ModalBody>
-                <FlightCtlForm>
-                  <CatalogAdvancedConfigStep schemaErrors={schemaErrors} />
+                  ) : (
+                    <CatalogAdvancedConfigStep schemaErrors={schemaErrors} />
+                  )}
                 </FlightCtlForm>
               </ModalBody>
               <ModalFooter>
                 <ActionList style={{ justifyContent: 'normal' }}>
                   <ActionListGroup>
                     <ActionListItem>
-                      <Button
-                        variant="secondary"
-                        onClick={() => {
-                          setSchemaErrors(undefined);
-                          setStep('configure');
-                        }}
-                        isDisabled={isSubmitting}
-                      >
-                        {t('Back')}
-                      </Button>
+                      {isConfigureStep ? (
+                        <Button variant="secondary" isDisabled>
+                          {t('Back')}
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="secondary"
+                          onClick={() => {
+                            setSchemaErrors(undefined);
+                            setErrors(errors.appName ? { appName: errors.appName } : {});
+                            setStep(Step.Configure);
+                          }}
+                          isDisabled={isSubmitting}
+                        >
+                          {t('Back')}
+                        </Button>
+                      )}
                     </ActionListItem>
                     <ActionListItem>
                       <Button
                         variant="primary"
                         onClick={() => void submitForm()}
-                        isDisabled={isSubmitting || !isValid || !isAppConfigStepValid(values, errors)}
+                        isDisabled={isSubmitting || (isConfigureStep ? !canProceedConfigure : !canSaveAdvanced)}
                       >
-                        {t('Save')}
+                        {isConfigureStep && goToAdvancedConfig ? t('Next') : t('Save')}
                       </Button>
                     </ActionListItem>
                   </ActionListGroup>
@@ -263,9 +249,9 @@ const CatalogAdvancedConfigEditModal = ({
                 </ActionList>
               </ModalFooter>
             </>
-          )}
-        </Formik>
-      )}
+          );
+        }}
+      </Formik>
     </FlightCtlModal>
   );
 };

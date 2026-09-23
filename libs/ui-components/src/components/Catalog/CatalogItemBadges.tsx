@@ -64,16 +64,7 @@ export const CatalogItemDeprecationBadge = () => {
   );
 };
 
-export const CatalogItemUpdateBadge = ({
-  hasUpdates,
-  onUpdate,
-  updateTooltip,
-}: {
-  hasUpdates: boolean;
-  onUpdate?: VoidFunction;
-  /** When set (and no onUpdate), wraps the label in a tooltip — e.g. wizard redirect to Catalog tab. */
-  updateTooltip?: string;
-}) => {
+export const CatalogItemUpdateBadge = ({ hasUpdates, onUpdate }: { hasUpdates: boolean; onUpdate?: VoidFunction }) => {
   const { t } = useTranslation();
   if (!hasUpdates) {
     return null;
@@ -85,29 +76,29 @@ export const CatalogItemUpdateBadge = ({
       </Button>
     );
   }
-  const label = (
-    <Label isCompact variant="outline" color="blue" icon={<ArrowCircleUpIcon />}>
-      {t('Update available')}
-    </Label>
+
+  return (
+    <WithTooltip
+      showTooltip
+      content={t(
+        'A newer catalog version is available. Update this item from the Software Catalog tab on this fleet or device.',
+      )}
+    >
+      <span tabIndex={0}>
+        <Label isCompact variant="outline" color="blue" icon={<ArrowCircleUpIcon />}>
+          {t('Update available')}
+        </Label>
+      </span>
+    </WithTooltip>
   );
-  if (updateTooltip) {
-    return (
-      <WithTooltip showTooltip content={updateTooltip}>
-        <span tabIndex={0}>{label}</span>
-      </WithTooltip>
-    );
-  }
-  return label;
 };
 
-const CatalogItemBadges = ({
+const CatalogItemViewBadges = ({
   itemSpec,
   hasUpdates,
-  updateTooltip,
 }: {
   itemSpec: CatalogItemSpec | undefined;
   hasUpdates: boolean;
-  updateTooltip?: string;
 }) => {
   const { t } = useTranslation();
   return (
@@ -130,7 +121,7 @@ const CatalogItemBadges = ({
       )}
       {hasUpdates && (
         <FlexItem>
-          <CatalogItemUpdateBadge hasUpdates={hasUpdates} updateTooltip={updateTooltip} />
+          <CatalogItemUpdateBadge hasUpdates={hasUpdates} />
         </FlexItem>
       )}
       {itemSpec?.deprecation && (
@@ -142,4 +133,4 @@ const CatalogItemBadges = ({
   );
 };
 
-export default CatalogItemBadges;
+export default CatalogItemViewBadges;

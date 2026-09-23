@@ -38,7 +38,7 @@ const CatalogRefField = ({
     <>
       <Split hasGutter>
         <SplitItem isFilled>
-          <CatalogRefCard catalogItemRef={refSpec} showUpdateStatus={showUpdateStatus} canCollapse={false} />
+          <CatalogRefCard catalogItemRef={refSpec} showUpdateStatus={showUpdateStatus} />
         </SplitItem>
         {!isReadOnly && (
           <SplitItem>
