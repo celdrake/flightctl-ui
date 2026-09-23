@@ -334,7 +334,7 @@ const CatalogSelectionModal = ({
                   </EmptyState>
                 ) : (
                   <Alert variant="info" title={t('No catalog items available')} isInline>
-                    {t('No application catalog items are available for this template.')}
+                    {t('No application catalog items are available.')}
                   </Alert>
                 )}
               </StackItem>
@@ -478,11 +478,7 @@ const CatalogSelectionModal = ({
                     <Button variant="link" onClick={() => setStep('browse')}>
                       {t('Back')}
                     </Button>
-                    <Button
-                      variant="primary"
-                      onClick={() => void submitForm()}
-                      isDisabled={isSubmitting || !isValid}
-                    >
+                    <Button variant="primary" onClick={() => void submitForm()} isDisabled={isSubmitting || !isValid}>
                       {goToAdvancedConfig ? t('Next') : t('Add to template')}
                     </Button>
                   </ModalFooter>
