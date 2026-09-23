@@ -10,8 +10,6 @@ import {
   Flex,
   FlexItem,
   FormGroup,
-  Gallery,
-  GalleryItem,
   Label,
   LabelGroup,
   ModalBody,
@@ -31,14 +29,11 @@ import { CatalogItemType } from '@flightctl/types/alpha';
 import { SearchIcon } from '@patternfly/react-icons/dist/js/icons/search-icon';
 import semver from 'semver';
 import { Formik } from 'formik';
-import { load } from 'js-yaml';
-import validator from '@rjsf/validator-ajv8';
 import type { CatalogItem } from '@flightctl/types/alpha';
-import type { RJSFSchema, RJSFValidationError } from '@rjsf/utils';
+import type { RJSFValidationError } from '@rjsf/utils';
 
 import { useTranslation } from '../../hooks/useTranslation';
 import FlightCtlModal from '../common/FlightCtlModal';
-import CatalogItemCard from '../Catalog/CatalogItemCard';
 import FormSelect from '../form/FormSelect';
 import TableTextSearch from '../Table/TableTextSearch';
 import TablePagination from '../Table/TablePagination';
@@ -54,22 +49,21 @@ import {
   getChannelVersions,
   getDefaultChannel,
   getUniqueApplicationName,
+  validateCatalogAdvancedConfig,
 } from './catalogCompositionUtils';
 import { getCatalogItemBadge } from '../Catalog/CatalogItemBadges';
 import { validateApplicationName } from '../form/validations';
-import CheckboxField from '../form/CheckboxField';
 import { getInitialAppConfig } from '../Catalog/InstallWizard/utils';
 import type { DynamicFormConfigFormik } from '../Catalog/InstallWizard/types';
 import CatalogAdvancedConfigStep from './CatalogAdvancedConfigStep';
-import CatalogApplicationNameField from './CatalogApplicationNameField';
+import CatalogConfigureFields from './CatalogConfigureFields';
 import { isAppConfigStepValid } from '../Catalog/InstallWizard/steps/AppConfigStep';
+import CatalogItemGallery from '../Catalog/CatalogItemGallery';
 
-import './CatalogSelectionModal.css';
-
-type CatalogSelectionModalProps = {
+type CatalogSelectAppModalProps = {
   appName?: string;
   existingAppNames?: string[];
-  onClose: () => void;
+  onClose: VoidFunction;
   onConfirm: (
     selection: CatalogSelectionConfirm,
     appName: string,
@@ -88,12 +82,12 @@ type ConfigureFormValues = {
 
 const applicationTypeOptions = appTypeIds.filter((type) => type !== CatalogItemType.CatalogItemTypeData);
 
-const CatalogSelectionModal = ({
+const CatalogSelectAppModal = ({
   appName = '',
   existingAppNames = [],
   onClose,
   onConfirm,
-}: CatalogSelectionModalProps) => {
+}: CatalogSelectAppModalProps) => {
   const { t } = useTranslation();
   const [step, setStep] = React.useState<Step>('browse');
   const [nameFilter, setNameFilter] = React.useState('');
@@ -204,25 +198,9 @@ const CatalogSelectionModal = ({
   }, [selectedItem, pendingConfigureValues]);
 
   const validateAdvancedConfig = (values: DynamicFormConfigFormik) => {
-    if (values.configureVia === 'form') {
-      setAdvancedSchemaErrors(undefined);
-      return values.dynamicFormValid ? undefined : { dynamicFormValid: t('Configuration is required') };
-    }
-    try {
-      const yamlContent = load(values.editorContent);
-      if (values.configSchema) {
-        const validationData = validator.validateFormData(yamlContent, values.configSchema as RJSFSchema);
-        if (validationData.errors.length) {
-          setAdvancedSchemaErrors(validationData.errors);
-          return { editorContent: t('Configuration is not valid') };
-        }
-      }
-      setAdvancedSchemaErrors(undefined);
-      return undefined;
-    } catch {
-      setAdvancedSchemaErrors(undefined);
-      return { editorContent: t('Not a valid configuration') };
-    }
+    const result = validateCatalogAdvancedConfig(values, t);
+    setAdvancedSchemaErrors(result.schemaErrors);
+    return Object.keys(result.errors).length > 0 ? result.errors : undefined;
   };
 
   const hasCatalogItems = catalogItems.length > 0;
@@ -240,7 +218,7 @@ const CatalogSelectionModal = ({
         {step === 'browse' && (
           <Stack hasGutter>
             <StackItem>
-              <Toolbar inset={{ default: 'insetNone' }} className="fctl-catalog-composition__toolbar">
+              <Toolbar inset={{ default: 'insetNone' }}>
                 <ToolbarContent>
                   <ToolbarItem>
                     <TableTextSearch
@@ -341,19 +319,13 @@ const CatalogSelectionModal = ({
             )}
             {!loading && !isUpdating && hasCatalogItems && (
               <StackItem>
-                <Gallery hasGutter minWidths={{ default: '220px' }} className="fctl-catalog-composition__gallery">
-                  {catalogItems.map((item) => (
-                    <GalleryItem key={`${item.metadata.catalog}/${item.metadata.name}`}>
-                      <CatalogItemCard
-                        catalogItem={item}
-                        onSelect={() => {
-                          setSelectedItem(item);
-                          setStep('configure');
-                        }}
-                      />
-                    </GalleryItem>
-                  ))}
-                </Gallery>
+                <CatalogItemGallery
+                  catalogItems={catalogItems}
+                  onSelect={(item) => {
+                    setSelectedItem(item);
+                    setStep('configure');
+                  }}
+                />
               </StackItem>
             )}
           </Stack>
@@ -421,57 +393,44 @@ const CatalogSelectionModal = ({
               return (
                 <>
                   <FlightCtlForm>
-                    <Stack hasGutter>
+                    <Stack hasGutter style={{ border: '2px solid lime' }}>
                       {selectedItem.spec.shortDescription && (
                         <StackItem>
                           <Content component={ContentVariants.p}>{selectedItem.spec.shortDescription}</Content>
                         </StackItem>
                       )}
-                      <StackItem>
-                        <CatalogApplicationNameField />
-                      </StackItem>
-                      <StackItem>
-                        <FormGroup label={t('Channel')} fieldId="catalog-channel">
-                          <FormSelect
-                            name="channel"
-                            items={channels}
-                            onChange={(channel) => {
-                              const versions = getChannelVersions(selectedItem, channel).sort((a, b) =>
-                                semver.rcompare(a.version, b.version),
-                              );
-                              const nextVersion = versions.some((entry) => entry.version === values.version)
-                                ? values.version
-                                : versions[0]?.version || '';
-                              if (nextVersion !== values.version) {
-                                void setFieldValue('version', nextVersion, true);
-                              }
-                            }}
-                          />
-                        </FormGroup>
-                      </StackItem>
-                      <StackItem>
-                        <FormGroup label={t('Version')} fieldId="catalog-version">
-                          <FormSelect name="version" items={versionItems} />
-                        </FormGroup>
-                      </StackItem>
-                      {requiresAdditionalInfo && (
+                      <CatalogConfigureFields
+                        requiresAdvancedConfig={requiresAdditionalInfo}
+                        requiredConfigPresentation="info-alert"
+                        checkboxDescription={t(
+                          'Optionally override catalog defaults or provide additional settings before adding this application.',
+                        )}
+                      >
                         <StackItem>
-                          <Alert isInline variant="info" title={t('Additional information required')}>
-                            {t(
-                              'This version needs required configuration before it can be added to the template. Continue to provide those values.',
-                            )}
-                          </Alert>
+                          <FormGroup label={t('Channel')} fieldId="catalog-channel">
+                            <FormSelect
+                              name="channel"
+                              items={channels}
+                              onChange={(channel) => {
+                                const versions = getChannelVersions(selectedItem, channel).sort((a, b) =>
+                                  semver.rcompare(a.version, b.version),
+                                );
+                                const nextVersion = versions.some((entry) => entry.version === values.version)
+                                  ? values.version
+                                  : versions[0]?.version || '';
+                                if (nextVersion !== values.version) {
+                                  void setFieldValue('version', nextVersion, true);
+                                }
+                              }}
+                            />
+                          </FormGroup>
                         </StackItem>
-                      )}
-                      <StackItem>
-                        <CheckboxField
-                          name="wantAdvancedConfig"
-                          label={t('Configure advanced settings')}
-                          description={t(
-                            'Optionally override catalog defaults or provide additional settings before adding this application.',
-                          )}
-                        />
-                      </StackItem>
+                        <StackItem>
+                          <FormGroup label={t('Version')} fieldId="catalog-version">
+                            <FormSelect name="version" items={versionItems} />
+                          </FormGroup>
+                        </StackItem>
+                      </CatalogConfigureFields>
                     </Stack>
                   </FlightCtlForm>
                   <ModalFooter>
@@ -545,4 +504,4 @@ const CatalogSelectionModal = ({
   );
 };
 
-export default CatalogSelectionModal;
+export default CatalogSelectAppModal;

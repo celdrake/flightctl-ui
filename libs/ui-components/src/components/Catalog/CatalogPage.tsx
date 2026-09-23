@@ -1,3 +1,4 @@
+import * as React from 'react';
 import {
   Content,
   DescriptionList,
@@ -10,7 +11,6 @@ import {
   EmptyStateActions,
   EmptyStateBody,
   EmptyStateFooter,
-  Gallery,
   MenuToggle,
   PageSection,
   Split,
@@ -22,7 +22,6 @@ import {
 } from '@patternfly/react-core';
 import { SearchIcon } from '@patternfly/react-icons/dist/js/icons/search-icon';
 import { EllipsisVIcon } from '@patternfly/react-icons/dist/js/icons/ellipsis-v-icon';
-import * as React from 'react';
 import {
   type Catalog,
   type CatalogItem,
@@ -32,7 +31,6 @@ import {
 } from '@flightctl/types/alpha';
 
 import { useTranslation } from '../../hooks/useTranslation';
-import CatalogItemCard from './CatalogItemCard';
 import CatalogPageToolbar, { CreateCatalogItemBtn, ImportCatalogBtn } from './CatalogPageToolbar';
 import { type CatalogFilter, useCatalogFilter } from './useCatalogFilter';
 import CatalogItemDetails from './CatalogItemDetails';
@@ -51,6 +49,7 @@ import ActionsDropdownList from '../common/ActionsDropdownList';
 import ResourceSyncImportStatus from '../ResourceSync/ResourceSyncImportStatus';
 import CatalogLandingPage, { CatalogLandingPageContent, useLandingPagePermissions } from './CatalogLandingPage';
 import PageWithPermissions from '../common/PageWithPermissions';
+import CatalogItemGallery from './CatalogItemGallery';
 
 import './CatalogPage.css';
 
@@ -244,6 +243,19 @@ export const CatalogPageContent = ({
 
   const filterIsEmpty = catalogFilter.itemType.length === 0 && !catalogFilter.nameFilter.trim();
 
+  const onSelectItem = React.useCallback((selection: CatalogItem) => {
+    setSelectedItem((val) => {
+      if (!val || val.itemName !== selection.metadata.name || val.catalog !== selection.metadata.catalog) {
+        return {
+          itemName: selection.metadata.name || '',
+          catalog: selection.metadata.catalog,
+        };
+      } else {
+        return undefined;
+      }
+    });
+  }, []);
+
   return (
     <>
       <ListPageBody error={error || catalogErr} loading={isLoading || catalogLoading}>
@@ -391,31 +403,8 @@ export const CatalogPageContent = ({
                           <CatalogLandingPageContent permissions={catalogPermissions} />
                         </StackItem>
                       )}
-                      <StackItem>
-                        <Gallery hasGutter>
-                          {catalogItems.map((ci) => (
-                            <CatalogItemCard
-                              catalogItem={ci}
-                              key={`${ci.metadata.catalog}/${ci.metadata.name}`}
-                              onSelect={() =>
-                                setSelectedItem((val) => {
-                                  if (
-                                    !val ||
-                                    val.itemName !== ci.metadata.name ||
-                                    val.catalog !== ci.metadata.catalog
-                                  ) {
-                                    return {
-                                      itemName: ci.metadata.name || '',
-                                      catalog: ci.metadata.catalog,
-                                    };
-                                  } else {
-                                    return undefined;
-                                  }
-                                })
-                              }
-                            />
-                          ))}
-                        </Gallery>
+                      <StackItem style={{ border: '2px solid lime' }}>
+                        <CatalogItemGallery catalogItems={catalogItems} onSelect={onSelectItem} />
                       </StackItem>
                     </Stack>
                   )}

@@ -1,7 +1,10 @@
 import { load } from 'js-yaml';
+import validator from '@rjsf/validator-ajv8';
+import type { RJSFSchema, RJSFValidationError } from '@rjsf/utils';
 import type { ApplicationProviderSpec, CatalogItemRefSpec } from '@flightctl/types';
 import type { CatalogItem, CatalogItemVersion } from '@flightctl/types/alpha';
 import { CatalogItemCategory } from '@flightctl/types/alpha';
+import type { TFunction } from 'i18next';
 
 // CELIA-WIP name of this file
 import type { ApplicationEntry, CatalogAppForm } from '../../types/deviceSpec';
@@ -22,6 +25,45 @@ export type CatalogAdvancedConfigValues = {
   editorContent: string;
   volumeSelection: VolumeCatalogSelection[];
   formValues: Record<string, unknown> | undefined;
+};
+
+export type CatalogAdvancedConfigFieldErrors = Partial<Record<'dynamicFormValid' | 'editorContent', string>>;
+
+export type CatalogAdvancedConfigValidationResult = {
+  errors: CatalogAdvancedConfigFieldErrors;
+  schemaErrors: RJSFValidationError[] | undefined;
+};
+
+/** Shared Formik/Yup validation for catalog advanced config (form view or YAML editor). */
+export const validateCatalogAdvancedConfig = (
+  values: Pick<DynamicFormConfigFormik, 'configureVia' | 'editorContent' | 'configSchema' | 'dynamicFormValid'>,
+  t: TFunction,
+): CatalogAdvancedConfigValidationResult => {
+  if (values.configureVia === 'form') {
+    return {
+      errors: values.dynamicFormValid ? {} : { dynamicFormValid: t('Configuration is required') },
+      schemaErrors: undefined,
+    };
+  }
+
+  try {
+    const yamlContent = load(values.editorContent || '');
+    if (values.configSchema) {
+      const validationData = validator.validateFormData(yamlContent, values.configSchema as RJSFSchema);
+      if (validationData.errors.length) {
+        return {
+          errors: { editorContent: t('Configuration is not valid') },
+          schemaErrors: validationData.errors,
+        };
+      }
+    }
+    return { errors: {}, schemaErrors: undefined };
+  } catch {
+    return {
+      errors: { editorContent: t('Not a valid configuration') },
+      schemaErrors: undefined,
+    };
+  }
 };
 
 export const getCatalogVersionConfigSchema = (
@@ -200,8 +242,3 @@ export const updateCatalogAppFormConfig = ({
   // Version stays locked to the existing pin.
   return toCatalogAppForm(apiApp, appForm.catalogItemRef);
 };
-
-export const getAdvancedConfigInitialValues = (
-  catalogItem: CatalogItem,
-  app: CatalogAppForm,
-): DynamicFormConfigFormik => getInitialAppConfig(catalogItem, app.catalogItemRef.version, app.apiApp);

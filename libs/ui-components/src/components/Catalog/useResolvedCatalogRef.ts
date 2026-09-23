@@ -53,6 +53,6 @@ export const useResolvedCatalogRef = (ref: CatalogItemRefSpec | undefined): UseR
     channel: resolved?.channel || ref.channel || '',
     imageUri: resolved?.imageUri,
     isLoading: !item && Boolean(contextLookup?.isLoading || localLookup.isLoading),
-    error: item ? undefined : (localLookup.error ?? contextLookup?.error),
+    error: item ? undefined : localLookup.error ?? contextLookup?.error,
   };
 };

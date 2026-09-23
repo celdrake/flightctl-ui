@@ -8,32 +8,30 @@ import {
   ModalFooter,
   ModalHeader,
   Stack,
-  StackItem,
 } from '@patternfly/react-core';
 import { Formik } from 'formik';
-import { load } from 'js-yaml';
-import validator from '@rjsf/validator-ajv8';
-import type { RJSFSchema, RJSFValidationError } from '@rjsf/utils';
+import type { RJSFValidationError } from '@rjsf/utils';
 import * as Yup from 'yup';
 
 import type { CatalogItem } from '@flightctl/types/alpha';
 import { useTranslation } from '../../hooks/useTranslation';
 import type { CatalogAppForm } from '../../types/deviceSpec';
-import type { DynamicFormConfigFormik } from '../Catalog/InstallWizard/types';
 import FlightCtlModal from '../common/FlightCtlModal';
 import { validApplicationAndVolumeName } from '../form/validations';
 import FlightCtlForm from '../form/FlightCtlForm';
-import CheckboxField from '../form/CheckboxField';
-import CatalogAdvancedConfigStep from './CatalogAdvancedConfigStep';
-import CatalogApplicationNameField from './CatalogApplicationNameField';
-import { isAppConfigStepValid } from '../Catalog/InstallWizard/steps/AppConfigStep';
 import {
   type CatalogAdvancedConfigValues,
   catalogItemRequiresAdvancedConfig,
-  getAdvancedConfigInitialValues,
   renameCatalogAppForm,
   updateCatalogAppFormConfig,
+  validateCatalogAdvancedConfig,
 } from './catalogCompositionUtils';
+import type { DynamicFormConfigFormik } from '../Catalog/InstallWizard/types';
+import { getInitialAppConfig } from '../Catalog/InstallWizard/utils';
+import { isAppConfigStepValid } from '../Catalog/InstallWizard/steps/AppConfigStep';
+
+import CatalogAdvancedConfigStep from './CatalogAdvancedConfigStep';
+import CatalogConfigureFields from './CatalogConfigureFields';
 
 type EditAppFormValues = DynamicFormConfigFormik & {
   wantAdvancedConfig: boolean;
@@ -44,7 +42,7 @@ enum Step {
   AdvancedConfig = 'advanced-config',
 }
 
-type CatalogAdvancedConfigEditModalProps = {
+type CatalogEditAppModalProps = {
   catalogItem: CatalogItem;
   appForm: CatalogAppForm;
   existingAppNames?: string[];
@@ -52,13 +50,13 @@ type CatalogAdvancedConfigEditModalProps = {
   onSave: (app: CatalogAppForm) => void;
 };
 
-const CatalogAdvancedConfigEditModal = ({
+const CatalogEditAppModal = ({
   catalogItem,
   appForm,
   existingAppNames = [],
   onClose,
   onSave,
-}: CatalogAdvancedConfigEditModalProps) => {
+}: CatalogEditAppModalProps) => {
   const { t } = useTranslation();
   const [step, setStep] = React.useState<Step>(Step.Configure);
   const [schemaErrors, setSchemaErrors] = React.useState<RJSFValidationError[] | undefined>();
@@ -73,59 +71,25 @@ const CatalogAdvancedConfigEditModal = ({
 
   const initialValues = React.useMemo<EditAppFormValues>(
     () => ({
-      ...getAdvancedConfigInitialValues(catalogItem, appForm),
+      ...getInitialAppConfig(catalogItem, appForm.catalogItemRef.version, appForm.apiApp),
       wantAdvancedConfig: true,
     }),
     [catalogItem, appForm],
   );
 
-  const validationSchema = React.useMemo(
+  const configureValidationSchema = React.useMemo(
     () =>
-      Yup.lazy((values: EditAppFormValues) => {
-        const appName = validApplicationAndVolumeName(t)
+      Yup.object({
+        appName: validApplicationAndVolumeName(t)
           .required(t('Application name is required'))
           .test('is-unique', t('An application with this name already exists'), (value) => {
             if (!value || value === appForm.name) {
               return true;
             }
             return !existingAppNames.some((existingName) => existingName === value);
-          });
-
-        // Configure step only cares about the application name.
-        if (isConfigureStep) {
-          return Yup.object({ appName });
-        }
-
-        if (values.configureVia === 'form') {
-          setSchemaErrors(undefined);
-          return Yup.object({
-            appName,
-            dynamicFormValid: Yup.boolean().oneOf([true], t('Configuration is required')),
-          });
-        }
-
-        return Yup.object({
-          appName,
-          editorContent: Yup.string().test('valid-config', function (value) {
-            try {
-              const yamlContent = load(value || '');
-              if (values.configSchema) {
-                const validationData = validator.validateFormData(yamlContent, values.configSchema as RJSFSchema);
-                if (validationData.errors.length) {
-                  setSchemaErrors(validationData.errors);
-                  return this.createError({ message: t('Configuration is not valid') });
-                }
-              }
-              setSchemaErrors(undefined);
-              return true;
-            } catch {
-              setSchemaErrors(undefined);
-              return this.createError({ message: t('Not a valid configuration') });
-            }
           }),
-        });
       }),
-    [t, isConfigureStep, existingAppNames, appForm.name],
+    [t, existingAppNames, appForm.name],
   );
 
   const handleClose = () => {
@@ -137,12 +101,20 @@ const CatalogAdvancedConfigEditModal = ({
   // CELIA-WIP REVIEW AGAIN NAME SETTING
 
   return (
-    <FlightCtlModal variant="medium" isOpen>
+    <FlightCtlModal variant="medium" isOpen style={{ border: '2px solid purple' }}>
       <ModalHeader title={t('Edit application')} />
       <Formik<EditAppFormValues>
         enableReinitialize
         initialValues={initialValues}
-        validationSchema={validationSchema}
+        validationSchema={isConfigureStep ? configureValidationSchema : undefined}
+        validate={(values) => {
+          if (isConfigureStep) {
+            return {};
+          }
+          const result = validateCatalogAdvancedConfig(values, t);
+          setSchemaErrors(result.schemaErrors);
+          return result.errors;
+        }}
         onSubmit={(values, { setSubmitting }) => {
           if (isConfigureStep) {
             if (requiresAdvancedConfig || values.wantAdvancedConfig) {
@@ -181,22 +153,17 @@ const CatalogAdvancedConfigEditModal = ({
           return (
             <>
               <ModalBody>
+                <div style={{ border: '2px solid orange' }}>{JSON.stringify(errors)}</div>
                 <FlightCtlForm>
                   {isConfigureStep ? (
                     <Stack hasGutter>
-                      <StackItem>
-                        <CatalogApplicationNameField />
-                      </StackItem>
-                      <StackItem>
-                        <CheckboxField
-                          name="wantAdvancedConfig"
-                          label={t('Configure advanced settings')}
-                          description={t(
-                            'Optionally override catalog defaults or provide additional settings for this application.',
-                          )}
-                          isDisabled={requiresAdvancedConfig}
-                        />
-                      </StackItem>
+                      <CatalogConfigureFields
+                        requiresAdvancedConfig={requiresAdvancedConfig}
+                        requiredConfigPresentation="disabled-checkbox"
+                        checkboxDescription={t(
+                          'Optionally override catalog defaults or provide additional settings for this application.',
+                        )}
+                      />
                     </Stack>
                   ) : (
                     <CatalogAdvancedConfigStep schemaErrors={schemaErrors} />
@@ -251,4 +218,4 @@ const CatalogAdvancedConfigEditModal = ({
   );
 };
 
-export default CatalogAdvancedConfigEditModal;
+export default CatalogEditAppModal;

@@ -44,8 +44,8 @@ import ApplicationVariablesForm from './ApplicationVariablesForm';
 import ApplicationIntegritySettings from './ApplicationIntegritySettings';
 import CatalogRefCard from '../../../CatalogRef/CatalogRefCard';
 import ApplicationWorkloadCard from './ApplicationWorkloadCard';
-import CatalogSelectionModal from '../../../CatalogComposition/CatalogSelectionModal';
-import CatalogAdvancedConfigEditModal from '../../../CatalogComposition/CatalogAdvancedConfigEditModal';
+import CatalogSelectAppModal from '../../../CatalogComposition/CatalogSelectAppModal';
+import CatalogEditAppModal from '../../../CatalogComposition/CatalogEditAppModal';
 import {
   createCatalogAppEntry,
   createCatalogAppEntryWithConfig,
@@ -79,7 +79,7 @@ const CatalogManagedApplicationSection = ({
         onEdit={isReadOnly || !resolved?.item ? undefined : () => setIsAdvancedEditOpen(true)}
       />
       {resolved?.item && isAdvancedEditOpen && (
-        <CatalogAdvancedConfigEditModal
+        <CatalogEditAppModal
           catalogItem={resolved.item}
           appForm={app}
           existingAppNames={existingAppNames}
@@ -356,7 +356,7 @@ const ApplicationTemplates = ({ isReadOnly, isEdit = false }: { isReadOnly?: boo
             )}
 
             {isCatalogSelectOpen && (
-              <CatalogSelectionModal
+              <CatalogSelectAppModal
                 existingAppNames={existingAppNames}
                 onClose={() => setIsCatalogSelectOpen(false)}
                 onConfirm={(selection, appName, advancedConfig) => {

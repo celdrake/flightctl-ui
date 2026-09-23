@@ -5,6 +5,8 @@ import {
   CardHeader,
   Flex,
   FlexItem,
+  Gallery,
+  GalleryItem,
   Split,
   SplitItem,
   Stack,
@@ -17,14 +19,9 @@ import { useTranslation } from '../../hooks/useTranslation';
 import CatalogItemIcon from './CatalogItemIcon';
 import { CatalogItemDeprecationBadge, CatalogItemTypeBadge } from './CatalogItemBadges';
 
-import './CatalogItemCard.css';
+import './CatalogItemGallery.css';
 
-export type CatalogItemCardProps = {
-  catalogItem: CatalogItem;
-  onSelect: VoidFunction;
-};
-
-const CatalogItemCard = ({ catalogItem, onSelect }: CatalogItemCardProps) => {
+const CatalogItemCard = ({ catalogItem, onSelect }: { catalogItem: CatalogItem; onSelect: VoidFunction }) => {
   const { t } = useTranslation();
 
   const { spec, metadata } = catalogItem;
@@ -84,4 +81,22 @@ const CatalogItemCard = ({ catalogItem, onSelect }: CatalogItemCardProps) => {
   );
 };
 
-export default CatalogItemCard;
+const CatalogItemGallery = ({
+  catalogItems,
+  onSelect,
+}: {
+  catalogItems: CatalogItem[];
+  onSelect: (item: CatalogItem) => void;
+}) => {
+  return (
+    <Gallery hasGutter minWidths={{ default: '220px' }}>
+      {catalogItems.map((item) => (
+        <GalleryItem key={`${item.metadata.catalog}/${item.metadata.name}`}>
+          <CatalogItemCard catalogItem={item} onSelect={() => onSelect(item)} />
+        </GalleryItem>
+      ))}
+    </Gallery>
+  );
+};
+
+export default CatalogItemGallery;

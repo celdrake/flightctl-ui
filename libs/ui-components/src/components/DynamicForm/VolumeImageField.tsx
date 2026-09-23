@@ -7,7 +7,6 @@ import {
   EmptyState,
   EmptyStateActions,
   EmptyStateBody,
-  Gallery,
   ModalBody,
   ModalFooter,
   ModalHeader,
@@ -56,7 +55,7 @@ import CatalogItemTitle from '../Catalog/CatalogItemTitle';
 import { type InstallSpecFormik } from '../Catalog/InstallWizard/types';
 import { useCatalogItems } from '../Catalog/useCatalogItems';
 import { useResolvedCatalogRef } from '../Catalog/useResolvedCatalogRef';
-import CatalogItemCard from '../Catalog/CatalogItemCard';
+import CatalogItemGallery from '../Catalog/CatalogItemGallery';
 
 /**
  * Regex for volume image reference field IDs.
@@ -177,11 +176,7 @@ const AssetsList = ({
           </ResourceListEmptyState>
         )
       ) : (
-        <Gallery hasGutter>
-          {assetCatalogItems.map((asset) => (
-            <CatalogItemCard key={asset.metadata.name} catalogItem={asset} onSelect={() => onSelect(asset)} />
-          ))}
-        </Gallery>
+        <CatalogItemGallery catalogItems={assetCatalogItems} onSelect={(asset) => onSelect(asset)} />
       )}
     </>
   );
