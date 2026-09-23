@@ -23,7 +23,6 @@ import {
   type CatalogAppForm,
   type DeviceSpecConfigFormValues,
   type ManualAppForm,
-  getAppIdentifier,
   isCatalogAppEntry,
 } from '../../../../types/deviceSpec';
 import { createInitialAppForm, createInitialManualAppEntry } from '../deviceSpecUtils';
@@ -58,12 +57,10 @@ const CatalogManagedApplicationSection = ({
   index,
   isReadOnly,
   showUpdateStatus,
-  existingAppNames,
 }: {
   index: number;
   isReadOnly?: boolean;
   showUpdateStatus: boolean;
-  existingAppNames: string[];
 }) => {
   const appFieldName = `applications[${index}].app`;
   const [{ value: app }, , { setValue }] = useField<CatalogAppForm>(appFieldName);
@@ -82,7 +79,6 @@ const CatalogManagedApplicationSection = ({
         <CatalogEditAppModal
           catalogItem={resolved.item}
           appForm={app}
-          existingAppNames={existingAppNames}
           onClose={() => setIsAdvancedEditOpen(false)}
           onSave={(nextApp) => {
             void setValue(nextApp);
@@ -253,19 +249,15 @@ const ApplicationSection = ({ index, isReadOnly }: { index: number; isReadOnly?:
 
 const ApplicationTemplates = ({ isReadOnly, isEdit = false }: { isReadOnly?: boolean; isEdit?: boolean }) => {
   const { t } = useTranslation();
-  const { values } = useFormikContext<DeviceSpecConfigFormValues>();
+  const { values, errors } = useFormikContext<DeviceSpecConfigFormValues>();
   const [appIndexToDelete, setAppIndexToDelete] = React.useState<number | undefined>(undefined);
   const [isCatalogSelectOpen, setIsCatalogSelectOpen] = React.useState(false);
-
-  const existingAppNames = React.useMemo(
-    () => values.applications.map((entry) => getAppIdentifier(entry)).filter(Boolean),
-    [values.applications],
-  );
 
   if (isReadOnly && values.applications.length === 0) {
     return null;
   }
 
+  // CELIA-WIP: Show app errors (eg. duplicate app names)
   return (
     <FormGroupWithHelperText
       label={t('Application workloads')}
@@ -276,6 +268,7 @@ const ApplicationTemplates = ({ isReadOnly, isEdit = false }: { isReadOnly?: boo
       <FieldArray name="applications">
         {(arrayHelpers) => (
           <>
+            <div style={{ border: '2px solid orange' }}>{JSON.stringify(errors)}</div>
             {values.applications.map((entry, index) => {
               const isCatalogApp = isCatalogAppEntry(entry);
 
@@ -288,7 +281,6 @@ const ApplicationTemplates = ({ isReadOnly, isEdit = false }: { isReadOnly?: boo
                           index={index}
                           isReadOnly={isReadOnly}
                           showUpdateStatus={isEdit}
-                          existingAppNames={existingAppNames}
                         />
                       ) : (
                         <ApplicationSection index={index} isReadOnly={isReadOnly} />
@@ -357,7 +349,6 @@ const ApplicationTemplates = ({ isReadOnly, isEdit = false }: { isReadOnly?: boo
 
             {isCatalogSelectOpen && (
               <CatalogSelectAppModal
-                existingAppNames={existingAppNames}
                 onClose={() => setIsCatalogSelectOpen(false)}
                 onConfirm={(selection, appName, advancedConfig) => {
                   try {

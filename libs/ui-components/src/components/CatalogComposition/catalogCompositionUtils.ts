@@ -1,15 +1,15 @@
+import * as Yup from 'yup';
 import { load } from 'js-yaml';
 import validator from '@rjsf/validator-ajv8';
 import type { RJSFSchema, RJSFValidationError } from '@rjsf/utils';
 import type { ApplicationProviderSpec, CatalogItemRefSpec } from '@flightctl/types';
-import type { CatalogItem, CatalogItemVersion } from '@flightctl/types/alpha';
-import { CatalogItemCategory } from '@flightctl/types/alpha';
+import { type CatalogItem, CatalogItemCategory, type CatalogItemVersion } from '@flightctl/types/alpha';
 import type { TFunction } from 'i18next';
 
 // CELIA-WIP name of this file
 import type { ApplicationEntry, CatalogAppForm } from '../../types/deviceSpec';
 import { type VolumeCatalogSelection, buildCatalogApplicationSpec, buildCatalogItemRef } from '../../utils/catalog';
-import { toValidApplicationName } from '../form/validations';
+import { toValidApplicationName, validApplicationAndVolumeName } from '../form/validations';
 import { getInitialAppConfig } from '../Catalog/InstallWizard/utils';
 import type { DynamicFormConfigFormik } from '../Catalog/InstallWizard/types';
 
@@ -33,6 +33,11 @@ export type CatalogAdvancedConfigValidationResult = {
   errors: CatalogAdvancedConfigFieldErrors;
   schemaErrors: RJSFValidationError[] | undefined;
 };
+
+export const getAppNameValidationSchema = (t: TFunction) =>
+  Yup.object().shape({
+    appName: validApplicationAndVolumeName(t).required(t('Application name is required')),
+  });
 
 /** Shared Formik/Yup validation for catalog advanced config (form view or YAML editor). */
 export const validateCatalogAdvancedConfig = (

@@ -45,6 +45,7 @@ import {
   type CatalogSelectionConfirm,
   buildSelectionConfirm,
   catalogItemRequiresAdvancedConfig,
+  getAppNameValidationSchema,
   getCatalogItemDefaultAppName,
   getChannelVersions,
   getDefaultChannel,
@@ -52,11 +53,10 @@ import {
   validateCatalogAdvancedConfig,
 } from './catalogCompositionUtils';
 import { getCatalogItemBadge } from '../Catalog/CatalogItemBadges';
-import { validateApplicationName } from '../form/validations';
 import { getInitialAppConfig } from '../Catalog/InstallWizard/utils';
 import type { DynamicFormConfigFormik } from '../Catalog/InstallWizard/types';
 import CatalogAdvancedConfigStep from './CatalogAdvancedConfigStep';
-import CatalogConfigureFields from './CatalogConfigureFields';
+import CatalogDefinitionFields from './CatalogDefinitionFields';
 import { isAppConfigStepValid } from '../Catalog/InstallWizard/steps/AppConfigStep';
 import CatalogItemGallery from '../Catalog/CatalogItemGallery';
 
@@ -71,7 +71,11 @@ type CatalogSelectAppModalProps = {
   ) => void;
 };
 
-type Step = 'browse' | 'configure' | 'advanced-config';
+enum Step {
+  Browse = 'browse',
+  SelectApp = 'select-app',
+  AddSettings = 'add-settings',
+}
 
 type ConfigureFormValues = {
   channel: string;
@@ -89,7 +93,7 @@ const CatalogSelectAppModal = ({
   onConfirm,
 }: CatalogSelectAppModalProps) => {
   const { t } = useTranslation();
-  const [step, setStep] = React.useState<Step>('browse');
+  const [step, setStep] = React.useState<Step>(Step.Browse);
   const [nameFilter, setNameFilter] = React.useState('');
   const [selectedItem, setSelectedItem] = React.useState<CatalogItem | null>(null);
   const [selectedAppTypes, setSelectedAppTypes] = React.useState<CatalogItemType[]>([]);
@@ -208,7 +212,7 @@ const CatalogSelectAppModal = ({
   return (
     <FlightCtlModal variant="large" isOpen onClose={handleClose}>
       <ModalHeader title={t('Add application from Software Catalog')}>
-        {(step === 'configure' || step === 'advanced-config') && selectedItem && (
+        {(step === Step.SelectApp || step === Step.AddSettings) && selectedItem && (
           <Title headingLevel="h2" size="md">
             {selectedItem.spec.displayName || selectedItem.metadata.name}
           </Title>
@@ -323,7 +327,7 @@ const CatalogSelectAppModal = ({
                   catalogItems={catalogItems}
                   onSelect={(item) => {
                     setSelectedItem(item);
-                    setStep('configure');
+                    setStep(Step.SelectApp);
                   }}
                 />
               </StackItem>
@@ -331,25 +335,11 @@ const CatalogSelectAppModal = ({
           </Stack>
         )}
 
-        {step === 'configure' && selectedItem && (
+        {step === Step.SelectApp && selectedItem && (
           <Formik<ConfigureFormValues>
             enableReinitialize
             initialValues={configureInitialValues}
-            validate={(values) => {
-              const errors: Partial<Record<keyof ConfigureFormValues, string>> = {};
-              const name = values.appName;
-              if (!name) {
-                errors.appName = t('Application name is required');
-              } else {
-                const nameError = validateApplicationName(name, t);
-                if (nameError) {
-                  errors.appName = nameError;
-                } else if (existingAppNames.some((existingName) => existingName === name) && name !== appName) {
-                  errors.appName = t('An application with this name already exists');
-                }
-              }
-              return errors;
-            }}
+            validationSchema={getAppNameValidationSchema(t)}
             onSubmit={(values) => {
               const version = selectedItem.spec.versions.find((entry) => entry.version === values.version);
               if (!version) {
@@ -365,7 +355,7 @@ const CatalogSelectAppModal = ({
               if (goToAdvancedConfig) {
                 setPendingConfigureValues(values);
                 setPendingSelection(selection);
-                setStep('advanced-config');
+                setStep(Step.AddSettings);
                 return;
               }
               onConfirm(selection, values.appName);
@@ -399,13 +389,7 @@ const CatalogSelectAppModal = ({
                           <Content component={ContentVariants.p}>{selectedItem.spec.shortDescription}</Content>
                         </StackItem>
                       )}
-                      <CatalogConfigureFields
-                        requiresAdvancedConfig={requiresAdditionalInfo}
-                        requiredConfigPresentation="info-alert"
-                        checkboxDescription={t(
-                          'Optionally override catalog defaults or provide additional settings before adding this application.',
-                        )}
-                      >
+                      <CatalogDefinitionFields requiresAdvancedConfig={requiresAdditionalInfo}>
                         <StackItem>
                           <FormGroup label={t('Channel')} fieldId="catalog-channel">
                             <FormSelect
@@ -430,11 +414,11 @@ const CatalogSelectAppModal = ({
                             <FormSelect name="version" items={versionItems} />
                           </FormGroup>
                         </StackItem>
-                      </CatalogConfigureFields>
+                      </CatalogDefinitionFields>
                     </Stack>
                   </FlightCtlForm>
                   <ModalFooter>
-                    <Button variant="link" onClick={() => setStep('browse')}>
+                    <Button variant="link" onClick={() => setStep(Step.Browse)}>
                       {t('Back')}
                     </Button>
                     <Button variant="primary" onClick={() => void submitForm()} isDisabled={isSubmitting || !isValid}>
@@ -447,7 +431,7 @@ const CatalogSelectAppModal = ({
           </Formik>
         )}
 
-        {step === 'advanced-config' && selectedItem && advancedInitialValues && pendingSelection && (
+        {step === Step.AddSettings && selectedItem && advancedInitialValues && pendingSelection && (
           <Formik<DynamicFormConfigFormik>
             enableReinitialize
             initialValues={advancedInitialValues}
@@ -475,7 +459,7 @@ const CatalogSelectAppModal = ({
                     variant="link"
                     onClick={() => {
                       setAdvancedSchemaErrors(undefined);
-                      setStep('configure');
+                      setStep(Step.SelectApp);
                     }}
                   >
                     {t('Back')}

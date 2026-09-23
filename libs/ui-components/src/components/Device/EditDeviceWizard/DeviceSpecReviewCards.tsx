@@ -187,28 +187,30 @@ const DeviceSpecReviewCards = ({ variant, showUpdateStatus, error }: DeviceSpecR
                 </DescriptionListGroup>
               )}
             </>
-          ) : deviceValues ? (
-            <>
-              <DescriptionListGroup>
-                <DescriptionListTerm>{t('Device alias')}</DescriptionListTerm>
-                <DescriptionListDescription>{deviceValues.deviceAlias || t('Untitled')}</DescriptionListDescription>
-              </DescriptionListGroup>
-              {deviceValues.labels.length > 0 && (
+          ) : (
+            deviceValues && (
+              <>
                 <DescriptionListGroup>
-                  <DescriptionListTerm>{t('Device labels')}</DescriptionListTerm>
-                  <DescriptionListDescription>
-                    <LabelsView prefix="device" labels={toAPILabel(deviceValues.labels)} />
-                  </DescriptionListDescription>
+                  <DescriptionListTerm>{t('Device alias')}</DescriptionListTerm>
+                  <DescriptionListDescription>{deviceValues.deviceAlias || t('Untitled')}</DescriptionListDescription>
                 </DescriptionListGroup>
-              )}
-              {deviceValues.fleetMatch && (
-                <DescriptionListGroup>
-                  <DescriptionListTerm>{t('Device fleet')}</DescriptionListTerm>
-                  <DescriptionListDescription>{deviceValues.fleetMatch}</DescriptionListDescription>
-                </DescriptionListGroup>
-              )}
-            </>
-          ) : null}
+                {deviceValues.labels.length > 0 && (
+                  <DescriptionListGroup>
+                    <DescriptionListTerm>{t('Device labels')}</DescriptionListTerm>
+                    <DescriptionListDescription>
+                      <LabelsView prefix="device" labels={toAPILabel(deviceValues.labels)} />
+                    </DescriptionListDescription>
+                  </DescriptionListGroup>
+                )}
+                {deviceValues.fleetMatch && (
+                  <DescriptionListGroup>
+                    <DescriptionListTerm>{t('Device fleet')}</DescriptionListTerm>
+                    <DescriptionListDescription>{deviceValues.fleetMatch}</DescriptionListDescription>
+                  </DescriptionListGroup>
+                )}
+              </>
+            )
+          )}
         </DescriptionList>
       </ReviewCard>
 

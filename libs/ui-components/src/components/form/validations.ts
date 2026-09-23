@@ -249,15 +249,6 @@ export const validApplicationAndVolumeName = (t: TFunction) =>
 export const requiredApplicationNameSchema = (t: TFunction) =>
   validApplicationAndVolumeName(t).required(t('Application name is required.'));
 
-export const validateApplicationName = (name: string, t: TFunction): string | undefined => {
-  try {
-    requiredApplicationNameSchema(t).validateSync(name.trim());
-    return undefined;
-  } catch (error) {
-    return (error as Yup.ValidationError).message;
-  }
-};
-
 /** Normalize a display name into a DNS-safe application name. */
 export const toValidApplicationName = (rawName: string): string => {
   const normalized = rawName

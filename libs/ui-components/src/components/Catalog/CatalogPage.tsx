@@ -403,7 +403,7 @@ export const CatalogPageContent = ({
                           <CatalogLandingPageContent permissions={catalogPermissions} />
                         </StackItem>
                       )}
-                      <StackItem style={{ border: '2px solid lime' }}>
+                      <StackItem>
                         <CatalogItemGallery catalogItems={catalogItems} onSelect={onSelectItem} />
                       </StackItem>
                     </Stack>

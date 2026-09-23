@@ -1,3 +1,8 @@
+/* Stretch to the gallery row so cards share a uniform height. */
+.fctl-catalog-item-card {
+  height: 100%;
+}
+
 .fctl-catalog-item-card .pf-v6-c-card__header {
   padding-inline-end: var(--pf-t--global--spacer--sm);
 }
