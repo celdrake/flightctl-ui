@@ -20,19 +20,26 @@ import ReviewStep from './steps/ReviewStep';
 import LeaveFormConfirmation from '../../common/LeaveFormConfirmation';
 import { validApplicationAndVolumeName } from '../../form/validations';
 import { isWizardStepDisabled } from '../../../utils/wizards';
+import { catalogItemRequiresAdvancedConfig } from '../../CatalogComposition/catalogCompositionUtils';
 
 const versionStepId = 'version-step';
 const configStepId = 'config-step';
 const reviewStepId = 'review-step';
 
-const orderedIds = [versionStepId, configStepId, reviewStepId];
+const getOrderedIds = (showConfigStep: boolean) =>
+  showConfigStep ? [versionStepId, configStepId, reviewStepId] : [versionStepId, reviewStepId];
 
-const getValidStepIds = (errors: FormikErrors<AppUpdateFormik>, values: AppUpdateFormik): string[] => {
+const getValidStepIds = (
+  errors: FormikErrors<AppUpdateFormik>,
+  values: AppUpdateFormik,
+  showConfigStep: boolean,
+): string[] => {
+  const orderedIds = getOrderedIds(showConfigStep);
   const validStepIds: string[] = [];
   if (isUpdateStepValid(errors)) {
     validStepIds.push(versionStepId);
   }
-  if (isAppConfigStepValid(values, errors)) {
+  if (showConfigStep && isAppConfigStepValid(values, errors)) {
     validStepIds.push(configStepId);
   }
   if (validStepIds.length === orderedIds.length - 1) {
@@ -73,7 +80,10 @@ const WizardContent: React.FC<WizardContentProps> = ({
 
   const { values, errors } = useFormikContext<AppUpdateFormik>();
 
-  const validStepIds = getValidStepIds(errors, values);
+  const requiresAdvancedConfig = catalogItemRequiresAdvancedConfig(catalogItem, values.version, appSpec);
+  const showConfigStep = requiresAdvancedConfig || values.wantAdvancedConfig;
+  const orderedIds = getOrderedIds(showConfigStep);
+  const validStepIds = getValidStepIds(errors, values, showConfigStep);
 
   return (
     <>
@@ -101,16 +111,19 @@ const WizardContent: React.FC<WizardContentProps> = ({
               currentVersion={currentVersion}
               isEdit={!!appSpec}
               existingApp={appSpec}
+              requiresAdvancedConfig={requiresAdvancedConfig}
             />
           )}
         </WizardStep>
-        <WizardStep
-          name={t('Configuration')}
-          id={configStepId}
-          isDisabled={isWizardStepDisabled(configStepId, orderedIds, validStepIds)}
-        >
-          {currentStep?.id === configStepId && <AppConfigStep isEdit={!!appSpec} />}
-        </WizardStep>
+        {showConfigStep && (
+          <WizardStep
+            name={t('Configuration')}
+            id={configStepId}
+            isDisabled={isWizardStepDisabled(configStepId, orderedIds, validStepIds)}
+          >
+            {currentStep?.id === configStepId && <AppConfigStep isEdit={!!appSpec} />}
+          </WizardStep>
+        )}
         <WizardStep
           name={t('Review and deploy')}
           id={reviewStepId}
@@ -134,9 +147,11 @@ type EditAppWizardProps = {
   currentApps: ApplicationProviderSpec[] | undefined;
   version: string;
   channel: string;
+  mode: 'edit' | 'update';
 };
 
-const EditAppWizard: React.FC<EditAppWizardProps> = ({
+const EditAppWizard = ({
+  mode,
   catalogItem,
   currentVersion,
   onUpdate,
@@ -145,7 +160,7 @@ const EditAppWizard: React.FC<EditAppWizardProps> = ({
   currentApps,
   version,
   channel,
-}) => {
+}: EditAppWizardProps) => {
   const { t } = useTranslation();
 
   const latestVersion = getUpdates(catalogItem, currentChannel, currentVersion.version).sort((a, b) =>
@@ -185,6 +200,7 @@ const EditAppWizard: React.FC<EditAppWizardProps> = ({
       initialValues={{
         version: appVersion,
         channel: appSpec ? currentChannel : channel,
+        wantAdvancedConfig: mode === 'edit',
         ...appConfig,
       }}
       validateOnMount

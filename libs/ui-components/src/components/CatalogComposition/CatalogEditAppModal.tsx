@@ -144,7 +144,6 @@ const CatalogEditAppModal = ({ catalogItem, appForm, onClose, onSave }: CatalogE
           return (
             <>
               <ModalBody>
-                <div style={{ border: '2px solid orange' }}>{JSON.stringify(errors)}</div>
                 <FlightCtlForm>
                   {isUpdateNameStep ? (
                     <CatalogDefinitionFields requiresAdvancedConfig={requiresAdvancedConfig} />

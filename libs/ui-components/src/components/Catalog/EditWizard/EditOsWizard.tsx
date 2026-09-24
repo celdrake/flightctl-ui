@@ -73,7 +73,12 @@ const WizardContent: React.FC<WizardContentProps> = ({ currentVersion, catalogIt
       >
         <WizardStep name={t('Version')} id={versionStepId}>
           {(!currentStep || currentStep?.id === versionStepId) && (
-            <UpdateStep catalogItem={catalogItem} currentVersion={currentVersion} isEdit={isEdit} />
+            <UpdateStep
+              catalogItem={catalogItem}
+              currentVersion={currentVersion}
+              isEdit={isEdit}
+              requiresAdvancedConfig={false}
+            />
           )}
         </WizardStep>
         <WizardStep

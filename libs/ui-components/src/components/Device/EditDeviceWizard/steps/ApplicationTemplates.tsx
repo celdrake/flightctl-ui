@@ -249,7 +249,7 @@ const ApplicationSection = ({ index, isReadOnly }: { index: number; isReadOnly?:
 
 const ApplicationTemplates = ({ isReadOnly, isEdit = false }: { isReadOnly?: boolean; isEdit?: boolean }) => {
   const { t } = useTranslation();
-  const { values, errors } = useFormikContext<DeviceSpecConfigFormValues>();
+  const { values } = useFormikContext<DeviceSpecConfigFormValues>();
   const [appIndexToDelete, setAppIndexToDelete] = React.useState<number | undefined>(undefined);
   const [isCatalogSelectOpen, setIsCatalogSelectOpen] = React.useState(false);
 
@@ -268,7 +268,6 @@ const ApplicationTemplates = ({ isReadOnly, isEdit = false }: { isReadOnly?: boo
       <FieldArray name="applications">
         {(arrayHelpers) => (
           <>
-            <div style={{ border: '2px solid orange' }}>{JSON.stringify(errors)}</div>
             {values.applications.map((entry, index) => {
               const isCatalogApp = isCatalogAppEntry(entry);
 

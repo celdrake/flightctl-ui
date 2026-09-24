@@ -95,7 +95,7 @@ const CatalogSelectAppModal = ({
                 {selectedItem.spec.displayName || selectedItem.metadata.name}
               </Title>
             </FlexItem>
-            {selectedItem?.spec.deprecation?.message && (
+            {selectedItem?.spec.deprecation?.message && step === Step.SelectApp && (
               <FlexItem>
                 <CatalogItemDeprecationBadge mode="item" />
               </FlexItem>

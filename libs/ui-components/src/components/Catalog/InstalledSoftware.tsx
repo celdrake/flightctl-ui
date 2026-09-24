@@ -23,7 +23,7 @@ import InstalledSoftwareItem from './InstalledSoftwareItem';
 type InstalledSoftwareProps = {
   hasPackageMode?: boolean;
   onDeleteItem: (id: SpecCatalogItemId) => Promise<void>;
-  onEdit: (id: SpecCatalogItemId) => void;
+  onEdit: (id: SpecCatalogItemId, mode: 'edit' | 'update') => void;
   canEdit: boolean;
 };
 
@@ -70,7 +70,7 @@ const InstalledSoftware = ({ onDeleteItem, onEdit, canEdit, hasPackageMode }: In
                   <InstalledSoftwareItem
                     catalogItemId={id}
                     data={data}
-                    onEdit={() => onEdit(id)}
+                    onEdit={onEdit}
                     onDelete={() => {
                       setItemToDelete(id);
                     }}

@@ -16,6 +16,8 @@ type DeviceDetailsCatalogProps = {
   canEdit: boolean;
 };
 
+const getEditWizardMode = (modeParam: string) => (modeParam === 'update' ? modeParam : 'edit');
+
 const DeviceDetailsCatalog = ({ device, refetch, canEdit }: DeviceDetailsCatalogProps) => {
   const { patch } = useFetch();
   const { t } = useTranslation();
@@ -61,11 +63,12 @@ const DeviceDetailsCatalog = ({ device, refetch, canEdit }: DeviceDetailsCatalog
       spec={device.spec}
       specPath="/"
       hasPackageMode={hasPackageMode}
-      onEdit={(id) => {
+      onEdit={(id, mode) => {
         let path = `${device.metadata.name}/${id.ref.catalog}/${id.ref.item}`;
         if (id.appName) {
           const params = new URLSearchParams({
             appName: id.appName,
+            mode: getEditWizardMode(mode),
           });
           path = `${path}?${params.toString()}`;
         }

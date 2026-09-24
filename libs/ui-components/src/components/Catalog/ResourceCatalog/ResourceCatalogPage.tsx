@@ -19,7 +19,7 @@ type ResourceCatalogPageProps = {
   hasPackageMode?: boolean;
   spec: DeviceSpec | undefined;
   onPatch: (allPatches: PatchRequest) => Promise<void>;
-  onEdit: (id: SpecCatalogItemId) => void;
+  onEdit: (id: SpecCatalogItemId, mode: 'edit' | 'update') => void;
   onInstall: (installItem: { item: CatalogItem; channel: string; version: string }) => void;
 };
 

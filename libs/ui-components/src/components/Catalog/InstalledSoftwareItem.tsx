@@ -69,7 +69,7 @@ const SoftwareItemDeprecation = ({ data }: { data: ResolvedCatalogItemData }) =>
 type InstalledSoftwareItemProps = {
   catalogItemId: SpecCatalogItemId;
   data?: ResolvedCatalogItemData;
-  onEdit: VoidFunction;
+  onEdit: (id: SpecCatalogItemId, mode: 'edit' | 'update') => void;
   onDelete: VoidFunction;
   canEdit: boolean;
 };
@@ -92,7 +92,7 @@ const InstalledSoftwareItem = ({ catalogItemId, data, onEdit, onDelete, canEdit 
         };
     regularActions.push({
       title: t('Edit'),
-      onClick: onEdit,
+      onClick: () => onEdit(catalogItemId, 'edit'),
       ...invalidItemProps,
     });
   }
@@ -115,7 +115,7 @@ const InstalledSoftwareItem = ({ catalogItemId, data, onEdit, onDelete, canEdit 
         {isValidCatalogItem && (
           <>
             <FlexItem>
-              <SoftwareItemUpdateBadge data={data} onEdit={onEdit} canEdit={canEdit} />
+              <SoftwareItemUpdateBadge data={data} onEdit={() => onEdit(catalogItemId, 'update')} canEdit={canEdit} />
             </FlexItem>
             <FlexItem>
               <SoftwareItemDeprecation data={data} />

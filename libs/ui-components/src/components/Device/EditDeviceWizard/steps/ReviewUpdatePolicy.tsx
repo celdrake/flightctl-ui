@@ -12,8 +12,8 @@ import {
 import type {
   DeltaGenerationForm,
   DisruptionBudgetForm,
-  UpdatePolicyForm,
   RolloutPolicyForm,
+  UpdatePolicyForm,
 } from '../../../../types/deviceSpec';
 
 import { useTranslation } from '../../../../hooks/useTranslation';

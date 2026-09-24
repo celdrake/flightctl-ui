@@ -36,6 +36,7 @@ import EditOsWizard from './EditOsWizard';
 import EditAppWizard from './EditAppWizard';
 
 type EditWizardProps = {
+  mode: 'edit' | 'update';
   specPath: string;
   currentOsSpec: ImageOrCatalogItemRefSpec | undefined;
   currentApps: ApplicationProviderSpec[] | undefined;
@@ -48,6 +49,7 @@ type EditWizardProps = {
 };
 
 const EditWizard = ({
+  mode,
   specPath,
   currentOsSpec,
   currentApps,
@@ -153,6 +155,7 @@ const EditWizard = ({
       } else {
         content = (
           <EditAppWizard
+            mode={mode}
             catalogItem={catalogItem}
             appSpec={appSpec}
             currentApps={currentApps}
@@ -255,11 +258,13 @@ const EditWizard = ({
 
 const editWizardPermissions = [{ kind: RESOURCE.CATALOG_ITEM, verb: VERB.GET }];
 
+const getEditWizardMode = (modeParam: string) => (modeParam === 'update' ? modeParam : 'edit');
+
 export const EditDeviceWizard = () => {
   const {
     router: { useParams },
   } = useAppContext();
-  const { deviceId } = useParams() as { deviceId: string };
+  const { deviceId, mode } = useParams() as { deviceId: string; mode: 'edit' | 'update' };
   const { checkPermissions, loading: permissionsLoading } = usePermissionsContext();
   const [canGetItem] = checkPermissions(editWizardPermissions);
 
@@ -271,6 +276,7 @@ export const EditDeviceWizard = () => {
   return (
     <PageWithPermissions allowed={canGetItem} loading={permissionsLoading}>
       <EditWizard
+        mode={getEditWizardMode(mode)}
         currentApps={device?.spec.applications}
         currentOsSpec={device?.spec.os}
         error={error}
@@ -289,22 +295,23 @@ export const EditFleetWizard = () => {
   const {
     router: { useParams },
   } = useAppContext();
-  const params = useParams() as { fleetId: string };
+  const { fleetId, mode } = useParams() as { fleetId: string; mode: 'edit' | 'update' };
   const { checkPermissions, loading: permissionsLoading } = usePermissionsContext();
   const [canGetItem] = checkPermissions(editWizardPermissions);
 
   const [fleet, loading, error] = useFetchPeriodically<Required<Fleet>>({
-    endpoint: `fleets/${params.fleetId}`,
+    endpoint: `fleets/${fleetId}`,
   });
   return (
     <PageWithPermissions allowed={canGetItem} loading={permissionsLoading}>
       <EditWizard
+        mode={getEditWizardMode(mode)}
         currentApps={fleet?.spec.template.spec.applications}
         currentOsSpec={fleet?.spec.template.spec.os}
         error={error}
         loading={loading}
         specPath="/spec/template/"
-        resourceId={params.fleetId}
+        resourceId={fleetId}
         isDevice={false}
       />
     </PageWithPermissions>
