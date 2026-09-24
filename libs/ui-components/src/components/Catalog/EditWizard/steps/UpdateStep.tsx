@@ -15,7 +15,6 @@ import ArrowRightIcon from '@patternfly/react-icons/dist/js/icons/arrow-right-ic
 import * as React from 'react';
 import { type FormikErrors, useFormikContext } from 'formik';
 import { type CatalogItem, type CatalogItemVersion } from '@flightctl/types/alpha';
-import semver from 'semver';
 import ReactMarkdown from 'react-markdown';
 
 import type { ApplicationProviderSpec } from '@flightctl/types';
@@ -29,7 +28,7 @@ import { InstallSpec, VersionDropdown } from '../../InstallWizard/steps/Specific
 import UpdateGraph from './UpdateGraph';
 import { FormGroupWithHelperText } from '../../../common/WithHelperText';
 import { applyInitialConfig, getInitialAppConfig } from '../../InstallWizard/utils';
-import { type CatalogEditWizardMode, getUpdates } from '../../../../utils/catalog';
+import { type CatalogEditWizardMode, getSortedUpdates, getUpdates } from '../../../../utils/catalog';
 import { type AppUpdateFormik } from '../types';
 
 export const isUpdateStepValid = (errors: FormikErrors<InstallSpecFormik>) => {
@@ -76,7 +75,6 @@ const UpdateStep = ({
   const { values, initialValues, setFieldValue } = useFormikContext<AppUpdateFormik>();
 
   const updates = getUpdates(catalogItem, values.channel, currentVersion.version);
-
   const updateVersion = catalogItem.spec.versions.find((v) => v.version === values.version);
 
   return isEdit ? (
@@ -116,9 +114,7 @@ const UpdateStep = ({
                           return acc;
                         }, {})}
                         onChange={(val) => {
-                          const latestVersion = getUpdates(catalogItem, val, currentVersion.version).sort((a, b) =>
-                            semver.rcompare(a.version, b.version),
-                          )[0]?.version;
+                          const latestVersion = getSortedUpdates(catalogItem, val, currentVersion.version)[0]?.version;
                           const newVersion = latestVersion || currentVersion.version;
                           setFieldValue('version', newVersion);
                           // Keep the current app config when the channel changes.
@@ -127,7 +123,7 @@ const UpdateStep = ({
                         }}
                       />
                     ) : (
-                      <div>VERSION IS LOCKED</div>
+                      values.channel
                     )}
                   </GridItem>
                   <GridItem span={3} />
@@ -151,11 +147,15 @@ const UpdateStep = ({
                   </GridItem>
                   <GridItem span={4}>
                     {updates.length ? (
-                      <VersionDropdown
-                        catalogItem={catalogItem}
-                        versions={[...updates, currentVersion]}
-                        existingApp={existingApp}
-                      />
+                      mode === 'edit' ? (
+                        <VersionDropdown
+                          catalogItem={catalogItem}
+                          versions={[...updates, currentVersion]}
+                          existingApp={existingApp}
+                        />
+                      ) : (
+                        values.version
+                      )
                     ) : (
                       <StatusDisplayContent level="success" label={t('Up to date')} />
                     )}

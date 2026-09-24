@@ -18,18 +18,13 @@ const SoftwareItemTitle = ({
   catalogItemId: SpecCatalogItemId;
   data?: ResolvedCatalogItemData;
 }) => {
-  const description = catalogItemId.type === 'app' && catalogItemId.appName ? catalogItemId.appName : '';
+  const title = catalogItemId.type === 'app' && catalogItemId.appName ? catalogItemId.appName : '';
 
   if (!data) {
-    return <BrokenCatalogItemTitle catalogRef={catalogItemId.ref} description={description} />;
+    return <BrokenCatalogItemTitle catalogRef={catalogItemId.ref} headerTitle={title} />;
   }
   return (
-    <CatalogItemTitle
-      item={data.item}
-      channel={data.channel}
-      version={data.version?.version}
-      description={description}
-    />
+    <CatalogItemTitle headerTitle={title} item={data.item} channel={data.channel} version={data.version?.version} />
   );
 };
 

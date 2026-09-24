@@ -3,7 +3,6 @@ import { Formik, type FormikErrors, useFormikContext } from 'formik';
 import { Wizard, WizardStep, type WizardStepType } from '@patternfly/react-core';
 import * as Yup from 'yup';
 import type { RJSFValidationError } from '@rjsf/utils';
-import semver from 'semver';
 
 import type { ApplicationProviderSpec } from '@flightctl/types';
 import type { CatalogItem, CatalogItemVersion } from '@flightctl/types/alpha';
@@ -13,13 +12,13 @@ import { getInitialAppConfig } from '../InstallWizard/utils';
 import AppConfigStep, { isAppConfigStepValid } from '../InstallWizard/steps/AppConfigStep';
 import FlightCtlWizardFooter from '../../common/FlightCtlWizardFooter';
 import { useSubmitCatalogForm } from '../useSubmitCatalogForm';
-import { getUpdates, type CatalogEditWizardMode } from '../../../utils/catalog';
+import { type CatalogEditWizardMode, getSortedUpdates } from '../../../utils/catalog';
+import { isWizardStepDisabled } from '../../../utils/wizards';
 import { type AppUpdateFormik } from './types';
 import UpdateStep, { isUpdateStepValid } from './steps/UpdateStep';
 import ReviewStep from './steps/ReviewStep';
 import LeaveFormConfirmation from '../../common/LeaveFormConfirmation';
 import { validApplicationAndVolumeName } from '../../form/validations';
-import { isWizardStepDisabled } from '../../../utils/wizards';
 import { catalogItemRequiresAdvancedConfig } from '../../CatalogComposition/catalogCompositionUtils';
 
 const versionStepId = 'version-step';
@@ -166,9 +165,7 @@ const EditAppWizard = ({
 }: EditAppWizardProps) => {
   const { t } = useTranslation();
 
-  const latestVersion = getUpdates(catalogItem, currentChannel, currentVersion.version).sort((a, b) =>
-    semver.rcompare(a.version, b.version),
-  )[0]?.version;
+  const latestVersion = getSortedUpdates(catalogItem, currentChannel, currentVersion.version)[0]?.version;
   const appVersion = appSpec ? latestVersion || currentVersion.version : version;
   const appConfig = getInitialAppConfig(catalogItem, appVersion, appSpec);
 

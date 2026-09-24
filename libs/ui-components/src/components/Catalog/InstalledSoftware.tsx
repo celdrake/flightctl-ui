@@ -66,7 +66,7 @@ const InstalledSoftware = ({ onDeleteItem, onEdit, canEdit, hasPackageMode }: In
           ) : (
             <Stack hasGutter>
               {softwareItems.map(({ id, data }, index) => (
-                <React.Fragment key={id.type === 'app' ? id.appName : 'os'}>
+                <React.Fragment key={id.type === 'app' ? `${id.appName}-${index}` : 'os'}>
                   {index > 0 && <Divider />}
                   <InstalledSoftwareItem
                     catalogItemId={id}

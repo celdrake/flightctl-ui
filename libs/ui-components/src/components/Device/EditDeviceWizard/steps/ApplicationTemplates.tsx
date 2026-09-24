@@ -12,7 +12,7 @@ import {
   Stack,
   StackItem,
 } from '@patternfly/react-core';
-import { FieldArray, useField, useFormikContext } from 'formik';
+import { FieldArray, FormikErrors, useField, useFormikContext } from 'formik';
 import { MinusCircleIcon } from '@patternfly/react-icons/dist/js/icons/minus-circle-icon';
 import { PlusCircleIcon } from '@patternfly/react-icons/dist/js/icons/plus-circle-icon';
 import CatalogIcon from '@patternfly/react-icons/dist/js/icons/catalog-icon';
@@ -20,6 +20,7 @@ import CatalogIcon from '@patternfly/react-icons/dist/js/icons/catalog-icon';
 import { AppType } from '@flightctl/types';
 import {
   AppSpecType,
+  ApplicationEntry,
   type CatalogAppForm,
   type DeviceSpecConfigFormValues,
   type ManualAppForm,
@@ -63,7 +64,7 @@ const CatalogManagedApplicationSection = ({
   showUpdateStatus: boolean;
 }) => {
   const appFieldName = `applications[${index}].app`;
-  const [{ value: app }, , { setValue }] = useField<CatalogAppForm>(appFieldName);
+  const [{ value: app }, { error }, { setValue }] = useField<CatalogAppForm>(appFieldName);
   const resolved = useResolvedCatalogRef(app.catalogItemRef);
   const [isAdvancedEditOpen, setIsAdvancedEditOpen] = React.useState(false);
 
@@ -74,6 +75,7 @@ const CatalogManagedApplicationSection = ({
         headerTitle={app.name}
         showUpdateStatus={showUpdateStatus}
         onEdit={isReadOnly || !resolved?.item ? undefined : () => setIsAdvancedEditOpen(true)}
+        formikErrror={error as unknown as CatalogAppForm}
       />
       {resolved?.item && isAdvancedEditOpen && (
         <CatalogEditAppModal
@@ -257,7 +259,6 @@ const ApplicationTemplates = ({ isReadOnly, isEdit = false }: { isReadOnly?: boo
     return null;
   }
 
-  // CELIA-WIP: Show app errors (eg. duplicate app names)
   return (
     <FormGroupWithHelperText
       label={t('Application workloads')}

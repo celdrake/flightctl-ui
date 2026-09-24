@@ -4,7 +4,6 @@ import type { CatalogItemRefSpec } from '@flightctl/types';
 import type { CatalogItem } from '@flightctl/types/alpha';
 
 import { useTranslation } from '../../hooks/useTranslation';
-import { formatCatalogItemRef } from '../../utils/catalog';
 import { getCatalogRefArtifactLabel } from './catalogRefArtifactLabel';
 
 type CatalogRefDescriptionGroupsProps = {
@@ -16,10 +15,18 @@ type CatalogRefDescriptionGroupsProps = {
 
 const CatalogRefDescriptionGroups = ({ catalogItemRef, channel, imageUri, item }: CatalogRefDescriptionGroupsProps) => {
   const { t } = useTranslation();
-  const pinnedVersion = catalogItemRef.version;
-
   return (
     <>
+      <DescriptionListGroup>
+        <DescriptionListTerm>{t('Catalog item name')}</DescriptionListTerm>
+        <DescriptionListDescription>{catalogItemRef.item}</DescriptionListDescription>
+      </DescriptionListGroup>
+      {imageUri && (
+        <DescriptionListGroup>
+          <DescriptionListTerm>{getCatalogRefArtifactLabel(item?.spec.type, t)}</DescriptionListTerm>
+          <DescriptionListDescription>{imageUri}</DescriptionListDescription>
+        </DescriptionListGroup>
+      )}
       {channel && (
         <DescriptionListGroup>
           <DescriptionListTerm>{t('Channel')}</DescriptionListTerm>
@@ -28,18 +35,8 @@ const CatalogRefDescriptionGroups = ({ catalogItemRef, channel, imageUri, item }
       )}
       <DescriptionListGroup>
         <DescriptionListTerm>{t('Version')}</DescriptionListTerm>
-        <DescriptionListDescription>{pinnedVersion}</DescriptionListDescription>
+        <DescriptionListDescription>{catalogItemRef.version}</DescriptionListDescription>
       </DescriptionListGroup>
-      <DescriptionListGroup>
-        <DescriptionListTerm>{t('Catalog reference')}</DescriptionListTerm>
-        <DescriptionListDescription>{formatCatalogItemRef(catalogItemRef)}</DescriptionListDescription>
-      </DescriptionListGroup>
-      {imageUri && (
-        <DescriptionListGroup>
-          <DescriptionListTerm>{getCatalogRefArtifactLabel(item?.spec.type, t)}</DescriptionListTerm>
-          <DescriptionListDescription>{imageUri}</DescriptionListDescription>
-        </DescriptionListGroup>
-      )}
     </>
   );
 };

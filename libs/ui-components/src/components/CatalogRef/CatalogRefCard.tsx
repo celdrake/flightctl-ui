@@ -8,6 +8,7 @@ import {
   Divider,
   Flex,
   FlexItem,
+  Icon,
   Spinner,
   Stack,
   StackItem,
@@ -15,6 +16,7 @@ import {
 import { PencilAltIcon } from '@patternfly/react-icons/dist/js/icons/pencil-alt-icon';
 import AngleDownIcon from '@patternfly/react-icons/dist/js/icons/angle-down-icon';
 import AngleRightIcon from '@patternfly/react-icons/dist/js/icons/angle-right-icon';
+import ExclamationCircleIcon from '@patternfly/react-icons/dist/esm/icons/exclamation-circle-icon';
 
 import type { CatalogItemRefSpec } from '@flightctl/types';
 import type { CatalogItem } from '@flightctl/types/alpha';
@@ -24,15 +26,27 @@ import { useResolvedCatalogRef } from '../Catalog/useResolvedCatalogRef';
 import CatalogRefCardDetails from './CatalogRefCardDetails';
 import CatalogItemIcon from '../Catalog/CatalogItemIcon';
 import CatalogItemViewBadges, { CatalogItemDeprecationBadge } from '../Catalog/CatalogItemBadges';
+import WithTooltip from '../common/WithTooltip';
+import { CatalogAppForm } from '../../types/deviceSpec';
 
 type CatalogRefCardProps = {
   catalogItemRef: CatalogItemRefSpec;
   headerTitle?: string;
   showUpdateStatus: boolean;
   onEdit?: VoidFunction;
+  formikErrror?: CatalogAppForm;
 };
 
-const CatalogRefTitle = ({ item, title, isLoading }: { item?: CatalogItem; title: string; isLoading: boolean }) => {
+const CatalogRefTitle = ({
+  item,
+  title,
+  isLoading,
+}: {
+  item?: CatalogItem;
+  title: string;
+  isLoading: boolean;
+  error?: string;
+}) => {
   const { t } = useTranslation();
   const icon = item ? <CatalogItemIcon catalogItem={item} size="sm" /> : isLoading ? <Spinner size="md" /> : null;
 
@@ -58,7 +72,30 @@ const CatalogRefTitle = ({ item, title, isLoading }: { item?: CatalogItem; title
   );
 };
 
-const CatalogRefCard = ({ catalogItemRef, headerTitle, showUpdateStatus, onEdit }: CatalogRefCardProps) => {
+const CatalogFormError = ({ error }: { error: CatalogAppForm | undefined }) => {
+  const errorText = error?.name;
+
+  if (!errorText) {
+    return null;
+  }
+  return (
+    <FlexItem>
+      <WithTooltip showTooltip={true} content={errorText}>
+        <Icon status="danger">
+          <ExclamationCircleIcon />
+        </Icon>
+      </WithTooltip>
+    </FlexItem>
+  );
+};
+
+const CatalogRefCard = ({
+  catalogItemRef,
+  headerTitle,
+  showUpdateStatus,
+  onEdit,
+  formikErrror,
+}: CatalogRefCardProps) => {
   const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = React.useState(false);
 
@@ -87,6 +124,7 @@ const CatalogRefCard = ({ catalogItemRef, headerTitle, showUpdateStatus, onEdit 
             >
               <FlexItem grow={{ default: 'grow' }}>
                 <Flex alignItems={{ default: 'alignItemsCenter' }} gap={{ default: 'gapSm' }}>
+                  <CatalogFormError error={formikErrror} />
                   <FlexItem>
                     <Button
                       variant="plain"

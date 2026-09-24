@@ -418,6 +418,9 @@ export const getUpdates = (catalogItem: CatalogItem, currentChannel: string, cur
   return updateVersions.filter((v) => !!getFullContainerURI(catalogItem.spec.artifacts, v));
 };
 
+export const getSortedUpdates = (catalogItem: CatalogItem, currentChannel: string, currentVersion: string) =>
+  getUpdates(catalogItem, currentChannel, currentVersion).sort((a, b) => semver.rcompare(a.version, b.version));
+
 export const getArtifactLabel = (t: TFunction, artifact: ArtifactFormValue | CatalogItemArtifact) => {
   const { type, name } = artifact;
   if (type === '') {

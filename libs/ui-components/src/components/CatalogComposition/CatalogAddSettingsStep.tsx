@@ -7,10 +7,7 @@ import { useTranslation } from '../../hooks/useTranslation';
 import FlightCtlForm from '../form/FlightCtlForm';
 import type { DynamicFormConfigFormik } from '../Catalog/InstallWizard/types';
 import { isAppConfigStepValid } from '../Catalog/InstallWizard/steps/AppConfigStep';
-import {
-  type CatalogAdvancedConfigValues,
-  validateCatalogAdvancedConfig,
-} from './catalogCompositionUtils';
+import { type CatalogAdvancedConfigValues, validateCatalogAdvancedConfig } from './catalogCompositionUtils';
 import CatalogAdvancedConfigStep from './CatalogAdvancedConfigStep';
 
 export type CatalogAddSettingsStepProps = {
