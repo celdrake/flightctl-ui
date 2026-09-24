@@ -17,13 +17,14 @@ import { type SpecCatalogItemId, formatCatalogItemRef } from '../../utils/catalo
 import { useTranslation } from '../../hooks/useTranslation';
 import { useCatalogItemsContext } from './CatalogItemsContext';
 import { resolveSpecCatalogItem } from './specCatalogItems';
+import { type CatalogEditWizardMode } from '../../utils/catalog';
 import DeleteModal from '../modals/DeleteModal/DeleteModal';
 import InstalledSoftwareItem from './InstalledSoftwareItem';
 
 type InstalledSoftwareProps = {
   hasPackageMode?: boolean;
   onDeleteItem: (id: SpecCatalogItemId) => Promise<void>;
-  onEdit: (id: SpecCatalogItemId, mode: 'edit' | 'update') => void;
+  onEdit: (id: SpecCatalogItemId, mode: CatalogEditWizardMode) => void;
   canEdit: boolean;
 };
 

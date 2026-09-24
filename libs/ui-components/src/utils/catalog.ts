@@ -48,6 +48,11 @@ export type ResolvedCatalogRef = {
   imageUri?: string;
 };
 
+export type CatalogEditWizardMode = 'edit' | 'update';
+
+export const getEditWizardMode = (modeParam: string): CatalogEditWizardMode =>
+  modeParam === 'update' ? modeParam : 'edit';
+
 export const getAppCatalogItemRef = (app: ApplicationProviderSpec): CatalogItemRefSpec | undefined =>
   'catalogItemRef' in app ? app.catalogItemRef : undefined;
 

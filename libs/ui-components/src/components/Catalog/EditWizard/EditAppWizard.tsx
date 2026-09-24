@@ -13,7 +13,7 @@ import { getInitialAppConfig } from '../InstallWizard/utils';
 import AppConfigStep, { isAppConfigStepValid } from '../InstallWizard/steps/AppConfigStep';
 import FlightCtlWizardFooter from '../../common/FlightCtlWizardFooter';
 import { useSubmitCatalogForm } from '../useSubmitCatalogForm';
-import { getUpdates } from '../../../utils/catalog';
+import { getUpdates, type CatalogEditWizardMode } from '../../../utils/catalog';
 import { type AppUpdateFormik } from './types';
 import UpdateStep, { isUpdateStepValid } from './steps/UpdateStep';
 import ReviewStep from './steps/ReviewStep';
@@ -59,6 +59,7 @@ const validateUpdateWizardStep = (
 };
 
 type WizardContentProps = {
+  mode: CatalogEditWizardMode;
   currentVersion: CatalogItemVersion;
   appSpec?: ApplicationProviderSpec;
   catalogItem: CatalogItem;
@@ -67,14 +68,15 @@ type WizardContentProps = {
   setError: (err: string | undefined) => void;
 };
 
-const WizardContent: React.FC<WizardContentProps> = ({
+const WizardContent = ({
+  mode,
   currentVersion,
   appSpec,
   catalogItem,
   error,
   schemaErrors,
   setError,
-}) => {
+}: WizardContentProps) => {
   const { t } = useTranslation();
   const [currentStep, setCurrentStep] = React.useState<WizardStepType>();
 
@@ -107,6 +109,7 @@ const WizardContent: React.FC<WizardContentProps> = ({
         <WizardStep name={t('Version')} id={versionStepId}>
           {(!currentStep || currentStep?.id === versionStepId) && (
             <UpdateStep
+              mode={mode}
               catalogItem={catalogItem}
               currentVersion={currentVersion}
               isEdit={!!appSpec}
@@ -147,7 +150,7 @@ type EditAppWizardProps = {
   currentApps: ApplicationProviderSpec[] | undefined;
   version: string;
   channel: string;
-  mode: 'edit' | 'update';
+  mode: CatalogEditWizardMode;
 };
 
 const EditAppWizard = ({
@@ -207,6 +210,7 @@ const EditAppWizard = ({
       onSubmit={onSubmit}
     >
       <WizardContent
+        mode={mode}
         currentVersion={currentVersion}
         appSpec={appSpec}
         catalogItem={catalogItem}

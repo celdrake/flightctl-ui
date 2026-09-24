@@ -7,6 +7,7 @@ import { getUpdates } from '../../utils/catalog';
 import { useTranslation } from '../../hooks/useTranslation';
 import { buildAllDropdownActions } from '../common/ActionsDropdownList';
 import type { ResolvedCatalogItemData } from './specCatalogItems';
+import { type CatalogEditWizardMode } from '../../utils/catalog';
 import CatalogItemTitle, { BrokenCatalogItemTitle } from './CatalogItemTitle';
 import { CatalogItemUpdateBadge } from './CatalogItemBadges';
 
@@ -69,7 +70,7 @@ const SoftwareItemDeprecation = ({ data }: { data: ResolvedCatalogItemData }) =>
 type InstalledSoftwareItemProps = {
   catalogItemId: SpecCatalogItemId;
   data?: ResolvedCatalogItemData;
-  onEdit: (id: SpecCatalogItemId, mode: 'edit' | 'update') => void;
+  onEdit: (id: SpecCatalogItemId, mode: CatalogEditWizardMode) => void;
   onDelete: VoidFunction;
   canEdit: boolean;
 };

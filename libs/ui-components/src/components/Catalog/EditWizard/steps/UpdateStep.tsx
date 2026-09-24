@@ -29,7 +29,7 @@ import { InstallSpec, VersionDropdown } from '../../InstallWizard/steps/Specific
 import UpdateGraph from './UpdateGraph';
 import { FormGroupWithHelperText } from '../../../common/WithHelperText';
 import { applyInitialConfig, getInitialAppConfig } from '../../InstallWizard/utils';
-import { getUpdates } from '../../../../utils/catalog';
+import { type CatalogEditWizardMode, getUpdates } from '../../../../utils/catalog';
 import { type AppUpdateFormik } from '../types';
 
 export const isUpdateStepValid = (errors: FormikErrors<InstallSpecFormik>) => {
@@ -37,6 +37,7 @@ export const isUpdateStepValid = (errors: FormikErrors<InstallSpecFormik>) => {
 };
 
 type UpdateStepProps = {
+  mode: CatalogEditWizardMode;
   currentVersion: CatalogItemVersion;
   catalogItem: CatalogItem;
   isEdit: boolean;
@@ -62,7 +63,14 @@ const AdvancedConfigControl = ({ requiresAdvancedConfig }: { requiresAdvancedCon
   );
 };
 
-const UpdateStep = ({ currentVersion, catalogItem, isEdit, existingApp, requiresAdvancedConfig }: UpdateStepProps) => {
+const UpdateStep = ({
+  mode,
+  currentVersion,
+  catalogItem,
+  isEdit,
+  existingApp,
+  requiresAdvancedConfig,
+}: UpdateStepProps) => {
   const [showReadme, setShowReadme] = React.useState(false);
   const { t } = useTranslation();
   const { values, initialValues, setFieldValue } = useFormikContext<AppUpdateFormik>();
@@ -100,23 +108,27 @@ const UpdateStep = ({ currentVersion, catalogItem, isEdit, existingApp, requires
                     </Icon>
                   </GridItem>
                   <GridItem span={4}>
-                    <FormSelect
-                      name="channel"
-                      items={currentVersion.channels.reduce((acc, curr) => {
-                        acc[curr] = curr;
-                        return acc;
-                      }, {})}
-                      onChange={(val) => {
-                        const latestVersion = getUpdates(catalogItem, val, currentVersion.version).sort((a, b) =>
-                          semver.rcompare(a.version, b.version),
-                        )[0]?.version;
-                        const newVersion = latestVersion || currentVersion.version;
-                        setFieldValue('version', newVersion);
-                        // Keep the current app config when the channel changes.
-                        const appConfig = getInitialAppConfig(catalogItem, newVersion, existingApp);
-                        applyInitialConfig(setFieldValue, appConfig);
-                      }}
-                    />
+                    {mode === 'edit' ? (
+                      <FormSelect
+                        name="channel"
+                        items={currentVersion.channels.reduce((acc, curr) => {
+                          acc[curr] = curr;
+                          return acc;
+                        }, {})}
+                        onChange={(val) => {
+                          const latestVersion = getUpdates(catalogItem, val, currentVersion.version).sort((a, b) =>
+                            semver.rcompare(a.version, b.version),
+                          )[0]?.version;
+                          const newVersion = latestVersion || currentVersion.version;
+                          setFieldValue('version', newVersion);
+                          // Keep the current app config when the channel changes.
+                          const appConfig = getInitialAppConfig(catalogItem, newVersion, existingApp);
+                          applyInitialConfig(setFieldValue, appConfig);
+                        }}
+                      />
+                    ) : (
+                      <div>VERSION IS LOCKED</div>
+                    )}
                   </GridItem>
                   <GridItem span={3} />
                 </Grid>

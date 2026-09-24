@@ -71,7 +71,7 @@ export const CatalogItemUpdateBadge = ({ hasUpdates, onUpdate }: { hasUpdates: b
   }
   if (onUpdate) {
     return (
-      <Button variant="link" isInline onClick={onUpdate} icon={<ArrowCircleUpIcon />}>
+      <Button variant="secondary" isInline onClick={onUpdate} icon={<ArrowCircleUpIcon />}>
         {t('Update available')}
       </Button>
     );

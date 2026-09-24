@@ -38,7 +38,7 @@ const CatalogTitleLayout = ({ icon, title, description, version, channel }: Cata
           </StackItem>
           {description && (
             <StackItem>
-              <Content component={ContentVariants.h6}>{description}</Content>
+              <Content component={ContentVariants.small}>{description}</Content>
             </StackItem>
           )}
           {versionLine && (

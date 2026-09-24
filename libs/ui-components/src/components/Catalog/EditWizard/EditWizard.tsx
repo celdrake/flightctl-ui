@@ -32,11 +32,12 @@ import PageWithPermissions from '../../common/PageWithPermissions';
 import { RESOURCE, VERB } from '../../../types/rbac';
 import { hasPackageModeCapability } from '../../../utils/capabilities';
 import { appendJSONPatch } from '../../../utils/patches/patch';
+import { type CatalogEditWizardMode, getEditWizardMode } from '../../../utils/catalog';
 import EditOsWizard from './EditOsWizard';
 import EditAppWizard from './EditAppWizard';
 
 type EditWizardProps = {
-  mode: 'edit' | 'update';
+  mode: CatalogEditWizardMode;
   specPath: string;
   currentOsSpec: ImageOrCatalogItemRefSpec | undefined;
   currentApps: ApplicationProviderSpec[] | undefined;
@@ -258,13 +259,14 @@ const EditWizard = ({
 
 const editWizardPermissions = [{ kind: RESOURCE.CATALOG_ITEM, verb: VERB.GET }];
 
-const getEditWizardMode = (modeParam: string) => (modeParam === 'update' ? modeParam : 'edit');
-
 export const EditDeviceWizard = () => {
   const {
-    router: { useParams },
+    router: { useParams, useSearchParams },
   } = useAppContext();
-  const { deviceId, mode } = useParams() as { deviceId: string; mode: 'edit' | 'update' };
+  const { deviceId } = useParams() as { deviceId: string };
+  const [searchParams] = useSearchParams();
+  const mode = getEditWizardMode(searchParams.get('mode') || '');
+
   const { checkPermissions, loading: permissionsLoading } = usePermissionsContext();
   const [canGetItem] = checkPermissions(editWizardPermissions);
 
@@ -276,7 +278,7 @@ export const EditDeviceWizard = () => {
   return (
     <PageWithPermissions allowed={canGetItem} loading={permissionsLoading}>
       <EditWizard
-        mode={getEditWizardMode(mode)}
+        mode={mode}
         currentApps={device?.spec.applications}
         currentOsSpec={device?.spec.os}
         error={error}
@@ -293,9 +295,12 @@ export const EditDeviceWizard = () => {
 
 export const EditFleetWizard = () => {
   const {
-    router: { useParams },
+    router: { useParams, useSearchParams },
   } = useAppContext();
-  const { fleetId, mode } = useParams() as { fleetId: string; mode: 'edit' | 'update' };
+  const { fleetId } = useParams() as { fleetId: string };
+  const [searchParams] = useSearchParams();
+  const mode = getEditWizardMode(searchParams.get('mode') || '');
+
   const { checkPermissions, loading: permissionsLoading } = usePermissionsContext();
   const [canGetItem] = checkPermissions(editWizardPermissions);
 
@@ -305,7 +310,7 @@ export const EditFleetWizard = () => {
   return (
     <PageWithPermissions allowed={canGetItem} loading={permissionsLoading}>
       <EditWizard
-        mode={getEditWizardMode(mode)}
+        mode={mode}
         currentApps={fleet?.spec.template.spec.applications}
         currentOsSpec={fleet?.spec.template.spec.os}
         error={error}
