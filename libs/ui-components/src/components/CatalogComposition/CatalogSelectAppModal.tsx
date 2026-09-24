@@ -1,64 +1,23 @@
 import * as React from 'react';
-import {
-  Alert,
-  Button,
-  Content,
-  ContentVariants,
-  EmptyState,
-  EmptyStateActions,
-  EmptyStateBody,
-  Flex,
-  FlexItem,
-  FormGroup,
-  Label,
-  LabelGroup,
-  ModalBody,
-  ModalFooter,
-  ModalHeader,
-  SelectList,
-  SelectOption,
-  Spinner,
-  Stack,
-  StackItem,
-  Title,
-  Toolbar,
-  ToolbarContent,
-  ToolbarItem,
-} from '@patternfly/react-core';
-import { CatalogItemType } from '@flightctl/types/alpha';
-import { SearchIcon } from '@patternfly/react-icons/dist/js/icons/search-icon';
-import semver from 'semver';
-import { Formik } from 'formik';
+import { Button, Flex, FlexItem, ModalBody, ModalFooter, ModalHeader, Title } from '@patternfly/react-core';
 import type { CatalogItem } from '@flightctl/types/alpha';
-import type { RJSFValidationError } from '@rjsf/utils';
 
 import { useTranslation } from '../../hooks/useTranslation';
 import FlightCtlModal from '../common/FlightCtlModal';
-import FormSelect from '../form/FormSelect';
-import TableTextSearch from '../Table/TableTextSearch';
-import TablePagination from '../Table/TablePagination';
-import FilterSelect, { FilterSelectGroup } from '../form/FilterSelect';
-import { appTypeIds, useCatalogItems } from '../Catalog/useCatalogItems';
-import FlightCtlForm from '../form/FlightCtlForm';
 import {
   type CatalogAdvancedConfigValues,
   type CatalogSelectionConfirm,
-  buildSelectionConfirm,
-  catalogItemRequiresAdvancedConfig,
-  getAppNameValidationSchema,
   getCatalogItemDefaultAppName,
-  getChannelVersions,
   getDefaultChannel,
+  getSortedChannelVersions,
   getUniqueApplicationName,
-  validateCatalogAdvancedConfig,
 } from './catalogCompositionUtils';
-import { getCatalogItemBadge } from '../Catalog/CatalogItemBadges';
 import { getInitialAppConfig } from '../Catalog/InstallWizard/utils';
 import type { DynamicFormConfigFormik } from '../Catalog/InstallWizard/types';
-import CatalogAdvancedConfigStep from './CatalogAdvancedConfigStep';
-import CatalogDefinitionFields from './CatalogDefinitionFields';
-import { isAppConfigStepValid } from '../Catalog/InstallWizard/steps/AppConfigStep';
-import CatalogItemGallery from '../Catalog/CatalogItemGallery';
+import CatalogBrowseStep from './CatalogBrowseStep';
+import CatalogSelectAppStep, { type ConfigureFormValues } from './CatalogSelectAppStep';
+import CatalogAddSettingsStep from './CatalogAddSettingsStep';
+import { CatalogItemDeprecationBadge } from '../Catalog/CatalogItemBadges';
 
 type CatalogSelectAppModalProps = {
   appName?: string;
@@ -77,15 +36,6 @@ enum Step {
   AddSettings = 'add-settings',
 }
 
-type ConfigureFormValues = {
-  channel: string;
-  version: string;
-  appName: string;
-  wantAdvancedConfig: boolean;
-};
-
-const applicationTypeOptions = appTypeIds.filter((type) => type !== CatalogItemType.CatalogItemTypeData);
-
 const CatalogSelectAppModal = ({
   appName = '',
   existingAppNames = [],
@@ -94,71 +44,9 @@ const CatalogSelectAppModal = ({
 }: CatalogSelectAppModalProps) => {
   const { t } = useTranslation();
   const [step, setStep] = React.useState<Step>(Step.Browse);
-  const [nameFilter, setNameFilter] = React.useState('');
   const [selectedItem, setSelectedItem] = React.useState<CatalogItem | null>(null);
-  const [selectedAppTypes, setSelectedAppTypes] = React.useState<CatalogItemType[]>([]);
-  // Chips show filters from the last settled search, not live toolbar edits mid-debounce/fetch.
-  const [appliedNameFilter, setAppliedNameFilter] = React.useState('');
-  const [appliedAppTypes, setAppliedAppTypes] = React.useState<CatalogItemType[]>([]);
   const [pendingConfigureValues, setPendingConfigureValues] = React.useState<ConfigureFormValues | null>(null);
   const [pendingSelection, setPendingSelection] = React.useState<CatalogSelectionConfirm | null>(null);
-  const [advancedSchemaErrors, setAdvancedSchemaErrors] = React.useState<RJSFValidationError[] | undefined>();
-
-  const itemTypeFilter = React.useMemo(
-    () => (selectedAppTypes.length === 0 ? applicationTypeOptions : selectedAppTypes),
-    [selectedAppTypes],
-  );
-
-  const [catalogItems, loading, error, pagination, isUpdating] = useCatalogItems({
-    catalogFilter: {
-      itemType: itemTypeFilter,
-      nameFilter: nameFilter || undefined,
-    },
-  });
-
-  React.useEffect(() => {
-    if (!isUpdating) {
-      setAppliedNameFilter(nameFilter);
-      setAppliedAppTypes(selectedAppTypes);
-    }
-    // Commit only when a search settles; ignore live filter edits while updating.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isUpdating]);
-
-  const toggleAppType = (type: CatalogItemType) => {
-    setSelectedAppTypes((current) =>
-      current.includes(type) ? current.filter((entry) => entry !== type) : [...current, type],
-    );
-  };
-
-  const clearNameFilter = () => {
-    setNameFilter('');
-    setAppliedNameFilter('');
-  };
-
-  const clearAppTypes = () => {
-    setSelectedAppTypes([]);
-    setAppliedAppTypes([]);
-  };
-
-  const removeAppType = (type: CatalogItemType) => {
-    setSelectedAppTypes((current) => current.filter((entry) => entry !== type));
-    setAppliedAppTypes((current) => current.filter((entry) => entry !== type));
-  };
-
-  const clearAllFilters = () => {
-    setNameFilter('');
-    setSelectedAppTypes([]);
-    setAppliedNameFilter('');
-    setAppliedAppTypes([]);
-  };
-
-  const onNameFilterChange = (value: string) => {
-    setNameFilter(value);
-    if (value === '') {
-      setAppliedNameFilter('');
-    }
-  };
 
   const handleClose = () => {
     onClose();
@@ -176,7 +64,7 @@ const CatalogSelectAppModal = ({
       return { channel: 'stable', version: '', appName, wantAdvancedConfig: false };
     }
     const channel = getDefaultChannel(selectedItem);
-    const versions = getChannelVersions(selectedItem, channel).sort((a, b) => semver.rcompare(a.version, b.version));
+    const versions = getSortedChannelVersions(selectedItem, channel);
     const version = versions[0]?.version || '';
     return {
       channel,
@@ -185,10 +73,6 @@ const CatalogSelectAppModal = ({
       wantAdvancedConfig: false,
     };
   }, [selectedItem, appName, defaultAppName]);
-
-  const hasNameFilter = Boolean(appliedNameFilter.trim());
-  const hasTypeFilter = appliedAppTypes.length > 0;
-  const hasFilters = hasNameFilter || hasTypeFilter;
 
   const advancedInitialValues = React.useMemo((): DynamicFormConfigFormik | null => {
     if (!selectedItem || !pendingConfigureValues) {
@@ -201,283 +85,66 @@ const CatalogSelectAppModal = ({
     };
   }, [selectedItem, pendingConfigureValues]);
 
-  const validateAdvancedConfig = (values: DynamicFormConfigFormik) => {
-    const result = validateCatalogAdvancedConfig(values, t);
-    setAdvancedSchemaErrors(result.schemaErrors);
-    return Object.keys(result.errors).length > 0 ? result.errors : undefined;
-  };
-
-  const hasCatalogItems = catalogItems.length > 0;
-
   return (
     <FlightCtlModal variant="large" isOpen onClose={handleClose}>
       <ModalHeader title={t('Add application from Software Catalog')}>
         {(step === Step.SelectApp || step === Step.AddSettings) && selectedItem && (
-          <Title headingLevel="h2" size="md">
-            {selectedItem.spec.displayName || selectedItem.metadata.name}
-          </Title>
+          <Flex>
+            <FlexItem>
+              <Title headingLevel="h2" size="md">
+                {selectedItem.spec.displayName || selectedItem.metadata.name}
+              </Title>
+            </FlexItem>
+            {selectedItem?.spec.deprecation?.message && (
+              <FlexItem>
+                <CatalogItemDeprecationBadge mode="item" />
+              </FlexItem>
+            )}
+          </Flex>
         )}
       </ModalHeader>
       <ModalBody>
-        {step === 'browse' && (
-          <Stack hasGutter>
-            <StackItem>
-              <Toolbar inset={{ default: 'insetNone' }}>
-                <ToolbarContent>
-                  <ToolbarItem>
-                    <TableTextSearch
-                      value={nameFilter}
-                      setValue={onNameFilterChange}
-                      placeholder={t('Search by name')}
-                    />
-                  </ToolbarItem>
-                  <ToolbarItem>
-                    <FilterSelect
-                      placeholder={t('Filter by type')}
-                      selectedFilters={selectedAppTypes.length}
-                      isFilterUpdating={isUpdating}
-                    >
-                      <SelectList>
-                        <FilterSelectGroup label={t('Application type')}>
-                          {applicationTypeOptions.map((type) => (
-                            <SelectOption
-                              key={type}
-                              value={type}
-                              hasCheckbox
-                              isSelected={selectedAppTypes.includes(type)}
-                              onClick={() => toggleAppType(type)}
-                            >
-                              {getCatalogItemBadge(type, t)}
-                            </SelectOption>
-                          ))}
-                        </FilterSelectGroup>
-                      </SelectList>
-                    </FilterSelect>
-                  </ToolbarItem>
-                  <ToolbarItem variant="pagination" align={{ default: 'alignEnd' }}>
-                    <TablePagination pagination={pagination} isUpdating={isUpdating} />
-                  </ToolbarItem>
-                </ToolbarContent>
-              </Toolbar>
-            </StackItem>
-
-            {hasFilters && (
-              <StackItem>
-                <Flex>
-                  {hasNameFilter && (
-                    <FlexItem>
-                      <LabelGroup categoryName={t('Name')} isClosable onClick={clearNameFilter}>
-                        <Label variant="outline" onClose={clearNameFilter}>
-                          {appliedNameFilter}
-                        </Label>
-                      </LabelGroup>
-                    </FlexItem>
-                  )}
-                  {hasTypeFilter && (
-                    <FlexItem>
-                      <LabelGroup categoryName={t('Application type')} isClosable onClick={clearAppTypes}>
-                        {appliedAppTypes.map((type) => (
-                          <Label variant="outline" key={type} onClose={() => removeAppType(type)}>
-                            {getCatalogItemBadge(type, t)}
-                          </Label>
-                        ))}
-                      </LabelGroup>
-                    </FlexItem>
-                  )}
-                  <FlexItem>
-                    <Button variant="link" isInline onClick={clearAllFilters}>
-                      {t('Clear all filters')}
-                    </Button>
-                  </FlexItem>
-                </Flex>
-              </StackItem>
-            )}
-
-            {error != null && (
-              <StackItem>
-                <Alert variant="danger" title={t('Failed to load catalog items')} isInline />
-              </StackItem>
-            )}
-            {(loading || (isUpdating && !hasCatalogItems)) && (
-              <StackItem>
-                <EmptyState titleText={t('Loading catalog items')} headingLevel="h4" icon={Spinner} />
-              </StackItem>
-            )}
-            {!loading && !isUpdating && !hasCatalogItems && (
-              <StackItem>
-                {hasFilters ? (
-                  <EmptyState headingLevel="h4" icon={SearchIcon} titleText={t('No results found')} variant="full">
-                    <EmptyStateBody>{t('Clear all filters and try again.')}</EmptyStateBody>
-                    <EmptyStateActions>
-                      <Button variant="link" onClick={clearAllFilters}>
-                        {t('Clear all filters')}
-                      </Button>
-                    </EmptyStateActions>
-                  </EmptyState>
-                ) : (
-                  <Alert variant="info" title={t('No catalog items available')} isInline>
-                    {t('No application catalog items are available.')}
-                  </Alert>
-                )}
-              </StackItem>
-            )}
-            {!loading && !isUpdating && hasCatalogItems && (
-              <StackItem>
-                <CatalogItemGallery
-                  catalogItems={catalogItems}
-                  onSelect={(item) => {
-                    setSelectedItem(item);
-                    setStep(Step.SelectApp);
-                  }}
-                />
-              </StackItem>
-            )}
-          </Stack>
+        {step === Step.Browse && (
+          <CatalogBrowseStep
+            onSelect={(item) => {
+              setSelectedItem(item);
+              setStep(Step.SelectApp);
+            }}
+          />
         )}
 
         {step === Step.SelectApp && selectedItem && (
-          <Formik<ConfigureFormValues>
-            enableReinitialize
+          <CatalogSelectAppStep
+            catalogItem={selectedItem}
             initialValues={configureInitialValues}
-            validationSchema={getAppNameValidationSchema(t)}
-            onSubmit={(values) => {
-              const version = selectedItem.spec.versions.find((entry) => entry.version === values.version);
-              if (!version) {
-                return;
-              }
-              const selection = buildSelectionConfirm({
-                catalogItem: selectedItem,
-                version,
-                channel: values.channel,
-              });
-              const goToAdvancedConfig =
-                catalogItemRequiresAdvancedConfig(selectedItem, values.version) || values.wantAdvancedConfig;
-              if (goToAdvancedConfig) {
-                setPendingConfigureValues(values);
-                setPendingSelection(selection);
-                setStep(Step.AddSettings);
-                return;
-              }
-              onConfirm(selection, values.appName);
+            onBack={() => setStep(Step.Browse)}
+            onConfirm={(selection, confirmedAppName) => {
+              onConfirm(selection, confirmedAppName);
               handleClose();
             }}
-          >
-            {({ values, setFieldValue, submitForm, isSubmitting, isValid }) => {
-              const requiresAdditionalInfo = catalogItemRequiresAdvancedConfig(selectedItem, values.version);
-              const goToAdvancedConfig = requiresAdditionalInfo || values.wantAdvancedConfig;
-              const channelVersions = getChannelVersions(selectedItem, values.channel).sort((a, b) =>
-                semver.rcompare(a.version, b.version),
-              );
-              const versionItems = channelVersions.reduce<Record<string, string>>((acc, entry) => {
-                acc[entry.version] = entry.version;
-                return acc;
-              }, {});
-
-              const channels = selectedItem.spec.versions.reduce<Record<string, string>>((acc, entry) => {
-                entry.channels.forEach((channel) => {
-                  acc[channel] = channel;
-                });
-                return acc;
-              }, {});
-
-              return (
-                <>
-                  <FlightCtlForm>
-                    <Stack hasGutter style={{ border: '2px solid lime' }}>
-                      {selectedItem.spec.shortDescription && (
-                        <StackItem>
-                          <Content component={ContentVariants.p}>{selectedItem.spec.shortDescription}</Content>
-                        </StackItem>
-                      )}
-                      <CatalogDefinitionFields requiresAdvancedConfig={requiresAdditionalInfo}>
-                        <StackItem>
-                          <FormGroup label={t('Channel')} fieldId="catalog-channel">
-                            <FormSelect
-                              name="channel"
-                              items={channels}
-                              onChange={(channel) => {
-                                const versions = getChannelVersions(selectedItem, channel).sort((a, b) =>
-                                  semver.rcompare(a.version, b.version),
-                                );
-                                const nextVersion = versions.some((entry) => entry.version === values.version)
-                                  ? values.version
-                                  : versions[0]?.version || '';
-                                if (nextVersion !== values.version) {
-                                  void setFieldValue('version', nextVersion, true);
-                                }
-                              }}
-                            />
-                          </FormGroup>
-                        </StackItem>
-                        <StackItem>
-                          <FormGroup label={t('Version')} fieldId="catalog-version">
-                            <FormSelect name="version" items={versionItems} />
-                          </FormGroup>
-                        </StackItem>
-                      </CatalogDefinitionFields>
-                    </Stack>
-                  </FlightCtlForm>
-                  <ModalFooter>
-                    <Button variant="link" onClick={() => setStep(Step.Browse)}>
-                      {t('Back')}
-                    </Button>
-                    <Button variant="primary" onClick={() => void submitForm()} isDisabled={isSubmitting || !isValid}>
-                      {goToAdvancedConfig ? t('Next') : t('Add to template')}
-                    </Button>
-                  </ModalFooter>
-                </>
-              );
+            onContinueToAdvanced={(values, selection) => {
+              setPendingConfigureValues(values);
+              setPendingSelection(selection);
+              setStep(Step.AddSettings);
             }}
-          </Formik>
+          />
         )}
 
         {step === Step.AddSettings && selectedItem && advancedInitialValues && pendingSelection && (
-          <Formik<DynamicFormConfigFormik>
-            enableReinitialize
+          <CatalogAddSettingsStep
             initialValues={advancedInitialValues}
-            validate={validateAdvancedConfig}
-            onSubmit={(values) => {
+            onBack={() => setStep(Step.SelectApp)}
+            onConfirm={(advancedConfig) => {
               const name = pendingConfigureValues?.appName;
               if (name) {
-                onConfirm(pendingSelection, name, {
-                  configureVia: values.configureVia,
-                  editorContent: values.editorContent,
-                  volumeSelection: values.volumeSelection,
-                  formValues: values.formValues,
-                });
+                onConfirm(pendingSelection, name, advancedConfig);
                 handleClose();
               }
             }}
-          >
-            {({ submitForm, isSubmitting, isValid, values, errors }) => (
-              <>
-                <FlightCtlForm>
-                  <CatalogAdvancedConfigStep schemaErrors={advancedSchemaErrors} />
-                </FlightCtlForm>
-                <ModalFooter>
-                  <Button
-                    variant="link"
-                    onClick={() => {
-                      setAdvancedSchemaErrors(undefined);
-                      setStep(Step.SelectApp);
-                    }}
-                  >
-                    {t('Back')}
-                  </Button>
-                  <Button
-                    variant="primary"
-                    onClick={() => void submitForm()}
-                    isDisabled={isSubmitting || !isValid || !isAppConfigStepValid(values, errors)}
-                  >
-                    {t('Add to template')}
-                  </Button>
-                </ModalFooter>
-              </>
-            )}
-          </Formik>
+          />
         )}
       </ModalBody>
-      {step === 'browse' && (
+      {step === Step.Browse && (
         <ModalFooter>
           <Button variant="link" onClick={handleClose}>
             {t('Cancel')}

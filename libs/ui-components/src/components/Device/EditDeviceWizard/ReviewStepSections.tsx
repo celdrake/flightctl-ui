@@ -18,7 +18,7 @@ import {
 import {
   type ApplicationEntry,
   type DeviceSpecConfigFormValues,
-  EditDeviceFormValues,
+  type EditDeviceFormValues,
   type ManualAppForm,
   UpdateMode,
   isCatalogAppEntry,
@@ -32,7 +32,7 @@ import { useSystemImage } from './useSystemImage';
 import { ReviewUpdatePolicy } from './steps/ReviewUpdatePolicy';
 import LabelsView from '../../common/LabelsView';
 import { toAPILabel } from '../../../utils/labels';
-import { FlightCtlLabel } from '../../../types/extraTypes';
+import type { FlightCtlLabel } from '../../../types/extraTypes';
 
 // CELIA-WIP: Visual parity without ported CSS — review card title weight and spacing may differ from design.
 export const ReviewCard = ({ title, children }: React.PropsWithChildren<{ title: string }>) => (

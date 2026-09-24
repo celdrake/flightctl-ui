@@ -9,11 +9,11 @@ import {
   StackItem,
 } from '@patternfly/react-core';
 
-import {
+import type {
   DeltaGenerationForm,
+  DisruptionBudgetForm,
   UpdatePolicyForm,
-  type DisruptionBudgetForm,
-  type RolloutPolicyForm,
+  RolloutPolicyForm,
 } from '../../../../types/deviceSpec';
 
 import { useTranslation } from '../../../../hooks/useTranslation';

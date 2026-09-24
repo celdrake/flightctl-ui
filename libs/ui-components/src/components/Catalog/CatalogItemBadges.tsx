@@ -53,10 +53,10 @@ export const CatalogItemTypeBadge = ({
   );
 };
 
-export const CatalogItemDeprecationBadge = () => {
+export const CatalogItemDeprecationBadge = ({ mode }: { mode: 'item' | 'version' }) => {
   const { t } = useTranslation();
   return (
-    <WithTooltip showTooltip content={t('This item is deprecated')}>
+    <WithTooltip showTooltip content={mode === 'item' ? t('This item is deprecated') : t('This version is deprecated')}>
       <Icon status="warning" size="sm">
         <ExclamationTriangleIcon />
       </Icon>
@@ -126,7 +126,7 @@ const CatalogItemViewBadges = ({
       )}
       {itemSpec?.deprecation && (
         <FlexItem>
-          <CatalogItemDeprecationBadge />
+          <CatalogItemDeprecationBadge mode="item" />
         </FlexItem>
       )}
     </Flex>

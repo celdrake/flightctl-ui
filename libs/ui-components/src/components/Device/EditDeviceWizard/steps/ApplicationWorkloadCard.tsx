@@ -10,12 +10,11 @@ import WithTooltip from '../../../common/WithTooltip';
 type ApplicationWorkloadCardProps = {
   title: string;
   isExpanded: boolean;
-  onToggle: () => void;
+  onToggle: VoidFunction;
   headerActions?: React.ReactNode;
   leadingContent?: React.ReactNode;
   hasError?: boolean;
   errorLabel?: string;
-  children: React.ReactNode;
 };
 
 const ApplicationWorkloadCard = ({
@@ -27,7 +26,7 @@ const ApplicationWorkloadCard = ({
   hasError,
   errorLabel,
   children,
-}: ApplicationWorkloadCardProps) => {
+}: React.PropsWithChildren<ApplicationWorkloadCardProps>) => {
   const { t } = useTranslation();
 
   return (

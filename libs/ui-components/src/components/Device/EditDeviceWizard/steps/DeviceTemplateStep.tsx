@@ -103,6 +103,45 @@ const MicroShiftCheckbox = ({ isFleet, isReadOnly }: { isFleet: boolean; isReadO
   );
 };
 
+const DeviceTemplateAlerts = ({
+  isReadOnly,
+  isFleet,
+  isEdit,
+}: {
+  isReadOnly?: boolean;
+  isFleet: boolean;
+  isEdit: boolean;
+}) => {
+  const { t } = useTranslation();
+  return (
+    <Stack hasGutter>
+      {isReadOnly ? (
+        <StackItem>
+          <Alert isInline variant="info" title={t('Template is read-only')}>
+            {isFleet
+              ? t('This fleet template is read-only. Catalog references and update availability are shown for review.')
+              : t(
+                  'This device template is read-only. Catalog references and update availability are shown for review.',
+                )}
+          </Alert>
+        </StackItem>
+      ) : isEdit ? (
+        <StackItem>
+          <Alert isInline variant="info" title={t('Catalog version updates')}>
+            {isFleet
+              ? t(
+                  'To update a catalog OS or application version, use the Catalog tab on this fleet. This page is for adding, removing, and configuring workloads.',
+                )
+              : t(
+                  'To update a catalog OS or application version, use the Catalog tab on this device. This page is for adding, removing, and configuring workloads.',
+                )}
+          </Alert>
+        </StackItem>
+      ) : null}
+    </Stack>
+  );
+};
+
 const DeviceTemplateStep = ({
   isFleet,
   isReadOnly,
@@ -120,13 +159,7 @@ const DeviceTemplateStep = ({
 
   return (
     <FlightCtlForm>
-      {isReadOnly && (
-        <Alert isInline variant="info" title={t('Template is read-only')}>
-          {isFleet
-            ? t('This fleet template is read-only. Catalog references and update availability are shown for review.')
-            : t('This device template is read-only. Catalog references and update availability are shown for review.')}
-        </Alert>
-      )}
+      <DeviceTemplateAlerts isReadOnly={isReadOnly} isFleet={isFleet} isEdit={isEdit} />
       {isFleet && !isReadOnly && (
         <Alert isInline variant="info" title={t('Using template variables')} isExpandable>
           <Trans t={t}>

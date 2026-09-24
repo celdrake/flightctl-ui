@@ -12,24 +12,23 @@ import {
   Stack,
   StackItem,
 } from '@patternfly/react-core';
-import type { CatalogItemRefSpec } from '@flightctl/types';
 import { PencilAltIcon } from '@patternfly/react-icons/dist/js/icons/pencil-alt-icon';
+import AngleDownIcon from '@patternfly/react-icons/dist/js/icons/angle-down-icon';
+import AngleRightIcon from '@patternfly/react-icons/dist/js/icons/angle-right-icon';
 
+import type { CatalogItemRefSpec } from '@flightctl/types';
 import type { CatalogItem } from '@flightctl/types/alpha';
 import { useTranslation } from '../../hooks/useTranslation';
 import { getCatalogRefDisplayName, getUpdates } from '../../utils/catalog';
 import { useResolvedCatalogRef } from '../Catalog/useResolvedCatalogRef';
 import CatalogRefCardDetails from './CatalogRefCardDetails';
 import CatalogItemIcon from '../Catalog/CatalogItemIcon';
-import CatalogItemViewBadges from '../Catalog/CatalogItemBadges';
-import AngleDownIcon from '@patternfly/react-icons/dist/js/icons/angle-down-icon';
-import AngleRightIcon from '@patternfly/react-icons/dist/js/icons/angle-right-icon';
+import CatalogItemViewBadges, { CatalogItemDeprecationBadge } from '../Catalog/CatalogItemBadges';
 
 type CatalogRefCardProps = {
   catalogItemRef: CatalogItemRefSpec;
   headerTitle?: string;
   showUpdateStatus: boolean;
-  // CELIA-WIP REVIEW
   onEdit?: VoidFunction;
 };
 
@@ -74,6 +73,8 @@ const CatalogRefCard = ({ catalogItemRef, headerTitle, showUpdateStatus, onEdit 
     showUpdateStatus && item && version && channel && getUpdates(item, channel, version.version).length > 0,
   );
 
+  const isDeprecated = version?.deprecation?.message;
+
   return (
     <Card isCompact>
       <CardBody>
@@ -104,6 +105,11 @@ const CatalogRefCard = ({ catalogItemRef, headerTitle, showUpdateStatus, onEdit 
               <FlexItem shrink={{ default: 'shrink' }}>
                 <Flex alignItems={{ default: 'alignItemsCenter' }} gap={{ default: 'gapSm' }}>
                   <CatalogItemViewBadges itemSpec={item?.spec} hasUpdates={hasUpdates} />
+                  {isDeprecated && (
+                    <FlexItem>
+                      <CatalogItemDeprecationBadge mode="version" />
+                    </FlexItem>
+                  )}
                   {onEdit && (
                     <FlexItem>
                       <Button variant="plain" icon={<PencilAltIcon />} onClick={onEdit} aria-label={t('Edit')} />

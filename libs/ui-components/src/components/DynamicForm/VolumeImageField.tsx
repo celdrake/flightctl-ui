@@ -24,6 +24,7 @@ import { Formik } from 'formik';
 import { SearchIcon } from '@patternfly/react-icons/dist/js/icons/search-icon';
 import { CubeIcon } from '@patternfly/react-icons/dist/js/icons/cube-icon';
 import { MinusCircleIcon } from '@patternfly/react-icons/dist/js/icons/minus-circle-icon';
+import { CatalogIcon } from '@patternfly/react-icons/dist/js/icons/catalog-icon';
 import type { FieldProps } from '@rjsf/utils';
 
 import {
@@ -51,11 +52,11 @@ import { buildCatalogItemRef, formatCatalogItemRef } from '../../utils/catalog';
 import ResourceListEmptyState from '../common/ResourceListEmptyState';
 import FlightCtlModal from '../common/FlightCtlModal';
 import { InstallSpec } from '../Catalog/InstallWizard/steps/SpecificationsStep';
-import CatalogItemTitle from '../Catalog/CatalogItemTitle';
 import { type InstallSpecFormik } from '../Catalog/InstallWizard/types';
 import { useCatalogItems } from '../Catalog/useCatalogItems';
 import { useResolvedCatalogRef } from '../Catalog/useResolvedCatalogRef';
 import CatalogItemGallery from '../Catalog/CatalogItemGallery';
+import CatalogRefCard from '../CatalogRef/CatalogRefCard';
 
 /**
  * Regex for volume image reference field IDs.
@@ -323,7 +324,11 @@ const VolumeImageField = ({ idSchema, formData, onChange, rawErrors, formContext
         <Split hasGutter>
           <SplitItem isFilled>
             {catalogItem ? (
-              <CatalogItemTitle item={catalogItem} channel={catalogRef.channel || ''} version={catalogRef.version} />
+              <CatalogRefCard
+                catalogItemRef={catalogRef}
+                headerTitle={catalogItem?.spec.displayName || catalogItem?.metadata.name || ''}
+                showUpdateStatus={false}
+              />
             ) : (
               t('Catalog item {{ catalogItemRef }}', {
                 catalogItemRef: formatCatalogItemRef(catalogRef),
@@ -359,8 +364,13 @@ const VolumeImageField = ({ idSchema, formData, onChange, rawErrors, formContext
           </SplitItem>
           {canListCatalogItems && (
             <SplitItem>
-              <Button variant="secondary" onClick={() => setIsModalOpen(true)} isDisabled={disabled || readonly}>
-                {t('Choose from catalog')}
+              <Button
+                variant="secondary"
+                icon={<CatalogIcon />}
+                onClick={() => setIsModalOpen(true)}
+                isDisabled={disabled || readonly}
+              >
+                {t('Add from software catalog')}
               </Button>
             </SplitItem>
           )}

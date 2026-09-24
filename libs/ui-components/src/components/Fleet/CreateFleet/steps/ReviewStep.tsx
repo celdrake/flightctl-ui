@@ -12,7 +12,7 @@ import {
 import { useFormikContext } from 'formik';
 
 import { useTranslation } from '../../../../hooks/useTranslation';
-import { FleetFormValues } from '../../../../types/deviceSpec';
+import type { FleetFormValues } from '../../../../types/deviceSpec';
 import { getErrorMessage } from '../../../../utils/error';
 import {
   ApplicationWorkloadsReviewCard,
@@ -20,8 +20,8 @@ import {
   DeviceSpecUpdatesReviewCard,
   ReviewCard,
   ReviewLabelSection,
-  SystemdUnitsReviewCard,
   SystemImageReviewCard,
+  SystemdUnitsReviewCard,
 } from '../../../Device/EditDeviceWizard/ReviewStepSections';
 import {
   ReviewDeltaGeneration,

@@ -1,4 +1,5 @@
 import * as Yup from 'yup';
+import semver from 'semver';
 import { load } from 'js-yaml';
 import validator from '@rjsf/validator-ajv8';
 import type { RJSFSchema, RJSFValidationError } from '@rjsf/utils';
@@ -160,8 +161,10 @@ export const getDefaultChannel = (catalogItem: CatalogItem): string => {
   return [...channels][0] || 'stable';
 };
 
-export const getChannelVersions = (catalogItem: CatalogItem, channel: string): CatalogItemVersion[] =>
-  catalogItem.spec.versions.filter((version) => version.channels.includes(channel));
+export const getSortedChannelVersions = (catalogItem: CatalogItem, channel: string): CatalogItemVersion[] =>
+  catalogItem.spec.versions
+    .filter((version) => version.channels.includes(channel))
+    .sort((a, b) => semver.rcompare(a.version, b.version));
 
 const toCatalogAppForm = (apiApp: ApplicationProviderSpec, catalogItemRef: CatalogItemRefSpec): CatalogAppForm => ({
   catalogItemRef,

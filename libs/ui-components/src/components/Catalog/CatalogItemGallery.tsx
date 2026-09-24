@@ -55,7 +55,7 @@ const CatalogItemCard = ({ catalogItem, onSelect }: { catalogItem: CatalogItem; 
               </FlexItem>
               {spec.deprecation && (
                 <FlexItem>
-                  <CatalogItemDeprecationBadge />
+                  <CatalogItemDeprecationBadge mode="item" />
                 </FlexItem>
               )}
             </Flex>

@@ -11,15 +11,15 @@ import {
 } from '@patternfly/react-core';
 import { useFormikContext } from 'formik';
 import { useTranslation } from '../../../../hooks/useTranslation';
-import { EditDeviceFormValues } from '../../../../types/deviceSpec';
+import type { EditDeviceFormValues } from '../../../../types/deviceSpec';
 import {
   ApplicationWorkloadsReviewCard,
   ConfigurationsReviewCard,
   DeviceSpecUpdatesReviewCard,
   ReviewCard,
   ReviewLabelSection,
-  SystemdUnitsReviewCard,
   SystemImageReviewCard,
+  SystemdUnitsReviewCard,
 } from '../ReviewStepSections';
 import { getErrorMessage } from '../../../../utils/error';
 
