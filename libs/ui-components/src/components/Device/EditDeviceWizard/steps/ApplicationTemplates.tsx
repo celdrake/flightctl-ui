@@ -253,6 +253,10 @@ const ApplicationTemplates = ({ isReadOnly, isEdit = false }: { isReadOnly?: boo
   const { values } = useFormikContext<DeviceSpecConfigFormValues>();
   const [appIndexToDelete, setAppIndexToDelete] = React.useState<number | undefined>(undefined);
   const [isCatalogSelectOpen, setIsCatalogSelectOpen] = React.useState(false);
+  const existingAppNames = React.useMemo(
+    () => values.applications.map((app) => app.app.name || '').filter(Boolean),
+    [values.applications],
+  );
 
   if (isReadOnly && values.applications.length === 0) {
     return null;
@@ -360,6 +364,7 @@ const ApplicationTemplates = ({ isReadOnly, isEdit = false }: { isReadOnly?: boo
                     // Unsupported catalog item types are filtered in the modal; ignore unexpected failures.
                   }
                 }}
+                existingAppNames={existingAppNames}
               />
             )}
           </>
