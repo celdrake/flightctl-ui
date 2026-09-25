@@ -18,7 +18,7 @@ import {
   ToolbarContent,
   ToolbarItem,
 } from '@patternfly/react-core';
-import { type CatalogItem, CatalogItemType } from '@flightctl/types/alpha';
+import { type CatalogItem, CatalogItemCategory, CatalogItemType } from '@flightctl/types/alpha';
 import { SearchIcon } from '@patternfly/react-icons/dist/js/icons/search-icon';
 
 import { useTranslation } from '../../hooks/useTranslation';
@@ -30,7 +30,6 @@ import { getCatalogItemBadge } from '../Catalog/CatalogItemBadges';
 import CatalogItemGallery from '../Catalog/CatalogItemGallery';
 
 const applicationTypeOptions = appTypeIds.filter((type) => type !== CatalogItemType.CatalogItemTypeData);
-const osTypeOptions = [CatalogItemType.CatalogItemTypeOS];
 
 export type BrowseMode = 'apps' | 'os';
 
@@ -39,12 +38,44 @@ export type CatalogBrowseStepProps = {
   onSelect: (item: CatalogItem) => void;
 };
 
+type AppTypeFiltersProps = {
+  selectedAppTypes: CatalogItemType[];
+  onSelectAppType: (type: CatalogItemType) => void;
+  isUpdating: boolean;
+};
+
+const AppTypeFilters = ({ selectedAppTypes, onSelectAppType, isUpdating }: AppTypeFiltersProps) => {
+  const { t } = useTranslation();
+  return (
+    <ToolbarItem>
+      <FilterSelect
+        placeholder={t('Filter by type')}
+        selectedFilters={selectedAppTypes.length}
+        isFilterUpdating={isUpdating}
+      >
+        <SelectList>
+          <FilterSelectGroup label={t('Application type')}>
+            {applicationTypeOptions.map((type) => (
+              <SelectOption
+                key={type}
+                value={type}
+                hasCheckbox
+                isSelected={selectedAppTypes.includes(type)}
+                onClick={() => onSelectAppType(type)}
+              >
+                {getCatalogItemBadge(type, t)}
+              </SelectOption>
+            ))}
+          </FilterSelectGroup>
+        </SelectList>
+      </FilterSelect>
+    </ToolbarItem>
+  );
+};
+
 const CatalogBrowseStep = ({ mode, onSelect }: CatalogBrowseStepProps) => {
   const { t } = useTranslation();
-  const showTypeFilter = mode === 'apps';
-  const defaultItemTypes = mode === 'apps' ? applicationTypeOptions : osTypeOptions;
-  const emptyStateMessage =
-    mode === 'apps' ? t('No application catalog items are available.') : t('No OS catalog items are available.');
+  const isAppsMode = mode === 'apps';
 
   const [nameFilter, setNameFilter] = React.useState('');
   const [selectedAppTypes, setSelectedAppTypes] = React.useState<CatalogItemType[]>([]);
@@ -52,16 +83,19 @@ const CatalogBrowseStep = ({ mode, onSelect }: CatalogBrowseStepProps) => {
   const [appliedNameFilter, setAppliedNameFilter] = React.useState('');
   const [appliedAppTypes, setAppliedAppTypes] = React.useState<CatalogItemType[]>([]);
 
-  const itemTypeFilter = React.useMemo(() => {
-    if (!showTypeFilter) {
-      return defaultItemTypes;
+  const typeFilter = React.useMemo(() => {
+    if (!isAppsMode) {
+      return { category: CatalogItemCategory.CatalogItemCategorySystem };
     }
-    return selectedAppTypes.length === 0 ? defaultItemTypes : selectedAppTypes;
-  }, [showTypeFilter, defaultItemTypes, selectedAppTypes]);
+    if (selectedAppTypes.length === 0) {
+      return { category: CatalogItemCategory.CatalogItemCategoryApplication };
+    }
+    return { itemTypes: selectedAppTypes };
+  }, [isAppsMode, selectedAppTypes]);
 
   const [catalogItems, loading, error, pagination, isUpdating] = useCatalogItems({
     catalogFilter: {
-      itemType: itemTypeFilter,
+      typeFilter,
       nameFilter: nameFilter || undefined,
     },
   });
@@ -110,91 +144,75 @@ const CatalogBrowseStep = ({ mode, onSelect }: CatalogBrowseStepProps) => {
     }
   };
 
-  const hasNameFilter = Boolean(appliedNameFilter.trim());
-  const hasTypeFilter = showTypeFilter && appliedAppTypes.length > 0;
-  const hasFilters = hasNameFilter || hasTypeFilter;
+  const hasTypeFilter = isAppsMode && appliedAppTypes.length > 0;
+  const hasFilters = Boolean(appliedNameFilter || hasTypeFilter);
   const hasCatalogItems = catalogItems.length > 0;
 
   return (
-    <Stack hasGutter>
+    <Stack>
       <StackItem>
         <Toolbar inset={{ default: 'insetNone' }}>
           <ToolbarContent>
             <ToolbarItem>
               <TableTextSearch value={nameFilter} setValue={onNameFilterChange} placeholder={t('Search by name')} />
             </ToolbarItem>
-            {showTypeFilter && (
-              <ToolbarItem>
-                <FilterSelect
-                  placeholder={t('Filter by type')}
-                  selectedFilters={selectedAppTypes.length}
-                  isFilterUpdating={isUpdating}
-                >
-                  <SelectList>
-                    <FilterSelectGroup label={t('Application type')}>
-                      {applicationTypeOptions.map((type) => (
-                        <SelectOption
-                          key={type}
-                          value={type}
-                          hasCheckbox
-                          isSelected={selectedAppTypes.includes(type)}
-                          onClick={() => toggleAppType(type)}
-                        >
-                          {getCatalogItemBadge(type, t)}
-                        </SelectOption>
-                      ))}
-                    </FilterSelectGroup>
-                  </SelectList>
-                </FilterSelect>
-              </ToolbarItem>
+            {isAppsMode && (
+              <AppTypeFilters
+                selectedAppTypes={selectedAppTypes}
+                onSelectAppType={toggleAppType}
+                isUpdating={isUpdating}
+              />
             )}
             <ToolbarItem variant="pagination" align={{ default: 'alignEnd' }}>
               <TablePagination pagination={pagination} isUpdating={isUpdating} />
             </ToolbarItem>
           </ToolbarContent>
+          {hasFilters && (
+            <ToolbarItem className="pf-v6-u-mb-md" style={{ border: '2px solid lime' }}>
+              <Flex>
+                {appliedNameFilter && (
+                  <FlexItem>
+                    <LabelGroup categoryName={t('Name')} isClosable onClick={clearNameFilter}>
+                      <Label variant="outline" onClose={clearNameFilter}>
+                        {appliedNameFilter}
+                      </Label>
+                    </LabelGroup>
+                  </FlexItem>
+                )}
+                {hasTypeFilter && (
+                  <FlexItem>
+                    <LabelGroup categoryName={t('Application type')} isClosable onClick={clearAppTypes}>
+                      {appliedAppTypes.map((type) => (
+                        <Label variant="outline" key={type} onClose={() => removeAppType(type)}>
+                          {getCatalogItemBadge(type, t)}
+                        </Label>
+                      ))}
+                    </LabelGroup>
+                  </FlexItem>
+                )}
+                <FlexItem>
+                  <Button variant="link" isInline onClick={clearAllFilters}>
+                    {t('Clear all filters')}
+                  </Button>
+                </FlexItem>
+              </Flex>
+            </ToolbarItem>
+          )}
         </Toolbar>
       </StackItem>
-
-      {hasFilters && (
-        <StackItem>
-          <Flex>
-            {hasNameFilter && (
-              <FlexItem>
-                <LabelGroup categoryName={t('Name')} isClosable onClick={clearNameFilter}>
-                  <Label variant="outline" onClose={clearNameFilter}>
-                    {appliedNameFilter}
-                  </Label>
-                </LabelGroup>
-              </FlexItem>
-            )}
-            {hasTypeFilter && (
-              <FlexItem>
-                <LabelGroup categoryName={t('Application type')} isClosable onClick={clearAppTypes}>
-                  {appliedAppTypes.map((type) => (
-                    <Label variant="outline" key={type} onClose={() => removeAppType(type)}>
-                      {getCatalogItemBadge(type, t)}
-                    </Label>
-                  ))}
-                </LabelGroup>
-              </FlexItem>
-            )}
-            <FlexItem>
-              <Button variant="link" isInline onClick={clearAllFilters}>
-                {t('Clear all filters')}
-              </Button>
-            </FlexItem>
-          </Flex>
-        </StackItem>
-      )}
 
       {error != null && (
         <StackItem>
           <Alert variant="danger" title={t('Failed to load catalog items')} isInline />
         </StackItem>
       )}
-      {(loading || (isUpdating && !hasCatalogItems)) && (
-        <StackItem>
-          <EmptyState titleText={t('Loading catalog items')} headingLevel="h4" icon={Spinner} />
+      {(loading || isUpdating) && (
+        <StackItem style={{ height: '400px', border: '1px solid red' }}>
+          <EmptyState
+            titleText={isAppsMode ? t('Searching applications') : t('Searching operating systems')}
+            headingLevel="h4"
+            icon={Spinner}
+          />
         </StackItem>
       )}
       {!loading && !isUpdating && !hasCatalogItems && (
@@ -209,8 +227,8 @@ const CatalogBrowseStep = ({ mode, onSelect }: CatalogBrowseStepProps) => {
               </EmptyStateActions>
             </EmptyState>
           ) : (
-            <Alert variant="info" title={t('No catalog items available')} isInline>
-              {emptyStateMessage}
+            <Alert variant="info" title={t('No items available')} isInline>
+              {t('No catalog items are available in this category')}
             </Alert>
           )}
         </StackItem>

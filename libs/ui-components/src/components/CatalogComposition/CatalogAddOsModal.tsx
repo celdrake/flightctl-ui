@@ -4,11 +4,7 @@ import type { CatalogItem } from '@flightctl/types/alpha';
 
 import { useTranslation } from '../../hooks/useTranslation';
 import FlightCtlModal from '../common/FlightCtlModal';
-import {
-  type CatalogSelectionConfirm,
-  getDefaultChannel,
-  getSortedChannelVersions,
-} from './catalogCompositionUtils';
+import { type CatalogSelectionConfirm, getDefaultChannel, getSortedChannelVersions } from './catalogCompositionUtils';
 import CatalogBrowseStep from './CatalogBrowseStep';
 import CatalogAddOsStep, { type OsConfigureFormValues } from './CatalogAddOsStep';
 import { CatalogItemDeprecationBadge } from '../Catalog/CatalogItemBadges';

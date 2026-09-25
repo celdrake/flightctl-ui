@@ -87,7 +87,9 @@ const SelectAssetModal = ({ onClose, onSelect }: SelectAssetModalProps) => {
   const { t } = useTranslation();
   const [assetCatalogItems, isLoading, error, pagination, isUpdating] = useCatalogItems({
     catalogFilter: {
-      itemType: assetItemTypeFilter,
+      typeFilter: {
+        itemTypes: assetItemTypeFilter,
+      },
       nameFilter,
     },
   });
@@ -277,17 +279,28 @@ const INVALID_EMPTY_IMAGE_REFERENCE = undefined;
 
 /**
  * Custom field for the volume image "reference" property.
- * Renders a text input plus "Choose from catalog" for Asset selection.
+ * Allows to either type in an OCI reference or select a catalog item, depending on the schema.
  * Used only when the field ID matches root_volumes_N_image_reference.
  * Catalog selections are tracked via "volumeSelection" and persisted as catalogItemRef on submit.
  */
-const VolumeImageField = ({ idSchema, formData, onChange, rawErrors, formContext, disabled, readonly }: FieldProps) => {
+const VolumeImageField = ({
+  idSchema,
+  formData,
+  onChange,
+  rawErrors,
+  formContext,
+  disabled,
+  readonly,
+  required,
+}: FieldProps) => {
   const { t } = useTranslation();
   const { checkPermissions } = usePermissionsContext();
   const [canListCatalogItems] = checkPermissions(catalogItemListPermission);
   const { onVolumeSelected, volumeSelection, onVolumeCleared } = formContext as DynamicFormContext;
   const imageReference = typeof formData === 'string' ? formData : '';
   const volumeIndex = getVolumeIndexFromId(idSchema.$id);
+  // When the "reference" field is required, the user cannot select a catalog item as it wouldn't satisfy the schema.
+  const canSelectFromCatalog = canListCatalogItems && !required;
 
   const [isModalOpen, setIsModalOpen] = React.useState(false);
 
@@ -360,10 +373,12 @@ const VolumeImageField = ({ idSchema, formData, onChange, rawErrors, formContext
               isDisabled={disabled}
               readOnlyVariant={readonly ? 'default' : undefined}
               validated={hasErrors ? 'error' : 'default'}
-              placeholder={t('Enter image reference or choose from catalog')}
+              placeholder={
+                canSelectFromCatalog ? t('Enter image reference or choose from catalog') : t('Enter image reference')
+              }
             />
           </SplitItem>
-          {canListCatalogItems && (
+          {canSelectFromCatalog && (
             <SplitItem>
               <Button
                 variant="secondary"
