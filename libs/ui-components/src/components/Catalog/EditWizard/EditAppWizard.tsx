@@ -19,7 +19,7 @@ import UpdateStep, { isUpdateStepValid } from './steps/UpdateStep';
 import ReviewStep from './steps/ReviewStep';
 import LeaveFormConfirmation from '../../common/LeaveFormConfirmation';
 import { validApplicationAndVolumeName } from '../../form/validations';
-import { catalogItemRequiresAdvancedConfig } from '../../CatalogComposition/catalogCompositionUtils';
+import { isAdvancedConfigRequired } from '../../CatalogComposition/catalogCompositionUtils';
 
 const versionStepId = 'version-step';
 const configStepId = 'config-step';
@@ -81,7 +81,8 @@ const WizardContent = ({
 
   const { values, errors } = useFormikContext<AppUpdateFormik>();
 
-  const requiresAdvancedConfig = catalogItemRequiresAdvancedConfig(catalogItem, values.version, appSpec);
+  const isVersionStep = !currentStep || currentStep?.id === versionStepId;
+  const requiresAdvancedConfig = isVersionStep ? isAdvancedConfigRequired(catalogItem, values.version, appSpec) : false;
   const showConfigStep = requiresAdvancedConfig || values.wantAdvancedConfig;
   const orderedIds = getOrderedIds(showConfigStep);
   const validStepIds = getValidStepIds(errors, values, showConfigStep);
@@ -106,7 +107,7 @@ const WizardContent = ({
         }}
       >
         <WizardStep name={t('Version')} id={versionStepId}>
-          {(!currentStep || currentStep?.id === versionStepId) && (
+          {isVersionStep && (
             <UpdateStep
               mode={mode}
               catalogItem={catalogItem}

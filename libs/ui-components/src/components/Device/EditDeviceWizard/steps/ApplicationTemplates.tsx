@@ -12,7 +12,7 @@ import {
   Stack,
   StackItem,
 } from '@patternfly/react-core';
-import { FieldArray, FormikErrors, useField, useFormikContext } from 'formik';
+import { FieldArray, useField, useFormikContext } from 'formik';
 import { MinusCircleIcon } from '@patternfly/react-icons/dist/js/icons/minus-circle-icon';
 import { PlusCircleIcon } from '@patternfly/react-icons/dist/js/icons/plus-circle-icon';
 import CatalogIcon from '@patternfly/react-icons/dist/js/icons/catalog-icon';
@@ -20,7 +20,6 @@ import CatalogIcon from '@patternfly/react-icons/dist/js/icons/catalog-icon';
 import { AppType } from '@flightctl/types';
 import {
   AppSpecType,
-  ApplicationEntry,
   type CatalogAppForm,
   type DeviceSpecConfigFormValues,
   type ManualAppForm,
@@ -44,7 +43,7 @@ import ApplicationVariablesForm from './ApplicationVariablesForm';
 import ApplicationIntegritySettings from './ApplicationIntegritySettings';
 import CatalogRefCard from '../../../CatalogRef/CatalogRefCard';
 import ApplicationWorkloadCard from './ApplicationWorkloadCard';
-import CatalogSelectAppModal from '../../../CatalogComposition/CatalogSelectAppModal';
+import CatalogAddAppModal from '../../../CatalogComposition/CatalogAddAppModal';
 import CatalogEditAppModal from '../../../CatalogComposition/CatalogEditAppModal';
 import {
   createCatalogAppEntry,
@@ -348,7 +347,7 @@ const ApplicationTemplates = ({ isReadOnly, isEdit = false }: { isReadOnly?: boo
             )}
 
             {isCatalogSelectOpen && (
-              <CatalogSelectAppModal
+              <CatalogAddAppModal
                 onClose={() => setIsCatalogSelectOpen(false)}
                 onConfirm={(selection, appName, advancedConfig) => {
                   try {

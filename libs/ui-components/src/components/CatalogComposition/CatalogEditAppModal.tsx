@@ -21,8 +21,8 @@ import FlightCtlModal from '../common/FlightCtlModal';
 import FlightCtlForm from '../form/FlightCtlForm';
 import {
   type CatalogAdvancedConfigValues,
-  catalogItemRequiresAdvancedConfig,
   getAppNameValidationSchema,
+  isAdvancedConfigRequired,
   renameCatalogAppForm,
   updateCatalogAppFormConfig,
   validateCatalogAdvancedConfig,
@@ -58,11 +58,13 @@ const CatalogEditAppModal = ({ catalogItem, appForm, onClose, onSave }: CatalogE
 
   const isUpdateNameStep = step === Step.UpdateName;
 
-  const requiresAdvancedConfig = catalogItemRequiresAdvancedConfig(
-    catalogItem,
-    appForm.catalogItemRef.version,
-    appForm.apiApp,
-  );
+  const requiresAdvancedConfig = React.useMemo(() => {
+    // This check is only necessary in the first step.
+    if (!isUpdateNameStep) {
+      return false;
+    }
+    return isAdvancedConfigRequired(catalogItem, appForm.catalogItemRef.version, appForm.apiApp);
+  }, [isUpdateNameStep, catalogItem, appForm.catalogItemRef.version, appForm.apiApp]);
 
   const initialValues = React.useMemo<EditAppFormValues>(
     () => ({

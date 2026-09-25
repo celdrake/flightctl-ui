@@ -141,8 +141,9 @@ const TypeConfigStep = ({ isEdit, isReadOnly }: { isEdit?: boolean; isReadOnly?:
                       {!isReadOnly && (
                         <SplitItem>
                           <Button
-                            aria-label={t('Remove artifact')}
+                            aria-label={t('Delete artifact')}
                             variant="link"
+                            isDanger
                             icon={<MinusCircleIcon />}
                             iconPosition="start"
                             onClick={() => arrayHelpers.remove(index)}

@@ -84,6 +84,7 @@ const ApplicationHelmForm = ({ index, isReadOnly }: { index: number; isReadOnly?
                       <Button
                         aria-label={t('Delete values file')}
                         variant="link"
+                        isDanger
                         icon={<MinusCircleIcon />}
                         iconPosition="end"
                         onClick={() => arrayHelpers.remove(fileIndex)}

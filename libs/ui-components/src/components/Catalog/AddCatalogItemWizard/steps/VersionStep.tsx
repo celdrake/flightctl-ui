@@ -209,8 +209,9 @@ const VersionStep = ({ isReadOnly, isEdit }: { isReadOnly?: boolean; isEdit: boo
                     {!isReadOnly && (
                       <SplitItem>
                         <Button
-                          aria-label={t('Remove version')}
+                          aria-label={t('Delete version')}
                           variant="link"
+                          isDanger
                           icon={<MinusCircleIcon />}
                           iconPosition="start"
                           onClick={() => arrayHelpers.remove(index)}

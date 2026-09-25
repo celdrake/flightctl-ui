@@ -339,6 +339,7 @@ const VolumeImageField = ({ idSchema, formData, onChange, rawErrors, formContext
             <Button
               aria-label={t('Delete item')}
               variant="link"
+              isDanger
               icon={<MinusCircleIcon />}
               iconPosition="start"
               isDisabled={disabled || readonly}

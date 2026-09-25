@@ -16,18 +16,18 @@ import {
 import { PencilAltIcon } from '@patternfly/react-icons/dist/js/icons/pencil-alt-icon';
 import AngleDownIcon from '@patternfly/react-icons/dist/js/icons/angle-down-icon';
 import AngleRightIcon from '@patternfly/react-icons/dist/js/icons/angle-right-icon';
-import ExclamationCircleIcon from '@patternfly/react-icons/dist/esm/icons/exclamation-circle-icon';
+import ExclamationCircleIcon from '@patternfly/react-icons/dist/js/icons/exclamation-circle-icon';
 
 import type { CatalogItemRefSpec } from '@flightctl/types';
 import type { CatalogItem } from '@flightctl/types/alpha';
 import { useTranslation } from '../../hooks/useTranslation';
 import { getCatalogRefDisplayName, getUpdates } from '../../utils/catalog';
+import type { CatalogAppForm } from '../../types/deviceSpec';
+import WithTooltip from '../common/WithTooltip';
 import { useResolvedCatalogRef } from '../Catalog/useResolvedCatalogRef';
 import CatalogRefCardDetails from './CatalogRefCardDetails';
 import CatalogItemIcon from '../Catalog/CatalogItemIcon';
 import CatalogItemViewBadges, { CatalogItemDeprecationBadge } from '../Catalog/CatalogItemBadges';
-import WithTooltip from '../common/WithTooltip';
-import { CatalogAppForm } from '../../types/deviceSpec';
 
 type CatalogRefCardProps = {
   catalogItemRef: CatalogItemRefSpec;
@@ -124,7 +124,6 @@ const CatalogRefCard = ({
             >
               <FlexItem grow={{ default: 'grow' }}>
                 <Flex alignItems={{ default: 'alignItemsCenter' }} gap={{ default: 'gapSm' }}>
-                  <CatalogFormError error={formikErrror} />
                   <FlexItem>
                     <Button
                       variant="plain"
@@ -135,6 +134,7 @@ const CatalogRefCard = ({
                       {isExpanded ? <AngleDownIcon /> : <AngleRightIcon />}
                     </Button>
                   </FlexItem>
+                  <CatalogFormError error={formikErrror} />
                   <FlexItem>
                     <CatalogRefTitle item={item} isLoading={isLoading || false} title={displayName} />
                   </FlexItem>

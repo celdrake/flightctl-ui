@@ -99,12 +99,11 @@ const schemaHasRequiredFields = (schema: Record<string, unknown> | undefined): b
 };
 
 /**
- * True when the selected version defines required configuration fields that are
- * not already satisfied by the existing app (e.g. on first install, or when
- * editing an incomplete config). If `existingApp` already validates against the
- * schema, advanced config is optional so the user can leave it unchecked.
+ * Determines whether the user needs to provide additional configuration for the selected catalog item.
+ * For new apps, it's enough to check if the version has required fields without defaults.
+ * For existing apps, we also need to pass in the existing app configuration.
  */
-export const catalogItemRequiresAdvancedConfig = (
+export const isAdvancedConfigRequired = (
   catalogItem: CatalogItem,
   version: string,
   existingApp?: ApplicationProviderSpec,
@@ -112,9 +111,7 @@ export const catalogItemRequiresAdvancedConfig = (
   if (!schemaHasRequiredFields(getCatalogVersionConfigSchema(catalogItem, version))) {
     return false;
   }
-  if (!existingApp) {
-    return true;
-  }
+  // Defaults (or an existing app) may already satisfy required fields.
   return !getInitialAppConfig(catalogItem, version, existingApp).dynamicFormValid;
 };
 

@@ -15,11 +15,11 @@ import {
 import { getInitialAppConfig } from '../Catalog/InstallWizard/utils';
 import type { DynamicFormConfigFormik } from '../Catalog/InstallWizard/types';
 import CatalogBrowseStep from './CatalogBrowseStep';
-import CatalogSelectAppStep, { type ConfigureFormValues } from './CatalogSelectAppStep';
+import CatalogAddAppStep, { type ConfigureFormValues } from './CatalogAddAppStep';
 import CatalogAddSettingsStep from './CatalogAddSettingsStep';
 import { CatalogItemDeprecationBadge } from '../Catalog/CatalogItemBadges';
 
-type CatalogSelectAppModalProps = {
+type CatalogAddAppModalProps = {
   appName?: string;
   existingAppNames?: string[];
   onClose: VoidFunction;
@@ -36,12 +36,7 @@ enum Step {
   AddSettings = 'add-settings',
 }
 
-const CatalogSelectAppModal = ({
-  appName = '',
-  existingAppNames = [],
-  onClose,
-  onConfirm,
-}: CatalogSelectAppModalProps) => {
+const CatalogAddAppModal = ({ appName = '', existingAppNames = [], onClose, onConfirm }: CatalogAddAppModalProps) => {
   const { t } = useTranslation();
   const [step, setStep] = React.useState<Step>(Step.Browse);
   const [selectedItem, setSelectedItem] = React.useState<CatalogItem | null>(null);
@@ -114,7 +109,7 @@ const CatalogSelectAppModal = ({
         )}
 
         {step === Step.SelectApp && selectedItem && (
-          <CatalogSelectAppStep
+          <CatalogAddAppStep
             catalogItem={selectedItem}
             initialValues={configureInitialValues}
             onBack={() => setStep(Step.Browse)}
@@ -155,4 +150,4 @@ const CatalogSelectAppModal = ({
   );
 };
 
-export default CatalogSelectAppModal;
+export default CatalogAddAppModal;
