@@ -9,6 +9,7 @@ import { useTranslation } from '../../hooks/useTranslation';
 import TextField from '../form/TextField';
 import { type DeviceSpecConfigFormValues } from '../../types/deviceSpec';
 import DeleteModal from '../modals/DeleteModal/DeleteModal';
+import CatalogAddOsModal from '../CatalogComposition/CatalogAddOsModal';
 import CatalogRefCard from './CatalogRefCard';
 
 type OsCatalogRefFieldProps = {
@@ -77,11 +78,10 @@ const CatalogRefField = ({
   );
 };
 
-// CELIA-WIP: Implement missing functionality for catalog selection slice.
-
 const OsCatalogRefField = ({ isReadOnly, isOsPackageMode, isEdit, showUpdateStatus }: OsCatalogRefFieldProps) => {
   const { t } = useTranslation();
   const { values, setFieldValue } = useFormikContext<DeviceSpecConfigFormValues>();
+  const [isCatalogSelectOpen, setIsCatalogSelectOpen] = React.useState(false);
 
   const clearOsSpec = () => {
     void setFieldValue('osSpec', { image: '' });
@@ -102,25 +102,36 @@ const OsCatalogRefField = ({ isReadOnly, isOsPackageMode, isEdit, showUpdateStat
 
   const canUpdateOs = !isReadOnly && !isOsPackageMode;
   return (
-    <Flex alignItems={{ default: 'alignItemsFlexStart' }} gap={{ default: 'gapSm' }} flexWrap={{ default: 'wrap' }}>
-      <FlexItem flex={{ default: 'flex_1' }}>
-        <TextField
-          aria-label={t('System image')}
-          name="osSpec.image"
-          isDisabled={!canUpdateOs}
-          helperText={t(
-            'Must be a reference to a bootable container image (such as "quay.io/<my-org>/my-rhel-with-fc-agent:<version>"). If you do not want to manage your OS from Edge management, leave this field empty.',
-          )}
-        />
-      </FlexItem>
-      {canUpdateOs && (
-        <FlexItem>
-          <Button variant="secondary" icon={<CatalogIcon />} isDisabled>
-            {t('Add from software catalog')}
-          </Button>
+    <>
+      <Flex alignItems={{ default: 'alignItemsFlexStart' }} gap={{ default: 'gapSm' }} flexWrap={{ default: 'wrap' }}>
+        <FlexItem flex={{ default: 'flex_1' }}>
+          <TextField
+            aria-label={t('System image')}
+            name="osSpec.image"
+            isDisabled={!canUpdateOs}
+            helperText={t(
+              'Must be a reference to a bootable container image (such as "quay.io/<my-org>/my-rhel-with-fc-agent:<version>"). If you do not want to manage your OS from Edge management, leave this field empty.',
+            )}
+          />
         </FlexItem>
+        {canUpdateOs && (
+          <FlexItem>
+            <Button variant="secondary" icon={<CatalogIcon />} onClick={() => setIsCatalogSelectOpen(true)}>
+              {t('Add from software catalog')}
+            </Button>
+          </FlexItem>
+        )}
+      </Flex>
+      {isCatalogSelectOpen && (
+        <CatalogAddOsModal
+          onClose={() => setIsCatalogSelectOpen(false)}
+          onConfirm={(selection) => {
+            void setFieldValue('osSpec', { catalogItemRef: selection.catalogItemRef });
+            setIsCatalogSelectOpen(false);
+          }}
+        />
       )}
-    </Flex>
+    </>
   );
 };
 

@@ -30,23 +30,34 @@ import { getCatalogItemBadge } from '../Catalog/CatalogItemBadges';
 import CatalogItemGallery from '../Catalog/CatalogItemGallery';
 
 const applicationTypeOptions = appTypeIds.filter((type) => type !== CatalogItemType.CatalogItemTypeData);
+const osTypeOptions = [CatalogItemType.CatalogItemTypeOS];
+
+export type BrowseMode = 'apps' | 'os';
 
 export type CatalogBrowseStepProps = {
+  mode: BrowseMode;
   onSelect: (item: CatalogItem) => void;
 };
 
-const CatalogBrowseStep = ({ onSelect }: CatalogBrowseStepProps) => {
+const CatalogBrowseStep = ({ mode, onSelect }: CatalogBrowseStepProps) => {
   const { t } = useTranslation();
+  const showTypeFilter = mode === 'apps';
+  const defaultItemTypes = mode === 'apps' ? applicationTypeOptions : osTypeOptions;
+  const emptyStateMessage =
+    mode === 'apps' ? t('No application catalog items are available.') : t('No OS catalog items are available.');
+
   const [nameFilter, setNameFilter] = React.useState('');
   const [selectedAppTypes, setSelectedAppTypes] = React.useState<CatalogItemType[]>([]);
   // Chips show filters from the last settled search, not live toolbar edits mid-debounce/fetch.
   const [appliedNameFilter, setAppliedNameFilter] = React.useState('');
   const [appliedAppTypes, setAppliedAppTypes] = React.useState<CatalogItemType[]>([]);
 
-  const itemTypeFilter = React.useMemo(
-    () => (selectedAppTypes.length === 0 ? applicationTypeOptions : selectedAppTypes),
-    [selectedAppTypes],
-  );
+  const itemTypeFilter = React.useMemo(() => {
+    if (!showTypeFilter) {
+      return defaultItemTypes;
+    }
+    return selectedAppTypes.length === 0 ? defaultItemTypes : selectedAppTypes;
+  }, [showTypeFilter, defaultItemTypes, selectedAppTypes]);
 
   const [catalogItems, loading, error, pagination, isUpdating] = useCatalogItems({
     catalogFilter: {
@@ -100,7 +111,7 @@ const CatalogBrowseStep = ({ onSelect }: CatalogBrowseStepProps) => {
   };
 
   const hasNameFilter = Boolean(appliedNameFilter.trim());
-  const hasTypeFilter = appliedAppTypes.length > 0;
+  const hasTypeFilter = showTypeFilter && appliedAppTypes.length > 0;
   const hasFilters = hasNameFilter || hasTypeFilter;
   const hasCatalogItems = catalogItems.length > 0;
 
@@ -112,29 +123,31 @@ const CatalogBrowseStep = ({ onSelect }: CatalogBrowseStepProps) => {
             <ToolbarItem>
               <TableTextSearch value={nameFilter} setValue={onNameFilterChange} placeholder={t('Search by name')} />
             </ToolbarItem>
-            <ToolbarItem>
-              <FilterSelect
-                placeholder={t('Filter by type')}
-                selectedFilters={selectedAppTypes.length}
-                isFilterUpdating={isUpdating}
-              >
-                <SelectList>
-                  <FilterSelectGroup label={t('Application type')}>
-                    {applicationTypeOptions.map((type) => (
-                      <SelectOption
-                        key={type}
-                        value={type}
-                        hasCheckbox
-                        isSelected={selectedAppTypes.includes(type)}
-                        onClick={() => toggleAppType(type)}
-                      >
-                        {getCatalogItemBadge(type, t)}
-                      </SelectOption>
-                    ))}
-                  </FilterSelectGroup>
-                </SelectList>
-              </FilterSelect>
-            </ToolbarItem>
+            {showTypeFilter && (
+              <ToolbarItem>
+                <FilterSelect
+                  placeholder={t('Filter by type')}
+                  selectedFilters={selectedAppTypes.length}
+                  isFilterUpdating={isUpdating}
+                >
+                  <SelectList>
+                    <FilterSelectGroup label={t('Application type')}>
+                      {applicationTypeOptions.map((type) => (
+                        <SelectOption
+                          key={type}
+                          value={type}
+                          hasCheckbox
+                          isSelected={selectedAppTypes.includes(type)}
+                          onClick={() => toggleAppType(type)}
+                        >
+                          {getCatalogItemBadge(type, t)}
+                        </SelectOption>
+                      ))}
+                    </FilterSelectGroup>
+                  </SelectList>
+                </FilterSelect>
+              </ToolbarItem>
+            )}
             <ToolbarItem variant="pagination" align={{ default: 'alignEnd' }}>
               <TablePagination pagination={pagination} isUpdating={isUpdating} />
             </ToolbarItem>
@@ -197,7 +210,7 @@ const CatalogBrowseStep = ({ onSelect }: CatalogBrowseStepProps) => {
             </EmptyState>
           ) : (
             <Alert variant="info" title={t('No catalog items available')} isInline>
-              {t('No application catalog items are available.')}
+              {emptyStateMessage}
             </Alert>
           )}
         </StackItem>

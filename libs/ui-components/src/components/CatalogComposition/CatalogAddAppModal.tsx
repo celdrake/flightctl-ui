@@ -95,12 +95,14 @@ const CatalogAddAppModal = ({ appName = '', existingAppNames = [], onClose, onCo
                 <CatalogItemDeprecationBadge mode="item" />
               </FlexItem>
             )}
+            <FlexItem>{JSON.stringify({ existingAppNames })} </FlexItem>
           </Flex>
         )}
       </ModalHeader>
       <ModalBody>
         {step === Step.Browse && (
           <CatalogBrowseStep
+            mode="apps"
             onSelect={(item) => {
               setSelectedItem(item);
               setStep(Step.SelectApp);

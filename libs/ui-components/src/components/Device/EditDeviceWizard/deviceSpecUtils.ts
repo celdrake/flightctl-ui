@@ -740,10 +740,11 @@ export const getApplicationPatches = (
  *
  * Supported use cases:
  * - Any modification when the spec uses an image (or it has an unset value): initially defining it, replacing it, or removing it
+ * - Setting a catalogItemRef when the current OS is unset or image-based
  * - Removing a catalogItemRef-defined OS (clearing it from the template)
  *
  * Unsupported use cases:
- * - Changing from Image to CatalogItemRef or vice versa
+ * - Changing from CatalogItemRef to image (delete the catalog ref first, then set an image)
  * - Modifying the catalogItemRef itself (must be done via the Catalog page)
  *
  * @param osPath - The path to the OS spec in the device/fleet spec
@@ -764,6 +765,14 @@ export const getFormOsSpecPatches = (
       return [{ path: osPath, op: 'remove' }];
     }
     return [];
+  }
+
+  const formCatalogRef = formOsSpec?.catalogItemRef;
+  if (formCatalogRef) {
+    if (!currentOsSpec?.image) {
+      return [{ path: osPath, op: 'add', value: { catalogItemRef: formCatalogRef } }];
+    }
+    return [{ path: osPath, op: 'replace', value: { catalogItemRef: formCatalogRef } }];
   }
 
   const currentOsImage = currentOsSpec?.image;

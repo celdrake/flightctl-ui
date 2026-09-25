@@ -17,14 +17,14 @@ type DeleteModalProps = {
   confirmText: React.ReactNode;
 };
 
-export const getDeleteLabel = (t: TFunction, resourceType: DeleteModalResourceType) => {
+export const getConfirmDeleteLabel = (t: TFunction, resourceType: DeleteModalResourceType) => {
   switch (resourceType) {
     case 'catalogItem':
       return t('Delete catalog item?');
     case 'application':
       return t('Delete application?');
     case 'os':
-      return t('Remove system image?');
+      return t('Delete system image?');
     case ResourceKind.DEVICE:
       return t('Delete device?');
     case ResourceKind.ENROLLMENT_REQUEST:
@@ -36,15 +36,34 @@ export const getDeleteLabel = (t: TFunction, resourceType: DeleteModalResourceTy
   }
 };
 
+export const getDeleteLabel = (t: TFunction, resourceType: DeleteModalResourceType) => {
+  switch (resourceType) {
+    case 'catalogItem':
+      return t('Delete catalog item');
+    case 'application':
+      return t('Delete application');
+    case 'os':
+      return t('Delete system image');
+    case ResourceKind.DEVICE:
+      return t('Delete device');
+    case ResourceKind.ENROLLMENT_REQUEST:
+      return t('Delete enrollment request');
+    case ResourceKind.RESOURCE_SYNC:
+      return t('Delete resource sync');
+    default:
+      return t('Delete resource');
+  }
+};
+
 const DeleteModal = ({ onDelete, onClose, resourceType, confirmText }: DeleteModalProps) => {
   const { t } = useTranslation();
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [error, setError] = React.useState<string>();
 
-  const deleteLabel = getDeleteLabel(t, resourceType);
+  const titleLabel = getConfirmDeleteLabel(t, resourceType);
   return (
     <FlightCtlModal isOpen onClose={onClose} variant="small">
-      <ModalHeader title={deleteLabel} titleIconVariant="warning" />
+      <ModalHeader title={titleLabel} titleIconVariant="warning" />
       <ModalBody>
         <Stack hasGutter>
           <StackItem>{confirmText}</StackItem>
@@ -75,7 +94,7 @@ const DeleteModal = ({ onDelete, onClose, resourceType, confirmText }: DeleteMod
             }
           }}
         >
-          {deleteLabel}
+          {t('Delete')}
         </Button>
         <Button key="cancel" variant="link" onClick={onClose} isDisabled={isDeleting}>
           {t('Cancel')}
