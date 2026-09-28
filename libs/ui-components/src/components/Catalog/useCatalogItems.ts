@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useDebounce } from 'use-debounce';
 import { type CatalogItem, type CatalogItemDeploymentList, type CatalogItemList } from '@flightctl/types/alpha';
-import { CatalogItemCategory, CatalogItemType } from '@flightctl/types/alpha';
+import { CatalogItemType } from '@flightctl/types/alpha';
 import { useFetchPeriodically } from '../../hooks/useFetchPeriodically';
 import { type PaginationDetails, useTablePagination } from '../../hooks/useTablePagination';
 import { PAGE_SIZE } from '../../constants';
@@ -16,30 +16,15 @@ export const appTypeIds = [
 
 const systemTypeIds = [CatalogItemType.CatalogItemTypeOS];
 
-// Exclusive filter: a single category or one or multiple item types.
 export type CatalogTypeFilter = {
   itemTypes?: CatalogItemType[];
-  category?: CatalogItemCategory;
 };
 
 const getItemTypesFilters = (itemTypes: CatalogItemType[] | undefined, excludeItemType?: CatalogItemType): string[] => {
   const parts: string[] = [];
-  let selectedTypes: CatalogItemType[] = [];
 
   const allTypesSelected = [...systemTypeIds, ...appTypeIds].every((id) => itemTypes?.includes(id));
-  if (!allTypesSelected) {
-    selectedTypes = itemTypes ? [...itemTypes] : [];
-
-    const categories: CatalogItemCategory[] = [];
-    if (appTypeIds.every((id) => selectedTypes.includes(id))) {
-      categories.push(CatalogItemCategory.CatalogItemCategoryApplication);
-      selectedTypes = selectedTypes.filter((t) => !appTypeIds.includes(t));
-    }
-
-    if (categories.length) {
-      parts.push(`spec.category in (${categories.join(',')})`);
-    }
-  }
+  const selectedTypes = allTypesSelected || !itemTypes ? [] : [...itemTypes];
 
   const isInvalidSelection = selectedTypes.length === 1 && selectedTypes[0] === excludeItemType;
   if (isInvalidSelection) {
@@ -64,11 +49,7 @@ const buildCatalogItemsFieldSelector = (
 ): string | undefined => {
   const parts: string[] = [];
 
-  if (typeFilter?.category) {
-    parts.push(`spec.category = ${typeFilter.category}`);
-  } else {
-    parts.push(...getItemTypesFilters(typeFilter?.itemTypes, excludeItemType));
-  }
+  parts.push(...getItemTypesFilters(typeFilter?.itemTypes, excludeItemType));
 
   if (nameFilter) {
     parts.push(`metadata.name contains ${nameFilter}`);

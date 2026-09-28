@@ -1,5 +1,5 @@
 import validator from '@rjsf/validator-ajv8';
-import { createSchemaUtils, type RJSFSchema } from '@rjsf/utils';
+import { type RJSFSchema, createSchemaUtils } from '@rjsf/utils';
 import merge from 'lodash/merge';
 import type { FormikHelpers } from 'formik';
 
@@ -37,9 +37,7 @@ export const getInitialAppConfig = (
   const rawConfigSchema =
     catalogItem.spec.versions.find((v) => v.version === version)?.configSchema ??
     catalogItem?.spec.defaults?.configSchema;
-  const configSchema = rawConfigSchema
-    ? enrichConfigSchemaForVolumeImages(rawConfigSchema as RJSFSchema)
-    : undefined;
+  const configSchema = rawConfigSchema ? enrichConfigSchemaForVolumeImages(rawConfigSchema as RJSFSchema) : undefined;
 
   let defaultConfig =
     catalogItem.spec.versions.find((v) => v.version === version)?.config ?? catalogItem?.spec.defaults?.config;

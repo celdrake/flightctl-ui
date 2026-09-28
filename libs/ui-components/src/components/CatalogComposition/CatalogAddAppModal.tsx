@@ -95,7 +95,6 @@ const CatalogAddAppModal = ({ appName = '', existingAppNames = [], onClose, onCo
                 <CatalogItemDeprecationBadge mode="item" />
               </FlexItem>
             )}
-            <FlexItem>{JSON.stringify({ existingAppNames })} </FlexItem>
           </Flex>
         )}
       </ModalHeader>

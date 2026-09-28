@@ -28,7 +28,7 @@ import {
 } from '@rjsf/utils';
 import { getDefaultRegistry } from '@rjsf/core';
 
-import VolumeImageField, { getVolumeImageSourceMode, ROOT_VOLUMES_IMAGE_FIELD_REGEX } from './VolumeImageField';
+import VolumeImageField, { ROOT_VOLUMES_IMAGE_FIELD_REGEX, getVolumeImageSourceMode } from './VolumeImageField';
 import FieldErrors from './FieldErrors';
 import { PFEmailWidget, PFPasswordWidget, PFTextWidget, PFURLWidget } from './FormWidget';
 import { useTranslation } from '../../hooks/useTranslation';

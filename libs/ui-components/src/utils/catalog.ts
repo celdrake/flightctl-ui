@@ -243,9 +243,7 @@ const getCatalogApiVolumes = (volumes: ApplicationVolume[] | undefined): Applica
   return volumes.map((v) => {
     const vol = v as FullAppVolume;
     const catalogItemRef = vol.image?.catalogItemRef;
-    const volumeImageSpec = catalogItemRef
-      ? { catalogItemRef }
-      : { image: vol.image?.reference || '' };
+    const volumeImageSpec = catalogItemRef ? { catalogItemRef } : { image: vol.image?.reference || '' };
     return buildApiVolume(vol.name, volumeImageSpec, vol.image?.pullPolicy, vol.mount?.path || '');
   });
 };

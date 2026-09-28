@@ -18,7 +18,7 @@ import {
   ToolbarContent,
   ToolbarItem,
 } from '@patternfly/react-core';
-import { type CatalogItem, CatalogItemCategory, CatalogItemType } from '@flightctl/types/alpha';
+import { type CatalogItem, CatalogItemType } from '@flightctl/types/alpha';
 import { SearchIcon } from '@patternfly/react-icons/dist/js/icons/search-icon';
 
 import { useTranslation } from '../../hooks/useTranslation';
@@ -30,6 +30,7 @@ import { getCatalogItemBadge } from '../Catalog/CatalogItemBadges';
 import CatalogItemGallery from '../Catalog/CatalogItemGallery';
 
 const applicationTypeOptions = appTypeIds.filter((type) => type !== CatalogItemType.CatalogItemTypeData);
+const osTypeOptions = [CatalogItemType.CatalogItemTypeOS];
 
 export type BrowseMode = 'apps' | 'os';
 
@@ -85,12 +86,9 @@ const CatalogBrowseStep = ({ mode, onSelect }: CatalogBrowseStepProps) => {
 
   const typeFilter = React.useMemo(() => {
     if (!isAppsMode) {
-      return { category: CatalogItemCategory.CatalogItemCategorySystem };
+      return { itemTypes: osTypeOptions };
     }
-    if (selectedAppTypes.length === 0) {
-      return { category: CatalogItemCategory.CatalogItemCategoryApplication };
-    }
-    return { itemTypes: selectedAppTypes };
+    return { itemTypes: selectedAppTypes.length > 0 ? selectedAppTypes : applicationTypeOptions };
   }, [isAppsMode, selectedAppTypes]);
 
   const [catalogItems, loading, error, pagination, isUpdating] = useCatalogItems({
@@ -168,7 +166,7 @@ const CatalogBrowseStep = ({ mode, onSelect }: CatalogBrowseStepProps) => {
             </ToolbarItem>
           </ToolbarContent>
           {hasFilters && (
-            <ToolbarItem className="pf-v6-u-mb-md" style={{ border: '2px solid lime' }}>
+            <ToolbarItem className="pf-v6-u-mb-md">
               <Flex>
                 {appliedNameFilter && (
                   <FlexItem>
@@ -206,8 +204,8 @@ const CatalogBrowseStep = ({ mode, onSelect }: CatalogBrowseStepProps) => {
           <Alert variant="danger" title={t('Failed to load catalog items')} isInline />
         </StackItem>
       )}
-      {(loading || isUpdating) && (
-        <StackItem style={{ height: '400px', border: '1px solid red' }}>
+      {(loading || (isUpdating && !hasCatalogItems)) && (
+        <StackItem>
           <EmptyState
             titleText={isAppsMode ? t('Searching applications') : t('Searching operating systems')}
             headingLevel="h4"
@@ -215,7 +213,7 @@ const CatalogBrowseStep = ({ mode, onSelect }: CatalogBrowseStepProps) => {
           />
         </StackItem>
       )}
-      {!loading && !isUpdating && !hasCatalogItems && (
+      {!loading && !hasCatalogItems && !isUpdating && (
         <StackItem>
           {hasFilters ? (
             <EmptyState headingLevel="h4" icon={SearchIcon} titleText={t('No results found')} variant="full">
@@ -233,7 +231,7 @@ const CatalogBrowseStep = ({ mode, onSelect }: CatalogBrowseStepProps) => {
           )}
         </StackItem>
       )}
-      {!loading && !isUpdating && hasCatalogItems && (
+      {!loading && hasCatalogItems && (
         <StackItem>
           <CatalogItemGallery catalogItems={catalogItems} onSelect={onSelect} />
         </StackItem>
