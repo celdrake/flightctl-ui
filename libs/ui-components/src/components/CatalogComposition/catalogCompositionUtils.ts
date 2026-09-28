@@ -7,9 +7,8 @@ import type { ApplicationProviderSpec, CatalogItemRefSpec } from '@flightctl/typ
 import { type CatalogItem, CatalogItemCategory, type CatalogItemVersion } from '@flightctl/types/alpha';
 import type { TFunction } from 'i18next';
 
-// CELIA-WIP name of this file
 import type { ApplicationEntry, CatalogAppForm } from '../../types/deviceSpec';
-import { type VolumeCatalogSelection, buildCatalogApplicationSpec, buildCatalogItemRef } from '../../utils/catalog';
+import { buildCatalogApplicationSpec, buildCatalogItemRef } from '../../utils/catalog';
 import { toValidApplicationName, validApplicationAndVolumeName } from '../form/validations';
 import { getInitialAppConfig } from '../Catalog/InstallWizard/utils';
 import type { DynamicFormConfigFormik } from '../Catalog/InstallWizard/types';
@@ -24,7 +23,6 @@ export type CatalogSelectionConfirm = {
 export type CatalogAdvancedConfigValues = {
   configureVia: 'editor' | 'form';
   editorContent: string;
-  volumeSelection: VolumeCatalogSelection[];
   formValues: Record<string, unknown> | undefined;
 };
 
@@ -200,7 +198,6 @@ export const createCatalogAppEntryWithConfig = ({
     catalogItemVersion: selection.version,
     channel: selection.channel,
     formValues,
-    volumeSelection: advancedConfig.configureVia === 'form' ? advancedConfig.volumeSelection : [],
   });
 
   return { type: 'catalog', app: toCatalogAppForm(apiApp, selection.catalogItemRef) };
@@ -241,7 +238,6 @@ export const updateCatalogAppFormConfig = ({
     catalogItemVersion: versionEntry,
     channel,
     formValues,
-    volumeSelection: advancedConfig.configureVia === 'form' ? advancedConfig.volumeSelection : [],
   });
 
   // Version stays locked to the existing pin.

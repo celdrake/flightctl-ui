@@ -34,12 +34,6 @@ export type SpecCatalogItemId = {
   appName?: string;
 };
 
-/** Tracks which volume slots use a catalog Data item. */
-export type VolumeCatalogSelection = {
-  volumeIndex: number;
-  catalogItemRef: CatalogItemRefSpec;
-};
-
 export type ResolvedCatalogRef = {
   item: CatalogItem;
   displayName: string;
@@ -240,22 +234,17 @@ const getAppType = (catalogItem: CatalogItem): AppType | undefined => {
   }
 };
 
-// Combines the form volumes with their selected Data catalog assets.
-const getCatalogApiVolumes = (
-  volumes: ApplicationVolume[] | undefined,
-  volumeSelection: VolumeCatalogSelection[],
-): ApplicationVolume[] => {
+/** Maps form volumes to API volumes (reference XOR catalogItemRef already in form data). */
+const getCatalogApiVolumes = (volumes: ApplicationVolume[] | undefined): ApplicationVolume[] => {
   if (!volumes?.length) {
     return [];
   }
 
-  return volumes.map((v, idx) => {
+  return volumes.map((v) => {
     const vol = v as FullAppVolume;
-
-    // Ensure only one of catalogItemRef or image is set.
-    const selectedVolume = volumeSelection.find((a) => a.volumeIndex === idx);
-    const volumeImageSpec = selectedVolume
-      ? { catalogItemRef: selectedVolume.catalogItemRef }
+    const catalogItemRef = vol.image?.catalogItemRef;
+    const volumeImageSpec = catalogItemRef
+      ? { catalogItemRef }
       : { image: vol.image?.reference || '' };
     return buildApiVolume(vol.name, volumeImageSpec, vol.image?.pullPolicy, vol.mount?.path || '');
   });
@@ -295,14 +284,12 @@ export const buildCatalogApplicationSpec = ({
   catalogItemVersion,
   channel,
   formValues,
-  volumeSelection = [],
 }: {
   appName: string;
   catalogItem: CatalogItem;
   catalogItemVersion: CatalogItemVersion;
   channel: string;
   formValues: Record<string, unknown> | undefined;
-  volumeSelection?: VolumeCatalogSelection[];
 }): ApplicationProviderSpec => {
   const appType = getAppType(catalogItem);
   if (!appType) {
@@ -335,7 +322,7 @@ export const buildCatalogApplicationSpec = ({
 
   // Only set volumes to the application types that support them.
   if (isContainerOrQuadletApp || isComposeAppSpec(appSpec)) {
-    appSpec.volumes = getCatalogApiVolumes(userVolumes, volumeSelection);
+    appSpec.volumes = getCatalogApiVolumes(userVolumes);
   }
 
   return appSpec;
@@ -349,7 +336,6 @@ export const getAppPatches = ({
   channel,
   formValues,
   specPath,
-  volumeSelection,
 }: {
   appName: string;
   currentApps: ApplicationProviderSpec[] | undefined;
@@ -358,7 +344,6 @@ export const getAppPatches = ({
   channel: string;
   formValues: Record<string, unknown> | undefined;
   specPath: string;
-  volumeSelection: VolumeCatalogSelection[];
 }) => {
   const appSpec = buildCatalogApplicationSpec({
     appName,
@@ -366,7 +351,6 @@ export const getAppPatches = ({
     catalogItemVersion,
     channel,
     formValues,
-    volumeSelection,
   });
 
   const existingAppIndex = currentApps?.findIndex((app) => app.name === appSpec.name);

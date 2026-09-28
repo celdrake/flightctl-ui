@@ -17,7 +17,6 @@ import { useFormikContext } from 'formik';
 import type * as monacoEditor from 'monaco-editor/esm/vs/editor/editor.api';
 
 import { useTranslation } from '../../hooks/useTranslation';
-import type { VolumeCatalogSelection } from '../../utils/catalog';
 import DynamicForm from '../DynamicForm/DynamicForm';
 import YamlEditorBase from '../common/CodeEditor/YamlEditorBase';
 import RadioField from '../form/RadioField';
@@ -33,44 +32,6 @@ const CatalogAdvancedConfigStep = ({ schemaErrors }: CatalogAdvancedConfigStepPr
   const editorRef = React.useRef<monacoEditor.editor.IStandaloneCodeEditor | null>(null);
   const { t } = useTranslation();
   const { values, setFieldValue, setFieldTouched } = useFormikContext<DynamicFormConfigFormik>();
-
-  const formContext = React.useMemo(() => {
-    const onVolumeSelected = (selection: VolumeCatalogSelection) => {
-      const existing = values.volumeSelection.findIndex((entry) => entry.volumeIndex === selection.volumeIndex);
-      let newVolumeSelection: VolumeCatalogSelection[];
-      if (existing >= 0) {
-        const updated = [...values.volumeSelection];
-        updated[existing] = selection;
-        newVolumeSelection = updated;
-      } else {
-        newVolumeSelection = [...values.volumeSelection, selection];
-      }
-      void setFieldValue('volumeSelection', newVolumeSelection);
-    };
-
-    const onBeforeArrayItemRemoved = (arrayId: string, removedIndex: number) => {
-      if (arrayId === 'root_volumes') {
-        const newVolumeSelection = values.volumeSelection
-          .filter((entry) => entry.volumeIndex !== removedIndex)
-          .map((entry) =>
-            entry.volumeIndex > removedIndex ? { ...entry, volumeIndex: entry.volumeIndex - 1 } : entry,
-          );
-        void setFieldValue('volumeSelection', newVolumeSelection);
-      }
-    };
-
-    const onVolumeSelectionCleared = (volumeIndex: number) => {
-      const newVolumeSelection = values.volumeSelection.filter((entry) => entry.volumeIndex !== volumeIndex);
-      void setFieldValue('volumeSelection', newVolumeSelection);
-    };
-
-    return {
-      onVolumeSelected,
-      onBeforeArrayItemRemoved,
-      onVolumeCleared: onVolumeSelectionCleared,
-      volumeSelection: values.volumeSelection,
-    };
-  }, [values.volumeSelection, setFieldValue]);
 
   return (
     <Stack hasGutter>
@@ -127,7 +88,6 @@ const CatalogAdvancedConfigStep = ({ schemaErrors }: CatalogAdvancedConfigStepPr
             onValidate={(valid) => {
               void setFieldValue('dynamicFormValid', valid);
             }}
-            formContext={formContext}
           />
         ) : (
           <div className="fctl-yaml-editor">

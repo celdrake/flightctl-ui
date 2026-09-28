@@ -124,7 +124,6 @@ const CatalogEditAppModal = ({ catalogItem, appForm, onClose, onSave }: CatalogE
           const advancedConfig: CatalogAdvancedConfigValues = {
             configureVia: values.configureVia,
             editorContent: values.editorContent,
-            volumeSelection: values.volumeSelection,
             formValues: values.formValues,
           };
           onSave(

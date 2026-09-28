@@ -19,7 +19,6 @@ import { AngleRightIcon } from '@patternfly/react-icons/dist/js/icons/angle-righ
 import { PlusCircleIcon } from '@patternfly/react-icons/dist/js/icons/plus-circle-icon';
 import { MinusCircleIcon } from '@patternfly/react-icons/dist/js/icons/minus-circle-icon';
 import {
-  RJSFSchema,
   type ArrayFieldTemplateProps,
   type BaseInputTemplateProps,
   type FieldProps,
@@ -29,16 +28,10 @@ import {
 } from '@rjsf/utils';
 import { getDefaultRegistry } from '@rjsf/core';
 
-import VolumeImageField, {
-  getVolumeImageSchema,
-  ROOT_VOLUMES_IMAGE_CATALOG_REF_FIELD_REGEX,
-  ROOT_VOLUMES_IMAGE_REFERENCE_FIELD_REGEX,
-  VolumeImageSourceMode,
-} from './VolumeImageField';
+import VolumeImageField, { getVolumeImageSourceMode, ROOT_VOLUMES_IMAGE_FIELD_REGEX } from './VolumeImageField';
 import FieldErrors from './FieldErrors';
 import { PFEmailWidget, PFPasswordWidget, PFTextWidget, PFURLWidget } from './FormWidget';
 import { useTranslation } from '../../hooks/useTranslation';
-import { type DynamicFormContext } from './DynamicForm';
 import { FormGroupWithHelperText } from '../common/WithHelperText';
 import { DefaultHelperText } from '../form/FieldHelperText';
 
@@ -54,7 +47,6 @@ const isRootLevelField = (schemaId: string) => /^root_[^_]+$/.test(schemaId);
 // Get default fields from rjsf to use as fallbacks
 const defaultRegistry = getDefaultRegistry();
 const DefaultObjectField = defaultRegistry.fields.ObjectField;
-const DefaultStringField = defaultRegistry.fields.StringField;
 
 type RootFieldWrapperProps = React.PropsWithChildren<{
   schemaId: string;
@@ -131,21 +123,6 @@ const PFFieldTemplate = ({
   );
 };
 
-const getVolumeImageSourceMode = (rootSchema: RJSFSchema) => {
-  const volumeImageSchema = getVolumeImageSchema(rootSchema);
-
-  // If the item has a property as required, return the mode based on the property
-  const requiredList = Array.isArray(volumeImageSchema?.required) ? volumeImageSchema.required : [];
-  if (requiredList.includes('catalogItemRef')) {
-    return VolumeImageSourceMode.CatalogOnly;
-  }
-  if (requiredList.includes('reference')) {
-    return VolumeImageSourceMode.ImageOnly;
-  }
-  // All other schemas accept both image and catalog item references
-  return VolumeImageSourceMode.Both;
-};
-
 // Object Field Template - layout for object properties using PatternFly FormFieldGroup
 const PFObjectFieldTemplate = ({ title, description, properties, idSchema }: ObjectFieldTemplateProps) => {
   const isRoot = idSchema.$id === 'root';
@@ -184,20 +161,16 @@ const PFObjectFieldTemplate = ({ title, description, properties, idSchema }: Obj
 };
 
 const CustomObjectField = (props: FieldProps) => {
-  const { idSchema, schema, name, registry, required, rawErrors } = props;
+  const { idSchema, schema, name, registry, rawErrors } = props;
 
-  if (ROOT_VOLUMES_IMAGE_CATALOG_REF_FIELD_REGEX.test(idSchema.$id)) {
+  if (ROOT_VOLUMES_IMAGE_FIELD_REGEX.test(idSchema.$id)) {
     const mode = getVolumeImageSourceMode(registry.rootSchema);
-    if (mode === VolumeImageSourceMode.CatalogOnly) {
-      // Object fields skip PFFieldTemplate's FormGroup; provide label/errors here.
-      const fieldTitle = (typeof schema.title === 'string' && schema.title) || name || idSchema.$id;
-      return (
-        <FormGroup fieldId={idSchema.$id} label={fieldTitle} isRequired={required}>
-          <VolumeImageField {...props} mode={mode} />
-          <FieldErrors errors={rawErrors} />
-        </FormGroup>
-      );
-    }
+    return (
+      <div className="pf-v6-u-mb-md">
+        <VolumeImageField {...props} mode={mode} />
+        <FieldErrors errors={rawErrors} />
+      </div>
+    );
   }
 
   const title = (typeof schema.title === 'string' && schema.title) || name || idSchema.$id;
@@ -209,36 +182,14 @@ const CustomObjectField = (props: FieldProps) => {
   );
 };
 
-// Custom String Field - use VolumeImageField for volume image reference only
-const CustomStringField = (props: FieldProps) => {
-  const { idSchema, schema } = props;
-
-  if (schema.type === 'string' && ROOT_VOLUMES_IMAGE_REFERENCE_FIELD_REGEX.test(idSchema.$id)) {
-    const mode = getVolumeImageSourceMode(props.registry.rootSchema);
-    return <VolumeImageField {...props} mode={mode} />;
-  }
-
-  return <DefaultStringField {...props} />;
-};
-
 // Custom fields registry
 const pfFields: RegistryFieldsType = {
   ObjectField: CustomObjectField,
-  StringField: CustomStringField,
 };
 
 // Array Field Template - each array item is an expandable section (aligned with ExpandableFormSection)
-const PFArrayFieldTemplate = ({
-  title,
-  items,
-  canAdd,
-  onAddClick,
-  idSchema,
-  rawErrors,
-  formContext,
-}: ArrayFieldTemplateProps) => {
+const PFArrayFieldTemplate = ({ title, items, canAdd, onAddClick, idSchema, rawErrors }: ArrayFieldTemplateProps) => {
   const { t } = useTranslation();
-  const onBeforeArrayItemRemoved = (formContext as DynamicFormContext)?.onBeforeArrayItemRemoved;
   const sectionTitle = title || t('Items');
   const isRootLevel = isRootLevelField(idSchema.$id);
   const [expandedItems, setExpandedItems] = React.useState<Record<number, boolean>>(() =>
@@ -288,10 +239,7 @@ const PFArrayFieldTemplate = ({
                       isDanger
                       icon={<MinusCircleIcon />}
                       iconPosition="start"
-                      onClick={() => {
-                        onBeforeArrayItemRemoved?.(idSchema.$id, item.index);
-                        item.onDropIndexClick(item.index)();
-                      }}
+                      onClick={item.onDropIndexClick(item.index)}
                     />
                   </SplitItem>
                 )}

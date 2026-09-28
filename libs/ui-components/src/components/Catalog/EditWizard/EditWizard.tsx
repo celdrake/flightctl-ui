@@ -175,7 +175,6 @@ const EditWizard = ({
                   values.configureVia === 'editor'
                     ? (load(values.editorContent) as Record<string, unknown>)
                     : values.formValues,
-                volumeSelection: values.volumeSelection,
                 specPath,
               });
               if (allPatches.length > 0) {

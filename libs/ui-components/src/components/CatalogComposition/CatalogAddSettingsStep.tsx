@@ -35,7 +35,6 @@ const CatalogAddSettingsStep = ({ initialValues, onBack, onConfirm }: CatalogAdd
         onConfirm({
           configureVia: values.configureVia,
           editorContent: values.editorContent,
-          volumeSelection: values.volumeSelection,
           formValues: values.formValues,
         });
       }}
