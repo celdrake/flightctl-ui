@@ -118,10 +118,6 @@ export const getDownloadPolicyText = (updatePolicy: UpdatePolicyForm, t: TFuncti
 };
 
 export const getInstallPolicyText = (updatePolicy: UpdatePolicyForm, t: TFunction): string => {
-  if (!updatePolicy.isCustomized) {
-    return '';
-  }
-
   return timeUtils.getScheduleUpdateText(
     {
       startsAt: updatePolicy.installStartsAt,

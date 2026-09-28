@@ -105,19 +105,14 @@ export type VariablesForm = { name: string; value: string }[];
 
 export type InlineFileForm = { path: string; content?: string; base64?: boolean };
 
-// CELIA-WIP: review if these app definitions are correct, do we need to exclude image+catalogItemRef everywhere?
-
+// Manual apps can only use plain images, not catalogItemRef
 type InlineOrImageVariantForm = {
   specType: AppSpecType;
-  /** OCI image reference when specType is OCI_IMAGE (manual apps only). */
   image?: string;
   files: InlineFileForm[];
 };
 
-export type SingleContainerAppForm = Omit<
-  ContainerApplication,
-  'ports' | 'resources' | 'envVars' | 'volumes' | 'image' | 'catalogItemRef'
-> & {
+export type SingleContainerAppForm = Omit<ContainerApplication, 'ports' | 'resources' | 'envVars' | 'volumes'> & {
   specType: AppSpecType.OCI_IMAGE;
   image?: string;
   ports: PortMapping[];
@@ -127,20 +122,20 @@ export type SingleContainerAppForm = Omit<
   volumes: ApplicationVolumeForm[];
 };
 
-export type HelmAppForm = Omit<HelmApplication, 'values' | 'image' | 'catalogItemRef'> & {
+export type HelmAppForm = Omit<HelmApplication, 'values'> & {
   specType: AppSpecType.OCI_IMAGE;
   image?: string;
   valuesYaml?: string;
   valuesFiles: string[];
 };
 
-export type QuadletAppForm = Omit<QuadletApplication, 'envVars' | 'volumes' | 'inline' | 'image' | 'catalogItemRef'> &
+export type QuadletAppForm = Omit<QuadletApplication, 'envVars' | 'volumes' | 'inline'> &
   InlineOrImageVariantForm & {
     variables: VariablesForm;
     volumes: ApplicationVolumeForm[];
   };
 
-export type ComposeAppForm = Omit<ComposeApplication, 'envVars' | 'volumes' | 'inline' | 'image' | 'catalogItemRef'> &
+export type ComposeAppForm = Omit<ComposeApplication, 'envVars' | 'volumes' | 'inline'> &
   InlineOrImageVariantForm & {
     variables: VariablesForm;
     volumes: ApplicationVolumeForm[];

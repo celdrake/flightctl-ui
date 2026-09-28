@@ -14,8 +14,7 @@ import FormSelect from '../../../form/FormSelect';
 import FlightCtlForm from '../../../form/FlightCtlForm';
 import ExpandableFormSection from '../../../form/ExpandableFormSection';
 import UploadField from '../../../form/UploadField';
-import { getArtifactLabel } from '../../../../utils/catalog';
-import { catalogAppTypeOptions } from '../../../../utils/apps';
+import { getArtifactLabel, usableCatalogTypeOptions } from '../../../../utils/catalogTypes';
 
 export const typeConfigStepId = 'type-config';
 
@@ -90,7 +89,7 @@ const TypeConfigStep = ({ isEdit, isReadOnly }: { isEdit?: boolean; isReadOnly?:
           <FormGroup label={t('Type')} isRequired>
             <FormSelect
               name="type"
-              items={catalogAppTypeOptions(t)}
+              items={usableCatalogTypeOptions(t)}
               placeholderText={t('Select a type')}
               isDisabled={isEdit || isReadOnly}
             />

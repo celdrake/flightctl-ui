@@ -9,7 +9,7 @@ import {
   getAppIdentifier,
   isCatalogAppEntry,
 } from '../../../../types/deviceSpec';
-import { getAppTypeLabel } from '../../../../utils/apps';
+import { getAppTypeLabel } from '../../../../utils/catalogTypes';
 
 const getManualAppName = (app: ManualAppForm, t: TFunction): string => {
   if (app.name) {

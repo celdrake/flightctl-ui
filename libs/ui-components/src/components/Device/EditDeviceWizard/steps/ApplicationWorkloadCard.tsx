@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Button, Card, CardBody, Divider, Flex, FlexItem, Stack, StackItem, Title } from '@patternfly/react-core';
+import { Button, Card, CardBody, Divider, Flex, FlexItem, Icon, Stack, StackItem, Title } from '@patternfly/react-core';
 import { AngleDownIcon } from '@patternfly/react-icons/dist/js/icons/angle-down-icon';
 import { AngleRightIcon } from '@patternfly/react-icons/dist/js/icons/angle-right-icon';
 import { ExclamationCircleIcon } from '@patternfly/react-icons/dist/js/icons/exclamation-circle-icon';
@@ -60,9 +60,15 @@ const ApplicationWorkloadCard = ({
                   {hasError && (
                     <FlexItem>
                       <WithTooltip showTooltip content={t('Invalid {{ itemType }}', { itemType: errorLabel || title })}>
-                        <ExclamationCircleIcon
-                          style={{ color: 'var(--pf-t--global--icon--color--status--danger--default)' }}
-                        />
+                        <span
+                          tabIndex={0}
+                          role="img"
+                          aria-label={t('Invalid {{ itemType }}', { itemType: errorLabel || title })}
+                        >
+                          <Icon status="danger">
+                            <ExclamationCircleIcon />
+                          </Icon>
+                        </span>
                       </WithTooltip>
                     </FlexItem>
                   )}

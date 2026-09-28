@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useDebounce } from 'use-debounce';
 import { type CatalogItem, type CatalogItemDeploymentList, type CatalogItemList } from '@flightctl/types/alpha';
-import { CatalogItemType } from '@flightctl/types/alpha';
+import { CatalogItemCategory, CatalogItemType } from '@flightctl/types/alpha';
 import { useFetchPeriodically } from '../../hooks/useFetchPeriodically';
 import { type PaginationDetails, useTablePagination } from '../../hooks/useTablePagination';
 import { PAGE_SIZE } from '../../constants';
@@ -16,15 +16,31 @@ export const appTypeIds = [
 
 const systemTypeIds = [CatalogItemType.CatalogItemTypeOS];
 
-export type CatalogTypeFilter = {
-  itemTypes?: CatalogItemType[];
-};
-
-const getItemTypesFilters = (itemTypes: CatalogItemType[] | undefined, excludeItemType?: CatalogItemType): string[] => {
+const buildCatalogItemsFieldSelector = (
+  itemType: CatalogItemType[] | undefined,
+  catalogs: string[],
+  nameFilter?: string,
+  excludeItemType?: CatalogItemType,
+): string | undefined => {
   const parts: string[] = [];
 
-  const allTypesSelected = [...systemTypeIds, ...appTypeIds].every((id) => itemTypes?.includes(id));
-  const selectedTypes = allTypesSelected || !itemTypes ? [] : [...itemTypes];
+  let selectedTypes: CatalogItemType[] = [];
+
+  const allTypesSelected = [...systemTypeIds, ...appTypeIds].every((id) => itemType?.includes(id));
+
+  if (!allTypesSelected) {
+    selectedTypes = itemType ? [...itemType] : [];
+
+    const categories: CatalogItemCategory[] = [];
+    if (appTypeIds.every((id) => selectedTypes.includes(id))) {
+      categories.push(CatalogItemCategory.CatalogItemCategoryApplication);
+      selectedTypes = selectedTypes.filter((t) => !appTypeIds.includes(t));
+    }
+
+    if (categories.length) {
+      parts.push(`spec.category in (${categories.join(',')})`);
+    }
+  }
 
   const isInvalidSelection = selectedTypes.length === 1 && selectedTypes[0] === excludeItemType;
   if (isInvalidSelection) {
@@ -38,19 +54,6 @@ const getItemTypesFilters = (itemTypes: CatalogItemType[] | undefined, excludeIt
     parts.push(`spec.type != ${excludeItemType}`);
   }
 
-  return parts;
-};
-
-const buildCatalogItemsFieldSelector = (
-  catalogs: string[],
-  typeFilter?: CatalogTypeFilter,
-  nameFilter?: string,
-  excludeItemType?: CatalogItemType,
-): string | undefined => {
-  const parts: string[] = [];
-
-  parts.push(...getItemTypesFilters(typeFilter?.itemTypes, excludeItemType));
-
   if (nameFilter) {
     parts.push(`metadata.name contains ${nameFilter}`);
   }
@@ -62,7 +65,7 @@ const buildCatalogItemsFieldSelector = (
 
 export type UseAllCatalogItemsFilter = {
   catalogFilter: {
-    typeFilter?: CatalogTypeFilter;
+    itemType?: CatalogItemType[];
     nameFilter?: string | undefined;
     catalogs?: string[];
   };
@@ -80,14 +83,14 @@ export const useCatalogItems = ({
   VoidFunction,
 ] => {
   const pagination = useTablePagination<CatalogItemList>();
-  const { typeFilter, nameFilter, catalogs } = catalogFilter;
+  const { itemType, nameFilter, catalogs } = catalogFilter;
 
   const fieldSelector = React.useMemo(
     () =>
-      typeFilter || nameFilter || catalogs || excludeItemType
-        ? buildCatalogItemsFieldSelector(catalogs || [], typeFilter, nameFilter, excludeItemType)
+      itemType || nameFilter || catalogs || excludeItemType
+        ? buildCatalogItemsFieldSelector(itemType, catalogs || [], nameFilter, excludeItemType)
         : undefined,
-    [typeFilter, nameFilter, catalogs, excludeItemType],
+    [itemType, nameFilter, catalogs, excludeItemType],
   );
 
   const endpoint = React.useMemo(() => {
@@ -109,7 +112,7 @@ export const useCatalogItems = ({
   React.useEffect(() => {
     pagination.setCurrentPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nameFilter, typeFilter, catalogs, excludeItemType]);
+  }, [nameFilter, itemType, catalogs, excludeItemType]);
 
   const [catalogItemsList, loading, error, refetch, isFetchUpdating] = useFetchPeriodically<CatalogItemList>(
     { endpoint: endpointDebounced },

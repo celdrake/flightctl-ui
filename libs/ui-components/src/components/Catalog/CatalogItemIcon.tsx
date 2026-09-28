@@ -21,7 +21,7 @@ const getCatalogItemIcon = (catalogItem: CatalogItem): string =>
   ((catalogItem.spec.category === CatalogItemCategory.CatalogItemCategorySystem ? osIcon : appIcon) as string);
 
 const CatalogItemIcon = ({ catalogItem, size = 'md' }: CatalogItemIconProps) => (
-  <img src={getCatalogItemIcon(catalogItem)} alt={`${catalogItem.metadata.name} icon`} style={sizeStyles[size]} />
+  <img src={getCatalogItemIcon(catalogItem)} alt={catalogItem.metadata.name} style={sizeStyles[size]} />
 );
 
 export default CatalogItemIcon;

@@ -207,9 +207,7 @@ const VolumeImageSelectAssetModal = ({
   const [nameFilter, setNameFilter] = React.useState('');
   const [assetCatalogItems, isLoading, error, pagination, isUpdating] = useCatalogItems({
     catalogFilter: {
-      typeFilter: {
-        itemTypes: assetItemTypeFilter,
-      },
+      itemType: assetItemTypeFilter,
       nameFilter,
     },
   });

@@ -55,11 +55,14 @@ export const CatalogItemTypeBadge = ({
 
 export const CatalogItemDeprecationBadge = ({ mode }: { mode: 'item' | 'version' }) => {
   const { t } = useTranslation();
+  const text = mode === 'item' ? t('This item is deprecated') : t('This version is deprecated');
   return (
-    <WithTooltip showTooltip content={mode === 'item' ? t('This item is deprecated') : t('This version is deprecated')}>
-      <Icon status="warning" size="sm">
-        <ExclamationTriangleIcon />
-      </Icon>
+    <WithTooltip showTooltip content={text}>
+      <span tabIndex={0} aria-label={text} role="img">
+        <Icon status="warning" size="sm">
+          <ExclamationTriangleIcon />
+        </Icon>
+      </span>
     </WithTooltip>
   );
 };

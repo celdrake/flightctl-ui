@@ -84,16 +84,16 @@ const CatalogBrowseStep = ({ mode, onSelect }: CatalogBrowseStepProps) => {
   const [appliedNameFilter, setAppliedNameFilter] = React.useState('');
   const [appliedAppTypes, setAppliedAppTypes] = React.useState<CatalogItemType[]>([]);
 
-  const typeFilter = React.useMemo(() => {
+  const itemType = React.useMemo(() => {
     if (!isAppsMode) {
-      return { itemTypes: osTypeOptions };
+      return osTypeOptions;
     }
-    return { itemTypes: selectedAppTypes.length > 0 ? selectedAppTypes : applicationTypeOptions };
+    return selectedAppTypes.length > 0 ? selectedAppTypes : applicationTypeOptions;
   }, [isAppsMode, selectedAppTypes]);
 
   const [catalogItems, loading, error, pagination, isUpdating] = useCatalogItems({
     catalogFilter: {
-      typeFilter,
+      itemType,
       nameFilter: nameFilter || undefined,
     },
   });

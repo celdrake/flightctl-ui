@@ -15,11 +15,9 @@ import {
   type CatalogItemVersion,
 } from '@flightctl/types/alpha';
 
-import { type TFunction } from 'i18next';
 import semver from 'semver';
 
 import { type FullAppVolume, buildApiVolume } from './volumes';
-import type { ArtifactFormValue } from '../components/Catalog/AddCatalogItemWizard/types';
 import { RUN_AS_ROOT_USER, isComposeAppSpec, isContainerAppSpec, isQuadletAppSpec } from '../types/deviceSpec';
 
 export type CatalogItemId = { catalog: string; item: string };
@@ -402,38 +400,3 @@ export const getUpdates = (catalogItem: CatalogItem, currentChannel: string, cur
 
 export const getSortedUpdates = (catalogItem: CatalogItem, currentChannel: string, currentVersion: string) =>
   getUpdates(catalogItem, currentChannel, currentVersion).sort((a, b) => semver.rcompare(a.version, b.version));
-
-export const getArtifactLabel = (t: TFunction, artifact: ArtifactFormValue | CatalogItemArtifact) => {
-  const { type, name } = artifact;
-  if (type === '') {
-    return name;
-  }
-  if (name) {
-    return `${name} (${type})`;
-  }
-  switch (type) {
-    case CatalogItemArtifactType.CatalogItemArtifactTypeQcow2:
-      return t('QCOW2 (qcow2)');
-    case CatalogItemArtifactType.CatalogItemArtifactTypeIso:
-      return t('Bare Metal (iso)');
-    case CatalogItemArtifactType.CatalogItemArtifactTypeAmi:
-      return t('Amazon Web Services (ami)');
-    case CatalogItemArtifactType.CatalogItemArtifactTypeAnacondaIso:
-      return t('Anaconda Installer (anaconda-iso)');
-    case CatalogItemArtifactType.CatalogItemArtifactTypeGce:
-      return t('Google Cloud (gce)');
-    case CatalogItemArtifactType.CatalogItemArtifactTypeRaw:
-      return t('KVM/custom cloud import (raw)');
-    case CatalogItemArtifactType.CatalogItemArtifactTypeVhd:
-      return t('Microsoft Hyper-V (vhd)');
-    case CatalogItemArtifactType.CatalogItemArtifactTypeVmdk:
-      return t('VMware vSphere (vmdk)');
-    case CatalogItemArtifactType.CatalogItemArtifactTypeContainer:
-      return t('Cloud native (container)');
-    case CatalogItemArtifactType.CatalogItemArtifactTypeQcow2DiskContainer:
-      return t('OpenShift Virtualization (qcow2-disk-container)');
-    default: {
-      return t('Unknown ({{ type }})', { type });
-    }
-  }
-};

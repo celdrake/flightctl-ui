@@ -111,32 +111,26 @@ const CatalogPageFilter = ({
 }) => {
   const { t } = useTranslation();
 
-  const selectedItemTypes = catalogFilter.typeFilter.itemTypes || [];
-
-  const setSelectedItemTypes = (itemTypes: CatalogItemType[]) => {
-    catalogFilter.setTypeFilter({ itemTypes });
-  };
-
   const onHandleCheck = (_event: React.ChangeEvent<HTMLInputElement>, item: TreeViewDataItem) => {
     const id = item.id as string;
 
     if (id === CatalogItemCategory.CatalogItemCategoryApplication) {
-      if (appTypeIds.every((typeId) => selectedItemTypes.includes(typeId))) {
-        setSelectedItemTypes(selectedItemTypes.filter((typeId) => !appTypeIds.includes(typeId)));
+      if (appTypeIds.every((typeId) => catalogFilter.itemType.includes(typeId))) {
+        catalogFilter.setItemType(catalogFilter.itemType.filter((typeId) => !appTypeIds.includes(typeId)));
       } else {
-        const newTypes = selectedItemTypes.filter((typeId) => !appTypeIds.includes(typeId));
-        setSelectedItemTypes([...newTypes, ...appTypeIds]);
+        const newTypes = catalogFilter.itemType.filter((typeId) => !appTypeIds.includes(typeId));
+        catalogFilter.setItemType([...newTypes, ...appTypeIds]);
       }
     } else {
-      const newTypes = selectedItemTypes.includes(id as CatalogItemType)
-        ? selectedItemTypes.filter((c) => c !== id)
-        : [...selectedItemTypes, id as CatalogItemType];
-      setSelectedItemTypes(newTypes);
+      const newTypes = catalogFilter.itemType.includes(id as CatalogItemType)
+        ? catalogFilter.itemType.filter((c) => c !== id)
+        : [...catalogFilter.itemType, id as CatalogItemType];
+      catalogFilter.setItemType(newTypes);
     }
   };
 
-  const osTypeChecked = selectedItemTypes.includes(CatalogItemType.CatalogItemTypeOS);
-  const anyAppTypeChecked = appTypeIds.some((typeId) => selectedItemTypes.includes(typeId));
+  const osTypeChecked = catalogFilter.itemType.includes(CatalogItemType.CatalogItemTypeOS);
+  const anyAppTypeChecked = appTypeIds.some((typeId) => catalogFilter.itemType.includes(typeId));
 
   const filterData: TreeViewDataItem[] = [
     {
@@ -162,7 +156,7 @@ const CatalogPageFilter = ({
       name: t('Application'),
       id: CatalogItemCategory.CatalogItemCategoryApplication,
       checkProps: {
-        checked: appTypeIds.every((typeId) => selectedItemTypes.includes(typeId))
+        checked: appTypeIds.every((typeId) => catalogFilter.itemType.includes(typeId))
           ? true
           : anyAppTypeChecked
             ? null
@@ -174,35 +168,35 @@ const CatalogPageFilter = ({
           name: t('Container'),
           id: CatalogItemType.CatalogItemTypeContainer,
           checkProps: {
-            checked: selectedItemTypes.includes(CatalogItemType.CatalogItemTypeContainer),
+            checked: catalogFilter.itemType.includes(CatalogItemType.CatalogItemTypeContainer),
           },
         },
         {
           name: t('Helm'),
           id: CatalogItemType.CatalogItemTypeHelm,
           checkProps: {
-            checked: selectedItemTypes.includes(CatalogItemType.CatalogItemTypeHelm),
+            checked: catalogFilter.itemType.includes(CatalogItemType.CatalogItemTypeHelm),
           },
         },
         {
           name: t('Quadlet'),
           id: CatalogItemType.CatalogItemTypeQuadlet,
           checkProps: {
-            checked: selectedItemTypes.includes(CatalogItemType.CatalogItemTypeQuadlet),
+            checked: catalogFilter.itemType.includes(CatalogItemType.CatalogItemTypeQuadlet),
           },
         },
         {
           name: t('Compose'),
           id: CatalogItemType.CatalogItemTypeCompose,
           checkProps: {
-            checked: selectedItemTypes.includes(CatalogItemType.CatalogItemTypeCompose),
+            checked: catalogFilter.itemType.includes(CatalogItemType.CatalogItemTypeCompose),
           },
         },
         {
           name: t('Data'),
           id: CatalogItemType.CatalogItemTypeData,
           checkProps: {
-            checked: selectedItemTypes.includes(CatalogItemType.CatalogItemTypeData),
+            checked: catalogFilter.itemType.includes(CatalogItemType.CatalogItemTypeData),
           },
         },
       ],
@@ -247,7 +241,7 @@ export const CatalogPageContent = ({
       )
     : undefined;
 
-  const filterIsEmpty = (catalogFilter.typeFilter.itemTypes?.length ?? 0) === 0 && !catalogFilter.nameFilter.trim();
+  const filterIsEmpty = catalogFilter.itemType.length === 0 && !catalogFilter.nameFilter.trim();
 
   const onSelectItem = React.useCallback((selection: CatalogItem) => {
     setSelectedItem((val) => {

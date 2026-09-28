@@ -14,10 +14,10 @@ import FlightCtlModal from '@flightctl/ui-components/src/components/common/Fligh
 import ArrowRightIcon from '@patternfly/react-icons/dist/js/icons/arrow-right-icon';
 import * as React from 'react';
 import { type FormikErrors, useFormikContext } from 'formik';
-import { type CatalogItem, type CatalogItemVersion } from '@flightctl/types/alpha';
 import ReactMarkdown from 'react-markdown';
 
 import type { ApplicationProviderSpec } from '@flightctl/types';
+import { CatalogItemCategory, type CatalogItem, type CatalogItemVersion } from '@flightctl/types/alpha';
 import FlightCtlForm from '../../../form/FlightCtlForm';
 import { useTranslation } from '../../../../hooks/useTranslation';
 import FormSelect from '../../../form/FormSelect';
@@ -76,6 +76,7 @@ const UpdateStep = ({
 
   const updates = getUpdates(catalogItem, values.channel, currentVersion.version);
   const updateVersion = catalogItem.spec.versions.find((v) => v.version === values.version);
+  const showAdvancedConfig = catalogItem.spec.category === CatalogItemCategory.CatalogItemCategoryApplication;
 
   return isEdit ? (
     <>
@@ -194,9 +195,11 @@ const UpdateStep = ({
               )}
             </Grid>
           </GridItem>
-          <GridItem>
-            <AdvancedConfigControl requiresAdvancedConfig={requiresAdvancedConfig} />
-          </GridItem>
+          {showAdvancedConfig && (
+            <GridItem>
+              <AdvancedConfigControl requiresAdvancedConfig={requiresAdvancedConfig} />
+            </GridItem>
+          )}
         </Grid>
       </FlightCtlForm>
       {showReadme && updateVersion?.readme && (
@@ -221,9 +224,11 @@ const UpdateStep = ({
         </FlightCtlForm>
       </GridItem>
       <GridItem>
-        <FlightCtlForm>
-          <AdvancedConfigControl requiresAdvancedConfig={requiresAdvancedConfig} />
-        </FlightCtlForm>
+        {showAdvancedConfig && (
+          <FlightCtlForm>
+            <AdvancedConfigControl requiresAdvancedConfig={requiresAdvancedConfig} />
+          </FlightCtlForm>
+        )}
       </GridItem>
     </Grid>
   );

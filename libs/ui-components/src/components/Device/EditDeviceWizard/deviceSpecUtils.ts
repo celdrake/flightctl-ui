@@ -736,72 +736,55 @@ export const getApplicationPatches = (
 };
 
 /**
- * Function that generates the patches to update the OS spec of a device/fleet, via the EditDevice/EditFleet form.
- *
- * Supported use cases:
- * - Any modification when the spec uses an image (or it has an unset value): initially defining it, replacing it, or removing it
- * - Setting a catalogItemRef when the current OS is unset or image-based
- * - Removing a catalogItemRef-defined OS (clearing it from the template)
- *
- * Unsupported use cases:
- * - Changing from CatalogItemRef to image (delete the catalog ref first, then set an image)
- * - Modifying the catalogItemRef itself (must be done via the Catalog page)
+ * Generates patches for the OS image / catalogItemRef of a device or fleet.
+ * Catalog-ref changes are handled first (add, replace, remove, or switch to/from
+ * a manual image); when the catalog ref is unchanged, only image updates apply.
  *
  * @param osPath - The path to the OS spec in the device/fleet spec
  * @param currentOsSpec - The current OS spec in the device/fleet spec
- * @param formOsSpec - The new OS spec in the device/fleet spec
- * @returns The patches to update the OS spec in the device/fleet spec
+ * @param formOsSpec - The new OS spec from the EditDevice/EditFleet form
+ * @returns The patches to update the OS spec
  */
 export const getFormOsSpecPatches = (
   osPath: string,
   currentOsSpec: ImageOrCatalogItemRefSpec | undefined,
   formOsSpec: ImageOrCatalogItemRefSpec | undefined,
 ): PatchRequest => {
-  if (currentOsSpec?.catalogItemRef) {
-    const formHasCatalogRef = Boolean(formOsSpec?.catalogItemRef);
-    const formHasImage = Boolean(formOsSpec?.image);
-    // Allow clearing a catalog-defined OS from the template; other catalog mutations stay unsupported.
-    if (!formHasCatalogRef && !formHasImage) {
-      return [{ path: osPath, op: 'remove' }];
-    }
+  const hasRefChanged = hasCatalogRefChanged(currentOsSpec, formOsSpec);
+  const hasImageChanged = hasImageOrCatalogRefChanged(currentOsSpec, formOsSpec);
+  if (!hasRefChanged && !hasImageChanged) {
     return [];
   }
 
-  const formCatalogRef = formOsSpec?.catalogItemRef;
-  if (formCatalogRef) {
-    if (!currentOsSpec?.image) {
-      return [{ path: osPath, op: 'add', value: { catalogItemRef: formCatalogRef } }];
-    }
-    return [{ path: osPath, op: 'replace', value: { catalogItemRef: formCatalogRef } }];
-  }
-
-  const currentOsImage = currentOsSpec?.image;
   const newOsImage = formOsSpec?.image;
-  const osChanged = hasStringChanged(currentOsImage, newOsImage);
-  if (!osChanged) {
-    return [];
+  if (hasRefChanged) {
+    const formCatalogRef = formOsSpec?.catalogItemRef;
+    if (formCatalogRef) {
+      return [
+        {
+          path: osPath,
+          op: currentOsSpec ? 'replace' : 'add',
+          value: { catalogItemRef: formCatalogRef },
+        },
+      ];
+    }
+    // Switching from catalogItemRef to manual image
+    if (newOsImage) {
+      return [{ path: osPath, op: 'replace', value: { image: newOsImage } }];
+    }
+    // OS image completely removed
+    return [{ path: osPath, op: 'remove' }];
   }
 
-  const patches: PatchRequest = [];
+  // Handles changes to the manual OS image
+  const currentOsImage = currentOsSpec?.image;
   if (!currentOsImage && newOsImage) {
-    patches.push({
-      path: osPath,
-      op: 'add',
-      value: { image: newOsImage },
-    });
-  } else if (!newOsImage && currentOsImage) {
-    patches.push({
-      path: osPath,
-      op: 'remove',
-    });
-  } else {
-    patches.push({
-      path: `${osPath}/image`,
-      op: 'replace',
-      value: formOsSpec?.image,
-    });
+    return [{ path: osPath, op: 'add', value: { image: newOsImage } }];
   }
-  return patches;
+  if (!newOsImage && currentOsImage) {
+    return [{ path: osPath, op: 'remove' }];
+  }
+  return [{ path: `${osPath}/image`, op: 'replace', value: newOsImage }];
 };
 
 export const getApiConfig = (ct: SpecConfigTemplate): ConfigSourceProvider => {

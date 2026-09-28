@@ -62,19 +62,11 @@ const CatalogRefTitle = ({
   const subtitle = provider ? t('Provided by {{provider}}', { provider }) : undefined;
 
   return (
-    <Flex
-      alignItems={{ default: 'alignItemsCenter' }}
-      gap={{ default: 'gapSm' }}
-      className="fctl-catalog-ref-card__title"
-    >
+    <Flex alignItems={{ default: 'alignItemsCenter' }} gap={{ default: 'gapSm' }}>
       {icon && <FlexItem>{icon}</FlexItem>}
       <FlexItem>
         <Stack>
-          <StackItem>
-            <Content component={ContentVariants.h3} className="fctl-catalog-ref-card__title-text">
-              {title}
-            </Content>
-          </StackItem>
+          <StackItem className="pf-v6-u-font-weight-bold">{title}</StackItem>
           {subtitle && (
             <StackItem>
               <Content component={ContentVariants.small}>{subtitle}</Content>
@@ -95,9 +87,11 @@ const CatalogFormError = ({ error }: { error: CatalogAppForm | undefined }) => {
   return (
     <FlexItem>
       <WithTooltip showTooltip={true} content={errorText}>
-        <Icon status="danger">
-          <ExclamationCircleIcon />
-        </Icon>
+        <span tabIndex={0} role="img" aria-label={errorText}>
+          <Icon status="danger">
+            <ExclamationCircleIcon />
+          </Icon>
+        </span>
       </WithTooltip>
     </FlexItem>
   );

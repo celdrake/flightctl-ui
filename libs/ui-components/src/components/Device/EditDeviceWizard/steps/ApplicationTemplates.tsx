@@ -31,7 +31,7 @@ import TextField from '../../../form/TextField';
 import FormSelect from '../../../form/FormSelect';
 import RadioField from '../../../form/RadioField';
 import { FormGroupWithHelperText } from '../../../common/WithHelperText';
-import { appTypeOptions, getAppTypeLabel } from '../../../../utils/apps';
+import { appTypeOptions, getAppTypeLabel } from '../../../../utils/catalogTypes';
 import DeleteModal from '../../../modals/DeleteModal/DeleteModal';
 import ApplicationImageForm from './ApplicationImageForm';
 import ApplicationInlineForm from './ApplicationInlineForm';
@@ -308,23 +308,24 @@ const ApplicationTemplates = ({ isReadOnly, isEdit = false }: { isReadOnly?: boo
                       </SplitItem>
                     )}
                   </Split>
-                  {appIndexToDelete !== undefined && (
-                    <DeleteModal
-                      onClose={() => setAppIndexToDelete(undefined)}
-                      onDelete={() => {
-                        arrayHelpers.remove(appIndexToDelete);
-                        setAppIndexToDelete(undefined);
-                        return Promise.resolve();
-                      }}
-                      resourceType="application"
-                      confirmText={t(
-                        'This removes the application from the template. You can add it again from the catalog or manually.',
-                      )}
-                    />
-                  )}
                 </FormSection>
               );
             })}
+
+            {appIndexToDelete !== undefined && (
+              <DeleteModal
+                onClose={() => setAppIndexToDelete(undefined)}
+                onDelete={() => {
+                  arrayHelpers.remove(appIndexToDelete);
+                  setAppIndexToDelete(undefined);
+                  return Promise.resolve();
+                }}
+                resourceType="application"
+                confirmText={t(
+                  'This removes the application from the template. You can add it again from the catalog or manually.',
+                )}
+              />
+            )}
 
             {!isReadOnly && (
               <FormSection>

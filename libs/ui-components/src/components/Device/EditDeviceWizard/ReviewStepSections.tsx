@@ -24,7 +24,7 @@ import {
   isCatalogAppEntry,
 } from '../../../types/deviceSpec';
 import { useTranslation } from '../../../hooks/useTranslation';
-import { getAppTypeLabel } from '../../../utils/apps';
+import { getAppTypeLabel } from '../../../utils/catalogTypes';
 import { RepositorySourcePlainList } from '../../Repository/RepositoryDetails/RepositorySourceList';
 import CatalogRefReviewDetails from '../../CatalogRef/CatalogRefReviewDetails';
 import { getApiConfig } from './deviceSpecUtils';
@@ -34,7 +34,6 @@ import LabelsView from '../../common/LabelsView';
 import { toAPILabel } from '../../../utils/labels';
 import type { FlightCtlLabel } from '../../../types/extraTypes';
 
-// CELIA-WIP: Visual parity without ported CSS — review card title weight and spacing may differ from design.
 export const ReviewCard = ({ title, children }: React.PropsWithChildren<{ title: string }>) => (
   <StackItem>
     <Card>

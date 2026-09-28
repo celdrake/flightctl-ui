@@ -82,7 +82,10 @@ const WizardContent = ({
   const { values, errors } = useFormikContext<AppUpdateFormik>();
 
   const isVersionStep = !currentStep || currentStep?.id === versionStepId;
-  const requiresAdvancedConfig = isVersionStep ? isAdvancedConfigRequired(catalogItem, values.version, appSpec) : false;
+  const requiresAdvancedConfig = React.useMemo(
+    () => isAdvancedConfigRequired(catalogItem, values.version, appSpec),
+    [catalogItem, values.version, appSpec],
+  );
   const showConfigStep = requiresAdvancedConfig || values.wantAdvancedConfig;
   const orderedIds = getOrderedIds(showConfigStep);
   const validStepIds = getValidStepIds(errors, values, showConfigStep);
