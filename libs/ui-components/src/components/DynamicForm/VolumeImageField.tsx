@@ -341,6 +341,7 @@ const VolumeImageField = ({
                 catalogItemRef={catalogRef}
                 headerTitle={catalogItem?.spec.displayName || catalogItem?.metadata.name || ''}
                 showUpdateStatus={false}
+                isCompact
               />
             ) : (
               t('Catalog item {{ catalogItemRef }}', {

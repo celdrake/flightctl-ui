@@ -29,9 +29,12 @@ import CatalogRefCardDetails from './CatalogRefCardDetails';
 import CatalogItemIcon from '../Catalog/CatalogItemIcon';
 import CatalogItemViewBadges, { CatalogItemDeprecationBadge } from '../Catalog/CatalogItemBadges';
 
+import './CatalogRefCard.css';
+
 type CatalogRefCardProps = {
   catalogItemRef: CatalogItemRefSpec;
   headerTitle?: string;
+  isCompact?: boolean;
   showUpdateStatus: boolean;
   onEdit?: VoidFunction;
   formikErrror?: CatalogAppForm;
@@ -40,26 +43,37 @@ type CatalogRefCardProps = {
 const CatalogRefTitle = ({
   item,
   title,
+  isCompact,
   isLoading,
 }: {
   item?: CatalogItem;
   title: string;
+  isCompact: boolean;
   isLoading: boolean;
-  error?: string;
 }) => {
   const { t } = useTranslation();
-  const icon = item ? <CatalogItemIcon catalogItem={item} size="sm" /> : isLoading ? <Spinner size="md" /> : null;
+  const icon = item ? (
+    <CatalogItemIcon catalogItem={item} size={isCompact ? 'xs' : 'sm'} />
+  ) : isLoading ? (
+    <Spinner size="md" />
+  ) : null;
 
   const provider = item?.spec.provider;
   const subtitle = provider ? t('Provided by {{provider}}', { provider }) : undefined;
 
   return (
-    <Flex alignItems={{ default: 'alignItemsCenter' }} gap={{ default: 'gapSm' }}>
+    <Flex
+      alignItems={{ default: 'alignItemsCenter' }}
+      gap={{ default: 'gapSm' }}
+      className="fctl-catalog-ref-card__title"
+    >
       {icon && <FlexItem>{icon}</FlexItem>}
       <FlexItem>
         <Stack>
           <StackItem>
-            <Content component={ContentVariants.h3}>{title}</Content>
+            <Content component={ContentVariants.h3} className="fctl-catalog-ref-card__title-text">
+              {title}
+            </Content>
           </StackItem>
           {subtitle && (
             <StackItem>
@@ -95,6 +109,7 @@ const CatalogRefCard = ({
   showUpdateStatus,
   onEdit,
   formikErrror,
+  isCompact = false,
 }: CatalogRefCardProps) => {
   const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = React.useState(false);
@@ -113,7 +128,7 @@ const CatalogRefCard = ({
   const isDeprecated = version?.deprecation?.message;
 
   return (
-    <Card isCompact>
+    <Card isCompact className={`fctl-catalog-ref-card ${isCompact ? 'fctl-catalog-ref-card--compact' : ''}`}>
       <CardBody>
         <Stack hasGutter={isExpanded}>
           <StackItem>
@@ -136,7 +151,12 @@ const CatalogRefCard = ({
                   </FlexItem>
                   <CatalogFormError error={formikErrror} />
                   <FlexItem>
-                    <CatalogRefTitle item={item} isLoading={isLoading || false} title={displayName} />
+                    <CatalogRefTitle
+                      item={item}
+                      isLoading={isLoading || false}
+                      title={displayName}
+                      isCompact={isCompact}
+                    />
                   </FlexItem>
                 </Flex>
               </FlexItem>
