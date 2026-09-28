@@ -25,8 +25,9 @@ import { SearchIcon } from '@patternfly/react-icons/dist/js/icons/search-icon';
 import { CubeIcon } from '@patternfly/react-icons/dist/js/icons/cube-icon';
 import { MinusCircleIcon } from '@patternfly/react-icons/dist/js/icons/minus-circle-icon';
 import { CatalogIcon } from '@patternfly/react-icons/dist/js/icons/catalog-icon';
-import type { FieldProps } from '@rjsf/utils';
+import type { FieldProps, RJSFSchema } from '@rjsf/utils';
 
+import type { CatalogItemRefSpec } from '@flightctl/types';
 import {
   type CatalogItem,
   type CatalogItemList,
@@ -58,21 +59,60 @@ import { useResolvedCatalogRef } from '../Catalog/useResolvedCatalogRef';
 import CatalogItemGallery from '../Catalog/CatalogItemGallery';
 import CatalogRefCard from '../CatalogRef/CatalogRefCard';
 
+export enum VolumeImageSourceMode {
+  // Volume accepts only an image reference
+  ImageOnly = 'imageOnly',
+  // Volume accepts only a catalog item reference
+  CatalogOnly = 'catalogOnly',
+  // Volume accepts can use either
+  Both = 'both',
+}
+
+/**
+ * Regex for volume image object field IDs.
+ * Matches IDs like: root_volumes_0_image, root_volumes_1_image, etc.
+ */
+export const ROOT_VOLUMES_IMAGE_FIELD_REGEX = /root_volumes_(\d+)_image$/;
+
 /**
  * Regex for volume image reference field IDs.
  * Matches IDs like: root_volumes_0_image_reference, root_volumes_1_image_reference, etc.
- * Capture group 1 is the volume index.
  */
 export const ROOT_VOLUMES_IMAGE_REFERENCE_FIELD_REGEX = /root_volumes_(\d+)_image_reference$/;
 
 /**
- * Extract the volume index from the field ID.
- * Field ID format: "root_volumes_0_image_reference" -> extracts index 0
+ * Regex for volume image catalogItemRef field IDs.
+ * Matches IDs like: root_volumes_0_image_catalogItemRef, etc.
+ */
+export const ROOT_VOLUMES_IMAGE_CATALOG_REF_FIELD_REGEX = /root_volumes_(\d+)_image_catalogItemRef$/;
+
+/**
+ * Extract the volume index from a volume image-related field ID.
  */
 export const getVolumeIndexFromId = (fieldId: string): number => {
-  const match = fieldId.match(ROOT_VOLUMES_IMAGE_REFERENCE_FIELD_REGEX);
+  const match =
+    fieldId.match(ROOT_VOLUMES_IMAGE_REFERENCE_FIELD_REGEX) ||
+    fieldId.match(ROOT_VOLUMES_IMAGE_CATALOG_REF_FIELD_REGEX) ||
+    fieldId.match(ROOT_VOLUMES_IMAGE_FIELD_REGEX);
   return match ? parseInt(match[1], 10) : -1;
 };
+
+/** Resolve the shared volumes[].image schema from the form root schema. */
+export const getVolumeImageSchema = (rootSchema: RJSFSchema | undefined): RJSFSchema | undefined => {
+  const volumes = rootSchema?.properties?.volumes;
+  if (!volumes || typeof volumes === 'boolean') {
+    return undefined;
+  }
+  const items = Array.isArray(volumes.items) ? volumes.items[0] : volumes.items;
+  if (!items || typeof items === 'boolean') {
+    return undefined;
+  }
+  const image = items.properties?.image;
+  return typeof image === 'object' ? image : undefined;
+};
+
+export const hasVolumeImageCatalogItemRefProperty = (imageSchema: RJSFSchema | undefined): boolean =>
+  !!imageSchema?.properties && 'catalogItemRef' in imageSchema.properties;
 
 type SelectAssetModalProps = {
   onClose: VoidFunction;
@@ -277,10 +317,12 @@ const VALID_EMPTY_IMAGE_REFERENCE = '';
 // Setting "reference" to undefined makes the field invalid, as required validation fails.
 const INVALID_EMPTY_IMAGE_REFERENCE = undefined;
 
+// CELIA-WIP: UNIfy managing of formData
+// CELIA-WIP: Unify double template
+
 /**
- * Custom field for the volume image "reference" property.
- * Allows to either type in an OCI reference or select a catalog item, depending on the schema.
- * Used only when the field ID matches root_volumes_N_image_reference.
+ * Custom field for volume image source (OCI reference and/or catalog item).
+ * Mounted on root_volumes_N_image_reference, or on catalogItemRef when mode is catalogOnly.
  * Catalog selections are tracked via "volumeSelection" and persisted as catalogItemRef on submit.
  */
 const VolumeImageField = ({
@@ -291,21 +333,25 @@ const VolumeImageField = ({
   formContext,
   disabled,
   readonly,
-  required,
-}: FieldProps) => {
+  mode,
+}: FieldProps & { mode: VolumeImageSourceMode }) => {
   const { t } = useTranslation();
   const { checkPermissions } = usePermissionsContext();
   const [canListCatalogItems] = checkPermissions(catalogItemListPermission);
   const { onVolumeSelected, volumeSelection, onVolumeCleared } = formContext as DynamicFormContext;
+  const isCatalogOnly = mode === 'catalogOnly';
+  const canSelectFromCatalog = canListCatalogItems && mode !== 'imageOnly';
   const imageReference = typeof formData === 'string' ? formData : '';
   const volumeIndex = getVolumeIndexFromId(idSchema.$id);
-  // When the "reference" field is required, the user cannot select a catalog item as it wouldn't satisfy the schema.
-  const canSelectFromCatalog = canListCatalogItems && !required;
 
   const [isModalOpen, setIsModalOpen] = React.useState(false);
 
   const currentVolumeSelection = volumeSelection.find((a) => a.volumeIndex === volumeIndex);
-  const catalogRef = currentVolumeSelection?.catalogItemRef;
+  const formCatalogRef =
+    isCatalogOnly && formData && typeof formData === 'object' && 'catalog' in formData && 'item' in formData
+      ? (formData as CatalogItemRefSpec)
+      : undefined;
+  const catalogRef = currentVolumeSelection?.catalogItemRef || formCatalogRef;
   const catalogItem = useResolvedCatalogRef(catalogRef)?.item;
 
   const handleTextChange = (_event: React.FormEvent<HTMLInputElement>, newImgValue: string) => {
@@ -316,54 +362,74 @@ const VolumeImageField = ({
   };
 
   const onSelect = (item: CatalogItem, version: CatalogItemVersion, channel: string) => {
+    const nextCatalogItemRef = buildCatalogItemRef({
+      catalogItem: item,
+      catalogItemVersion: version,
+      channel,
+    });
     onVolumeSelected({
       volumeIndex,
-      catalogItemRef: buildCatalogItemRef({
-        catalogItem: item,
-        catalogItemVersion: version,
-        channel,
-      }),
+      catalogItemRef: nextCatalogItemRef,
     });
-    // Clear reference so submit path writes catalogItemRef exclusively
-    onChange(VALID_EMPTY_IMAGE_REFERENCE);
+    if (isCatalogOnly) {
+      onChange(nextCatalogItemRef);
+    } else {
+      // Clear reference so submit path writes catalogItemRef exclusively
+      onChange(VALID_EMPTY_IMAGE_REFERENCE);
+    }
+  };
+
+  const onClearCatalog = () => {
+    onVolumeCleared(volumeIndex);
+    onChange(isCatalogOnly ? undefined : INVALID_EMPTY_IMAGE_REFERENCE);
   };
 
   const hasErrors = !!rawErrors?.length;
 
+  const catalogCard = catalogRef ? (
+    <Split hasGutter>
+      <SplitItem isFilled>
+        {catalogItem ? (
+          <CatalogRefCard
+            catalogItemRef={catalogRef}
+            headerTitle={catalogItem?.spec.displayName || catalogItem?.metadata.name || ''}
+            showUpdateStatus={false}
+            isCompact
+          />
+        ) : (
+          t('Catalog item {{ catalogItemRef }}', {
+            catalogItemRef: formatCatalogItemRef(catalogRef),
+          })
+        )}
+      </SplitItem>
+      <SplitItem>
+        <Button
+          aria-label={t('Delete item')}
+          variant="link"
+          isDanger
+          icon={<MinusCircleIcon />}
+          iconPosition="start"
+          isDisabled={disabled || readonly}
+          onClick={onClearCatalog}
+        />
+      </SplitItem>
+    </Split>
+  ) : null;
+
   // Render only the control content; parent FieldTemplate provides the FormGroup label and errors
   return (
-    <>
+    <div>
       {catalogRef ? (
-        <Split hasGutter>
-          <SplitItem isFilled>
-            {catalogItem ? (
-              <CatalogRefCard
-                catalogItemRef={catalogRef}
-                headerTitle={catalogItem?.spec.displayName || catalogItem?.metadata.name || ''}
-                showUpdateStatus={false}
-                isCompact
-              />
-            ) : (
-              t('Catalog item {{ catalogItemRef }}', {
-                catalogItemRef: formatCatalogItemRef(catalogRef),
-              })
-            )}
-          </SplitItem>
-          <SplitItem>
-            <Button
-              aria-label={t('Delete item')}
-              variant="link"
-              isDanger
-              icon={<MinusCircleIcon />}
-              iconPosition="start"
-              isDisabled={disabled || readonly}
-              onClick={() => {
-                onVolumeCleared(volumeIndex);
-                onChange(INVALID_EMPTY_IMAGE_REFERENCE);
-              }}
-            />
-          </SplitItem>
-        </Split>
+        catalogCard
+      ) : isCatalogOnly ? (
+        <Button
+          variant="secondary"
+          icon={<CatalogIcon />}
+          onClick={() => setIsModalOpen(true)}
+          isDisabled={disabled || readonly || !canSelectFromCatalog}
+        >
+          {t('Add from software catalog')}
+        </Button>
       ) : (
         <Split hasGutter>
           <SplitItem isFilled>
@@ -394,7 +460,7 @@ const VolumeImageField = ({
         </Split>
       )}
       {isModalOpen && <SelectAssetModal onClose={() => setIsModalOpen(false)} onSelect={onSelect} />}
-    </>
+    </div>
   );
 };
 
