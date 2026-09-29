@@ -94,16 +94,18 @@ const CatalogItemTitle = ({
   item,
   version,
   channel,
+  description,
 }: {
   item: CatalogItem;
   headerTitle?: string;
   version?: string;
   channel?: string;
+  description?: string;
 }) => (
   <CatalogTitleLayout
     icon={<CatalogItemIcon catalogItem={item} />}
     title={headerTitle}
-    description={item.spec.displayName || item.metadata.name || ''}
+    description={description}
     version={version}
     channel={channel}
   />

@@ -18,13 +18,20 @@ const SoftwareItemTitle = ({
   catalogItemId: SpecCatalogItemId;
   data?: ResolvedCatalogItemData;
 }) => {
-  const title = catalogItemId.type === 'app' && catalogItemId.appName ? catalogItemId.appName : '';
+  const appName = catalogItemId.type === 'app' && catalogItemId.appName ? catalogItemId.appName : '';
 
   if (!data) {
-    return <BrokenCatalogItemTitle catalogRef={catalogItemId.ref} headerTitle={title} />;
+    return <BrokenCatalogItemTitle catalogRef={catalogItemId.ref} headerTitle="test" />;
   }
+  const itemName = data.item.spec.displayName || data.item.metadata.name || '';
   return (
-    <CatalogItemTitle headerTitle={title} item={data.item} channel={data.channel} version={data.version?.version} />
+    <CatalogItemTitle
+      headerTitle={appName || itemName}
+      description={appName ? itemName : undefined}
+      item={data.item}
+      channel={data.channel}
+      version={data.version?.version}
+    />
   );
 };
 
