@@ -7,7 +7,7 @@ import type { CatalogItem, CatalogItemVersion } from '@flightctl/types/alpha';
 import { useTranslation } from '../../../hooks/useTranslation';
 import type { InstallSpecFormik } from '../InstallWizard/types';
 import FlightCtlWizardFooter from '../../common/FlightCtlWizardFooter';
-import { getSortedUpdates } from '../../../utils/catalog';
+import { CatalogEditWizardMode, getSortedUpdates } from '../../../utils/catalog';
 import UpdateStep, { isUpdateStepValid } from './steps/UpdateStep';
 import { getErrorMessage } from '../../../utils/error';
 import ReviewStep from './steps/ReviewStep';
@@ -36,6 +36,7 @@ const validateUpdateWizardStep = (activeStepId: string, errors: FormikErrors<Ins
 };
 
 type WizardContentProps = {
+  mode: CatalogEditWizardMode;
   currentVersion: CatalogItemVersion;
   catalogItem: CatalogItem;
   error: string | undefined;
@@ -43,7 +44,14 @@ type WizardContentProps = {
   isEdit: boolean;
 };
 
-const WizardContent: React.FC<WizardContentProps> = ({ currentVersion, catalogItem, error, setError, isEdit }) => {
+const WizardContent: React.FC<WizardContentProps> = ({
+  mode,
+  currentVersion,
+  catalogItem,
+  error,
+  setError,
+  isEdit,
+}) => {
   const { t } = useTranslation();
   const [currentStep, setCurrentStep] = React.useState<WizardStepType>();
 
@@ -73,7 +81,7 @@ const WizardContent: React.FC<WizardContentProps> = ({ currentVersion, catalogIt
         <WizardStep name={t('Version')} id={versionStepId}>
           {(!currentStep || currentStep?.id === versionStepId) && (
             <UpdateStep
-              mode="update"
+              mode={mode}
               catalogItem={catalogItem}
               currentVersion={currentVersion}
               isEdit={isEdit}
@@ -94,6 +102,7 @@ const WizardContent: React.FC<WizardContentProps> = ({ currentVersion, catalogIt
 };
 
 type EditOsWizardProps = {
+  mode: CatalogEditWizardMode;
   catalogItem: CatalogItem;
   currentVersion: CatalogItemVersion;
   onUpdate: (catalogItemVersion: CatalogItemVersion, values: InstallSpecFormik) => Promise<void>;
@@ -104,6 +113,7 @@ type EditOsWizardProps = {
 };
 
 const EditOsWizard: React.FC<EditOsWizardProps> = ({
+  mode,
   catalogItem,
   currentVersion,
   onUpdate,
@@ -143,6 +153,7 @@ const EditOsWizard: React.FC<EditOsWizardProps> = ({
       }}
     >
       <WizardContent
+        mode={mode}
         currentVersion={currentVersion}
         catalogItem={catalogItem}
         error={error}

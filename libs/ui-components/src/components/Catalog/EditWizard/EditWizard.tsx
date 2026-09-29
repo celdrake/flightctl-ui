@@ -114,6 +114,7 @@ const EditWizard = ({
     } else {
       content = (
         <EditOsWizard
+          mode={mode}
           isEdit={!version}
           catalogItem={catalogItem}
           currentChannel={currentChannel}
