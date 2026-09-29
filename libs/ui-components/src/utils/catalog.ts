@@ -217,7 +217,7 @@ export const getRemoveAppPatches = ({
   return allPatches;
 };
 
-const getAppType = (catalogItem: CatalogItem): AppType | undefined => {
+export const getAppType = (catalogItem: CatalogItem): AppType | undefined => {
   switch (catalogItem.spec.type) {
     case CatalogItemType.CatalogItemTypeCompose:
       return AppType.AppTypeCompose;

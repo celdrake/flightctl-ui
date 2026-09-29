@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Button, Flex, FlexItem, ModalBody, ModalFooter, ModalHeader, Title } from '@patternfly/react-core';
+import { Alert, Button, Flex, FlexItem, ModalBody, ModalFooter, ModalHeader, Title } from '@patternfly/react-core';
 import type { CatalogItem } from '@flightctl/types/alpha';
 
 import { useTranslation } from '../../hooks/useTranslation';
@@ -18,6 +18,7 @@ import CatalogBrowseStep from './CatalogBrowseStep';
 import CatalogAddAppStep, { type ConfigureFormValues } from './CatalogAddAppStep';
 import CatalogAddSettingsStep from './CatalogAddSettingsStep';
 import { CatalogItemDeprecationBadge } from '../Catalog/CatalogItemBadges';
+import { getAppType } from '../../utils/catalog';
 
 type CatalogAddAppModalProps = {
   appName?: string;
@@ -42,6 +43,7 @@ const CatalogAddAppModal = ({ appName = '', existingAppNames = [], onClose, onCo
   const [selectedItem, setSelectedItem] = React.useState<CatalogItem | null>(null);
   const [pendingConfigureValues, setPendingConfigureValues] = React.useState<ConfigureFormValues | null>(null);
   const [pendingSelection, setPendingSelection] = React.useState<CatalogSelectionConfirm | null>(null);
+  const [invalidAppType, setInvalidAppType] = React.useState<string>();
 
   const handleClose = () => {
     onClose();
@@ -103,8 +105,14 @@ const CatalogAddAppModal = ({ appName = '', existingAppNames = [], onClose, onCo
           <CatalogBrowseStep
             mode="apps"
             onSelect={(item) => {
-              setSelectedItem(item);
-              setStep(Step.SelectApp);
+              const appType = getAppType(item);
+              if (appType) {
+                setSelectedItem(item);
+                setStep(Step.SelectApp);
+                setInvalidAppType(undefined);
+              } else {
+                setInvalidAppType(item.spec.type);
+              }
             }}
           />
         )}
@@ -115,8 +123,14 @@ const CatalogAddAppModal = ({ appName = '', existingAppNames = [], onClose, onCo
             initialValues={configureInitialValues}
             onBack={() => setStep(Step.Browse)}
             onConfirm={(selection, confirmedAppName) => {
-              onConfirm(selection, confirmedAppName);
-              handleClose();
+              const appType = getAppType(selection.catalogItem);
+              if (appType) {
+                setInvalidAppType(undefined);
+                onConfirm(selection, confirmedAppName);
+                handleClose();
+              } else {
+                setInvalidAppType(selection.catalogItem.spec.type);
+              }
             }}
             onContinueToAdvanced={(values, selection) => {
               setPendingConfigureValues(values);
@@ -138,6 +152,11 @@ const CatalogAddAppModal = ({ appName = '', existingAppNames = [], onClose, onCo
               }
             }}
           />
+        )}
+        {invalidAppType && (
+          <Alert variant="danger" title={t('Unsupported application type')} className="pf-v6-u-mt-md">
+            {t('Applications of type {{appType}} are not supported via the console.', { appType: invalidAppType })}
+          </Alert>
         )}
       </ModalBody>
       {step === Step.Browse && (

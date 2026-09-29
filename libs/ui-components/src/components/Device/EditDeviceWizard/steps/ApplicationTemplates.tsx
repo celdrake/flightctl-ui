@@ -45,10 +45,7 @@ import CatalogRefCard from '../../../CatalogRef/CatalogRefCard';
 import ApplicationWorkloadCard from './ApplicationWorkloadCard';
 import CatalogAddAppModal from '../../../CatalogComposition/CatalogAddAppModal';
 import CatalogEditAppModal from '../../../CatalogComposition/CatalogEditAppModal';
-import {
-  createCatalogAppEntry,
-  createCatalogAppEntryWithConfig,
-} from '../../../CatalogComposition/catalogCompositionUtils';
+import { createCatalogAppEntry } from '../../../CatalogComposition/catalogCompositionUtils';
 import { useResolvedCatalogRef } from '../../../Catalog/useResolvedCatalogRef';
 
 import './ApplicationsForm.css';
@@ -355,15 +352,8 @@ const ApplicationTemplates = ({ isReadOnly, isEdit = false }: { isReadOnly?: boo
               <CatalogAddAppModal
                 onClose={() => setIsCatalogSelectOpen(false)}
                 onConfirm={(selection, appName, advancedConfig) => {
-                  try {
-                    const nextEntry = advancedConfig
-                      ? createCatalogAppEntryWithConfig({ selection, appName, advancedConfig })
-                      : createCatalogAppEntry(selection, appName);
-                    arrayHelpers.push(nextEntry);
-                    setIsCatalogSelectOpen(false);
-                  } catch {
-                    // Unsupported catalog item types are filtered in the modal; ignore unexpected failures.
-                  }
+                  arrayHelpers.push(createCatalogAppEntry(appName, selection, advancedConfig));
+                  setIsCatalogSelectOpen(false);
                 }}
                 existingAppNames={existingAppNames}
               />

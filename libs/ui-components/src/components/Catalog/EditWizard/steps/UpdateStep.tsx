@@ -17,7 +17,7 @@ import { type FormikErrors, useFormikContext } from 'formik';
 import ReactMarkdown from 'react-markdown';
 
 import type { ApplicationProviderSpec } from '@flightctl/types';
-import { CatalogItemCategory, type CatalogItem, type CatalogItemVersion } from '@flightctl/types/alpha';
+import { type CatalogItem, CatalogItemCategory, type CatalogItemVersion } from '@flightctl/types/alpha';
 import FlightCtlForm from '../../../form/FlightCtlForm';
 import { useTranslation } from '../../../../hooks/useTranslation';
 import FormSelect from '../../../form/FormSelect';

@@ -167,30 +167,18 @@ const toCatalogAppForm = (apiApp: ApplicationProviderSpec, catalogItemRef: Catal
   apiApp,
 });
 
-export const createCatalogAppEntry = (selection: CatalogSelectionConfirm, appName: string): ApplicationEntry => {
-  const apiApp = buildCatalogApplicationSpec({
-    appName,
-    catalogItem: selection.catalogItem,
-    catalogItemVersion: selection.version,
-    channel: selection.channel,
-    formValues: undefined,
-  });
-  return { type: 'catalog', app: toCatalogAppForm(apiApp, selection.catalogItemRef) };
-};
-
-export const createCatalogAppEntryWithConfig = ({
-  selection,
-  appName,
-  advancedConfig,
-}: {
-  selection: CatalogSelectionConfirm;
-  appName: string;
-  advancedConfig: CatalogAdvancedConfigValues;
-}): ApplicationEntry => {
-  const formValues =
-    advancedConfig.configureVia === 'editor'
-      ? (load(advancedConfig.editorContent) as Record<string, unknown>)
-      : advancedConfig.formValues;
+export const createCatalogAppEntry = (
+  appName: string,
+  selection: CatalogSelectionConfirm,
+  advancedConfig?: CatalogAdvancedConfigValues,
+): ApplicationEntry => {
+  let formValues: Record<string, unknown> | undefined;
+  if (advancedConfig) {
+    formValues =
+      advancedConfig.configureVia === 'editor'
+        ? (load(advancedConfig.editorContent) as Record<string, unknown>)
+        : advancedConfig.formValues;
+  }
 
   const apiApp = buildCatalogApplicationSpec({
     appName,
@@ -199,7 +187,6 @@ export const createCatalogAppEntryWithConfig = ({
     channel: selection.channel,
     formValues,
   });
-
   return { type: 'catalog', app: toCatalogAppForm(apiApp, selection.catalogItemRef) };
 };
 
