@@ -86,12 +86,12 @@ const DeviceOverviewLayoutContent = ({
   const { t } = useTranslation();
   const systemInfoStatus = useDemoSystemInfoStatus(device.status?.systemInfo, device.status?.systemInfoStatus);
   const { entries: customInfoEntries, reporting: customInfoReporting } = useDeviceCustomInfo(
-    device.status?.systemInfo,
     t,
+    device.status?.systemInfo,
     systemInfoStatus,
   );
   // Device information computes its own list; reuse the same demo status for the page-alert summary
-  const { reporting: systemInfoReporting } = useDeviceSystemInfo(device.status?.systemInfo, t, systemInfoStatus);
+  const { reporting: systemInfoReporting } = useDeviceSystemInfo(t, device.status?.systemInfo, systemInfoStatus);
 
   return (
     <Stack hasGutter>

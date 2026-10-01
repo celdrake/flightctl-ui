@@ -23,6 +23,8 @@ import SystemInfoReportingBadge from './SystemInfoReportingBadge';
 
 import './DeviceDetailsTab.css';
 
+// CELIA-WIP: we must show an error when the label has a value which doesn't match that of systemInfo/customInfo
+
 // By default only show the first 4 fields, with the rest shown in an expandable section
 // However, if there are less than 8 fields, show all of them without needing to expand
 const EXPAND_SYSTEM_INFO_COUNT = 4;
@@ -32,7 +34,7 @@ const DeviceInformationCard = ({ device }: { device: Required<Device> }) => {
   const { t } = useTranslation();
   // TEMP: demo overlay for reporting variants
   const systemInfoStatus = useDemoSystemInfoStatus(device.status?.systemInfo, device.status?.systemInfoStatus);
-  const { entries: systemInfoFields, reporting } = useDeviceSystemInfo(device.status?.systemInfo, t, systemInfoStatus);
+  const { entries: systemInfoFields, reporting } = useDeviceSystemInfo(t, device.status?.systemInfo, systemInfoStatus);
 
   const [isMoreInfoExpanded, setIsMoreInfoExpanded] = React.useState(false);
 

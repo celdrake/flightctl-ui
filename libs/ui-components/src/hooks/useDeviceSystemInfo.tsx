@@ -60,7 +60,6 @@ export const propNameToTitle = (input: string) => {
 };
 
 const excludedKnownProps = [
-  'distroVersion', // It's combined with "distroName"
   'customInfo', // Custom properies are evaluated separately from the predefined, known properties
   'attestation', // In Phase1 this includes only the raw data, without a report of success or failure.
   // "deltaEligible", "bootcVersion", and "ociDeltaVersion" are shown in a separate section on the device details page
@@ -69,23 +68,23 @@ const excludedKnownProps = [
   'ociDeltaVersion',
 ];
 
-const getInfoDataKnownKeys = (t: TFunction): Record<string, string> => ({
-  agentVersion: t('Agent version'),
-  operatingSystem: t('Operating system'),
-  hostname: t('Hostname'),
-  tpmVendorInfo: t('TPM vendor info'),
-  architecture: t('Architecture'),
-  distroName: t('Distro'),
-  bootcVersion: t('Bootc version'),
-  bootID: t('Boot ID'),
-  kernel: t('Kernel'),
-  netInterfaceDefault: t('Net interface default'),
-  netIpDefault: t('Net IP default'),
-  netMacDefault: t('Net MAC default'),
-  productName: t('Product name'),
-  productSerial: t('Product serial'),
-  productUuid: t('Product UUID'),
-});
+const systemInfoKnownKeys = [
+  'agentVersion',
+  'operatingSystem',
+  'hostname',
+  'tpmVendorInfo',
+  'architecture',
+  'distroName',
+  'bootcVersion',
+  'bootID',
+  'kernel',
+  'netInterfaceDefault',
+  'netIpDefault',
+  'netMacDefault',
+  'productName',
+  'productSerial',
+  'productUuid',
+];
 
 const toReporting = (
   sourceStatus: SystemInfoSourceStatus | undefined,
@@ -101,32 +100,16 @@ const toReporting = (
   };
 };
 
-const getSystemInfoValue = (systemInfo: DeviceSystemInfo, infoKey: string) => {
-  switch (infoKey) {
-    case 'distroName': {
-      if (systemInfo.distroVersion) {
-        return `${systemInfo.distroName} ${systemInfo.distroVersion}`;
-      }
-      return systemInfo.distroName;
-    }
-    default:
-      return systemInfo[infoKey];
-  }
-};
-
-const hasDisplayValue = (value: React.ReactNode) => value !== undefined && value !== null && value !== '';
-
 const emptyResult: SystemInfoListResult = {
   entries: [],
   reporting: { hasReporting: false, hasErrors: false },
 };
 
 export const useDeviceSystemInfo = (
-  systemInfo: DeviceSystemInfo | undefined,
   t: TFunction,
+  systemInfo: DeviceSystemInfo | undefined,
   systemInfoStatus?: DeviceSystemInfoStatus,
 ): SystemInfoListResult => {
-  const infoDataKnownKeys = React.useMemo(() => getInfoDataKnownKeys(t), [t]);
   if (!systemInfo) {
     return emptyResult;
   }
@@ -135,34 +118,28 @@ export const useDeviceSystemInfo = (
   const includedKeys = new Set<string>();
 
   // Add the known fields first, in their desired order of appearance
-  const systemInfoItems: SystemInfoEntry[] = Object.entries(infoDataKnownKeys)
-    .filter(([infoKey]) => {
-      if (excludedKnownProps.includes(infoKey)) {
-        return false;
-      }
-      return hasDisplayValue(getSystemInfoValue(systemInfo, infoKey)) || !!statusMap?.[infoKey];
-    })
+  const systemInfoItems: SystemInfoEntry[] = systemInfoKnownKeys
+    .filter((infoKey) => systemInfo[infoKey] || !!statusMap?.[infoKey])
     .map(([infoKey, infoTitle]) => {
       includedKeys.add(infoKey);
       return {
         key: infoKey,
         title: infoTitle,
-        value: getSystemInfoValue(systemInfo, infoKey),
+        value: systemInfo[infoKey],
         reporting: toReporting(statusMap?.[infoKey], t),
       };
     });
 
   // Add any other fields that weren't included yet, in arbitrary order
   Object.keys(systemInfo).forEach((infoKey) => {
-    if (infoDataKnownKeys[infoKey] || excludedKnownProps.includes(infoKey) || includedKeys.has(infoKey)) {
+    if (systemInfoKnownKeys.includes(infoKey) || excludedKnownProps.includes(infoKey) || includedKeys.has(infoKey)) {
       return;
     }
     const value = systemInfo[infoKey];
     const reporting = toReporting(statusMap?.[infoKey], t);
-    if (!hasDisplayValue(value) && !reporting) {
+    if (!value && !reporting) {
       return;
     }
-    includedKeys.add(infoKey);
     systemInfoItems.push({
       key: infoKey,
       title: propNameToTitle(infoKey),
@@ -170,21 +147,6 @@ export const useDeviceSystemInfo = (
       reporting,
     });
   });
-
-  // Include status-only systemInfo keys (e.g. Error with no retained value)
-  Object.keys(statusMap || {}).forEach((infoKey) => {
-    if (excludedKnownProps.includes(infoKey) || includedKeys.has(infoKey)) {
-      return;
-    }
-    includedKeys.add(infoKey);
-    systemInfoItems.push({
-      key: infoKey,
-      title: infoDataKnownKeys[infoKey] || propNameToTitle(infoKey),
-      value: systemInfo[infoKey],
-      reporting: toReporting(statusMap?.[infoKey], t),
-    });
-  });
-
   return {
     entries: systemInfoItems,
     reporting: buildReportingSummary(systemInfoItems),
@@ -192,8 +154,8 @@ export const useDeviceSystemInfo = (
 };
 
 export const useDeviceCustomInfo = (
-  systemInfo: DeviceSystemInfo | undefined,
   t: TFunction,
+  systemInfo: DeviceSystemInfo | undefined,
   systemInfoStatus?: DeviceSystemInfoStatus,
 ): SystemInfoListResult => {
   const customInfo = systemInfo?.customInfo || {};

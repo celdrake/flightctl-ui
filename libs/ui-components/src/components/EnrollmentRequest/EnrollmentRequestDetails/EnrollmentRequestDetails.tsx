@@ -63,8 +63,8 @@ const EnrollmentRequestDetails = () => {
 
   const [isApprovalModalOpen, setIsApprovalModalOpen] = React.useState(false);
   const systemInfo = er?.spec.deviceStatus?.systemInfo;
-  const { entries: erSystemInfo } = useDeviceSystemInfo(systemInfo, t, er?.spec.deviceStatus?.systemInfoStatus);
-  const { entries: customInfoEntries, reporting: customInfoReporting } = useDeviceCustomInfo(systemInfo, t);
+  const { entries: erSystemInfo } = useDeviceSystemInfo(t, systemInfo, er?.spec.deviceStatus?.systemInfoStatus);
+  const { entries: customInfoEntries, reporting: customInfoReporting } = useDeviceCustomInfo(t, systemInfo);
 
   const hasDefaultLabels = Object.keys(er?.spec.labels || {}).length > 0;
   const deviceId = er?.metadata.name as string;
