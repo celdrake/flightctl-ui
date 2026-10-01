@@ -67,6 +67,7 @@ const DeviceIdentityCard = ({
             <DescriptionListGroup>
               <DescriptionListTerm>
                 <LabelWithHelperText
+                  hideLabel
                   label={t('Device-reported information')}
                   content={t(
                     'Values promoted from device status by organization label sync mappings. They influence device selection and mapping, and cannot be edited on the device.',

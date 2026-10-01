@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Grid, GridItem, Stack, StackItem } from '@patternfly/react-core';
 
 import { type Device } from '@flightctl/types';
-import { useDeviceCustomInfo, useDeviceSystemInfo } from '../../../hooks/useDeviceSystemInfo';
+import { useDeviceSystemInfo } from '../../../hooks/useDeviceSystemInfo';
 import { useDeviceOverallHealth } from '../../../hooks/useDeviceOverallHealth';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useVulnerabilitiesEnabled } from '../../../hooks/useServicesEnabled';
@@ -34,10 +34,12 @@ const DeviceOverviewLayout = ({
   const [vulnerabilitiesEnabled, canListVulnerabilities] = useVulnerabilitiesEnabled();
   const showVulnerabilities = vulnerabilitiesEnabled && canListVulnerabilities;
 
-  const systemInfoStatuses = device.status?.systemInfoStatus?.statuses;
-  const systemInfo = device.status?.systemInfo;
-  const systemInfoResult = useDeviceSystemInfo(t, systemInfo, systemInfoStatuses?.systemInfo);
-  const customInfoResult = useDeviceCustomInfo(t, systemInfo?.customInfo, systemInfoStatuses?.customInfo);
+  const { systemInfo: systemInfoResult, customInfo: customInfoResult } = useDeviceSystemInfo(
+    t,
+    device.status?.systemInfo,
+    device.status?.systemInfoStatus?.statuses,
+    true,
+  );
 
   console.log('%c systemInfoResult', 'color: blue; font-size:18px', systemInfoResult);
 
@@ -45,7 +47,7 @@ const DeviceOverviewLayout = ({
     <Stack hasGutter>
       <DeviceHealthAlert
         deviceHealth={deviceHealth}
-        systemInfoHasErrors={systemInfoResult.hasErrors}
+        systemInfoHasErrors={systemInfoResult.main.hasErrors || systemInfoResult.expanded.hasErrors}
         customInfoHasErrors={customInfoResult.hasErrors}
       />
       <Grid hasGutter>

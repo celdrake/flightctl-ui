@@ -114,7 +114,7 @@ const DeviceManagedLabelsDrawer = ({ device, labels }: DeviceManagedLabelsDrawer
         panelContent={
           <>
             <DrawerHead>
-              <span>{t('Device-reported information')}</span>
+              {t('Device-reported information')}
               <DrawerActions>
                 <DrawerCloseButton onClose={() => setDrawerOpen(false)} />
               </DrawerActions>

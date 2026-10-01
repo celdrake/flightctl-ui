@@ -2,13 +2,13 @@ import * as React from 'react';
 import { CardBody, DescriptionList } from '@patternfly/react-core';
 import { TagIcon } from '@patternfly/react-icons/dist/js/icons/tag-icon';
 
-import type { SystemInfoListResult } from '../../../hooks/useDeviceSystemInfo';
+import type { CustomInfoListResult } from '../../../hooks/useDeviceSystemInfo';
 import { useTranslation } from '../../../hooks/useTranslation';
 import DetailsPageCard, { DetailsPageCardTitle } from '../../DetailsPage/DetailsPageCard';
 import SystemInfoDescriptionGroup from './SystemInfoDescriptionGroup';
 import SystemInfoReportingBadge from './SystemInfoReportingBadge';
 
-const DeviceCustomDataCard = ({ customInfoResult }: { customInfoResult: SystemInfoListResult }) => {
+const DeviceCustomDataCard = ({ customInfoResult }: { customInfoResult: CustomInfoListResult }) => {
   const { t } = useTranslation();
 
   return (
