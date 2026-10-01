@@ -14,12 +14,6 @@ import DeviceInformationCard from './DeviceInformationCard';
 import DeviceStatusCard from './DeviceStatusCard';
 import DeviceSystemdUnits from './DeviceSystemdUnits';
 import DeviceVulnerabilities from './DeviceVulnerabilities';
-import {
-  type SystemInfoDemoOptions,
-  SystemInfoDemoOptionsBar,
-  SystemInfoDemoOptionsProvider,
-  useDemoSystemInfoStatus,
-} from './SystemInfoDemoOptions';
 
 import './DeviceDetailsTab.css';
 
@@ -35,62 +29,17 @@ const DeviceOverviewLayout = ({
   canEdit,
   children,
 }: React.PropsWithChildren<DeviceOverviewLayoutProps>) => {
+  const { t } = useTranslation();
   const deviceHealth = useDeviceOverallHealth(device);
   const [vulnerabilitiesEnabled, canListVulnerabilities] = useVulnerabilitiesEnabled();
   const showVulnerabilities = vulnerabilitiesEnabled && canListVulnerabilities;
 
-  // TEMP demo toggles — revert after colleague demos
-  const [demoOptions, setDemoOptions] = React.useState<SystemInfoDemoOptions>({
-    shortChangedLabel: false,
-    prettifyNames: true,
-    showDeviceReportedInfo: false,
-    simulateReportingVariants: false,
-  });
-
-  return (
-    <SystemInfoDemoOptionsProvider value={demoOptions}>
-      <DeviceOverviewLayoutContent
-        device={device}
-        refetch={refetch}
-        canEdit={canEdit}
-        deviceHealth={deviceHealth}
-        showVulnerabilities={showVulnerabilities}
-        demoOptions={demoOptions}
-        setDemoOptions={setDemoOptions}
-      >
-        {children}
-      </DeviceOverviewLayoutContent>
-    </SystemInfoDemoOptionsProvider>
-  );
-};
-
-// Inner content so useDemoSystemInfoStatus can read the provider above
-const DeviceOverviewLayoutContent = ({
-  device,
-  refetch,
-  canEdit,
-  deviceHealth,
-  showVulnerabilities,
-  demoOptions,
-  setDemoOptions,
-  children,
-}: React.PropsWithChildren<{
-  device: Required<Device>;
-  refetch: VoidFunction;
-  canEdit: boolean;
-  deviceHealth: ReturnType<typeof useDeviceOverallHealth>;
-  showVulnerabilities: boolean;
-  demoOptions: SystemInfoDemoOptions;
-  setDemoOptions: React.Dispatch<React.SetStateAction<SystemInfoDemoOptions>>;
-}>) => {
-  const { t } = useTranslation();
-  const systemInfoStatus = useDemoSystemInfoStatus(device.status?.systemInfo, device.status?.systemInfoStatus);
+  const systemInfoStatus = device.status?.systemInfoStatus;
   const { entries: customInfoEntries, reporting: customInfoReporting } = useDeviceCustomInfo(
     t,
     device.status?.systemInfo,
     systemInfoStatus,
   );
-  // Device information computes its own list; reuse the same demo status for the page-alert summary
   const { reporting: systemInfoReporting } = useDeviceSystemInfo(t, device.status?.systemInfo, systemInfoStatus);
 
   return (
@@ -100,9 +49,6 @@ const DeviceOverviewLayoutContent = ({
         systemInfoHasErrors={systemInfoReporting.hasErrors}
         customInfoHasErrors={customInfoReporting.hasErrors}
       />
-      <StackItem>
-        <SystemInfoDemoOptionsBar options={demoOptions} onChange={setDemoOptions} />
-      </StackItem>
       <Grid hasGutter>
         <GridItem lg={8}>
           <Stack hasGutter>

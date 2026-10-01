@@ -32,9 +32,11 @@ const MIN_SYSTEM_INFO_FIELDS_FOR_EXPAND = 8;
 
 const DeviceInformationCard = ({ device }: { device: Required<Device> }) => {
   const { t } = useTranslation();
-  // TEMP: demo overlay for reporting variants
-  const systemInfoStatus = useDemoSystemInfoStatus(device.status?.systemInfo, device.status?.systemInfoStatus);
-  const { entries: systemInfoFields, reporting } = useDeviceSystemInfo(t, device.status?.systemInfo, systemInfoStatus);
+  const { entries: systemInfoFields, reporting } = useDeviceSystemInfo(
+    t,
+    device.status?.systemInfo,
+    device.status?.systemInfoStatus,
+  );
 
   const [isMoreInfoExpanded, setIsMoreInfoExpanded] = React.useState(false);
 

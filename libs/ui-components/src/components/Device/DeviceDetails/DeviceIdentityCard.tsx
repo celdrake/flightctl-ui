@@ -17,7 +17,6 @@ import EditLabelsForm, { ViewLabels } from '../../modals/EditLabelsModal/EditLab
 import DeviceFleet from './DeviceFleet';
 import DeviceManagedLabelsDrawer from './DeviceManagedLabelsDrawer';
 import SidebarDescriptionList from './SidebarDescriptionList';
-import { useSystemInfoDemoOptions } from './SystemInfoDemoOptions';
 
 import './DeviceDetailsTab.css';
 
@@ -34,10 +33,8 @@ const DeviceIdentityCard = ({
   children,
 }: React.PropsWithChildren<DeviceIdentityCardProps>) => {
   const { t } = useTranslation();
-  const { showDeviceReportedInfo } = useSystemInfoDemoOptions();
-
-  // Always omit managed labels from the editable Labels field (independent of the demo toggle).
   const managedLabels = React.useMemo(() => getManagedLabelsFromDevice(device), [device]);
+  const hasManagedLabels = Object.keys(managedLabels).length > 0;
 
   return (
     <DetailsPageCard>
@@ -66,7 +63,7 @@ const DeviceIdentityCard = ({
               )}
             </DescriptionListDescription>
           </DescriptionListGroup>
-          {showDeviceReportedInfo && (
+          {hasManagedLabels && (
             <DescriptionListGroup>
               <DescriptionListTerm>
                 <LabelWithHelperText

@@ -15,13 +15,11 @@ import { SystemInfoSourceStatusType } from '@flightctl/types';
 import type { SystemInfoEntry } from '../../../hooks/useDeviceSystemInfo';
 import { useTranslation } from '../../../hooks/useTranslation';
 import LabelWithHelperText from '../../common/WithHelperText';
-import { useSystemInfoDemoOptions } from './SystemInfoDemoOptions';
 
 const hasDisplayValue = (value: React.ReactNode) => value !== undefined && value !== null && value !== '';
 
 const SystemInfoValue = ({ entry }: { entry: SystemInfoEntry }) => {
   const { t } = useTranslation();
-  const { shortChangedLabel } = useSystemInfoDemoOptions();
   const reporting = entry.reporting;
   const isFailed = reporting?.status === SystemInfoSourceStatusType.SystemInfoSourceStatusError;
   const isUnknown = reporting?.status === SystemInfoSourceStatusType.SystemInfoSourceStatusUnknown;
@@ -33,11 +31,7 @@ const SystemInfoValue = ({ entry }: { entry: SystemInfoEntry }) => {
       </StackItem>
       {reporting && (
         <StackItem>
-          <Content component="small">
-            {shortChangedLabel
-              ? t('Changed {{time}}', { time: reporting.timeSince })
-              : t('Last changed {{time}}', { time: reporting.timeSince })}
-          </Content>
+          <Content component="small">{t('Last changed {{time}}', { time: reporting.timeSince })}</Content>
         </StackItem>
       )}
       {isUnknown && (
@@ -83,17 +77,13 @@ const SystemInfoValue = ({ entry }: { entry: SystemInfoEntry }) => {
   );
 };
 
-const SystemInfoDescriptionGroup = ({ entry }: { entry: SystemInfoEntry }) => {
-  const { prettifyNames } = useSystemInfoDemoOptions();
-
-  return (
-    <DescriptionListGroup key={entry.key}>
-      <DescriptionListTerm>{prettifyNames ? entry.title : entry.key}</DescriptionListTerm>
-      <DescriptionListDescription>
-        <SystemInfoValue entry={entry} />
-      </DescriptionListDescription>
-    </DescriptionListGroup>
-  );
-};
+const SystemInfoDescriptionGroup = ({ entry }: { entry: SystemInfoEntry }) => (
+  <DescriptionListGroup key={entry.key}>
+    <DescriptionListTerm>{entry.title}</DescriptionListTerm>
+    <DescriptionListDescription>
+      <SystemInfoValue entry={entry} />
+    </DescriptionListDescription>
+  </DescriptionListGroup>
+);
 
 export default SystemInfoDescriptionGroup;
