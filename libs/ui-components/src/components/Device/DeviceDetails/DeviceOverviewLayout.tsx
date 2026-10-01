@@ -2,16 +2,23 @@ import * as React from 'react';
 import { Grid, GridItem, Stack, StackItem } from '@patternfly/react-core';
 
 import { type Device } from '@flightctl/types';
+import { useDeviceCustomInfo } from '../../../hooks/useDeviceSpecSystemInfo';
 import { useDeviceOverallHealth } from '../../../hooks/useDeviceOverallHealth';
+import { useTranslation } from '../../../hooks/useTranslation';
 import { useVulnerabilitiesEnabled } from '../../../hooks/useServicesEnabled';
-import DeviceInformationCard from './DeviceInformationCard';
-import DeviceSpecificationsCard from './DeviceSpecificationsCard';
-import DeviceCustomDataCard from './DeviceCustomDataCard';
-import DeviceStatusCard from './DeviceStatusCard';
 import DeviceApplications from './DeviceApplications';
-import DeviceVulnerabilities from './DeviceVulnerabilities';
-import DeviceSystemdUnits from './DeviceSystemdUnits';
+import DeviceCustomDataCard from './DeviceCustomDataCard';
 import DeviceHealthAlert from './DeviceHealthAlert';
+import DeviceIdentityCard from './DeviceIdentityCard';
+import DeviceInformationCard from './DeviceInformationCard';
+import DeviceStatusCard from './DeviceStatusCard';
+import DeviceSystemdUnits from './DeviceSystemdUnits';
+import DeviceVulnerabilities from './DeviceVulnerabilities';
+import {
+  type SystemInfoDemoOptions,
+  SystemInfoDemoOptionsBar,
+  SystemInfoDemoOptionsProvider,
+} from './SystemInfoDemoOptions';
 
 import './DeviceDetailsTab.css';
 
@@ -27,56 +34,68 @@ const DeviceOverviewLayout = ({
   canEdit,
   children,
 }: React.PropsWithChildren<DeviceOverviewLayoutProps>) => {
+  const { t } = useTranslation();
   const deviceHealth = useDeviceOverallHealth(device);
   const [vulnerabilitiesEnabled, canListVulnerabilities] = useVulnerabilitiesEnabled();
   const showVulnerabilities = vulnerabilitiesEnabled && canListVulnerabilities;
 
-  const customInfo = Object.entries<string>(device.status?.systemInfo?.customInfo || {});
+  // TEMP demo toggles — revert after colleague demos
+  const [demoOptions, setDemoOptions] = React.useState<SystemInfoDemoOptions>({
+    shortChangedLabel: false,
+    prettifyNames: true,
+  });
+
+  const customInfoEntries = useDeviceCustomInfo(device.status?.systemInfo, t, device.status?.systemInfoStatus);
 
   return (
-    <Stack hasGutter>
-      <DeviceHealthAlert deviceHealth={deviceHealth} />
-      <Grid hasGutter>
-        <GridItem lg={8}>
-          <Stack hasGutter>
-            <StackItem>
-              <DeviceStatusCard device={device} health={deviceHealth.statusHealth} />
-            </StackItem>
-            <StackItem>
-              <DeviceApplications device={device} health={deviceHealth.appsHealth} refetch={refetch} />
-            </StackItem>
-            {showVulnerabilities && (
+    <SystemInfoDemoOptionsProvider value={demoOptions}>
+      <Stack hasGutter>
+        <DeviceHealthAlert deviceHealth={deviceHealth} />
+        <StackItem>
+          <SystemInfoDemoOptionsBar options={demoOptions} onChange={setDemoOptions} />
+        </StackItem>
+        <Grid hasGutter>
+          <GridItem lg={8}>
+            <Stack hasGutter>
               <StackItem>
-                <DeviceVulnerabilities deviceId={device.metadata.name as string} />
+                <DeviceStatusCard device={device} health={deviceHealth.statusHealth} />
               </StackItem>
-            )}
-            <StackItem className="fctl-device-overview__systemd-wide">
-              <DeviceSystemdUnits device={device} />
-            </StackItem>
-          </Stack>
-        </GridItem>
-        <GridItem lg={4}>
-          <Stack hasGutter>
-            <StackItem>
-              <DeviceInformationCard device={device} refetch={refetch} canEdit={canEdit}>
-                {children}
-              </DeviceInformationCard>
-            </StackItem>
-            <StackItem>
-              <DeviceSpecificationsCard device={device} />
-            </StackItem>
-            {customInfo.length > 0 && (
               <StackItem>
-                <DeviceCustomDataCard customInfo={customInfo} />
+                <DeviceApplications device={device} health={deviceHealth.appsHealth} refetch={refetch} />
               </StackItem>
-            )}
-          </Stack>
-        </GridItem>
-        <GridItem md={12} className="fctl-device-overview__systemd-narrow">
-          <DeviceSystemdUnits device={device} />
-        </GridItem>
-      </Grid>
-    </Stack>
+              {showVulnerabilities && (
+                <StackItem>
+                  <DeviceVulnerabilities deviceId={device.metadata.name as string} />
+                </StackItem>
+              )}
+              <StackItem className="fctl-device-overview__systemd-wide">
+                <DeviceSystemdUnits device={device} />
+              </StackItem>
+            </Stack>
+          </GridItem>
+          <GridItem lg={4}>
+            <Stack hasGutter>
+              <StackItem>
+                <DeviceIdentityCard device={device} refetch={refetch} canEdit={canEdit}>
+                  {children}
+                </DeviceIdentityCard>
+              </StackItem>
+              <StackItem>
+                <DeviceInformationCard device={device} />
+              </StackItem>
+              {customInfoEntries.length > 0 && (
+                <StackItem>
+                  <DeviceCustomDataCard entries={customInfoEntries} />
+                </StackItem>
+              )}
+            </Stack>
+          </GridItem>
+          <GridItem md={12} className="fctl-device-overview__systemd-narrow">
+            <DeviceSystemdUnits device={device} />
+          </GridItem>
+        </Grid>
+      </Stack>
+    </SystemInfoDemoOptionsProvider>
   );
 };
 

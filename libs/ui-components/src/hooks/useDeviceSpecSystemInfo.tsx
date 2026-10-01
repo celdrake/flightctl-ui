@@ -1,11 +1,28 @@
 import React from 'react';
 import type { TFunction } from 'react-i18next';
 
-import type { DeviceSystemInfo } from '@flightctl/types';
+import type {
+  DeviceSystemInfo,
+  DeviceSystemInfoStatus,
+  SystemInfoSourceStatus,
+  SystemInfoSourceStatusType,
+} from '@flightctl/types';
+
+import { timeSinceText } from '../utils/dates';
+
+export type SystemInfoReporting = {
+  status: SystemInfoSourceStatusType;
+  /** Relative time from lastTransitionTime, via timeSinceText(t, ...) */
+  timeSince: string;
+  /** Collection error detail from SystemInfoSourceStatus.message */
+  error?: string;
+};
 
 export type SystemInfoEntry = {
+  key: string;
   title: string;
   value: React.ReactNode;
+  reporting?: SystemInfoReporting;
 };
 
 // Converts a camelCase variable into words. Example: "someInfoData" --> "Some info data"
@@ -25,7 +42,7 @@ const excludedKnownProps = [
   'ociDeltaVersion',
 ];
 
-const getInfoDataKnownKeys = (t: TFunction) => ({
+const getInfoDataKnownKeys = (t: TFunction): Record<string, string> => ({
   agentVersion: t('Agent version'),
   operatingSystem: t('Operating system'),
   hostname: t('Hostname'),
@@ -43,6 +60,20 @@ const getInfoDataKnownKeys = (t: TFunction) => ({
   productUuid: t('Product UUID'),
 });
 
+const toReporting = (
+  sourceStatus: SystemInfoSourceStatus | undefined,
+  t: TFunction,
+): SystemInfoReporting | undefined => {
+  if (!sourceStatus) {
+    return undefined;
+  }
+  return {
+    status: sourceStatus.status,
+    timeSince: timeSinceText(t, sourceStatus.lastTransitionTime),
+    error: sourceStatus.message,
+  };
+};
+
 const getSystemInfoValue = (systemInfo: DeviceSystemInfo, infoKey: string) => {
   switch (infoKey) {
     case 'distroName': {
@@ -56,35 +87,88 @@ const getSystemInfoValue = (systemInfo: DeviceSystemInfo, infoKey: string) => {
   }
 };
 
-export const useDeviceSpecSystemInfo = (systemInfo: DeviceSystemInfo | undefined, t: TFunction): SystemInfoEntry[] => {
+const hasDisplayValue = (value: React.ReactNode) => value !== undefined && value !== null && value !== '';
+
+export const useDeviceSpecSystemInfo = (
+  systemInfo: DeviceSystemInfo | undefined,
+  t: TFunction,
+  systemInfoStatus?: DeviceSystemInfoStatus,
+): SystemInfoEntry[] => {
   const infoDataKnownKeys = React.useMemo(() => getInfoDataKnownKeys(t), [t]);
   if (!systemInfo) {
     return [];
   }
 
+  const statusMap = systemInfoStatus?.statuses.systemInfo;
+  const includedKeys = new Set<string>();
+
   // Add the known fields first, in their desired order of appearance
-  const systemInfoItems = Object.entries(infoDataKnownKeys)
+  const systemInfoItems: SystemInfoEntry[] = Object.entries(infoDataKnownKeys)
     .filter(([infoKey]) => {
-      return !excludedKnownProps.includes(infoKey) && systemInfo[infoKey];
+      if (excludedKnownProps.includes(infoKey)) {
+        return false;
+      }
+      return hasDisplayValue(getSystemInfoValue(systemInfo, infoKey)) || !!statusMap?.[infoKey];
     })
-    .map(([infoKey, infoTitle]) => ({
-      title: infoTitle,
-      value: getSystemInfoValue(systemInfo, infoKey),
-    }));
+    .map(([infoKey, infoTitle]) => {
+      includedKeys.add(infoKey);
+      return {
+        key: infoKey,
+        title: infoTitle,
+        value: getSystemInfoValue(systemInfo, infoKey),
+        reporting: toReporting(statusMap?.[infoKey], t),
+      };
+    });
 
   // Add any other fields that weren't included yet, in arbitrary order
   Object.keys(systemInfo).forEach((infoKey) => {
-    if (infoDataKnownKeys[infoKey] || excludedKnownProps.includes(infoKey)) {
+    if (infoDataKnownKeys[infoKey] || excludedKnownProps.includes(infoKey) || includedKeys.has(infoKey)) {
       return;
     }
     const value = systemInfo[infoKey];
-    if (value) {
-      systemInfoItems.push({
-        title: propNameToTitle(infoKey),
-        value,
-      });
+    const reporting = toReporting(statusMap?.[infoKey], t);
+    if (!hasDisplayValue(value) && !reporting) {
+      return;
     }
+    includedKeys.add(infoKey);
+    systemInfoItems.push({
+      key: infoKey,
+      title: propNameToTitle(infoKey),
+      value,
+      reporting,
+    });
+  });
+
+  // Include status-only systemInfo keys (e.g. Error with no retained value)
+  Object.keys(statusMap || {}).forEach((infoKey) => {
+    if (excludedKnownProps.includes(infoKey) || includedKeys.has(infoKey)) {
+      return;
+    }
+    includedKeys.add(infoKey);
+    systemInfoItems.push({
+      key: infoKey,
+      title: infoDataKnownKeys[infoKey] || propNameToTitle(infoKey),
+      value: systemInfo[infoKey],
+      reporting: toReporting(statusMap?.[infoKey], t),
+    });
   });
 
   return systemInfoItems;
+};
+
+export const useDeviceCustomInfo = (
+  systemInfo: DeviceSystemInfo | undefined,
+  t: TFunction,
+  systemInfoStatus?: DeviceSystemInfoStatus,
+): SystemInfoEntry[] => {
+  const customInfo = systemInfo?.customInfo || {};
+  const statusMap = systemInfoStatus?.statuses.customInfo;
+  const keys = new Set([...Object.keys(customInfo), ...Object.keys(statusMap || {})]);
+
+  return [...keys].map((key) => ({
+    key,
+    title: propNameToTitle(key),
+    value: customInfo[key],
+    reporting: toReporting(statusMap?.[key], t),
+  }));
 };
