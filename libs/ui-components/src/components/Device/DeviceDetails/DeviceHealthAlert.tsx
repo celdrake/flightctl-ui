@@ -6,6 +6,8 @@ import type { DeviceHealthItem, DeviceOverallHealth } from '../../../hooks/useDe
 
 const DEVICE_STATUS_CARD_ID = 'device-status-card';
 const DEVICE_APPLICATIONS_CARD_ID = 'device-applications-card';
+const DEVICE_INFORMATION_CARD_ID = 'device-information-card';
+const DEVICE_CUSTOM_DATA_CARD_ID = 'device-custom-data-card';
 
 const scrollToSection = (targetId: string) => {
   requestAnimationFrame(() => {
@@ -29,9 +31,22 @@ const DeviceHealthAlertLink = ({ healthItem }: { healthItem: DeviceHealthItem })
   );
 };
 
-const DeviceHealthAlert = ({ deviceHealth }: { deviceHealth: DeviceOverallHealth }) => {
+type DeviceHealthAlertProps = {
+  deviceHealth: DeviceOverallHealth;
+  systemInfoHasErrors?: boolean;
+  customInfoHasErrors?: boolean;
+};
+
+const DeviceHealthAlert = ({
+  deviceHealth,
+  systemInfoHasErrors = false,
+  customInfoHasErrors = false,
+}: DeviceHealthAlertProps) => {
   const { t } = useTranslation();
   const alertRef = React.useRef<HTMLDivElement>(null);
+
+  const hasReportingErrors = systemInfoHasErrors || customInfoHasErrors;
+  const hasDeviceHealthIssues = deviceHealth.level !== null;
 
   // PatternFly Alert manages expand state internally (defaults collapsed); expand on mount so jump links are visible.
   React.useLayoutEffect(() => {
@@ -41,14 +56,17 @@ const DeviceHealthAlert = ({ deviceHealth }: { deviceHealth: DeviceOverallHealth
     }
   }, []);
 
-  if (deviceHealth.level === null) {
+  if (!hasDeviceHealthIssues && !hasReportingErrors) {
     return null;
   }
 
   const { statusHealth, appsHealth } = deviceHealth;
+  // Keep danger if status/apps already danger; otherwise warning when only reporting errors
+  const variant = deviceHealth.level === 'danger' ? 'danger' : 'warning';
+
   return (
     <div ref={alertRef}>
-      <Alert variant={deviceHealth.level} isInline isExpandable title={t('Issues detected')}>
+      <Alert variant={variant} isInline isExpandable title={t('Issues detected')}>
         <List isPlain>
           {statusHealth.itemCount > 0 && (
             <ListItem>
@@ -58,6 +76,20 @@ const DeviceHealthAlert = ({ deviceHealth }: { deviceHealth: DeviceOverallHealth
           {appsHealth.itemCount > 0 && (
             <ListItem>
               <DeviceHealthAlertLink healthItem={appsHealth} />
+            </ListItem>
+          )}
+          {systemInfoHasErrors && (
+            <ListItem>
+              <Button variant="link" isInline onClick={() => scrollToSection(DEVICE_INFORMATION_CARD_ID)}>
+                {t('System information reporting is stale')}
+              </Button>
+            </ListItem>
+          )}
+          {customInfoHasErrors && (
+            <ListItem>
+              <Button variant="link" isInline onClick={() => scrollToSection(DEVICE_CUSTOM_DATA_CARD_ID)}>
+                {t('Custom data reporting is stale')}
+              </Button>
             </ListItem>
           )}
         </List>

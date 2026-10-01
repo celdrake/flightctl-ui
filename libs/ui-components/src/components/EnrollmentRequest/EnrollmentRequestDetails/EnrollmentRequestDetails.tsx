@@ -63,10 +63,8 @@ const EnrollmentRequestDetails = () => {
 
   const [isApprovalModalOpen, setIsApprovalModalOpen] = React.useState(false);
   const systemInfo = er?.spec.deviceStatus?.systemInfo;
-  const erSystemInfo = useDeviceSpecSystemInfo(systemInfo, t, er?.spec.deviceStatus?.systemInfoStatus);
-  console.log('%c erSystemInfo', 'color: red; font-size:18px', erSystemInfo);
-
-  const customInfoEntries = useDeviceCustomInfo(systemInfo, t);
+  const { entries: erSystemInfo } = useDeviceSpecSystemInfo(systemInfo, t, er?.spec.deviceStatus?.systemInfoStatus);
+  const { entries: customInfoEntries, reporting: customInfoReporting } = useDeviceCustomInfo(systemInfo, t);
 
   const hasDefaultLabels = Object.keys(er?.spec.labels || {}).length > 0;
   const deviceId = er?.metadata.name as string;
@@ -146,7 +144,7 @@ const EnrollmentRequestDetails = () => {
         </GridItem>
         {customInfoEntries.length > 0 && (
           <GridItem md={6}>
-            <DeviceCustomDataCard entries={customInfoEntries} />
+            <DeviceCustomDataCard entries={customInfoEntries} reporting={customInfoReporting} />
           </GridItem>
         )}
         <GridItem md={6}>

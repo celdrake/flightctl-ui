@@ -1,12 +1,8 @@
 import React from 'react';
 import type { TFunction } from 'react-i18next';
 
-import type {
-  DeviceSystemInfo,
-  DeviceSystemInfoStatus,
-  SystemInfoSourceStatus,
-  SystemInfoSourceStatusType,
-} from '@flightctl/types';
+import type { DeviceSystemInfo, DeviceSystemInfoStatus, SystemInfoSourceStatus } from '@flightctl/types';
+import { SystemInfoSourceStatusType } from '@flightctl/types';
 
 import { timeSinceText } from '../utils/dates';
 
@@ -23,6 +19,37 @@ export type SystemInfoEntry = {
   title: string;
   value: React.ReactNode;
   reporting?: SystemInfoReporting;
+};
+
+export type SystemInfoReportingSummary = {
+  /** At least one entry has reporting metadata (systemInfoStatus present for that key) */
+  hasReporting: boolean;
+  /** Any entry with API status Error, or a non-empty reporting.error message */
+  hasErrors: boolean;
+};
+
+export type SystemInfoListResult = {
+  entries: SystemInfoEntry[];
+  reporting: SystemInfoReportingSummary;
+};
+
+export const buildReportingSummary = (entries: SystemInfoEntry[]): SystemInfoReportingSummary => {
+  const acc = {
+    hasReporting: false,
+    hasErrors: false,
+  };
+  return entries.reduce((acc, entry) => {
+    if (
+      entry.reporting?.status === SystemInfoSourceStatusType.SystemInfoSourceStatusError ||
+      !!entry.reporting?.error
+    ) {
+      acc.hasErrors = true;
+    }
+    if (!!entry.reporting) {
+      acc.hasReporting = true;
+    }
+    return acc;
+  }, acc);
 };
 
 // Converts a camelCase variable into words. Example: "someInfoData" --> "Some info data"
@@ -89,14 +116,19 @@ const getSystemInfoValue = (systemInfo: DeviceSystemInfo, infoKey: string) => {
 
 const hasDisplayValue = (value: React.ReactNode) => value !== undefined && value !== null && value !== '';
 
+const emptyResult: SystemInfoListResult = {
+  entries: [],
+  reporting: { hasReporting: false, hasErrors: false },
+};
+
 export const useDeviceSpecSystemInfo = (
   systemInfo: DeviceSystemInfo | undefined,
   t: TFunction,
   systemInfoStatus?: DeviceSystemInfoStatus,
-): SystemInfoEntry[] => {
+): SystemInfoListResult => {
   const infoDataKnownKeys = React.useMemo(() => getInfoDataKnownKeys(t), [t]);
   if (!systemInfo) {
-    return [];
+    return emptyResult;
   }
 
   const statusMap = systemInfoStatus?.statuses.systemInfo;
@@ -153,22 +185,30 @@ export const useDeviceSpecSystemInfo = (
     });
   });
 
-  return systemInfoItems;
+  return {
+    entries: systemInfoItems,
+    reporting: buildReportingSummary(systemInfoItems),
+  };
 };
 
 export const useDeviceCustomInfo = (
   systemInfo: DeviceSystemInfo | undefined,
   t: TFunction,
   systemInfoStatus?: DeviceSystemInfoStatus,
-): SystemInfoEntry[] => {
+): SystemInfoListResult => {
   const customInfo = systemInfo?.customInfo || {};
   const statusMap = systemInfoStatus?.statuses.customInfo;
   const keys = new Set([...Object.keys(customInfo), ...Object.keys(statusMap || {})]);
 
-  return [...keys].map((key) => ({
+  const entries = [...keys].map((key) => ({
     key,
     title: propNameToTitle(key),
     value: customInfo[key],
     reporting: toReporting(statusMap?.[key], t),
   }));
+
+  return {
+    entries,
+    reporting: buildReportingSummary(entries),
+  };
 };

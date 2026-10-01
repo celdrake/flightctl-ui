@@ -1,13 +1,25 @@
 import * as React from 'react';
-import { CardBody, Divider, ExpandableSection, Stack, StackItem, Title } from '@patternfly/react-core';
+import {
+  CardBody,
+  Divider,
+  ExpandableSection,
+  Flex,
+  FlexItem,
+  Label,
+  Stack,
+  StackItem,
+  Title,
+} from '@patternfly/react-core';
 import { AddressCardIcon } from '@patternfly/react-icons/dist/js/icons/address-card-icon';
 
 import { type Device } from '@flightctl/types';
+import { buildReportingSummary, useDeviceSpecSystemInfo } from '../../../hooks/useDeviceSpecSystemInfo';
 import { useTranslation } from '../../../hooks/useTranslation';
-import { useDeviceSpecSystemInfo } from '../../../hooks/useDeviceSpecSystemInfo';
 import DetailsPageCard, { DetailsPageCardTitle } from '../../DetailsPage/DetailsPageCard';
 import ConfigurationsContent from './DeviceDetailsTabContent/ConfigurationsContent';
 import { CapabilitiesFieldsList, SystemInfoFieldsList } from './SidebarDescriptionList';
+import { useDemoSystemInfoStatus } from './SystemInfoDemoOptions';
+import SystemInfoReportingBadge from './SystemInfoReportingBadge';
 
 import './DeviceDetailsTab.css';
 
@@ -18,9 +30,15 @@ const MIN_SYSTEM_INFO_FIELDS_FOR_EXPAND = 8;
 
 const DeviceInformationCard = ({ device }: { device: Required<Device> }) => {
   const { t } = useTranslation();
-  const systemInfoFields = useDeviceSpecSystemInfo(device.status?.systemInfo, t, device.status?.systemInfoStatus);
+  // TEMP: demo overlay for reporting variants
+  const systemInfoStatus = useDemoSystemInfoStatus(device.status?.systemInfo, device.status?.systemInfoStatus);
+  const { entries: systemInfoFields, reporting } = useDeviceSpecSystemInfo(
+    device.status?.systemInfo,
+    t,
+    systemInfoStatus,
+  );
 
-  const [showMoreSystemInfo, setShowMoreSystemInfo] = React.useState(false);
+  const [isMoreInfoExpanded, setIsMoreInfoExpanded] = React.useState(false);
 
   const { visibleSystemInfoFields, expandableSystemInfoFields } = React.useMemo(() => {
     if (systemInfoFields.length < MIN_SYSTEM_INFO_FIELDS_FOR_EXPAND) {
@@ -36,9 +54,17 @@ const DeviceInformationCard = ({ device }: { device: Required<Device> }) => {
     };
   }, [systemInfoFields]);
 
+  // CELIA-WIP: unify useDemoSystemInfoStatus so that it splits the systemInfoFields into visible and expandable sections with reporting status
+  // can be optional if the caller shows all eleemnts at the first level
+  const expandableHasErrors = buildReportingSummary(expandableSystemInfoFields).hasErrors;
+
   return (
-    <DetailsPageCard>
-      <DetailsPageCardTitle title={t('Device information')} icon={<AddressCardIcon />} />
+    <DetailsPageCard id="device-information-card">
+      <DetailsPageCardTitle
+        title={t('Device information')}
+        icon={<AddressCardIcon />}
+        badge={<SystemInfoReportingBadge reporting={reporting} />}
+      />
       <CardBody>
         <Stack hasGutter>
           {visibleSystemInfoFields.length > 0 && (
@@ -49,9 +75,20 @@ const DeviceInformationCard = ({ device }: { device: Required<Device> }) => {
           {expandableSystemInfoFields.length > 0 && (
             <StackItem>
               <ExpandableSection
-                toggleText={showMoreSystemInfo ? t('Hide full system info') : t('Show full system info')}
-                onToggle={(_event, expanded) => setShowMoreSystemInfo(expanded)}
-                isExpanded={showMoreSystemInfo}
+                toggleContent={
+                  <Flex spaceItems={{ default: 'spaceItemsSm' }} alignItems={{ default: 'alignItemsCenter' }}>
+                    <FlexItem>{isMoreInfoExpanded ? t('Hide full system info') : t('Show full system info')}</FlexItem>
+                    {!isMoreInfoExpanded && expandableHasErrors && (
+                      <FlexItem>
+                        <Label isCompact status="warning">
+                          {t('Stale values below')}
+                        </Label>
+                      </FlexItem>
+                    )}
+                  </Flex>
+                }
+                onToggle={(_event, expanded) => setIsMoreInfoExpanded(expanded)}
+                isExpanded={isMoreInfoExpanded}
               >
                 <SystemInfoFieldsList entries={expandableSystemInfoFields} />
               </ExpandableSection>

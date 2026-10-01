@@ -24,6 +24,7 @@ const SystemInfoValue = ({ entry }: { entry: SystemInfoEntry }) => {
   const { shortChangedLabel } = useSystemInfoDemoOptions();
   const reporting = entry.reporting;
   const isFailed = reporting?.status === SystemInfoSourceStatusType.SystemInfoSourceStatusError;
+  const isUnknown = reporting?.status === SystemInfoSourceStatusType.SystemInfoSourceStatusUnknown;
 
   return (
     <Stack>
@@ -39,17 +40,40 @@ const SystemInfoValue = ({ entry }: { entry: SystemInfoEntry }) => {
           </Content>
         </StackItem>
       )}
+      {isUnknown && (
+        <StackItem>
+          <Label isCompact>{t('Unknown')}</Label>
+        </StackItem>
+      )}
       {isFailed && (
         <StackItem>
           <Flex spaceItems={{ default: 'spaceItemsXs' }} alignItems={{ default: 'alignItemsCenter' }}>
             <FlexItem>
-              <Label isCompact status="danger">
-                {t('Failed')}
+              <Label isCompact status="warning">
+                {t('Stale')}
               </Label>
             </FlexItem>
             {reporting?.error && (
               <FlexItem>
-                <LabelWithHelperText hideLabel label={t('Failed')} content={reporting.error} />
+                <LabelWithHelperText
+                  hideLabel
+                  label={t('Reported {{fieldKey}} value is stale', { fieldKey: entry.key })}
+                  content={
+                    <Stack hasGutter>
+                      <StackItem>
+                        {t(
+                          'This is the last known value. It has not been refreshed within the expected reporting interval.',
+                        )}
+                      </StackItem>
+                      <StackItem>
+                        <details>
+                          <summary>{t('Error details')}</summary>
+                          {reporting.error}
+                        </details>
+                      </StackItem>
+                    </Stack>
+                  }
+                />
               </FlexItem>
             )}
           </Flex>
