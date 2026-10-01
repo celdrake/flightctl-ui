@@ -8,14 +8,14 @@ import {
 import IdBadgeIcon from '@patternfly/react-icons/dist/js/icons/id-badge-icon';
 
 import type { Device } from '@flightctl/types';
-import { getOperatorLabelsFromDevice, useDeviceLabelProvenance } from '../../../hooks/useDeviceLabelProvenance';
+import { getManagedLabelsFromDevice } from '../../../hooks/useDeviceLabelProvenance';
 import { useTranslation } from '../../../hooks/useTranslation';
 import ResourceLink from '../../common/ResourceLink';
 import LabelWithHelperText from '../../common/WithHelperText';
 import DetailsPageCard, { DetailsPageCardTitle } from '../../DetailsPage/DetailsPageCard';
 import EditLabelsForm, { ViewLabels } from '../../modals/EditLabelsModal/EditLabelsForm';
 import DeviceFleet from './DeviceFleet';
-import ManagedLabelsDisplay from './DynamicLabels/ManagedLabelsDisplay';
+import DeviceManagedLabelsDrawer from './DeviceManagedLabelsDrawer';
 import SidebarDescriptionList from './SidebarDescriptionList';
 import { useSystemInfoDemoOptions } from './SystemInfoDemoOptions';
 
@@ -35,35 +35,9 @@ const DeviceIdentityCard = ({
 }: React.PropsWithChildren<DeviceIdentityCardProps>) => {
   const { t } = useTranslation();
   const { showDeviceReportedInfo } = useSystemInfoDemoOptions();
-  // TEMP: mock provenance until GET .../labelsyncprovenance exists
-  const { items: provenanceItems } = useDeviceLabelProvenance(device);
 
-  const labelsDevice = React.useMemo((): Required<Device> => {
-    if (!showDeviceReportedInfo) {
-      return device;
-    }
-    return {
-      ...device,
-      metadata: {
-        ...device.metadata,
-        labels: getOperatorLabelsFromDevice(device),
-      },
-    };
-  }, [device, showDeviceReportedInfo]);
-
-  const managedLabels = React.useMemo(() => {
-    if (!showDeviceReportedInfo) {
-      return {};
-    }
-    const allLabels = device.metadata.labels || {};
-    const managed: Record<string, string> = {};
-    provenanceItems.forEach(({ key }) => {
-      if (allLabels[key] !== undefined) {
-        managed[key] = allLabels[key];
-      }
-    });
-    return managed;
-  }, [device, provenanceItems, showDeviceReportedInfo]);
+  // Always omit managed labels from the editable Labels field (independent of the demo toggle).
+  const managedLabels = React.useMemo(() => getManagedLabelsFromDevice(device), [device]);
 
   return (
     <DetailsPageCard>
@@ -86,9 +60,9 @@ const DeviceIdentityCard = ({
             <DescriptionListTerm>{t('Labels')}</DescriptionListTerm>
             <DescriptionListDescription>
               {canEdit ? (
-                <EditLabelsForm device={labelsDevice} onDeviceUpdate={refetch} />
+                <EditLabelsForm device={device} managedLabels={managedLabels} onDeviceUpdate={refetch} />
               ) : (
-                <ViewLabels device={labelsDevice} />
+                <ViewLabels device={device} managedLabels={managedLabels} />
               )}
             </DescriptionListDescription>
           </DescriptionListGroup>
@@ -103,7 +77,7 @@ const DeviceIdentityCard = ({
                 />
               </DescriptionListTerm>
               <DescriptionListDescription>
-                <ManagedLabelsDisplay device={device} labels={managedLabels} showHeading={false} />
+                <DeviceManagedLabelsDrawer device={device} labels={managedLabels} />
               </DescriptionListDescription>
             </DescriptionListGroup>
           )}

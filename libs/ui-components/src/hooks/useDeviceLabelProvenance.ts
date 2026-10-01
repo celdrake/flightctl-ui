@@ -9,6 +9,8 @@ export type LabelSyncProvenanceItem = {
   source: 'DeviceOwnership' | 'ScalarReservation';
 };
 
+// CELIA-WIP check for unnecessary format conversions
+
 export const SYSTEMINFO_LABEL_PREFIX = 'systeminfo.flightctl.io/';
 export const CUSTOMINFO_LABEL_PREFIX = 'custominfo.flightctl.io/';
 /** TEMP demo: novel derived mapping that does not reuse systeminfo/custominfo prefixes. */
@@ -67,6 +69,7 @@ export const getOperatorLabelsFromDevice = (device: Device): Record<string, stri
       operator[key] = value;
     }
   });
+  console.log('%c operator', 'color: red; font-size:18px', operator);
   return operator;
 };
 

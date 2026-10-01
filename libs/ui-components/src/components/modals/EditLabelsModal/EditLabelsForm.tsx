@@ -32,6 +32,16 @@ const getValidationSchema = (t: TFunction) => {
   });
 };
 
+const omitLabelKeys = (
+  labels: Record<string, string>,
+  omittedKeys: Set<string>,
+): Record<string, string> => {
+  if (omittedKeys.size === 0) {
+    return labels;
+  }
+  return Object.fromEntries(Object.entries(labels).filter(([key]) => !omittedKeys.has(key)));
+};
+
 const EditLabelsFormContent = ({ isSubmitting, submitForm }: EditLabelsFormContentProps) => {
   const [submitError, setSubmitError] = React.useState<string>();
 
@@ -54,28 +64,42 @@ const EditLabelsFormContent = ({ isSubmitting, submitForm }: EditLabelsFormConte
 type EditLabelsFormProps = {
   device: Device;
   onDeviceUpdate: () => void;
+  /** Labels that must not appear in the editor and must be preserved on save. */
+  managedLabels?: Record<string, string>;
 };
 
-export const ViewLabels = ({ device }: { device: Device }) => {
-  const currentLabels = device.metadata.labels || {};
+export const ViewLabels = ({
+  device,
+  managedLabels = {},
+}: {
+  device: Device;
+  managedLabels?: Record<string, string>;
+}) => {
+  const omittedKeys = new Set(Object.keys(managedLabels));
+  const currentLabels = omitLabelKeys(device.metadata.labels || {}, omittedKeys);
   return <LabelsView prefix="read-only-labels" labels={currentLabels} />;
 };
 
-const EditLabelsForm = ({ device, onDeviceUpdate }: EditLabelsFormProps) => {
+const EditLabelsForm = ({ device, onDeviceUpdate, managedLabels = {} }: EditLabelsFormProps) => {
   const { t } = useTranslation();
   const { patch } = useFetch();
 
+  const omittedKeys = React.useMemo(() => new Set(Object.keys(managedLabels)), [managedLabels]);
   const currentLabelsMap = device.metadata.labels || {};
-  const currentLabelsList = fromAPILabel(currentLabelsMap || {});
+  const editableLabelsList = fromAPILabel(omitLabelKeys(currentLabelsMap, omittedKeys)).filter(
+    (label) => label.key !== 'alias',
+  );
 
   return (
     <Formik<EditLabelsFormValues>
       initialValues={{
-        labels: currentLabelsList.filter((label) => label.key !== 'alias'),
+        labels: editableLabelsList,
       }}
       onSubmit={async (values: EditLabelsFormValues) => {
         try {
-          const labelsPatch = getDeviceLabelPatches(currentLabelsMap, values.labels);
+          // Re-attach managed labels so a replace of /metadata/labels does not wipe them.
+          const labelsToPatch = values.labels.concat(fromAPILabel(managedLabels));
+          const labelsPatch = getDeviceLabelPatches(currentLabelsMap, labelsToPatch);
           if (labelsPatch.length > 0) {
             await patch(`devices/${device.metadata.name}`, labelsPatch);
             onDeviceUpdate();
