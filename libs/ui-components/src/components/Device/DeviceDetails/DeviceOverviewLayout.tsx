@@ -7,13 +7,13 @@ import { useDeviceOverallHealth } from '../../../hooks/useDeviceOverallHealth';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useVulnerabilitiesEnabled } from '../../../hooks/useServicesEnabled';
 import DeviceApplications from './DeviceApplications';
-import DeviceCustomDataCard from './DeviceCustomDataCard';
 import DeviceHealthAlert from './DeviceHealthAlert';
 import DeviceIdentityCard from './DeviceIdentityCard';
 import DeviceInformationCard from './DeviceInformationCard';
 import DeviceStatusCard from './DeviceStatusCard';
 import DeviceSystemdUnits from './DeviceSystemdUnits';
 import DeviceVulnerabilities from './DeviceVulnerabilities';
+import DeviceCustomDataCard from './DeviceCustomDataCard';
 
 import './DeviceDetailsTab.css';
 
@@ -38,6 +38,8 @@ const DeviceOverviewLayout = ({
   const systemInfo = device.status?.systemInfo;
   const systemInfoResult = useDeviceSystemInfo(t, systemInfo, systemInfoStatuses?.systemInfo);
   const customInfoResult = useDeviceCustomInfo(t, systemInfo?.customInfo, systemInfoStatuses?.customInfo);
+
+  console.log('%c systemInfoResult', 'color: blue; font-size:18px', systemInfoResult);
 
   return (
     <Stack hasGutter>
@@ -73,7 +75,7 @@ const DeviceOverviewLayout = ({
               </DeviceIdentityCard>
             </StackItem>
             <StackItem>
-              <DeviceInformationCard device={device} />
+              <DeviceInformationCard device={device} systemInfoResult={systemInfoResult} />
             </StackItem>
             {customInfoResult.entries.length > 0 && (
               <StackItem>

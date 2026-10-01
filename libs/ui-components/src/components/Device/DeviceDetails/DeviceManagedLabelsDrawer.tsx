@@ -58,6 +58,7 @@ const ManagedLabel = ({ labelKey, value }: ManagedLabelProps) => {
 const DeviceManagedLabelsDrawer = ({ device, labels }: DeviceManagedLabelsDrawerProps) => {
   const { t } = useTranslation();
   const [drawerOpen, setDrawerOpen] = React.useState(false);
+  // CELIA-WIP: DO NOT GENERATE SYSTEMINFORESULT AGAIN FOR THIS FUNCTIONALITY
   const { novel } = partitionManagedLabels(labels, device);
   // CELIA-WIP redo all of this
   const novelEntries = labelEntries(novel);

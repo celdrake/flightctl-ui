@@ -13,57 +13,57 @@ import {
 import { AddressCardIcon } from '@patternfly/react-icons/dist/js/icons/address-card-icon';
 
 import { type Device } from '@flightctl/types';
-import { buildReportingSummary, useDeviceSystemInfo } from '../../../hooks/useDeviceSystemInfo';
+import { type SystemInfoListResult } from '../../../hooks/useDeviceSystemInfo';
 import { useTranslation } from '../../../hooks/useTranslation';
 import DetailsPageCard, { DetailsPageCardTitle } from '../../DetailsPage/DetailsPageCard';
 import ConfigurationsContent from './DeviceDetailsTabContent/ConfigurationsContent';
 import { CapabilitiesFieldsList, SystemInfoFieldsList } from './SidebarDescriptionList';
-import { useDemoSystemInfoStatus } from './SystemInfoDemoOptions';
 import SystemInfoReportingBadge from './SystemInfoReportingBadge';
 
 import './DeviceDetailsTab.css';
 
 // CELIA-WIP: we must show an error when the label has a value which doesn't match that of systemInfo/customInfo
 
+// CELIA-WIP: unify useDemoSystemInfoStatus so that it splits the systemInfoFields into visible and expandable sections with reporting status
+// can be optional if the caller shows all eleemnts at the first level
+
 // By default only show the first 4 fields, with the rest shown in an expandable section
 // However, if there are less than 8 fields, show all of them without needing to expand
 const EXPAND_SYSTEM_INFO_COUNT = 4;
 const MIN_SYSTEM_INFO_FIELDS_FOR_EXPAND = 8;
 
-const DeviceInformationCard = ({ device }: { device: Required<Device> }) => {
+const DeviceInformationCard = ({
+  device,
+  systemInfoResult,
+}: {
+  device: Required<Device>;
+  systemInfoResult: SystemInfoListResult;
+}) => {
   const { t } = useTranslation();
-  const { entries: systemInfoFields, reporting } = useDeviceSystemInfo(
-    t,
-    device.status?.systemInfo,
-    device.status?.systemInfoStatus,
-  );
-
   const [isMoreInfoExpanded, setIsMoreInfoExpanded] = React.useState(false);
 
   const { visibleSystemInfoFields, expandableSystemInfoFields } = React.useMemo(() => {
-    if (systemInfoFields.length < MIN_SYSTEM_INFO_FIELDS_FOR_EXPAND) {
+    if (systemInfoResult.entries.length < MIN_SYSTEM_INFO_FIELDS_FOR_EXPAND) {
       return {
-        visibleSystemInfoFields: systemInfoFields,
+        visibleSystemInfoFields: systemInfoResult.entries,
         expandableSystemInfoFields: [],
       };
     }
 
     return {
-      visibleSystemInfoFields: systemInfoFields.slice(0, EXPAND_SYSTEM_INFO_COUNT),
-      expandableSystemInfoFields: systemInfoFields.slice(EXPAND_SYSTEM_INFO_COUNT),
+      visibleSystemInfoFields: systemInfoResult.entries.slice(0, EXPAND_SYSTEM_INFO_COUNT),
+      expandableSystemInfoFields: systemInfoResult.entries.slice(EXPAND_SYSTEM_INFO_COUNT),
     };
-  }, [systemInfoFields]);
+  }, [systemInfoResult.entries]);
 
-  // CELIA-WIP: unify useDemoSystemInfoStatus so that it splits the systemInfoFields into visible and expandable sections with reporting status
-  // can be optional if the caller shows all eleemnts at the first level
-  const expandableHasErrors = buildReportingSummary(expandableSystemInfoFields).hasErrors;
+  const expandableHasErrors = systemInfoResult.hasErrors;
 
   return (
     <DetailsPageCard id="device-information-card">
       <DetailsPageCardTitle
         title={t('Device information')}
         icon={<AddressCardIcon />}
-        badge={<SystemInfoReportingBadge reporting={reporting} />}
+        badge={<SystemInfoReportingBadge hasErrors={systemInfoResult.hasErrors} />}
       />
       <CardBody>
         <Stack hasGutter>

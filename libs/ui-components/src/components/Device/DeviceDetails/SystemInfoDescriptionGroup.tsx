@@ -29,7 +29,7 @@ const SystemInfoValue = ({ entry }: { entry: SystemInfoEntry }) => {
       <StackItem>
         {hasDisplayValue(entry.value) ? entry.value : <Content component="small">{t('No value reported')}</Content>}
       </StackItem>
-      {reporting && (
+      {reporting?.timeSince && (
         <StackItem>
           <Content component="small">{t('Last changed {{time}}', { time: reporting.timeSince })}</Content>
         </StackItem>
@@ -79,7 +79,7 @@ const SystemInfoValue = ({ entry }: { entry: SystemInfoEntry }) => {
 
 const SystemInfoDescriptionGroup = ({ entry }: { entry: SystemInfoEntry }) => (
   <DescriptionListGroup key={entry.key}>
-    <DescriptionListTerm>{entry.title}</DescriptionListTerm>
+    <DescriptionListTerm>{entry.key}</DescriptionListTerm>
     <DescriptionListDescription>
       <SystemInfoValue entry={entry} />
     </DescriptionListDescription>

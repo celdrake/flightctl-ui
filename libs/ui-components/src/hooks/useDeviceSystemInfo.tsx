@@ -1,12 +1,7 @@
 import React from 'react';
 import type { TFunction } from 'react-i18next';
 
-import type {
-  CustomDeviceInfo,
-  DeviceSystemInfo,
-  DeviceSystemInfoStatus,
-  SystemInfoSourceStatus,
-} from '@flightctl/types';
+import type { CustomDeviceInfo, DeviceSystemInfo, SystemInfoSourceStatus } from '@flightctl/types';
 import { SystemInfoSourceStatusType } from '@flightctl/types';
 import { timeSinceText } from '../utils/dates';
 
@@ -18,9 +13,8 @@ export type SystemInfoReporting = {
 
 export type SystemInfoEntry = {
   key: string;
-  title: string;
   value: React.ReactNode;
-  reporting: SystemInfoReporting;
+  reporting: SystemInfoReporting | null;
 };
 
 export type SystemInfoListResult = {
@@ -28,15 +22,8 @@ export type SystemInfoListResult = {
   hasErrors: boolean;
 };
 
-const hasReportingError = (entryReport: SystemInfoReporting): boolean => {
-  return entryReport.status === SystemInfoSourceStatusType.SystemInfoSourceStatusError || !!entryReport.error;
-};
-
-// Converts a camelCase variable into words. Example: "someInfoData" --> "Some info data"
-// Keeps acronyms together, converted to lowercase. Example: "bootID" --> Boot id
-export const propNameToTitle = (input: string) => {
-  const words = input.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2');
-  return words.charAt(0).toUpperCase() + words.slice(1).toLowerCase();
+const hasReportingError = (entryReport: SystemInfoReporting | null): boolean => {
+  return entryReport?.status === SystemInfoSourceStatusType.SystemInfoSourceStatusError || !!entryReport?.error;
 };
 
 const excludedKnownProps = [
@@ -66,9 +53,9 @@ const systemInfoKnownKeys = [
   'productUuid',
 ];
 
-const toReporting = (sourceStatus: SystemInfoSourceStatus | undefined, t: TFunction): SystemInfoReporting => {
+const toReporting = (sourceStatus: SystemInfoSourceStatus | undefined, t: TFunction): SystemInfoReporting | null => {
   if (!sourceStatus) {
-    return { status: SystemInfoSourceStatusType.SystemInfoSourceStatusUnknown };
+    return null;
   }
   return {
     status: sourceStatus.status,
@@ -102,16 +89,17 @@ export const useDeviceSystemInfo = (
   };
   const includedKeys = new Set<string>();
 
+  console.log('%c reculating deviceSystemInfo', 'color: red; font-size:18px', Date.now());
+
   // Add the known fields first, in their desired order of appearance
   systemInfoKnownKeys
     .filter((infoKey) => systemInfo[infoKey] || !!infoStatus?.[infoKey])
-    .forEach(([infoKey, infoTitle]) => {
+    .forEach((infoKey) => {
       includedKeys.add(infoKey);
 
       const reporting = toReporting(infoStatus?.[infoKey], t);
       addSystemInfoEntry(result, {
         key: infoKey,
-        title: infoTitle,
         value: systemInfo[infoKey],
         reporting,
       });
@@ -130,7 +118,6 @@ export const useDeviceSystemInfo = (
     const reporting = toReporting(itemStatus, t);
     addSystemInfoEntry(result, {
       key: infoKey,
-      title: propNameToTitle(infoKey),
       value,
       reporting,
     });
@@ -154,7 +141,6 @@ export const useDeviceCustomInfo = (
     const reporting = toReporting(infoStatus?.[key], t);
     addSystemInfoEntry(result, {
       key,
-      title: propNameToTitle(key),
       value: customInfo[key],
       reporting,
     });

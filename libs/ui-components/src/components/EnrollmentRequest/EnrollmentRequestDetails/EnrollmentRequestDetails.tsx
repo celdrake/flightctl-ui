@@ -63,12 +63,12 @@ const EnrollmentRequestDetails = () => {
 
   const [isApprovalModalOpen, setIsApprovalModalOpen] = React.useState(false);
   const deviceStatus = er?.spec.deviceStatus;
-  const { entries: erSystemInfo } = useDeviceSystemInfo(
+  const systemInfoResult = useDeviceSystemInfo(
     t,
     deviceStatus?.systemInfo,
     deviceStatus?.systemInfoStatus?.statuses.systemInfo,
   );
-  const { entries: customInfoEntries } = useDeviceCustomInfo(
+  const customInfoResult = useDeviceCustomInfo(
     t,
     deviceStatus?.systemInfo?.customInfo,
     deviceStatus?.systemInfoStatus?.statuses.customInfo,
@@ -143,16 +143,16 @@ const EnrollmentRequestDetails = () => {
                     <EnrollmentRequestStatus er={er} />
                   </DescriptionListDescription>
                 </DescriptionListGroup>
-                {erSystemInfo.map((entry) => (
+                {systemInfoResult.entries.map((entry) => (
                   <SystemInfoDescriptionGroup key={entry.key} entry={entry} />
                 ))}
               </DescriptionList>
             </CardBody>
           </DetailsPageCard>
         </GridItem>
-        {customInfoEntries.length > 0 && (
+        {customInfoResult.entries.length > 0 && (
           <GridItem md={6}>
-            <DeviceCustomDataCard entries={customInfoEntries} reporting={customInfoReporting} />
+            <DeviceCustomDataCard customInfoResult={customInfoResult} />
           </GridItem>
         )}
         <GridItem md={6}>
