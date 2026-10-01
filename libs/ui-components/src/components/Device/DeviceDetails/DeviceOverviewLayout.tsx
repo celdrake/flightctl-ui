@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Grid, GridItem, Stack, StackItem } from '@patternfly/react-core';
 
 import { type Device } from '@flightctl/types';
-import { useDeviceCustomInfo, useDeviceSpecSystemInfo } from '../../../hooks/useDeviceSpecSystemInfo';
+import { useDeviceCustomInfo, useDeviceSystemInfo } from '../../../hooks/useDeviceSystemInfo';
 import { useDeviceOverallHealth } from '../../../hooks/useDeviceOverallHealth';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useVulnerabilitiesEnabled } from '../../../hooks/useServicesEnabled';
@@ -91,7 +91,7 @@ const DeviceOverviewLayoutContent = ({
     systemInfoStatus,
   );
   // Device information computes its own list; reuse the same demo status for the page-alert summary
-  const { reporting: systemInfoReporting } = useDeviceSpecSystemInfo(device.status?.systemInfo, t, systemInfoStatus);
+  const { reporting: systemInfoReporting } = useDeviceSystemInfo(device.status?.systemInfo, t, systemInfoStatus);
 
   return (
     <Stack hasGutter>

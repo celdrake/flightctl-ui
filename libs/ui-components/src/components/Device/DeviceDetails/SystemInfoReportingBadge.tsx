@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Flex, FlexItem, Label } from '@patternfly/react-core';
 
-import type { SystemInfoReportingSummary } from '../../../hooks/useDeviceSpecSystemInfo';
+import type { SystemInfoReportingSummary } from '../../../hooks/useDeviceSystemInfo';
 import { useTranslation } from '../../../hooks/useTranslation';
 import LabelWithHelperText from '../../common/WithHelperText';
 

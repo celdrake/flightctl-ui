@@ -33,7 +33,7 @@ import EnrollmentRequestStatus from '../../Status/EnrollmentRequestStatus';
 import LabelWithHelperText from '../../common/WithHelperText';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { ROUTE, useNavigate } from '../../../hooks/useNavigate';
-import { useDeviceCustomInfo, useDeviceSpecSystemInfo } from '../../../hooks/useDeviceSpecSystemInfo';
+import { useDeviceCustomInfo, useDeviceSystemInfo } from '../../../hooks/useDeviceSystemInfo';
 import { useAppContext } from '../../../hooks/useAppContext';
 import { usePermissionsContext } from '../../common/PermissionsContext';
 import { RESOURCE, VERB } from '../../../types/rbac';
@@ -63,7 +63,7 @@ const EnrollmentRequestDetails = () => {
 
   const [isApprovalModalOpen, setIsApprovalModalOpen] = React.useState(false);
   const systemInfo = er?.spec.deviceStatus?.systemInfo;
-  const { entries: erSystemInfo } = useDeviceSpecSystemInfo(systemInfo, t, er?.spec.deviceStatus?.systemInfoStatus);
+  const { entries: erSystemInfo } = useDeviceSystemInfo(systemInfo, t, er?.spec.deviceStatus?.systemInfoStatus);
   const { entries: customInfoEntries, reporting: customInfoReporting } = useDeviceCustomInfo(systemInfo, t);
 
   const hasDefaultLabels = Object.keys(er?.spec.labels || {}).length > 0;

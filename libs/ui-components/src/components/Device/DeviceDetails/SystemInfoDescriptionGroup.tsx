@@ -12,7 +12,7 @@ import {
 } from '@patternfly/react-core';
 import { SystemInfoSourceStatusType } from '@flightctl/types';
 
-import type { SystemInfoEntry } from '../../../hooks/useDeviceSpecSystemInfo';
+import type { SystemInfoEntry } from '../../../hooks/useDeviceSystemInfo';
 import { useTranslation } from '../../../hooks/useTranslation';
 import LabelWithHelperText from '../../common/WithHelperText';
 import { useSystemInfoDemoOptions } from './SystemInfoDemoOptions';

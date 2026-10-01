@@ -121,7 +121,7 @@ const emptyResult: SystemInfoListResult = {
   reporting: { hasReporting: false, hasErrors: false },
 };
 
-export const useDeviceSpecSystemInfo = (
+export const useDeviceSystemInfo = (
   systemInfo: DeviceSystemInfo | undefined,
   t: TFunction,
   systemInfoStatus?: DeviceSystemInfoStatus,

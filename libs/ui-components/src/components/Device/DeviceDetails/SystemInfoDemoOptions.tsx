@@ -162,6 +162,19 @@ export const useDemoSystemInfoStatus = (
   }, [simulateReportingVariants, systemInfo, systemInfoStatus]);
 };
 
+const allEnabled: SystemInfoDemoOptions = {
+  shortChangedLabel: true,
+  prettifyNames: true,
+  showDeviceReportedInfo: true,
+  simulateReportingVariants: true,
+};
+
+const isAllEnabled = (options: SystemInfoDemoOptions) =>
+  options.shortChangedLabel &&
+  options.prettifyNames &&
+  options.showDeviceReportedInfo &&
+  options.simulateReportingVariants;
+
 /** TEMP: checkbox strip for demoing systemInfo / device-reported label variants */
 export const SystemInfoDemoOptionsBar = ({
   options,
@@ -172,6 +185,14 @@ export const SystemInfoDemoOptionsBar = ({
 }) => (
   <Alert isInline variant="warning" title="Demo options">
     <Flex spaceItems={{ default: 'spaceItemsLg' }}>
+      <FlexItem>
+        <Checkbox
+          id="temp-demo-enable-all"
+          label="Enable all"
+          isChecked={isAllEnabled(options)}
+          onChange={(_e, checked) => onChange(checked ? allEnabled : defaultOptions)}
+        />
+      </FlexItem>
       <FlexItem>
         <Checkbox
           id="temp-demo-raw-field-names"

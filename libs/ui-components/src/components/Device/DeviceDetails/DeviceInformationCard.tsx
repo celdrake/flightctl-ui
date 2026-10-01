@@ -13,7 +13,7 @@ import {
 import { AddressCardIcon } from '@patternfly/react-icons/dist/js/icons/address-card-icon';
 
 import { type Device } from '@flightctl/types';
-import { buildReportingSummary, useDeviceSpecSystemInfo } from '../../../hooks/useDeviceSpecSystemInfo';
+import { buildReportingSummary, useDeviceSystemInfo } from '../../../hooks/useDeviceSystemInfo';
 import { useTranslation } from '../../../hooks/useTranslation';
 import DetailsPageCard, { DetailsPageCardTitle } from '../../DetailsPage/DetailsPageCard';
 import ConfigurationsContent from './DeviceDetailsTabContent/ConfigurationsContent';
@@ -32,11 +32,7 @@ const DeviceInformationCard = ({ device }: { device: Required<Device> }) => {
   const { t } = useTranslation();
   // TEMP: demo overlay for reporting variants
   const systemInfoStatus = useDemoSystemInfoStatus(device.status?.systemInfo, device.status?.systemInfoStatus);
-  const { entries: systemInfoFields, reporting } = useDeviceSpecSystemInfo(
-    device.status?.systemInfo,
-    t,
-    systemInfoStatus,
-  );
+  const { entries: systemInfoFields, reporting } = useDeviceSystemInfo(device.status?.systemInfo, t, systemInfoStatus);
 
   const [isMoreInfoExpanded, setIsMoreInfoExpanded] = React.useState(false);
 

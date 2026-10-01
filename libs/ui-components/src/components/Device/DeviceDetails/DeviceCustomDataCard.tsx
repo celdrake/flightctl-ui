@@ -2,7 +2,7 @@ import * as React from 'react';
 import { CardBody, DescriptionList } from '@patternfly/react-core';
 import { TagIcon } from '@patternfly/react-icons/dist/js/icons/tag-icon';
 
-import type { SystemInfoEntry, SystemInfoReportingSummary } from '../../../hooks/useDeviceSpecSystemInfo';
+import type { SystemInfoEntry, SystemInfoReportingSummary } from '../../../hooks/useDeviceSystemInfo';
 import { useTranslation } from '../../../hooks/useTranslation';
 import DetailsPageCard, { DetailsPageCardTitle } from '../../DetailsPage/DetailsPageCard';
 import SystemInfoDescriptionGroup from './SystemInfoDescriptionGroup';

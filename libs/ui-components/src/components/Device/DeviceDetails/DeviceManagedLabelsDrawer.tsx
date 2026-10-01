@@ -20,7 +20,8 @@ import FlightCtlPageDrawer from '../../common/FlightCtlPageDrawer';
 import LabelWithHelperText from '../../common/WithHelperText';
 
 /** Max novel chips shown inline before directing the user to View all. */
-export const DEVICE_REPORTED_NOVEL_INLINE_LIMIT = 5;
+// CELIA-WIP: limit set to 5 in rhem-paola
+export const DEVICE_REPORTED_NOVEL_INLINE_LIMIT = 3;
 
 type DeviceManagedLabelsDrawerProps = {
   device: Device;

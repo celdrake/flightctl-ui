@@ -8,7 +8,7 @@ import {
 } from '@patternfly/react-core';
 import { type DeviceStatus } from '@flightctl/types';
 
-import type { SystemInfoEntry } from '../../../hooks/useDeviceSpecSystemInfo';
+import type { SystemInfoEntry } from '../../../hooks/useDeviceSystemInfo';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { getDeviceCapability } from '../../../utils/capabilities';
 import { OsModeLabel } from '../../common/OsModeContent';
