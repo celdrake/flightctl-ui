@@ -62,9 +62,17 @@ const EnrollmentRequestDetails = () => {
   const [canApprove, canDelete] = checkPermissions(enrollmentRequestDetailsPermissions);
 
   const [isApprovalModalOpen, setIsApprovalModalOpen] = React.useState(false);
-  const systemInfo = er?.spec.deviceStatus?.systemInfo;
-  const { entries: erSystemInfo } = useDeviceSystemInfo(t, systemInfo, er?.spec.deviceStatus?.systemInfoStatus);
-  const { entries: customInfoEntries, reporting: customInfoReporting } = useDeviceCustomInfo(t, systemInfo);
+  const deviceStatus = er?.spec.deviceStatus;
+  const { entries: erSystemInfo } = useDeviceSystemInfo(
+    t,
+    deviceStatus?.systemInfo,
+    deviceStatus?.systemInfoStatus?.statuses.systemInfo,
+  );
+  const { entries: customInfoEntries } = useDeviceCustomInfo(
+    t,
+    deviceStatus?.systemInfo?.customInfo,
+    deviceStatus?.systemInfoStatus?.statuses.customInfo,
+  );
 
   const hasDefaultLabels = Object.keys(er?.spec.labels || {}).length > 0;
   const deviceId = er?.metadata.name as string;

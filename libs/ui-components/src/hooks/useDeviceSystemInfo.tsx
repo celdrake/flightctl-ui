@@ -1,16 +1,18 @@
 import React from 'react';
 import type { TFunction } from 'react-i18next';
 
-import type { DeviceSystemInfo, DeviceSystemInfoStatus, SystemInfoSourceStatus } from '@flightctl/types';
+import type {
+  CustomDeviceInfo,
+  DeviceSystemInfo,
+  DeviceSystemInfoStatus,
+  SystemInfoSourceStatus,
+} from '@flightctl/types';
 import { SystemInfoSourceStatusType } from '@flightctl/types';
-
 import { timeSinceText } from '../utils/dates';
 
 export type SystemInfoReporting = {
   status: SystemInfoSourceStatusType;
-  /** Relative time from lastTransitionTime, via timeSinceText(t, ...) */
-  timeSince: string;
-  /** Collection error detail from SystemInfoSourceStatus.message */
+  timeSince?: string;
   error?: string;
 };
 
@@ -18,38 +20,16 @@ export type SystemInfoEntry = {
   key: string;
   title: string;
   value: React.ReactNode;
-  reporting?: SystemInfoReporting;
-};
-
-export type SystemInfoReportingSummary = {
-  /** At least one entry has reporting metadata (systemInfoStatus present for that key) */
-  hasReporting: boolean;
-  /** Any entry with API status Error, or a non-empty reporting.error message */
-  hasErrors: boolean;
+  reporting: SystemInfoReporting;
 };
 
 export type SystemInfoListResult = {
   entries: SystemInfoEntry[];
-  reporting: SystemInfoReportingSummary;
+  hasErrors: boolean;
 };
 
-export const buildReportingSummary = (entries: SystemInfoEntry[]): SystemInfoReportingSummary => {
-  const acc = {
-    hasReporting: false,
-    hasErrors: false,
-  };
-  return entries.reduce((acc, entry) => {
-    if (
-      entry.reporting?.status === SystemInfoSourceStatusType.SystemInfoSourceStatusError ||
-      !!entry.reporting?.error
-    ) {
-      acc.hasErrors = true;
-    }
-    if (!!entry.reporting) {
-      acc.hasReporting = true;
-    }
-    return acc;
-  }, acc);
+const hasReportingError = (entryReport: SystemInfoReporting): boolean => {
+  return entryReport.status === SystemInfoSourceStatusType.SystemInfoSourceStatusError || !!entryReport.error;
 };
 
 // Converts a camelCase variable into words. Example: "someInfoData" --> "Some info data"
@@ -86,12 +66,9 @@ const systemInfoKnownKeys = [
   'productUuid',
 ];
 
-const toReporting = (
-  sourceStatus: SystemInfoSourceStatus | undefined,
-  t: TFunction,
-): SystemInfoReporting | undefined => {
+const toReporting = (sourceStatus: SystemInfoSourceStatus | undefined, t: TFunction): SystemInfoReporting => {
   if (!sourceStatus) {
-    return undefined;
+    return { status: SystemInfoSourceStatusType.SystemInfoSourceStatusUnknown };
   }
   return {
     status: sourceStatus.status,
@@ -100,34 +77,44 @@ const toReporting = (
   };
 };
 
+const addSystemInfoEntry = (result: SystemInfoListResult, newEntry: SystemInfoEntry) => {
+  result.entries.push(newEntry);
+  result.hasErrors = result.hasErrors || hasReportingError(newEntry.reporting);
+};
+
 const emptyResult: SystemInfoListResult = {
   entries: [],
-  reporting: { hasReporting: false, hasErrors: false },
+  hasErrors: false,
 };
 
 export const useDeviceSystemInfo = (
   t: TFunction,
   systemInfo: DeviceSystemInfo | undefined,
-  systemInfoStatus?: DeviceSystemInfoStatus,
+  infoStatus?: Record<string, SystemInfoSourceStatus>,
 ): SystemInfoListResult => {
   if (!systemInfo) {
     return emptyResult;
   }
 
-  const statusMap = systemInfoStatus?.statuses.systemInfo;
+  const result = {
+    entries: [],
+    hasErrors: false,
+  };
   const includedKeys = new Set<string>();
 
   // Add the known fields first, in their desired order of appearance
-  const systemInfoItems: SystemInfoEntry[] = systemInfoKnownKeys
-    .filter((infoKey) => systemInfo[infoKey] || !!statusMap?.[infoKey])
-    .map(([infoKey, infoTitle]) => {
+  systemInfoKnownKeys
+    .filter((infoKey) => systemInfo[infoKey] || !!infoStatus?.[infoKey])
+    .forEach(([infoKey, infoTitle]) => {
       includedKeys.add(infoKey);
-      return {
+
+      const reporting = toReporting(infoStatus?.[infoKey], t);
+      addSystemInfoEntry(result, {
         key: infoKey,
         title: infoTitle,
         value: systemInfo[infoKey],
-        reporting: toReporting(statusMap?.[infoKey], t),
-      };
+        reporting,
+      });
     });
 
   // Add any other fields that weren't included yet, in arbitrary order
@@ -136,41 +123,41 @@ export const useDeviceSystemInfo = (
       return;
     }
     const value = systemInfo[infoKey];
-    const reporting = toReporting(statusMap?.[infoKey], t);
-    if (!value && !reporting) {
+    const itemStatus = infoStatus?.[infoKey];
+    if (!value && !itemStatus) {
       return;
     }
-    systemInfoItems.push({
+    const reporting = toReporting(itemStatus, t);
+    addSystemInfoEntry(result, {
       key: infoKey,
       title: propNameToTitle(infoKey),
       value,
       reporting,
     });
   });
-  return {
-    entries: systemInfoItems,
-    reporting: buildReportingSummary(systemInfoItems),
-  };
+  return result;
 };
 
 export const useDeviceCustomInfo = (
   t: TFunction,
-  systemInfo: DeviceSystemInfo | undefined,
-  systemInfoStatus?: DeviceSystemInfoStatus,
+  systemInfo: CustomDeviceInfo | undefined,
+  infoStatus?: Record<string, SystemInfoSourceStatus>,
 ): SystemInfoListResult => {
   const customInfo = systemInfo?.customInfo || {};
-  const statusMap = systemInfoStatus?.statuses.customInfo;
-  const keys = new Set([...Object.keys(customInfo), ...Object.keys(statusMap || {})]);
 
-  const entries = [...keys].map((key) => ({
-    key,
-    title: propNameToTitle(key),
-    value: customInfo[key],
-    reporting: toReporting(statusMap?.[key], t),
-  }));
-
-  return {
-    entries,
-    reporting: buildReportingSummary(entries),
+  const result = {
+    entries: [],
+    hasErrors: false,
   };
+
+  Object.keys(customInfo).forEach((key) => {
+    const reporting = toReporting(infoStatus?.[key], t);
+    addSystemInfoEntry(result, {
+      key,
+      title: propNameToTitle(key),
+      value: customInfo[key],
+      reporting,
+    });
+  });
+  return result;
 };

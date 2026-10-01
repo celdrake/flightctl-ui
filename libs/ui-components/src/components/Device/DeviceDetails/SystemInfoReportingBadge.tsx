@@ -1,18 +1,16 @@
 import * as React from 'react';
 import { Flex, FlexItem, Label } from '@patternfly/react-core';
 
-import type { SystemInfoReportingSummary } from '../../../hooks/useDeviceSystemInfo';
 import { useTranslation } from '../../../hooks/useTranslation';
 import LabelWithHelperText from '../../common/WithHelperText';
 
-const SystemInfoReportingBadge = ({ reporting }: { reporting: SystemInfoReportingSummary }) => {
+const SystemInfoReportingBadge = ({ hasErrors }: { hasErrors: boolean }) => {
   const { t } = useTranslation();
 
-  if (!reporting.hasReporting) {
+  if (!hasErrors) {
     return null;
   }
 
-  const hasErrors = reporting.hasErrors;
   const label = hasErrors ? t('Reporting issue') : t('Reporting current');
   const content = hasErrors
     ? t('One or more values failed to report.')

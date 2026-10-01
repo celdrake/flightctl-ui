@@ -34,20 +34,17 @@ const DeviceOverviewLayout = ({
   const [vulnerabilitiesEnabled, canListVulnerabilities] = useVulnerabilitiesEnabled();
   const showVulnerabilities = vulnerabilitiesEnabled && canListVulnerabilities;
 
-  const systemInfoStatus = device.status?.systemInfoStatus;
-  const { entries: customInfoEntries, reporting: customInfoReporting } = useDeviceCustomInfo(
-    t,
-    device.status?.systemInfo,
-    systemInfoStatus,
-  );
-  const { reporting: systemInfoReporting } = useDeviceSystemInfo(t, device.status?.systemInfo, systemInfoStatus);
+  const systemInfoStatuses = device.status?.systemInfoStatus?.statuses;
+  const systemInfo = device.status?.systemInfo;
+  const systemInfoResult = useDeviceSystemInfo(t, systemInfo, systemInfoStatuses?.systemInfo);
+  const customInfoResult = useDeviceCustomInfo(t, systemInfo?.customInfo, systemInfoStatuses?.customInfo);
 
   return (
     <Stack hasGutter>
       <DeviceHealthAlert
         deviceHealth={deviceHealth}
-        systemInfoHasErrors={systemInfoReporting.hasErrors}
-        customInfoHasErrors={customInfoReporting.hasErrors}
+        systemInfoHasErrors={systemInfoResult.hasErrors}
+        customInfoHasErrors={customInfoResult.hasErrors}
       />
       <Grid hasGutter>
         <GridItem lg={8}>
@@ -78,9 +75,9 @@ const DeviceOverviewLayout = ({
             <StackItem>
               <DeviceInformationCard device={device} />
             </StackItem>
-            {customInfoEntries.length > 0 && (
+            {customInfoResult.entries.length > 0 && (
               <StackItem>
-                <DeviceCustomDataCard entries={customInfoEntries} reporting={customInfoReporting} />
+                <DeviceCustomDataCard customInfoResult={customInfoResult} />
               </StackItem>
             )}
           </Stack>
