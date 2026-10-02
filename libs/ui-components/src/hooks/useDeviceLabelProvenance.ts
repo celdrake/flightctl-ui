@@ -25,6 +25,16 @@ const isPrimaryManagedLabel = (labelKey: string, systemInfo: DeviceSystemInfo | 
   return !!customInfo && Object.prototype.hasOwnProperty.call(customInfo, field);
 };
 
+type ManagedLabel = FlightCtlLabel & {
+  isPrimary: boolean;
+};
+
+export type ManagedLabelsPartition = {
+  items: ManagedLabel[];
+  totalCount: number;
+  primaryCount: number;
+  derivedCount: number;
+};
 /**
  * Split mapping-owned labels into primary (direct systemInfo/customInfo props)
  * vs derived (combined / novel mapping output). managedLabelKeys come from provenance.
@@ -33,27 +43,27 @@ export const partitionManagedLabels = (
   device: Device,
   managedLabelKeys: string[],
   systemInfo?: DeviceSystemInfo,
-): { primaryLabels: FlightCtlLabel[]; derivedLabels: FlightCtlLabel[]; allManagedLabels: FlightCtlLabel[] } => {
-  const primaryLabels: FlightCtlLabel[] = [];
-  const derivedLabels: FlightCtlLabel[] = [];
-  const managedKeySet = new Set(managedLabelKeys);
+): ManagedLabelsPartition => {
+  const managedLabels: ManagedLabel[] = [];
+  let primaryCount = 0;
 
   Object.entries(device.metadata.labels || {}).forEach(([key, value]) => {
-    if (!managedKeySet.has(key)) {
+    if (!managedLabelKeys.includes(key)) {
       return;
     }
     const label = { key, value };
-    if (isPrimaryManagedLabel(key, systemInfo)) {
-      primaryLabels.push(label);
-    } else {
-      derivedLabels.push(label);
+    const isPrimary = isPrimaryManagedLabel(key, systemInfo);
+    managedLabels.push({ ...label, isPrimary });
+    if (isPrimary) {
+      primaryCount++;
     }
   });
 
   return {
-    primaryLabels,
-    derivedLabels,
-    allManagedLabels: [...primaryLabels, ...derivedLabels],
+    items: managedLabels,
+    primaryCount,
+    derivedCount: managedLabels.length - primaryCount,
+    totalCount: managedLabels.length,
   };
 };
 

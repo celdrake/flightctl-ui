@@ -3,6 +3,7 @@ import { Label, LabelGroup, Tooltip } from '@patternfly/react-core';
 
 import { useTranslation } from '../../hooks/useTranslation';
 import { FlightCtlLabel } from '../../types/extraTypes';
+import { ManagedLabelsPartition } from '../../hooks/useDeviceLabelProvenance';
 
 interface LabelsViewProps {
   prefix: string;
@@ -29,19 +30,19 @@ const ManagedLabel = ({ label, isInline }: { label: FlightCtlLabel; isInline?: b
 };
 
 export const ManagedLabelsView = ({
-  numLabels,
   managedLabels,
-  isInline,
+  showOnly,
 }: {
-  numLabels: number;
-  managedLabels: FlightCtlLabel[];
-  isInline?: boolean;
+  managedLabels: ManagedLabelsPartition;
+  showOnly?: number;
 }) => {
   return (
-    <LabelGroup numLabels={numLabels}>
-      {managedLabels.map((label) => (
-        <ManagedLabel key={label.key} label={label} isInline={isInline} />
-      ))}
+    <LabelGroup numLabels={showOnly || managedLabels.totalCount}>
+      {managedLabels.items
+        .filter((_, index) => index < (showOnly || managedLabels.totalCount))
+        .map((label) => (
+          <ManagedLabel key={label.key} label={label} isInline={Boolean(showOnly)} />
+        ))}
     </LabelGroup>
   );
 };
