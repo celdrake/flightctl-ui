@@ -4,7 +4,7 @@ import { Alert } from '@patternfly/react-core';
 import { type TFunction } from 'i18next';
 import * as Yup from 'yup';
 
-import { LabelSyncProvenanceItem, type Device } from '@flightctl/types';
+import type { Device } from '@flightctl/types';
 import LabelsField from '../../form/LabelsField';
 import { type FlightCtlLabel } from '../../../types/extraTypes';
 import { useFetch } from '../../../hooks/useFetch';

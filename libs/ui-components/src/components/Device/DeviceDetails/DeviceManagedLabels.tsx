@@ -13,34 +13,35 @@ import {
 } from '@patternfly/react-core';
 
 import type { Device } from '@flightctl/types';
-import { useTranslation } from '../../../hooks/useTranslation';
 import { partitionManagedLabels } from '../../../hooks/useDeviceLabelProvenance';
+import { useTranslation } from '../../../hooks/useTranslation';
 import FlightCtlPageDrawer from '../../common/FlightCtlPageDrawer';
 import { ManagedLabelsView } from '../../common/LabelsView';
-import { DeviceSystemInfoResult } from '../../../hooks/useDeviceSystemInfo';
 
-/** Max novel chips shown inline before directing the user to View all. */
+/** Max derived chips shown inline before directing the user to View all. */
 // CELIA-WIP: limit set to 5 in rhem-paola
 export const DEVICE_REPORTED_NOVEL_INLINE_LIMIT = 3;
 
-type DeviceManagedLabelsDrawerProps = {
+type DeviceManagedLabelsProps = {
   device: Device;
-  systemInfoResult: DeviceSystemInfoResult;
   managedLabelKeys: string[];
 };
 
-// CELIA-WIP see how to use systemInfoResult to filter out labels that are already in systemInfo/customInfo
 /**
- * TEMP EDM-5268 demo: novel device-reported chips + View all drawer.
- * Keys that already appear as systemInfo/customInfo fields stay on those cards.
+ * Derived (non–systemInfo/customInfo) chips inline; full managed label set in the drawer.
+ * Primary labels already appear on System info / Custom data cards.
  */
-const DeviceManagedLabels = ({ device, managedLabelKeys }: DeviceManagedLabelsDrawerProps) => {
+const DeviceManagedLabels = ({ device, managedLabelKeys }: DeviceManagedLabelsProps) => {
   const { t } = useTranslation();
   const [drawerOpen, setDrawerOpen] = React.useState(false);
-  // CELIA-WIP: useLabelProvenance already provides the split
-  const { primaryLabels, derivedLabels } = partitionManagedLabels(device, managedLabelKeys);
-  const inlineDerived = primaryLabels.slice(0, DEVICE_REPORTED_NOVEL_INLINE_LIMIT);
-  const hasMoreDerived = primaryLabels.length > DEVICE_REPORTED_NOVEL_INLINE_LIMIT;
+  const { derivedLabels, allManagedLabels } = partitionManagedLabels(
+    device,
+    managedLabelKeys,
+    device.status?.systemInfo,
+  );
+  const inlineDerived = derivedLabels.slice(0, DEVICE_REPORTED_NOVEL_INLINE_LIMIT);
+  const hasMoreDerived = derivedLabels.length > DEVICE_REPORTED_NOVEL_INLINE_LIMIT;
+  const hasManagedLabels = allManagedLabels.length > 0;
 
   return (
     <>
@@ -66,10 +67,10 @@ const DeviceManagedLabels = ({ device, managedLabelKeys }: DeviceManagedLabelsDr
             )}
           </StackItem>
         )}
-        {derivedLabels.length > 0 && (
+        {hasManagedLabels && (
           <StackItem>
             <Button variant="link" isInline onClick={() => setDrawerOpen(true)}>
-              {t('View all device-reported information ({{count}})', { count: derivedLabels.length })}
+              {t('View all device-reported information ({{num}})', { num: allManagedLabels.length })}
             </Button>
           </StackItem>
         )}
@@ -94,7 +95,7 @@ const DeviceManagedLabels = ({ device, managedLabelKeys }: DeviceManagedLabelsDr
                   </Alert>
                 </StackItem>
                 <StackItem>
-                  <ManagedLabelsView numLabels={derivedLabels.length} managedLabels={derivedLabels} />
+                  <ManagedLabelsView numLabels={allManagedLabels.length} managedLabels={allManagedLabels} />
                 </StackItem>
               </Stack>
             </DrawerPanelBody>

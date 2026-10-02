@@ -10,7 +10,6 @@ import IdBadgeIcon from '@patternfly/react-icons/dist/js/icons/id-badge-icon';
 
 import type { Device } from '@flightctl/types';
 import useDeviceLabelProvenance from '../../../hooks/useDeviceLabelProvenance';
-import { DeviceSystemInfoResult } from '../../../hooks/useDeviceSystemInfo';
 import { useTranslation } from '../../../hooks/useTranslation';
 import ResourceLink from '../../common/ResourceLink';
 import LabelWithHelperText from '../../common/WithHelperText';
@@ -24,19 +23,16 @@ import './DeviceDetailsTab.css';
 
 type DeviceIdentityCardProps = {
   device: Required<Device>;
-  systemInfoResult: DeviceSystemInfoResult;
   refetch: VoidFunction;
   canEdit: boolean;
 };
 
 const DeviceLabelsSection = ({
   device,
-  systemInfoResult,
   canEdit,
   refetch,
 }: {
   device: Required<Device>;
-  systemInfoResult: DeviceSystemInfoResult;
   canEdit: boolean;
   refetch: VoidFunction;
 }) => {
@@ -78,11 +74,7 @@ const DeviceLabelsSection = ({
             />
           </DescriptionListTerm>
           <DescriptionListDescription>
-            <DeviceManagedLabels
-              device={device}
-              systemInfoResult={systemInfoResult}
-              managedLabelKeys={managedLabelKeys}
-            />
+            <DeviceManagedLabels device={device} managedLabelKeys={managedLabelKeys} />
           </DescriptionListDescription>
         </DescriptionListGroup>
       )}
@@ -92,7 +84,6 @@ const DeviceLabelsSection = ({
 
 const DeviceIdentityCard = ({
   device,
-  systemInfoResult,
   refetch,
   canEdit,
   children,
@@ -116,12 +107,7 @@ const DeviceIdentityCard = ({
               <DeviceFleet device={device} />
             </DescriptionListDescription>
           </DescriptionListGroup>
-          <DeviceLabelsSection
-            device={device}
-            systemInfoResult={systemInfoResult}
-            canEdit={canEdit}
-            refetch={refetch}
-          />
+          <DeviceLabelsSection device={device} canEdit={canEdit} refetch={refetch} />
           {children}
         </SidebarDescriptionList>
       </CardBody>

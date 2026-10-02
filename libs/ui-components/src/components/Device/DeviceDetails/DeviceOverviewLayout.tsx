@@ -71,12 +71,7 @@ const DeviceOverviewLayout = ({
         <GridItem lg={4}>
           <Stack hasGutter>
             <StackItem>
-              <DeviceIdentityCard
-                device={device}
-                systemInfoResult={fullSystemInfoResult}
-                refetch={refetch}
-                canEdit={canEdit}
-              >
+              <DeviceIdentityCard device={device} refetch={refetch} canEdit={canEdit}>
                 {children}
               </DeviceIdentityCard>
             </StackItem>

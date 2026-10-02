@@ -1,95 +1,76 @@
 import * as React from 'react';
 
-import type { Device } from '@flightctl/types';
-import { FlightCtlLabel } from '../types/extraTypes';
+import type { Device, DeviceSystemInfo, LabelSyncProvenanceList } from '@flightctl/types';
+import type { FlightCtlLabel } from '../types/extraTypes';
+import { useFetchPeriodically } from './useFetchPeriodically';
 
-type ApiLabels = Record<string, string>;
-
-// CELIA-WIP check for unnecessary format conversions
-
-export const SYSTEMINFO_LABEL_PREFIX = 'systeminfo.flightctl.io/';
-export const CUSTOMINFO_LABEL_PREFIX = 'custominfo.flightctl.io/';
-/** TEMP demo: novel derived mapping that does not reuse systeminfo/custominfo prefixes. */
-export const COMBINED_PROPS_LABEL_PREFIX = 'my-combined-props/';
-
-// CELIA-WIP: temp impleementation
-const isDerivedLabelKey = (key: string): boolean => key.startsWith(COMBINED_PROPS_LABEL_PREFIX);
-const isManagedLabelKey = (key: string): boolean =>
-  key.startsWith(SYSTEMINFO_LABEL_PREFIX) || key.startsWith(CUSTOMINFO_LABEL_PREFIX) || isDerivedLabelKey(key);
-
-/** TEMP until the API is implemented: Managed (mapping-promoted) labels on the device, keyed by full label key. */
-const getManagedLabelsFromDevice = (device: Device): ApiLabels => {
-  const labels = device.metadata.labels || {};
-  const managed: ApiLabels = {};
-  Object.entries(labels).forEach(([key, value]) => {
-    if (isManagedLabelKey(key)) {
-      managed[key] = value;
-    }
-  });
-  return managed;
+const getLabelFieldName = (labelKey: string): string => {
+  const slash = labelKey.lastIndexOf('/');
+  return slash >= 0 ? labelKey.slice(slash + 1) : labelKey;
 };
 
-/**
- * True when this managed label already has a page home as systemInfo / customInfo.
- * Novel labels (e.g. edgeTier from a derived mapping) return false.
- */
-// CELIA-WIP: check this function
-/*
-const isDerivedLabel = (labelKey: string, systemInfo: DeviceSystemInfo): boolean => {
-  const field = getManagedLabelFieldName(labelKey);
-  if (field !== 'customInfo' && Object.prototype.hasOwnProperty.call(systemInfo, field)) {
+/** Primary = managed label whose field maps 1:1 to a systemInfo or customInfo property. */
+const isPrimaryManagedLabel = (labelKey: string, systemInfo: DeviceSystemInfo | undefined): boolean => {
+  if (!systemInfo) {
+    return false;
+  }
+  const field = getLabelFieldName(labelKey);
+  if (field === 'customInfo') {
+    return false;
+  }
+  if (Object.prototype.hasOwnProperty.call(systemInfo, field)) {
     return true;
   }
   const customInfo = systemInfo.customInfo;
-  if (customInfo && Object.prototype.hasOwnProperty.call(customInfo, field)) {
-    return true;
-  }
-  return false;
-};
-*/
-
-export const partitionManagedLabels = (
-  device: Device,
-  managedLabelKeys: string[],
-): { primaryLabels: FlightCtlLabel[]; derivedLabels: FlightCtlLabel[] } => {
-  const primaryLabels: FlightCtlLabel[] = [];
-  const derivedLabels: FlightCtlLabel[] = [];
-  // CELIA-WIP can we use owner here? to identify where the label might be coming from?
-  // CELIA-WIP FIx algorithm based on the API response
-  Object.entries(device.metadata.labels || {}).forEach(([key, value]) => {
-    if (managedLabelKeys.includes(key)) {
-      if (isDerivedLabelKey(key)) {
-        derivedLabels.push({ key, value });
-      } else {
-        primaryLabels.push({ key, value });
-      }
-    }
-  });
-  return { primaryLabels, derivedLabels };
+  return !!customInfo && Object.prototype.hasOwnProperty.call(customInfo, field);
 };
 
 /**
- * TEMP: mocks GET /devices/{name}/labelsyncprovenance from device.metadata.labels.
- * Real shape (no apiVersion/kind/metadata; items only):
- *
- * {
- *   "items": [
- *     { "key": "systeminfo.flightctl.io/hostname", "owners": ["system-info"] },
- *     { "key": "custominfo.flightctl.io/site", "owners": ["custom-info"] },
- *     { "key": "my-combined-props/edgeTier", "owners": ["edge-tier"] }
- *   ]
- * }
- *
- * Empty owners means the key has no current mapping owner. Device queries omit
- * unowned keys and sort by key. Replace with a real fetch when the API lands.
+ * Split mapping-owned labels into primary (direct systemInfo/customInfo props)
+ * vs derived (combined / novel mapping output). managedLabelKeys come from provenance.
+ */
+export const partitionManagedLabels = (
+  device: Device,
+  managedLabelKeys: string[],
+  systemInfo?: DeviceSystemInfo,
+): { primaryLabels: FlightCtlLabel[]; derivedLabels: FlightCtlLabel[]; allManagedLabels: FlightCtlLabel[] } => {
+  const primaryLabels: FlightCtlLabel[] = [];
+  const derivedLabels: FlightCtlLabel[] = [];
+  const managedKeySet = new Set(managedLabelKeys);
+
+  Object.entries(device.metadata.labels || {}).forEach(([key, value]) => {
+    if (!managedKeySet.has(key)) {
+      return;
+    }
+    const label = { key, value };
+    if (isPrimaryManagedLabel(key, systemInfo)) {
+      primaryLabels.push(label);
+    } else {
+      derivedLabels.push(label);
+    }
+  });
+
+  return {
+    primaryLabels,
+    derivedLabels,
+    allManagedLabels: [...primaryLabels, ...derivedLabels],
+  };
+};
+
+/**
+ * Fetches GET /devices/{name}/labelsyncprovenance.
+ * Keys in the response are mapping-owned (managed); other device labels are operator-defined.
  */
 export const useDeviceLabelProvenance = (device: Device) => {
-  const labelKeys = React.useMemo((): string[] => {
-    const managed = getManagedLabelsFromDevice(device);
-    return Object.keys(managed);
-  }, [device]);
+  const deviceName = device.metadata.name || '';
+  const [provenance, isLoading, error] = useFetchPeriodically<LabelSyncProvenanceList>({
+    endpoint: deviceName ? `devices/${deviceName}/labelsyncprovenance` : '',
+    timeout: 60000,
+  });
 
-  return { labelKeys, isLoading: false };
+  const labelKeys = React.useMemo(() => (provenance?.items || []).map((item) => item.key), [provenance]);
+
+  return { labelKeys, provenance, isLoading: Boolean(deviceName) && isLoading, error };
 };
 
 export default useDeviceLabelProvenance;
