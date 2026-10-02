@@ -8,6 +8,8 @@ import LabelsView from '../common/LabelsView';
 import { toAPILabel } from '../../utils/labels';
 import ErrorHelperText, { DefaultHelperText } from './FieldHelperText';
 
+import './LabelsField.css';
+
 type LabelsFieldProps = {
   name: string;
   isLoading?: boolean;
@@ -17,8 +19,6 @@ type LabelsFieldProps = {
   /** Applied to the PatternFly `LabelGroup` root for E2E selectors (e.g. fleet wizard fleet labels). */
   labelGroupTestId?: string;
 };
-
-const maxLabelWidth = '16ch';
 
 const LabelsField = ({
   name,
@@ -72,7 +72,13 @@ const LabelsField = ({
 
   return (
     <>
-      <LabelGroup numLabels={5} isEditable={!isLoading} data-testid={labelGroupTestId}>
+      <LabelGroup
+        numLabels={5}
+        isEditable={!isLoading}
+        isVertical
+        data-testid={labelGroupTestId}
+        className="fctl-labels-field"
+      >
         {labels
           .map((label, originalIndex) => ({ ...label, originalIndex }))
           .map(({ key, value, originalIndex }) => {
@@ -85,7 +91,6 @@ const LabelsField = ({
               <Label
                 key={elKey}
                 color="blue"
-                textMaxWidth={maxLabelWidth}
                 closeBtnProps={closeButtonProps}
                 onClose={(e) => onDelete(e, originalIndex)}
                 onEditCancel={(_, prevText) => onEdit(originalIndex, prevText)}
@@ -93,6 +98,7 @@ const LabelsField = ({
                 /* Add a basic tooltip as the PF tooltip doesn't work for editable labels */
                 title={isLabelEditable ? text : undefined}
                 isEditable={isLabelEditable}
+                textMaxWidth="100%"
               >
                 {text}
               </Label>
