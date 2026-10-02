@@ -4,7 +4,7 @@ import { Alert } from '@patternfly/react-core';
 import { type TFunction } from 'i18next';
 import * as Yup from 'yup';
 
-import { type Device } from '@flightctl/types';
+import { LabelSyncProvenanceItem, type Device } from '@flightctl/types';
 import LabelsField from '../../form/LabelsField';
 import { type FlightCtlLabel } from '../../../types/extraTypes';
 import { useFetch } from '../../../hooks/useFetch';
@@ -19,6 +19,8 @@ type EditLabelsFormValues = {
   labels: FlightCtlLabel[];
 };
 
+type ApiLabels = Record<string, string>;
+
 type EditLabelsFormContentProps = {
   isSubmitting: FormikProps<EditLabelsFormValues>['isSubmitting'];
   submitForm: (values: EditLabelsFormValues) => Promise<string>;
@@ -32,14 +34,15 @@ const getValidationSchema = (t: TFunction) => {
   });
 };
 
-const omitLabelKeys = (
-  labels: Record<string, string>,
-  omittedKeys: Set<string>,
-): Record<string, string> => {
-  if (omittedKeys.size === 0) {
-    return labels;
+const omitManagedLabels = (labels: ApiLabels, managedLabelKeys: string[]): ApiLabels => {
+  const result = {};
+
+  for (const [key, value] of Object.entries(labels)) {
+    if (key !== 'alias' && !managedLabelKeys.includes(key)) {
+      result[key] = value;
+    }
   }
-  return Object.fromEntries(Object.entries(labels).filter(([key]) => !omittedKeys.has(key)));
+  return result;
 };
 
 const EditLabelsFormContent = ({ isSubmitting, submitForm }: EditLabelsFormContentProps) => {
@@ -54,52 +57,42 @@ const EditLabelsFormContent = ({ isSubmitting, submitForm }: EditLabelsFormConte
   };
 
   return (
-    <>
+    <div style={{ border: '2px solid lime' }}>
       <LabelsField name="labels" isLoading={isSubmitting} onChangeCallback={onChangedLabels} />
       {submitError && <Alert isInline title={submitError} variant="danger" />}
-    </>
+    </div>
   );
 };
 
 type EditLabelsFormProps = {
   device: Device;
   onDeviceUpdate: () => void;
-  /** Labels that must not appear in the editor and must be preserved on save. */
-  managedLabels?: Record<string, string>;
+  managedLabelKeys?: string[];
 };
 
-export const ViewLabels = ({
-  device,
-  managedLabels = {},
-}: {
-  device: Device;
-  managedLabels?: Record<string, string>;
-}) => {
-  const omittedKeys = new Set(Object.keys(managedLabels));
-  const currentLabels = omitLabelKeys(device.metadata.labels || {}, omittedKeys);
-  return <LabelsView prefix="read-only-labels" labels={currentLabels} />;
+export const ViewLabels = ({ device, managedLabelKeys = [] }: { device: Device; managedLabelKeys?: string[] }) => {
+  const viewableLabels = omitManagedLabels(device.metadata.labels || {}, managedLabelKeys);
+  return <LabelsView prefix="read-only-labels" labels={viewableLabels} />;
 };
 
-const EditLabelsForm = ({ device, onDeviceUpdate, managedLabels = {} }: EditLabelsFormProps) => {
+const EditLabelsForm = ({ device, onDeviceUpdate, managedLabelKeys = [] }: EditLabelsFormProps) => {
   const { t } = useTranslation();
   const { patch } = useFetch();
 
-  const omittedKeys = React.useMemo(() => new Set(Object.keys(managedLabels)), [managedLabels]);
-  const currentLabelsMap = device.metadata.labels || {};
-  const editableLabelsList = fromAPILabel(omitLabelKeys(currentLabelsMap, omittedKeys)).filter(
-    (label) => label.key !== 'alias',
-  );
+  const currentLabels = device.metadata.labels || {};
+  const editableLabels = fromAPILabel(omitManagedLabels(currentLabels, managedLabelKeys));
 
   return (
     <Formik<EditLabelsFormValues>
       initialValues={{
-        labels: editableLabelsList,
+        labels: editableLabels,
       }}
       onSubmit={async (values: EditLabelsFormValues) => {
         try {
           // Re-attach managed labels so a replace of /metadata/labels does not wipe them.
-          const labelsToPatch = values.labels.concat(fromAPILabel(managedLabels));
-          const labelsPatch = getDeviceLabelPatches(currentLabelsMap, labelsToPatch);
+          // CELIA-WIP: in theory we don't need to re-attach managed labels, check after Kyle's changes.
+          // But need to reattach "alias" label.
+          const labelsPatch = getDeviceLabelPatches(currentLabels, values.labels);
           if (labelsPatch.length > 0) {
             await patch(`devices/${device.metadata.name}`, labelsPatch);
             onDeviceUpdate();

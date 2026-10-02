@@ -14,10 +14,11 @@ import {
 } from '@patternfly/react-core';
 
 import type { Device } from '@flightctl/types';
-import { labelEntries, partitionManagedLabels } from '../../../hooks/useDeviceLabelProvenance';
 import { useTranslation } from '../../../hooks/useTranslation';
 import FlightCtlPageDrawer from '../../common/FlightCtlPageDrawer';
 import LabelWithHelperText from '../../common/WithHelperText';
+import { partitionManagedLabels } from '../../../hooks/useDeviceLabelProvenance';
+import { FlightCtlLabel } from '../../../types/extraTypes';
 
 /** Max novel chips shown inline before directing the user to View all. */
 // CELIA-WIP: limit set to 5 in rhem-paola
@@ -25,18 +26,13 @@ export const DEVICE_REPORTED_NOVEL_INLINE_LIMIT = 3;
 
 type DeviceManagedLabelsDrawerProps = {
   device: Device;
-  labels: Record<string, string>;
-};
-
-type ManagedLabelProps = {
-  labelKey: string;
-  value: string;
+  managedLabelKeys: string[];
 };
 
 /** TEMP: gray read-only chip for mapping-promoted labels (EDM-5268 demo). */
-const ManagedLabel = ({ labelKey, value }: ManagedLabelProps) => {
+const ManagedLabel = ({ label }: { label: FlightCtlLabel }) => {
   const { t } = useTranslation();
-  const text = value ? `${labelKey}=${value}` : labelKey;
+  const text = label.value ? `${label.key}=${label.value}` : label.key;
 
   return (
     <Tooltip
@@ -55,16 +51,14 @@ const ManagedLabel = ({ labelKey, value }: ManagedLabelProps) => {
  * TEMP EDM-5268 demo: novel device-reported chips + View all drawer.
  * Keys that already appear as systemInfo/customInfo fields stay on those cards.
  */
-const DeviceManagedLabelsDrawer = ({ device, labels }: DeviceManagedLabelsDrawerProps) => {
+const DeviceManagedLabelsDrawer = ({ device, managedLabelKeys }: DeviceManagedLabelsDrawerProps) => {
   const { t } = useTranslation();
   const [drawerOpen, setDrawerOpen] = React.useState(false);
+  // CELIA-WIP: useLabelProvenance already provides the split
   // CELIA-WIP: DO NOT GENERATE SYSTEMINFORESULT AGAIN FOR THIS FUNCTIONALITY
-  const { novel } = partitionManagedLabels(labels, device);
-  // CELIA-WIP redo all of this
-  const novelEntries = labelEntries(novel);
-  const allEntries = labelEntries(labels);
-  const inlineNovel = novelEntries.slice(0, DEVICE_REPORTED_NOVEL_INLINE_LIMIT);
-  const hasMoreNovel = novelEntries.length > DEVICE_REPORTED_NOVEL_INLINE_LIMIT;
+  const { primaryLabels, derivedLabels } = partitionManagedLabels(device, managedLabelKeys);
+  const inlineDerived = primaryLabels.slice(0, DEVICE_REPORTED_NOVEL_INLINE_LIMIT);
+  const hasMoreDerived = primaryLabels.length > DEVICE_REPORTED_NOVEL_INLINE_LIMIT;
 
   return (
     <>
@@ -77,7 +71,7 @@ const DeviceManagedLabelsDrawer = ({ device, labels }: DeviceManagedLabelsDrawer
             )}
           />
         </StackItem>
-        {novelEntries.length === 0 ? (
+        {derivedLabels.length === 0 ? (
           <StackItem>
             <Alert isInline isPlain variant="info" title={t('No additional device-reported information')}>
               {t(
@@ -88,23 +82,23 @@ const DeviceManagedLabelsDrawer = ({ device, labels }: DeviceManagedLabelsDrawer
         ) : (
           <StackItem>
             <LabelGroup numLabels={DEVICE_REPORTED_NOVEL_INLINE_LIMIT}>
-              {inlineNovel.map(({ key, value }) => (
-                <ManagedLabel key={key} labelKey={key} value={value} />
+              {inlineDerived.map((label) => (
+                <ManagedLabel key={label.key} label={label} />
               ))}
             </LabelGroup>
-            {hasMoreNovel && (
+            {hasMoreDerived && (
               <div>
                 {t('+{{count}} more - open View all', {
-                  count: novelEntries.length - DEVICE_REPORTED_NOVEL_INLINE_LIMIT,
+                  count: derivedLabels.length - DEVICE_REPORTED_NOVEL_INLINE_LIMIT,
                 })}
               </div>
             )}
           </StackItem>
         )}
-        {allEntries.length > 0 && (
+        {derivedLabels.length > 0 && (
           <StackItem>
             <Button variant="link" isInline onClick={() => setDrawerOpen(true)}>
-              {t('View all device-reported information ({{count}})', { count: allEntries.length })}
+              {t('View all device-reported information ({{count}})', { count: derivedLabels.length })}
             </Button>
           </StackItem>
         )}
@@ -129,9 +123,9 @@ const DeviceManagedLabelsDrawer = ({ device, labels }: DeviceManagedLabelsDrawer
                   </Alert>
                 </StackItem>
                 <StackItem>
-                  <LabelGroup numLabels={allEntries.length}>
-                    {allEntries.map(({ key, value }) => (
-                      <ManagedLabel key={key} labelKey={key} value={value} />
+                  <LabelGroup numLabels={derivedLabels.length}>
+                    {derivedLabels.map((label) => (
+                      <ManagedLabel key={label.key} label={label} />
                     ))}
                   </LabelGroup>
                 </StackItem>

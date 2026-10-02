@@ -392,6 +392,7 @@ export const validHelmValuesFile = (t: TFunction) =>
     return true;
   });
 
+// CELIA-WIP can I remove forbiddenLabels parameter?
 export const validLabelsSchema = (t: TFunction, forbiddenLabels?: string[]) =>
   Yup.array()
     .of(

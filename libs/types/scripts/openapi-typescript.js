@@ -14,7 +14,7 @@ const ALPHA_CORE_API = 'alphacore';
 const IMAGEBUILDER_API = 'imagebuilder';
 
 const getSwaggerUrl = (api) => {
-  return `https://raw.githubusercontent.com/flightctl/flightctl/main/api/${api}/openapi.yaml`;
+  return `https://raw.githubusercontent.com/kkyrazis/flightctl/EDM-6116-expose-promoted-label-provenance/api/${api}/openapi.yaml`;
 };
 
 const processJsonAPI = (jsonString) => {

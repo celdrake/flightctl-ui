@@ -4,6 +4,7 @@ import {
   DescriptionList,
   DescriptionListDescription,
   DescriptionListGroup,
+  DescriptionListProps,
   DescriptionListTerm,
 } from '@patternfly/react-core';
 import { type DeviceStatus } from '@flightctl/types';
@@ -76,15 +77,14 @@ export const CapabilitiesFieldsList = ({ deviceStatus }: { deviceStatus: DeviceS
   );
 };
 
-const SidebarDescriptionList = ({ children }: React.PropsWithChildren) => (
-  <DescriptionList isHorizontal isCompact horizontalTermWidthModifier={{ default: '12ch' }}>
-    {children}
-  </DescriptionList>
+// CELIA-WIP: ADJUST THE WIDTH OF THE LABELS FOR SYUSTEM INFO CARD
+const SidebarDescriptionList = ({ children, ...props }: React.PropsWithChildren<DescriptionListProps>) => (
+  <DescriptionList {...props}>{children}</DescriptionList>
 );
 
 export const SystemInfoFieldsList = ({ entries }: { entries: SystemInfoEntry[] }) => {
   return (
-    <SidebarDescriptionList>
+    <SidebarDescriptionList isHorizontal>
       {entries.map((entry) => (
         <SystemInfoDescriptionGroup key={entry.key} entry={entry} />
       ))}

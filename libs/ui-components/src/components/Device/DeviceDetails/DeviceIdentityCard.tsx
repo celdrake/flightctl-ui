@@ -8,7 +8,7 @@ import {
 import IdBadgeIcon from '@patternfly/react-icons/dist/js/icons/id-badge-icon';
 
 import type { Device } from '@flightctl/types';
-import { getManagedLabelsFromDevice } from '../../../hooks/useDeviceLabelProvenance';
+import useDeviceLabelProvenance from '../../../hooks/useDeviceLabelProvenance';
 import { useTranslation } from '../../../hooks/useTranslation';
 import ResourceLink from '../../common/ResourceLink';
 import LabelWithHelperText from '../../common/WithHelperText';
@@ -33,8 +33,7 @@ const DeviceIdentityCard = ({
   children,
 }: React.PropsWithChildren<DeviceIdentityCardProps>) => {
   const { t } = useTranslation();
-  const managedLabels = React.useMemo(() => getManagedLabelsFromDevice(device), [device]);
-  const hasManagedLabels = Object.keys(managedLabels).length > 0;
+  const { labelKeys: managedLabelKeys, isLoading } = useDeviceLabelProvenance(device);
 
   return (
     <DetailsPageCard>
@@ -57,13 +56,13 @@ const DeviceIdentityCard = ({
             <DescriptionListTerm>{t('Labels')}</DescriptionListTerm>
             <DescriptionListDescription>
               {canEdit ? (
-                <EditLabelsForm device={device} managedLabels={managedLabels} onDeviceUpdate={refetch} />
+                <EditLabelsForm device={device} managedLabelKeys={managedLabelKeys} onDeviceUpdate={refetch} />
               ) : (
-                <ViewLabels device={device} managedLabels={managedLabels} />
+                <ViewLabels device={device} managedLabelKeys={managedLabelKeys} />
               )}
             </DescriptionListDescription>
           </DescriptionListGroup>
-          {hasManagedLabels && (
+          {managedLabelKeys.length > 0 && (
             <DescriptionListGroup>
               <DescriptionListTerm>
                 <LabelWithHelperText
@@ -75,7 +74,7 @@ const DeviceIdentityCard = ({
                 />
               </DescriptionListTerm>
               <DescriptionListDescription>
-                <DeviceManagedLabelsDrawer device={device} labels={managedLabels} />
+                <DeviceManagedLabelsDrawer device={device} managedLabelKeys={managedLabelKeys} />
               </DescriptionListDescription>
             </DescriptionListGroup>
           )}
