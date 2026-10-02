@@ -12,10 +12,10 @@ export const CUSTOMINFO_LABEL_PREFIX = 'custominfo.flightctl.io/';
 /** TEMP demo: novel derived mapping that does not reuse systeminfo/custominfo prefixes. */
 export const COMBINED_PROPS_LABEL_PREFIX = 'my-combined-props/';
 
+// CELIA-WIP: temp impleementation
+const isDerivedLabelKey = (key: string): boolean => key.startsWith(COMBINED_PROPS_LABEL_PREFIX);
 const isManagedLabelKey = (key: string): boolean =>
-  key.startsWith(SYSTEMINFO_LABEL_PREFIX) ||
-  key.startsWith(CUSTOMINFO_LABEL_PREFIX) ||
-  key.startsWith(COMBINED_PROPS_LABEL_PREFIX);
+  key.startsWith(SYSTEMINFO_LABEL_PREFIX) || key.startsWith(CUSTOMINFO_LABEL_PREFIX) || isDerivedLabelKey(key);
 
 /** TEMP until the API is implemented: Managed (mapping-promoted) labels on the device, keyed by full label key. */
 const getManagedLabelsFromDevice = (device: Device): ApiLabels => {
@@ -58,9 +58,11 @@ export const partitionManagedLabels = (
   // CELIA-WIP FIx algorithm based on the API response
   Object.entries(device.metadata.labels || {}).forEach(([key, value]) => {
     if (managedLabelKeys.includes(key)) {
-      primaryLabels.push({ key, value });
-    } else {
-      derivedLabels.push({ key, value });
+      if (isDerivedLabelKey(key)) {
+        derivedLabels.push({ key, value });
+      } else {
+        primaryLabels.push({ key, value });
+      }
     }
   });
   return { primaryLabels, derivedLabels };

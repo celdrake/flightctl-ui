@@ -20,8 +20,6 @@ type LabelsFieldProps = {
   labelGroupTestId?: string;
 };
 
-const maxLabelWidth = '30ch';
-
 const LabelsField = ({
   name,
   onChangeCallback,

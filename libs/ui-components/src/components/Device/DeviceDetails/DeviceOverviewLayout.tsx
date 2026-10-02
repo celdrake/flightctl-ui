@@ -34,21 +34,20 @@ const DeviceOverviewLayout = ({
   const [vulnerabilitiesEnabled, canListVulnerabilities] = useVulnerabilitiesEnabled();
   const showVulnerabilities = vulnerabilitiesEnabled && canListVulnerabilities;
 
-  const { systemInfo: systemInfoResult, customInfo: customInfoResult } = useDeviceSystemInfo(
+  const fullSystemInfoResult = useDeviceSystemInfo(
     t,
     device.status?.systemInfo,
     device.status?.systemInfoStatus?.statuses,
     true,
   );
-
-  console.log('%c systemInfoResult', 'color: blue; font-size:18px', systemInfoResult);
+  const { systemInfo, customInfo } = fullSystemInfoResult;
 
   return (
     <Stack hasGutter>
       <DeviceHealthAlert
         deviceHealth={deviceHealth}
-        systemInfoHasErrors={systemInfoResult.main.hasErrors || systemInfoResult.expanded.hasErrors}
-        customInfoHasErrors={customInfoResult.hasErrors}
+        systemInfoHasErrors={systemInfo.main.hasErrors || systemInfo.expanded.hasErrors}
+        customInfoHasErrors={customInfo.hasErrors}
       />
       <Grid hasGutter>
         <GridItem lg={8}>
@@ -72,16 +71,21 @@ const DeviceOverviewLayout = ({
         <GridItem lg={4}>
           <Stack hasGutter>
             <StackItem>
-              <DeviceIdentityCard device={device} refetch={refetch} canEdit={canEdit}>
+              <DeviceIdentityCard
+                device={device}
+                systemInfoResult={fullSystemInfoResult}
+                refetch={refetch}
+                canEdit={canEdit}
+              >
                 {children}
               </DeviceIdentityCard>
             </StackItem>
             <StackItem>
-              <DeviceInformationCard device={device} systemInfoResult={systemInfoResult} />
+              <DeviceInformationCard device={device} systemInfoResult={systemInfo} />
             </StackItem>
-            {customInfoResult.entries.length > 0 && (
+            {customInfo.entries.length > 0 && (
               <StackItem>
-                <DeviceCustomDataCard customInfoResult={customInfoResult} />
+                <DeviceCustomDataCard customInfoResult={customInfo} />
               </StackItem>
             )}
           </Stack>

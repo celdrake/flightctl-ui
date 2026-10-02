@@ -2,23 +2,22 @@ import * as React from 'react';
 import {
   Alert,
   Button,
+  Content,
+  ContentVariants,
   DrawerActions,
   DrawerCloseButton,
   DrawerHead,
   DrawerPanelBody,
-  Label,
-  LabelGroup,
   Stack,
   StackItem,
-  Tooltip,
 } from '@patternfly/react-core';
 
 import type { Device } from '@flightctl/types';
 import { useTranslation } from '../../../hooks/useTranslation';
-import FlightCtlPageDrawer from '../../common/FlightCtlPageDrawer';
-import LabelWithHelperText from '../../common/WithHelperText';
 import { partitionManagedLabels } from '../../../hooks/useDeviceLabelProvenance';
-import { FlightCtlLabel } from '../../../types/extraTypes';
+import FlightCtlPageDrawer from '../../common/FlightCtlPageDrawer';
+import { ManagedLabelsView } from '../../common/LabelsView';
+import { DeviceSystemInfoResult } from '../../../hooks/useDeviceSystemInfo';
 
 /** Max novel chips shown inline before directing the user to View all. */
 // CELIA-WIP: limit set to 5 in rhem-paola
@@ -26,36 +25,19 @@ export const DEVICE_REPORTED_NOVEL_INLINE_LIMIT = 3;
 
 type DeviceManagedLabelsDrawerProps = {
   device: Device;
+  systemInfoResult: DeviceSystemInfoResult;
   managedLabelKeys: string[];
 };
 
-/** TEMP: gray read-only chip for mapping-promoted labels (EDM-5268 demo). */
-const ManagedLabel = ({ label }: { label: FlightCtlLabel }) => {
-  const { t } = useTranslation();
-  const text = label.value ? `${label.key}=${label.value}` : label.key;
-
-  return (
-    <Tooltip
-      content={t(
-        'Promoted from device status by organization mappings. Used for device selection and mapping; cannot be edited on the device.',
-      )}
-    >
-      <span tabIndex={0}>
-        <Label color="grey">{text}</Label>
-      </span>
-    </Tooltip>
-  );
-};
-
+// CELIA-WIP see how to use systemInfoResult to filter out labels that are already in systemInfo/customInfo
 /**
  * TEMP EDM-5268 demo: novel device-reported chips + View all drawer.
  * Keys that already appear as systemInfo/customInfo fields stay on those cards.
  */
-const DeviceManagedLabelsDrawer = ({ device, managedLabelKeys }: DeviceManagedLabelsDrawerProps) => {
+const DeviceManagedLabels = ({ device, managedLabelKeys }: DeviceManagedLabelsDrawerProps) => {
   const { t } = useTranslation();
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   // CELIA-WIP: useLabelProvenance already provides the split
-  // CELIA-WIP: DO NOT GENERATE SYSTEMINFORESULT AGAIN FOR THIS FUNCTIONALITY
   const { primaryLabels, derivedLabels } = partitionManagedLabels(device, managedLabelKeys);
   const inlineDerived = primaryLabels.slice(0, DEVICE_REPORTED_NOVEL_INLINE_LIMIT);
   const hasMoreDerived = primaryLabels.length > DEVICE_REPORTED_NOVEL_INLINE_LIMIT;
@@ -63,14 +45,6 @@ const DeviceManagedLabelsDrawer = ({ device, managedLabelKeys }: DeviceManagedLa
   return (
     <>
       <Stack hasGutter>
-        <StackItem>
-          <LabelWithHelperText
-            label={t('Device-reported information')}
-            content={t(
-              'Values promoted from device status by organization label sync mappings. They influence device selection and mapping, and cannot be edited on the device.',
-            )}
-          />
-        </StackItem>
         {derivedLabels.length === 0 ? (
           <StackItem>
             <Alert isInline isPlain variant="info" title={t('No additional device-reported information')}>
@@ -80,18 +54,15 @@ const DeviceManagedLabelsDrawer = ({ device, managedLabelKeys }: DeviceManagedLa
             </Alert>
           </StackItem>
         ) : (
-          <StackItem>
-            <LabelGroup numLabels={DEVICE_REPORTED_NOVEL_INLINE_LIMIT}>
-              {inlineDerived.map((label) => (
-                <ManagedLabel key={label.key} label={label} />
-              ))}
-            </LabelGroup>
+          <StackItem className="fctl-managed-labels-view">
+            <ManagedLabelsView numLabels={DEVICE_REPORTED_NOVEL_INLINE_LIMIT} managedLabels={inlineDerived} isInline />
+
             {hasMoreDerived && (
-              <div>
-                {t('+{{count}} more - open View all', {
-                  count: derivedLabels.length - DEVICE_REPORTED_NOVEL_INLINE_LIMIT,
+              <Content>
+                {t('+{{moreItems}} more', {
+                  moreItems: derivedLabels.length - DEVICE_REPORTED_NOVEL_INLINE_LIMIT,
                 })}
-              </div>
+              </Content>
             )}
           </StackItem>
         )}
@@ -108,7 +79,7 @@ const DeviceManagedLabelsDrawer = ({ device, managedLabelKeys }: DeviceManagedLa
         panelContent={
           <>
             <DrawerHead>
-              {t('Device-reported information')}
+              <Content component={ContentVariants.h3}>{t('Device-reported information')}</Content>
               <DrawerActions>
                 <DrawerCloseButton onClose={() => setDrawerOpen(false)} />
               </DrawerActions>
@@ -123,11 +94,7 @@ const DeviceManagedLabelsDrawer = ({ device, managedLabelKeys }: DeviceManagedLa
                   </Alert>
                 </StackItem>
                 <StackItem>
-                  <LabelGroup numLabels={derivedLabels.length}>
-                    {derivedLabels.map((label) => (
-                      <ManagedLabel key={label.key} label={label} />
-                    ))}
-                  </LabelGroup>
+                  <ManagedLabelsView numLabels={derivedLabels.length} managedLabels={derivedLabels} />
                 </StackItem>
               </Stack>
             </DrawerPanelBody>
@@ -138,4 +105,4 @@ const DeviceManagedLabelsDrawer = ({ device, managedLabelKeys }: DeviceManagedLa
   );
 };
 
-export default DeviceManagedLabelsDrawer;
+export default DeviceManagedLabels;

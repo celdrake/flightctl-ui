@@ -57,10 +57,10 @@ const EditLabelsFormContent = ({ isSubmitting, submitForm }: EditLabelsFormConte
   };
 
   return (
-    <div style={{ border: '2px solid lime' }}>
+    <>
       <LabelsField name="labels" isLoading={isSubmitting} onChangeCallback={onChangedLabels} />
       {submitError && <Alert isInline title={submitError} variant="danger" />}
-    </div>
+    </>
   );
 };
 

@@ -4,7 +4,6 @@ import {
   DescriptionList,
   DescriptionListDescription,
   DescriptionListGroup,
-  DescriptionListProps,
   DescriptionListTerm,
 } from '@patternfly/react-core';
 import { type DeviceStatus } from '@flightctl/types';
@@ -59,6 +58,14 @@ const DeltaGenerationDescriptionGroups = ({ deviceStatus }: { deviceStatus: Devi
   );
 };
 
+export const SystemInfoFieldsList = ({ entries }: { entries: SystemInfoEntry[] }) => (
+  <SidebarDescriptionList isWide>
+    {entries.map((entry) => (
+      <SystemInfoDescriptionGroup key={entry.key} entry={entry} />
+    ))}
+  </SidebarDescriptionList>
+);
+
 export const CapabilitiesFieldsList = ({ deviceStatus }: { deviceStatus: DeviceStatus | undefined }) => {
   const { t } = useTranslation();
 
@@ -77,19 +84,16 @@ export const CapabilitiesFieldsList = ({ deviceStatus }: { deviceStatus: DeviceS
   );
 };
 
-// CELIA-WIP: ADJUST THE WIDTH OF THE LABELS FOR SYUSTEM INFO CARD
-const SidebarDescriptionList = ({ children, ...props }: React.PropsWithChildren<DescriptionListProps>) => (
-  <DescriptionList {...props}>{children}</DescriptionList>
+const defaultHorizontalTermWidthModifier = { default: '30ch', md: '20ch' };
+const compactHorizontalTermWidthModifier = { default: '12ch' };
+
+const SidebarDescriptionList = ({ children, isWide = false }: React.PropsWithChildren<{ isWide?: boolean }>) => (
+  <DescriptionList
+    isHorizontal
+    isCompact
+    horizontalTermWidthModifier={isWide ? defaultHorizontalTermWidthModifier : compactHorizontalTermWidthModifier}
+  >
+    {children}
+  </DescriptionList>
 );
-
-export const SystemInfoFieldsList = ({ entries }: { entries: SystemInfoEntry[] }) => {
-  return (
-    <SidebarDescriptionList isHorizontal>
-      {entries.map((entry) => (
-        <SystemInfoDescriptionGroup key={entry.key} entry={entry} />
-      ))}
-    </SidebarDescriptionList>
-  );
-};
-
 export default SidebarDescriptionList;
