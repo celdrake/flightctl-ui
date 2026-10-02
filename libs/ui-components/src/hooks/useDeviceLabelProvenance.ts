@@ -4,83 +4,82 @@ import type { Device, DeviceSystemInfo, LabelSyncProvenanceList } from '@flightc
 import type { FlightCtlLabel } from '../types/extraTypes';
 import { useFetchPeriodically } from './useFetchPeriodically';
 
-const getLabelFieldName = (labelKey: string): string => {
-  const slash = labelKey.lastIndexOf('/');
-  return slash >= 0 ? labelKey.slice(slash + 1) : labelKey;
-};
-
-/** Primary = managed label whose field maps 1:1 to a systemInfo or customInfo property. */
+/** A managed label is primary when it's a direct mapping from a field within systemInfo or customInfo. */
 const isPrimaryManagedLabel = (labelKey: string, systemInfo: DeviceSystemInfo | undefined): boolean => {
-  if (!systemInfo) {
-    return false;
-  }
-  const field = getLabelFieldName(labelKey);
-  if (field === 'customInfo') {
-    return false;
-  }
-  if (Object.prototype.hasOwnProperty.call(systemInfo, field)) {
+  if (systemInfo?.[labelKey] || systemInfo?.customInfo?.[labelKey]) {
     return true;
   }
-  const customInfo = systemInfo.customInfo;
-  return !!customInfo && Object.prototype.hasOwnProperty.call(customInfo, field);
+  return false;
 };
 
-type ManagedLabel = FlightCtlLabel & {
-  isPrimary: boolean;
+export type ManagedLabel = FlightCtlLabel & {
+  isDerived: boolean;
 };
 
-export type ManagedLabelsPartition = {
+export type ManagedLabels = {
   items: ManagedLabel[];
   totalCount: number;
   primaryCount: number;
   derivedCount: number;
 };
-/**
- * Split mapping-owned labels into primary (direct systemInfo/customInfo props)
- * vs derived (combined / novel mapping output). managedLabelKeys come from provenance.
- */
-export const partitionManagedLabels = (
-  device: Device,
-  managedLabelKeys: string[],
-  systemInfo?: DeviceSystemInfo,
-): ManagedLabelsPartition => {
-  const managedLabels: ManagedLabel[] = [];
+
+const emptyResult: ManagedLabels = {
+  items: [],
+  totalCount: 0,
+  primaryCount: 0,
+  derivedCount: 0,
+};
+
+const buildManagedLabels = (device: Device, managedLabelKeys: string[]): ManagedLabels => {
+  const systemInfo = device.status?.systemInfo;
+
+  const items: ManagedLabel[] = [];
   let primaryCount = 0;
 
   Object.entries(device.metadata.labels || {}).forEach(([key, value]) => {
-    if (!managedLabelKeys.includes(key)) {
-      return;
-    }
-    const label = { key, value };
-    const isPrimary = isPrimaryManagedLabel(key, systemInfo);
-    managedLabels.push({ ...label, isPrimary });
-    if (isPrimary) {
-      primaryCount++;
+    if (managedLabelKeys.includes(key)) {
+      const isPrimary = isPrimaryManagedLabel(key, systemInfo);
+      items.push({ key, value, isDerived: !isPrimary });
+      if (isPrimary) {
+        primaryCount++;
+      }
     }
   });
 
   return {
-    items: managedLabels,
+    items,
     primaryCount,
-    derivedCount: managedLabels.length - primaryCount,
-    totalCount: managedLabels.length,
+    derivedCount: items.length - primaryCount,
+    totalCount: items.length,
   };
 };
 
-/**
- * Fetches GET /devices/{name}/labelsyncprovenance.
- * Keys in the response are mapping-owned (managed); other device labels are operator-defined.
- */
-export const useDeviceLabelProvenance = (device: Device) => {
+type DeviceLabelProvenance = {
+  managedLabels: ManagedLabels;
+  isLoading: boolean;
+  error: unknown;
+};
+
+export const useDeviceLabelProvenance = (device: Device): DeviceLabelProvenance => {
   const deviceName = device.metadata.name || '';
   const [provenance, isLoading, error] = useFetchPeriodically<LabelSyncProvenanceList>({
     endpoint: deviceName ? `devices/${deviceName}/labelsyncprovenance` : '',
     timeout: 60000,
   });
 
-  const labelKeys = React.useMemo(() => (provenance?.items || []).map((item) => item.key), [provenance]);
+  const managedLabels = React.useMemo(() => {
+    if (!provenance) {
+      return emptyResult;
+    }
+    const labelKeys = provenance.items.map((item) => item.key);
+    return buildManagedLabels(device, labelKeys);
+  }, [device, provenance]);
 
-  return { labelKeys, provenance, isLoading: Boolean(deviceName) && isLoading, error };
+  return {
+    managedLabels,
+    isLoading: Boolean(deviceName) && isLoading,
+    error,
+  };
 };
 
 export default useDeviceLabelProvenance;

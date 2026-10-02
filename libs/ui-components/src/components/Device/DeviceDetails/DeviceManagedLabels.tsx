@@ -12,8 +12,7 @@ import {
   StackItem,
 } from '@patternfly/react-core';
 
-import type { Device } from '@flightctl/types';
-import { partitionManagedLabels } from '../../../hooks/useDeviceLabelProvenance';
+import type { ManagedLabels } from '../../../hooks/useDeviceLabelProvenance';
 import { useTranslation } from '../../../hooks/useTranslation';
 import FlightCtlPageDrawer from '../../common/FlightCtlPageDrawer';
 import { ManagedLabelsView } from '../../common/LabelsView';
@@ -21,21 +20,15 @@ import { ManagedLabelsView } from '../../common/LabelsView';
 // CELIA-WIP: limit set to 5 in rhem-paola
 export const DERIVED_MANAGED_LABELS_LIMIT = 3;
 
-type DeviceManagedLabelsProps = {
-  device: Device;
-  managedLabelKeys: string[];
-};
-
 /**
- * Derived (non–systemInfo/customInfo) chips inline; full managed label set in the drawer.
+ * Derived chips inline; full managed label set in the drawer.
  * Primary labels already appear on System info / Custom data cards.
  */
-const DeviceManagedLabels = ({ device, managedLabelKeys }: DeviceManagedLabelsProps) => {
+const DeviceManagedLabels = ({ managedLabels }: { managedLabels: ManagedLabels }) => {
   const { t } = useTranslation();
   const [drawerOpen, setDrawerOpen] = React.useState(false);
-  const managedLabels = partitionManagedLabels(device, managedLabelKeys, device.status?.systemInfo);
-  const hasMoreDerived = managedLabels.derivedCount > DERIVED_MANAGED_LABELS_LIMIT;
-  const hasManagedLabels = managedLabels.totalCount > 0;
+
+  const derivedLabels = React.useMemo(() => managedLabels.items.filter((label) => label.isDerived), [managedLabels]);
 
   return (
     <>
@@ -50,18 +43,18 @@ const DeviceManagedLabels = ({ device, managedLabelKeys }: DeviceManagedLabelsPr
           </StackItem>
         ) : (
           <StackItem className="fctl-managed-labels-view">
-            <ManagedLabelsView managedLabels={managedLabels} showOnly={DERIVED_MANAGED_LABELS_LIMIT} />
+            <ManagedLabelsView managedLabels={derivedLabels} showOnly={DERIVED_MANAGED_LABELS_LIMIT} onlyDerived />
 
-            {hasMoreDerived && (
-              <Content>
-                {t('+{{moreItems}} more', {
-                  moreItems: managedLabels.derivedCount - DERIVED_MANAGED_LABELS_LIMIT,
+            {managedLabels.derivedCount > DERIVED_MANAGED_LABELS_LIMIT && (
+              <Content className="pf-v6-u-mt-sm">
+                {t('+{{itemCount}} more', {
+                  itemCount: managedLabels.derivedCount - DERIVED_MANAGED_LABELS_LIMIT,
                 })}
               </Content>
             )}
           </StackItem>
         )}
-        {hasManagedLabels && (
+        {managedLabels.totalCount > 0 && (
           <StackItem>
             <Button variant="link" isInline onClick={() => setDrawerOpen(true)}>
               {t('View all device-reported information ({{num}})', { num: managedLabels.totalCount })}
@@ -89,7 +82,7 @@ const DeviceManagedLabels = ({ device, managedLabelKeys }: DeviceManagedLabelsPr
                   </Alert>
                 </StackItem>
                 <StackItem>
-                  <ManagedLabelsView managedLabels={managedLabels} />
+                  <ManagedLabelsView managedLabels={managedLabels.items} />
                 </StackItem>
               </Stack>
             </DrawerPanelBody>

@@ -9,6 +9,7 @@ import LabelsField from '../../form/LabelsField';
 import { type FlightCtlLabel } from '../../../types/extraTypes';
 import { useFetch } from '../../../hooks/useFetch';
 import { useTranslation } from '../../../hooks/useTranslation';
+import type { ManagedLabel } from '../../../hooks/useDeviceLabelProvenance';
 import { fromAPILabel } from '../../../utils/labels';
 import { validLabelsSchema } from '../../form/validations';
 import { getErrorMessage } from '../../../utils/error';
@@ -34,9 +35,10 @@ const getValidationSchema = (t: TFunction) => {
   });
 };
 
-const omitManagedLabels = (labels: ApiLabels, managedLabelKeys: string[]): ApiLabels => {
-  const result = {};
+const omitManagedLabels = (labels: ApiLabels, managedLabels: ManagedLabel[]): ApiLabels => {
+  const managedLabelKeys = managedLabels.map((label) => label.key);
 
+  const result = {};
   for (const [key, value] of Object.entries(labels)) {
     if (key !== 'alias' && !managedLabelKeys.includes(key)) {
       result[key] = value;
@@ -67,20 +69,20 @@ const EditLabelsFormContent = ({ isSubmitting, submitForm }: EditLabelsFormConte
 type EditLabelsFormProps = {
   device: Device;
   onDeviceUpdate: () => void;
-  managedLabelKeys?: string[];
+  managedLabels: ManagedLabel[];
 };
 
-export const ViewLabels = ({ device, managedLabelKeys = [] }: { device: Device; managedLabelKeys?: string[] }) => {
-  const viewableLabels = omitManagedLabels(device.metadata.labels || {}, managedLabelKeys);
+export const ViewLabels = ({ device, managedLabels }: { device: Device; managedLabels: ManagedLabel[] }) => {
+  const viewableLabels = omitManagedLabels(device.metadata.labels || {}, managedLabels);
   return <LabelsView prefix="read-only-labels" labels={viewableLabels} />;
 };
 
-const EditLabelsForm = ({ device, onDeviceUpdate, managedLabelKeys = [] }: EditLabelsFormProps) => {
+const EditLabelsForm = ({ device, onDeviceUpdate, managedLabels }: EditLabelsFormProps) => {
   const { t } = useTranslation();
   const { patch } = useFetch();
 
   const currentLabels = device.metadata.labels || {};
-  const editableLabels = fromAPILabel(omitManagedLabels(currentLabels, managedLabelKeys));
+  const editableLabels = fromAPILabel(omitManagedLabels(currentLabels, managedLabels));
 
   return (
     <Formik<EditLabelsFormValues>

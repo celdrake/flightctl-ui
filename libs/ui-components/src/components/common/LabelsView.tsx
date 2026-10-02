@@ -1,30 +1,34 @@
 import * as React from 'react';
 import { Label, LabelGroup, Tooltip } from '@patternfly/react-core';
 
+import type { ManagedLabel } from '../../hooks/useDeviceLabelProvenance';
 import { useTranslation } from '../../hooks/useTranslation';
-import { FlightCtlLabel } from '../../types/extraTypes';
-import { ManagedLabelsPartition } from '../../hooks/useDeviceLabelProvenance';
+import type { FlightCtlLabel } from '../../types/extraTypes';
 
 interface LabelsViewProps {
   prefix: string;
   labels: Record<string, string | undefined> | undefined;
 }
 
-const ManagedLabel = ({ label, isInline }: { label: FlightCtlLabel; isInline?: boolean }) => {
+const ManagedLabelChip = ({ label, withMaxWidth }: { label: FlightCtlLabel; withMaxWidth?: boolean }) => {
   const { t } = useTranslation();
   const text = label.value ? `${label.key}=${label.value}` : label.key;
 
-  return (
+  const labelContent = (
+    <Label color="grey" textMaxWidth={withMaxWidth ? '20ch' : undefined}>
+      {text}
+    </Label>
+  );
+
+  return withMaxWidth ? (
+    labelContent
+  ) : (
     <Tooltip
       content={t(
         'Promoted from device status by organization mappings. Used for device selection and mapping; cannot be edited on the device.',
       )}
     >
-      <span tabIndex={0}>
-        <Label color="grey" textMaxWidth={isInline ? '12ch' : undefined}>
-          {text}
-        </Label>
-      </span>
+      <span tabIndex={0}>{labelContent}</span>
     </Tooltip>
   );
 };
@@ -32,17 +36,29 @@ const ManagedLabel = ({ label, isInline }: { label: FlightCtlLabel; isInline?: b
 export const ManagedLabelsView = ({
   managedLabels,
   showOnly,
+  onlyDerived,
 }: {
-  managedLabels: ManagedLabelsPartition;
+  managedLabels: ManagedLabel[];
   showOnly?: number;
+  onlyDerived?: boolean;
 }) => {
+  let visibleLabels: ManagedLabel[] = [];
+  if (onlyDerived || showOnly) {
+    visibleLabels = managedLabels.filter((label, index) => {
+      if (showOnly && index >= showOnly) {
+        return false;
+      }
+      return onlyDerived ? label.isDerived : true;
+    });
+  } else {
+    visibleLabels = managedLabels;
+  }
+
   return (
-    <LabelGroup numLabels={showOnly || managedLabels.totalCount}>
-      {managedLabels.items
-        .filter((_, index) => index < (showOnly || managedLabels.totalCount))
-        .map((label) => (
-          <ManagedLabel key={label.key} label={label} isInline={Boolean(showOnly)} />
-        ))}
+    <LabelGroup numLabels={visibleLabels.length}>
+      {visibleLabels.map((label) => (
+        <ManagedLabelChip key={label.key} label={label} withMaxWidth={onlyDerived} />
+      ))}
     </LabelGroup>
   );
 };

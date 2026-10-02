@@ -37,7 +37,7 @@ const DeviceLabelsSection = ({
   refetch: VoidFunction;
 }) => {
   const { t } = useTranslation();
-  const { labelKeys: managedLabelKeys, isLoading } = useDeviceLabelProvenance(device);
+  const { managedLabels, isLoading } = useDeviceLabelProvenance(device);
 
   if (isLoading) {
     return (
@@ -56,14 +56,14 @@ const DeviceLabelsSection = ({
         <DescriptionListTerm>{t('Labels')}</DescriptionListTerm>
         <DescriptionListDescription>
           {canEdit ? (
-            <EditLabelsForm device={device} managedLabelKeys={managedLabelKeys} onDeviceUpdate={refetch} />
+            <EditLabelsForm device={device} managedLabels={managedLabels.items} onDeviceUpdate={refetch} />
           ) : (
-            <ViewLabels device={device} managedLabelKeys={managedLabelKeys} />
+            <ViewLabels device={device} managedLabels={managedLabels.items} />
           )}
         </DescriptionListDescription>
       </DescriptionListGroup>
 
-      {managedLabelKeys.length > 0 && (
+      {managedLabels.totalCount > 0 && (
         <DescriptionListGroup>
           <DescriptionListTerm>
             <LabelWithHelperText
@@ -74,7 +74,7 @@ const DeviceLabelsSection = ({
             />
           </DescriptionListTerm>
           <DescriptionListDescription>
-            <DeviceManagedLabels device={device} managedLabelKeys={managedLabelKeys} />
+            <DeviceManagedLabels managedLabels={managedLabels} />
           </DescriptionListDescription>
         </DescriptionListGroup>
       )}

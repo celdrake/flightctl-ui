@@ -143,7 +143,7 @@ const buildSystemInfoList = (
 
   // Add any other fields that weren't included yet, in arbitrary order
   systemInfoKeys.forEach((infoKey) => {
-    if (systemInfoKnownKeys.includes(infoKey) || excludedKnownProps.includes(infoKey) || includedKeys.has(infoKey)) {
+    if (includedKeys.has(infoKey) || excludedKnownProps.includes(infoKey)) {
       return;
     }
     const value = systemInfo[infoKey];
@@ -200,8 +200,6 @@ export const useDeviceSystemInfo = (
   if (!systemInfo) {
     return emptyCombinedResult;
   }
-
-  console.log('%c reculating deviceSystemInfo', 'color: red; font-size:18px', Date.now());
 
   const systemInfoList = buildSystemInfoList(t, systemInfo, infoStatuses?.systemInfo, split);
   const customInfoList = buildCustomInfoList(t, systemInfo.customInfo, infoStatuses?.customInfo);
