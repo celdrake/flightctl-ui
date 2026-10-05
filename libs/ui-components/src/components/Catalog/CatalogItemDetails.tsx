@@ -32,7 +32,7 @@ import {
   type CatalogItem,
   CatalogItemType,
   DeviceFeatureBoolean,
-  DeviceFeatures,
+  type DeviceFeatures,
 } from '@flightctl/types/alpha';
 import { OsModeType } from '@flightctl/types';
 import { useTranslation } from '../../hooks/useTranslation';
@@ -45,8 +45,8 @@ import FlightCtlForm from '../form/FlightCtlForm';
 import { DeprecateModal, RestoreModal } from './DeprecateModal';
 import { getFullContainerURI } from '../../utils/catalog';
 import {
-  DeviceFeatureBooleanFormValue,
-  DeviceFeatureOsModeFormValue,
+  type DeviceFeatureBooleanFormValue,
+  type DeviceFeatureOsModeFormValue,
   deviceFeaturesFromApi,
 } from '../../utils/catalogDeviceFeatures';
 import DeleteModal from '../modals/DeleteModal/DeleteModal';

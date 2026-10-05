@@ -5,8 +5,6 @@ import {
   DescriptionListDescription,
   DescriptionListGroup,
   DescriptionListTerm,
-  Flex,
-  FlexItem,
   List,
   ListItem,
   Stack,
@@ -15,14 +13,14 @@ import {
 } from '@patternfly/react-core';
 import { useFormikContext } from 'formik';
 
-import { DeviceFeatureBoolean, type DeviceFeatures } from '@flightctl/types/alpha';
+import { DeviceFeatureBoolean } from '@flightctl/types/alpha';
 import { OsModeType } from '@flightctl/types';
 import type { AddCatalogItemFormValues } from '../types';
 import { useTranslation } from '../../../../hooks/useTranslation';
 import { getErrorMessage } from '../../../../utils/error';
 import { appTypeIds } from '../../useCatalogItems';
 import { getArtifactLabel } from '../../../../utils/catalogTypes';
-import { DeviceFeatureBooleanFormValue, deviceFeaturesFromApi } from '../../../../utils/catalogDeviceFeatures';
+import type { DeviceFeatureBooleanFormValue, DeviceFeaturesFormValues } from '../../../../utils/catalogDeviceFeatures';
 
 export const reviewStepId = 'review';
 
@@ -40,44 +38,39 @@ const addEnabledOrDisabledFeature = (
 };
 
 // CELIA-WIP IMPLEMENT FOR REAL
-const CatalogItemVersionFeatures = ({ deviceFeatures }: { deviceFeatures?: DeviceFeatures | null }) => {
+const CatalogItemVersionFeatures = ({ deviceFeatures }: { deviceFeatures: DeviceFeaturesFormValues | null }) => {
   const { t } = useTranslation();
-  const formFeatures = deviceFeaturesFromApi(deviceFeatures);
-  console.log('%c deviceFeatures', 'color: blue; font-size:18px', deviceFeatures, 'vs', formFeatures);
-  if (!formFeatures) {
+  if (!deviceFeatures) {
     return t('No device features defined');
   }
 
-  const enabledFeatures = [];
-  const disabledFeatures = [];
-  addEnabledOrDisabledFeature(enabledFeatures, disabledFeatures, formFeatures.gpuPresent, t('GPU'));
-  addEnabledOrDisabledFeature(enabledFeatures, disabledFeatures, formFeatures.kvmEnabled, t('KVM'));
-  if (formFeatures.osMode === OsModeType.OsModeImage) {
+  const enabledFeatures: string[] = [];
+  const disabledFeatures: string[] = [];
+  addEnabledOrDisabledFeature(enabledFeatures, disabledFeatures, deviceFeatures.gpuPresent, t('GPU'));
+  addEnabledOrDisabledFeature(enabledFeatures, disabledFeatures, deviceFeatures.kvmEnabled, t('KVM'));
+  if (deviceFeatures.osMode === OsModeType.OsModeImage) {
     enabledFeatures.push(t('Image mode OS'));
-  } else if (formFeatures.osMode === OsModeType.OsModePackage) {
-    disabledFeatures.push(t('Package mode OS'));
+  } else if (deviceFeatures.osMode === OsModeType.OsModePackage) {
+    enabledFeatures.push(t('Package mode OS'));
   }
 
-  console.log('%c enabledFeatures', 'color: red; font-size:18px', enabledFeatures, 'vs', disabledFeatures);
   return (
-    <Flex>
-      <FlexItem>{t('Device features')}</FlexItem>
+    <Stack>
       {disabledFeatures.length > 0 && (
-        <FlexItem>
+        <StackItem>
           <span>
             {t('Features that must be absent:')} {disabledFeatures.join(', ')}
           </span>
-        </FlexItem>
+        </StackItem>
       )}
-
       {enabledFeatures.length > 0 && (
-        <FlexItem>
+        <StackItem>
           <span>
             {t('Features that must be present:')} {enabledFeatures.join(', ')}
           </span>
-        </FlexItem>
+        </StackItem>
       )}
-    </Flex>
+    </Stack>
   );
 };
 
