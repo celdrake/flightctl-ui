@@ -34,6 +34,7 @@ import {
   DeviceFeatureBoolean,
   DeviceFeatures,
 } from '@flightctl/types/alpha';
+import { OsModeType } from '@flightctl/types';
 import { useTranslation } from '../../hooks/useTranslation';
 import { useFetch } from '../../hooks/useFetch';
 import { useFetchPeriodically } from '../../hooks/useFetchPeriodically';

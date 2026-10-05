@@ -15,31 +15,68 @@ import {
 } from '@patternfly/react-core';
 import { useFormikContext } from 'formik';
 
-import { type DeviceFeatures } from '@flightctl/types/alpha';
+import { DeviceFeatureBoolean, type DeviceFeatures } from '@flightctl/types/alpha';
+import { OsModeType } from '@flightctl/types';
 import type { AddCatalogItemFormValues } from '../types';
 import { useTranslation } from '../../../../hooks/useTranslation';
 import { getErrorMessage } from '../../../../utils/error';
 import { appTypeIds } from '../../useCatalogItems';
 import { getArtifactLabel } from '../../../../utils/catalogTypes';
+import { DeviceFeatureBooleanFormValue, deviceFeaturesFromApi } from '../../../../utils/catalogDeviceFeatures';
 
 export const reviewStepId = 'review';
+
+const addEnabledOrDisabledFeature = (
+  enabledFeatures: string[],
+  disabledFeatures: string[],
+  feature: DeviceFeatureBooleanFormValue,
+  label: string,
+) => {
+  if (feature === DeviceFeatureBoolean.DeviceFeatureBooleanTrue) {
+    enabledFeatures.push(label);
+  } else if (feature === DeviceFeatureBoolean.DeviceFeatureBooleanFalse) {
+    disabledFeatures.push(label);
+  }
+};
 
 // CELIA-WIP IMPLEMENT FOR REAL
 const CatalogItemVersionFeatures = ({ deviceFeatures }: { deviceFeatures?: DeviceFeatures | null }) => {
   const { t } = useTranslation();
-  if (!deviceFeatures) {
+  const formFeatures = deviceFeaturesFromApi(deviceFeatures);
+  console.log('%c deviceFeatures', 'color: blue; font-size:18px', deviceFeatures, 'vs', formFeatures);
+  if (!formFeatures) {
     return t('No device features defined');
   }
+
+  const enabledFeatures = [];
+  const disabledFeatures = [];
+  addEnabledOrDisabledFeature(enabledFeatures, disabledFeatures, formFeatures.gpuPresent, t('GPU'));
+  addEnabledOrDisabledFeature(enabledFeatures, disabledFeatures, formFeatures.kvmEnabled, t('KVM'));
+  if (formFeatures.osMode === OsModeType.OsModeImage) {
+    enabledFeatures.push(t('Image mode OS'));
+  } else if (formFeatures.osMode === OsModeType.OsModePackage) {
+    disabledFeatures.push(t('Package mode OS'));
+  }
+
+  console.log('%c enabledFeatures', 'color: red; font-size:18px', enabledFeatures, 'vs', disabledFeatures);
   return (
     <Flex>
-      <FlexItem>
-        <DescriptionListTerm>{t('Device features')}</DescriptionListTerm>
-      </FlexItem>
-      <FlexItem>
-        {deviceFeatures.gpuPresent && t('GPU present')}
-        {deviceFeatures.kvmEnabled && t('KVM enabled')}
-        {deviceFeatures.osMode && t('OS mode')}
-      </FlexItem>
+      <FlexItem>{t('Device features')}</FlexItem>
+      {disabledFeatures.length > 0 && (
+        <FlexItem>
+          <span>
+            {t('Features that must be absent:')} {disabledFeatures.join(', ')}
+          </span>
+        </FlexItem>
+      )}
+
+      {enabledFeatures.length > 0 && (
+        <FlexItem>
+          <span>
+            {t('Features that must be present:')} {enabledFeatures.join(', ')}
+          </span>
+        </FlexItem>
+      )}
     </Flex>
   );
 };
@@ -140,7 +177,7 @@ const ReviewStep = ({ error, isEdit, isReadOnly }: { error: unknown; isEdit?: bo
           )}
 
           {values.versions.map((v) => (
-            <DescriptionListGroup>
+            <DescriptionListGroup key={v.version}>
               <DescriptionListTerm>{t('Version {{version}}', { version: v.version })}</DescriptionListTerm>
               <DescriptionListDescription>
                 <CatalogItemVersionFeatures deviceFeatures={v.deviceFeatures} />
