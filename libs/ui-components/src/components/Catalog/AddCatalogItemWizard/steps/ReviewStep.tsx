@@ -5,6 +5,8 @@ import {
   DescriptionListDescription,
   DescriptionListGroup,
   DescriptionListTerm,
+  Flex,
+  FlexItem,
   List,
   ListItem,
   Stack,
@@ -21,6 +23,26 @@ import { appTypeIds } from '../../useCatalogItems';
 import { getArtifactLabel } from '../../../../utils/catalogTypes';
 
 export const reviewStepId = 'review';
+
+// CELIA-WIP IMPLEMENT FOR REAL
+const CatalogItemVersionFeatures = ({ deviceFeatures }: { deviceFeatures?: DeviceFeatures | null }) => {
+  const { t } = useTranslation();
+  if (!deviceFeatures) {
+    return t('No device features defined');
+  }
+  return (
+    <Flex>
+      <FlexItem>
+        <DescriptionListTerm>{t('Device features')}</DescriptionListTerm>
+      </FlexItem>
+      <FlexItem>
+        {deviceFeatures.gpuPresent && t('GPU present')}
+        {deviceFeatures.kvmEnabled && t('KVM enabled')}
+        {deviceFeatures.osMode && t('OS mode')}
+      </FlexItem>
+    </Flex>
+  );
+};
 
 const ReviewStep = ({ error, isEdit, isReadOnly }: { error: unknown; isEdit?: boolean; isReadOnly?: boolean }) => {
   const { t } = useTranslation();
@@ -117,19 +139,14 @@ const ReviewStep = ({ error, isEdit, isReadOnly }: { error: unknown; isEdit?: bo
             </DescriptionListGroup>
           )}
 
-          <DescriptionListGroup>
-            <DescriptionListTerm>{t('Versions')}</DescriptionListTerm>
-            <DescriptionListDescription>{values.versions.map((v) => v.version).join(', ')}</DescriptionListDescription>
-          </DescriptionListGroup>
-          {values.versions.map((versionValues) => {
-            return (
-              <CatalogItemVersionDeviceRequirements
-                key={versionValues.version}
-                version={versionValues.version}
-                deviceFeatures={versionValues.deviceFeatures}
-              />
-            );
-          })}
+          {values.versions.map((v) => (
+            <DescriptionListGroup>
+              <DescriptionListTerm>{t('Version {{version}}', { version: v.version })}</DescriptionListTerm>
+              <DescriptionListDescription>
+                <CatalogItemVersionFeatures deviceFeatures={v.deviceFeatures} />
+              </DescriptionListDescription>
+            </DescriptionListGroup>
+          ))}
         </DescriptionList>
       </StackItem>
       {!!error && (
