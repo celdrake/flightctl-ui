@@ -27,6 +27,11 @@ import {
 } from './types';
 import { appTypeIds } from '../useCatalogItems';
 import { getKubernetesDnsSubdomainErrors, validKubernetesDnsSubdomain, validURLSchema } from '../../form/validations';
+import {
+  deviceFeaturesFromApi,
+  deviceFeaturesToApi,
+  getEmptyDeviceFeaturesFormValues,
+} from '../../../utils/catalogDeviceFeatures';
 import { appendJSONPatch } from '../../../utils/patches/patch';
 
 const parseYamlField = (value: string): Record<string, unknown> | undefined => {
@@ -46,6 +51,7 @@ const dumpYamlField = (value: Record<string, unknown> | undefined): string => {
 export const getEmptyVersion = (): VersionFormValues => ({
   version: '',
   references: {},
+  deviceFeatures: getEmptyDeviceFeaturesFormValues(),
   channels: [],
   replaces: '',
   skips: '',
@@ -116,6 +122,7 @@ const formVersionsToApi = (values: AddCatalogItemFormValues) => {
       config: configurable ? parseYamlField(v.config) : undefined,
       configSchema: configurable ? parseSchemaField(v.configSchema) : undefined,
       deprecation: v.deprecated ? { message: v.deprecationMessage } : undefined,
+      deviceFeatures: deviceFeaturesToApi(v.deviceFeatures),
     };
 
     return Object.fromEntries(
@@ -494,6 +501,13 @@ const versionSchema = (t: TFunction, duplicates: Set<string>, configurable: bool
     skips: optionalSemverList(t),
     skipRange: optionalSemverRange(t),
     readme: Yup.string(),
+    deviceFeatures: Yup.object()
+      .shape({
+        gpuPresent: Yup.string(),
+        kvmEnabled: Yup.string(),
+        osMode: Yup.string(),
+      })
+      .nullable(),
     config: configurable ? yamlFieldSchema(t) : Yup.string(),
     configSchema: configurable ? jsonSchemaFieldSchema(t) : Yup.string(),
     deprecated: Yup.boolean(),
@@ -619,6 +633,7 @@ export const getInitialValuesFromItem = (item: CatalogItem): AddCatalogItemFormV
       skips: v.skips?.join(', ') || '',
       skipRange: v.skipRange || '',
       readme: v.readme || '',
+      deviceFeatures: deviceFeaturesFromApi(v.deviceFeatures),
       config: dumpYamlField(v.config as Record<string, unknown> | undefined),
       configSchema: dumpYamlField(v.configSchema as Record<string, unknown> | undefined),
       deprecated: !!v.deprecation,

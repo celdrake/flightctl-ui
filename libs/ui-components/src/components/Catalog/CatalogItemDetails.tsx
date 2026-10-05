@@ -27,7 +27,13 @@ import ReactMarkdown from 'react-markdown';
 import { Formik, useFormikContext } from 'formik';
 import { ActionsColumn, type IAction } from '@patternfly/react-table';
 
-import { type Catalog, type CatalogItem, CatalogItemType } from '@flightctl/types/alpha';
+import {
+  type Catalog,
+  type CatalogItem,
+  CatalogItemType,
+  DeviceFeatureBoolean,
+  DeviceFeatures,
+} from '@flightctl/types/alpha';
 import { useTranslation } from '../../hooks/useTranslation';
 import { useFetch } from '../../hooks/useFetch';
 import { useFetchPeriodically } from '../../hooks/useFetchPeriodically';
@@ -37,6 +43,11 @@ import { useItemIsInUse } from './useCatalogItems';
 import FlightCtlForm from '../form/FlightCtlForm';
 import { DeprecateModal, RestoreModal } from './DeprecateModal';
 import { getFullContainerURI } from '../../utils/catalog';
+import {
+  DeviceFeatureBooleanFormValue,
+  DeviceFeatureOsModeFormValue,
+  deviceFeaturesFromApi,
+} from '../../utils/catalogDeviceFeatures';
 import DeleteModal from '../modals/DeleteModal/DeleteModal';
 import WithTooltip from '../common/WithTooltip';
 import { buildAllDropdownActions } from '../common/ActionsDropdownList';
@@ -378,6 +389,64 @@ type CatalogItemDetailsContentProps = {
   item: CatalogItem;
 };
 
+const CatalogItemDeviceRequirement = ({
+  label,
+  requirement,
+}: {
+  label: string;
+  requirement: DeviceFeatureBooleanFormValue;
+}) => {
+  const { t } = useTranslation();
+  return (
+    <div>
+      {label}
+      {requirement === DeviceFeatureBoolean.DeviceFeatureBooleanTrue ? t('required') : t('must not be present')}
+    </div>
+  );
+};
+
+const CatalogItemDeviceRequirementOsMode = ({
+  label,
+  requirement,
+}: {
+  label: string;
+  requirement: DeviceFeatureOsModeFormValue;
+}) => {
+  const { t } = useTranslation();
+  return (
+    <div>
+      {label}: {requirement === OsModeType.OsModeImage ? t('Image') : t('Package')}
+    </div>
+  );
+};
+
+const CatalogItemDeviceRequirements = ({ deviceFeatures }: { deviceFeatures?: DeviceFeatures }) => {
+  const { t } = useTranslation();
+
+  const definedRequirements = deviceFeaturesFromApi(deviceFeatures);
+  if (!definedRequirements) {
+    return null;
+  }
+
+  return (
+    <DescriptionListGroup>
+      <DescriptionListTerm>{t('Device requirements')}</DescriptionListTerm>
+      <DescriptionListDescription className="fctl-catalog-item-details">
+        {definedRequirements.gpuPresent && (
+          <CatalogItemDeviceRequirement label={t('GPU acceleration')} requirement={definedRequirements.gpuPresent} />
+        )}
+
+        {definedRequirements.kvmEnabled && (
+          <CatalogItemDeviceRequirement label={t('KVM virtualization')} requirement={definedRequirements.kvmEnabled} />
+        )}
+        {definedRequirements.osMode && (
+          <CatalogItemDeviceRequirementOsMode label={t('OS mode')} requirement={definedRequirements.osMode} />
+        )}
+      </DescriptionListDescription>
+    </DescriptionListGroup>
+  );
+};
+
 export const CatalogItemDetailsContent = ({ item }: CatalogItemDetailsContentProps) => {
   const { t } = useTranslation();
 
@@ -389,7 +458,8 @@ export const CatalogItemDetailsContent = ({ item }: CatalogItemDetailsContentPro
     endpoint: `catalogs/${item.metadata.catalog}`,
   });
 
-  const readme = item.spec.versions.find((v) => v.version === version)?.readme;
+  const selectedVersion = item.spec.versions.find((v) => v.version === version);
+  const readme = selectedVersion?.readme;
 
   return (
     <Grid hasGutter>
@@ -425,6 +495,7 @@ export const CatalogItemDetailsContent = ({ item }: CatalogItemDetailsContentPro
               <CatalogItemPanelLink link={item.spec.homepage} />
             </DescriptionListDescription>
           </DescriptionListGroup>
+          <CatalogItemDeviceRequirements deviceFeatures={selectedVersion?.deviceFeatures} />
         </DescriptionList>
       </GridItem>
       <GridItem span={9}>

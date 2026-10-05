@@ -13,6 +13,7 @@ import {
 } from '@patternfly/react-core';
 import { useFormikContext } from 'formik';
 
+import { type DeviceFeatures } from '@flightctl/types/alpha';
 import type { AddCatalogItemFormValues } from '../types';
 import { useTranslation } from '../../../../hooks/useTranslation';
 import { getErrorMessage } from '../../../../utils/error';
@@ -120,6 +121,15 @@ const ReviewStep = ({ error, isEdit, isReadOnly }: { error: unknown; isEdit?: bo
             <DescriptionListTerm>{t('Versions')}</DescriptionListTerm>
             <DescriptionListDescription>{values.versions.map((v) => v.version).join(', ')}</DescriptionListDescription>
           </DescriptionListGroup>
+          {values.versions.map((versionValues) => {
+            return (
+              <CatalogItemVersionDeviceRequirements
+                key={versionValues.version}
+                version={versionValues.version}
+                deviceFeatures={versionValues.deviceFeatures}
+              />
+            );
+          })}
         </DescriptionList>
       </StackItem>
       {!!error && (
