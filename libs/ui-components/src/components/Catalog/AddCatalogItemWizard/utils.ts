@@ -27,11 +27,7 @@ import {
 } from './types';
 import { appTypeIds } from '../useCatalogItems';
 import { getKubernetesDnsSubdomainErrors, validKubernetesDnsSubdomain, validURLSchema } from '../../form/validations';
-import {
-  deviceFeaturesFromApi,
-  deviceFeaturesToApi,
-  getEmptyDeviceFeaturesFormValues,
-} from '../../../utils/catalogDeviceFeatures';
+import { deviceFeaturesFromApi, deviceFeaturesToApi } from '../../../utils/catalogDeviceFeatures';
 import { appendJSONPatch } from '../../../utils/patches/patch';
 
 const parseYamlField = (value: string): Record<string, unknown> | undefined => {
@@ -51,7 +47,7 @@ const dumpYamlField = (value: Record<string, unknown> | undefined): string => {
 export const getEmptyVersion = (): VersionFormValues => ({
   version: '',
   references: {},
-  deviceFeatures: getEmptyDeviceFeaturesFormValues(),
+  deviceFeatures: null,
   channels: [],
   replaces: '',
   skips: '',

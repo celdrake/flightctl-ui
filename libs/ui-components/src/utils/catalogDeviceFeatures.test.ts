@@ -8,19 +8,20 @@ import {
   DEVICE_FEATURE_OS_MODE,
   deviceFeaturesFromApi,
   deviceFeaturesToApi,
-  getDeviceFeatureRequirementLines,
   getEmptyDeviceFeaturesFormValues,
-  hasKnownDeviceFeatureRequirements,
 } from './catalogDeviceFeatures';
-
-const t = (key: string) => key;
 
 describe('catalogDeviceFeatures', () => {
   it.each([
     {
-      name: 'When deviceFeatures is absent it should return empty form values',
+      name: 'When deviceFeatures is absent it should return null',
       features: undefined,
-      expected: getEmptyDeviceFeaturesFormValues(),
+      expected: null,
+    },
+    {
+      name: 'When deviceFeatures is empty it should return null',
+      features: {},
+      expected: null,
     },
     {
       name: 'When known include and exclude values are set it should map them to form fields',
@@ -33,6 +34,18 @@ describe('catalogDeviceFeatures', () => {
         gpuPresent: DeviceFeatureBoolean.DeviceFeatureBooleanTrue,
         kvmEnabled: DeviceFeatureBoolean.DeviceFeatureBooleanFalse,
         osMode: OsModeType.OsModeImage,
+      },
+    },
+    {
+      name: 'When boolean true or false is set it should map them to feature enums',
+      features: {
+        [DEVICE_FEATURE_GPU_PRESENT]: true,
+        [DEVICE_FEATURE_KVM_ENABLED]: false,
+      },
+      expected: {
+        gpuPresent: DeviceFeatureBoolean.DeviceFeatureBooleanTrue,
+        kvmEnabled: DeviceFeatureBoolean.DeviceFeatureBooleanFalse,
+        osMode: '',
       },
     },
     {
@@ -52,7 +65,7 @@ describe('catalogDeviceFeatures', () => {
       features: {
         [DEVICE_FEATURE_GPU_PRESENT]: 'maybe',
       },
-      expected: getEmptyDeviceFeaturesFormValues(),
+      expected: null,
     },
   ])('$name', ({ features, expected }) => {
     expect(deviceFeaturesFromApi(features)).toEqual(expected);
@@ -60,6 +73,7 @@ describe('catalogDeviceFeatures', () => {
 
   it('When all known features are unspecified it should omit deviceFeatures from the API payload', () => {
     expect(deviceFeaturesToApi(getEmptyDeviceFeaturesFormValues())).toBeUndefined();
+    expect(deviceFeaturesToApi(null)).toBeUndefined();
   });
 
   it('When known features are set it should emit dotted API keys', () => {
@@ -84,23 +98,5 @@ describe('catalogDeviceFeatures', () => {
     expect(deviceFeaturesToApi(deviceFeaturesFromApi(original))).toEqual({
       [DEVICE_FEATURE_KVM_ENABLED]: DeviceFeatureBoolean.DeviceFeatureBooleanFalse,
     });
-  });
-
-  it('When no known requirements are set it should report none', () => {
-    expect(hasKnownDeviceFeatureRequirements(getEmptyDeviceFeaturesFormValues())).toBe(false);
-  });
-
-  it('When known requirements are set it should format display lines', () => {
-    expect(
-      getDeviceFeatureRequirementLines(t, {
-        [DEVICE_FEATURE_GPU_PRESENT]: DeviceFeatureBoolean.DeviceFeatureBooleanTrue,
-        [DEVICE_FEATURE_KVM_ENABLED]: DeviceFeatureBoolean.DeviceFeatureBooleanFalse,
-        [DEVICE_FEATURE_OS_MODE]: OsModeType.OsModeImage,
-      }),
-    ).toEqual([
-      { label: 'GPU acceleration', constraint: 'required' },
-      { label: 'KVM virtualization', constraint: 'must not be present' },
-      { label: 'OS mode', constraint: 'Image' },
-    ]);
   });
 });

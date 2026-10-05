@@ -14,22 +14,28 @@ export type DeviceFeaturesFormValues = {
   osMode: DeviceFeatureOsModeFormValue;
 };
 
-export type DeviceFeatureRequirementLine = {
-  label: string;
-  constraint: string;
-};
-
 export const getEmptyDeviceFeaturesFormValues = (): DeviceFeaturesFormValues => ({
   gpuPresent: '',
   kvmEnabled: '',
   osMode: '',
 });
 
-const isDeviceFeatureSet = (value: unknown): value is DeviceFeatureBoolean =>
-  value === DeviceFeatureBoolean.DeviceFeatureBooleanTrue || value === DeviceFeatureBoolean.DeviceFeatureBooleanFalse;
+const parseBooleanFeature = (value: unknown): DeviceFeatureBoolean | undefined => {
+  if (value === true || value === DeviceFeatureBoolean.DeviceFeatureBooleanTrue) {
+    return DeviceFeatureBoolean.DeviceFeatureBooleanTrue;
+  }
+  if (value === false || value === DeviceFeatureBoolean.DeviceFeatureBooleanFalse) {
+    return DeviceFeatureBoolean.DeviceFeatureBooleanFalse;
+  }
+  return undefined;
+};
 
-const isOsModeType = (value: unknown): value is OsModeType =>
-  value === OsModeType.OsModeImage || value === OsModeType.OsModePackage;
+const parseOsMode = (value: unknown): OsModeType | undefined => {
+  if (value === OsModeType.OsModeImage || value === OsModeType.OsModePackage) {
+    return value;
+  }
+  return undefined;
+};
 
 export const deviceFeaturesFromApi = (features?: DeviceFeatures | null): DeviceFeaturesFormValues | null => {
   if (!features) {
@@ -37,26 +43,25 @@ export const deviceFeaturesFromApi = (features?: DeviceFeatures | null): DeviceF
   }
 
   const form = getEmptyDeviceFeaturesFormValues();
-
-  // Features can either be set to true (must be present) or false (must be absent), or not set at all.
   let hasSetFeatures = false;
-  const gpuPresent = features[DEVICE_FEATURE_GPU_PRESENT];
-  if (isDeviceFeatureSet(gpuPresent)) {
+
+  const gpuPresent = parseBooleanFeature(features[DEVICE_FEATURE_GPU_PRESENT]);
+  if (gpuPresent) {
     form.gpuPresent = gpuPresent;
     hasSetFeatures = true;
   }
-  const kvmEnabled = features[DEVICE_FEATURE_KVM_ENABLED];
-  if (isDeviceFeatureSet(kvmEnabled)) {
+  const kvmEnabled = parseBooleanFeature(features[DEVICE_FEATURE_KVM_ENABLED]);
+  if (kvmEnabled) {
     form.kvmEnabled = kvmEnabled;
     hasSetFeatures = true;
   }
-  const osMode = features[DEVICE_FEATURE_OS_MODE];
-  if (isOsModeType(osMode)) {
+  const osMode = parseOsMode(features[DEVICE_FEATURE_OS_MODE]);
+  if (osMode) {
     form.osMode = osMode;
     hasSetFeatures = true;
   }
 
-  return form;
+  return hasSetFeatures ? form : null;
 };
 
 export const deviceFeaturesToApi = (form: DeviceFeaturesFormValues | null): DeviceFeatures | undefined => {
