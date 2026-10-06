@@ -6,11 +6,11 @@ import {
   DescriptionListGroup,
   DescriptionListTerm,
 } from '@patternfly/react-core';
-import { type DeviceStatus } from '@flightctl/types';
+import type { DeviceGpu, DeviceStatus } from '@flightctl/types';
 
 import type { SystemInfoEntry } from '../../../hooks/useDeviceSystemInfo';
 import { useTranslation } from '../../../hooks/useTranslation';
-import { getGpuCapability, getKvmCapability } from '../../../utils/capabilities';
+import { getKvmCapability } from '../../../utils/capabilities';
 import { OsModeLabel } from '../../common/OsModeContent';
 import LabelWithHelperText from '../../common/WithHelperText';
 import SystemInfoDescriptionGroup from './SystemInfoDescriptionGroup';
@@ -80,6 +80,14 @@ const CapabilityValue = ({ value }: { value: DeviceFeatureBoolean | undefined })
   }
 };
 
+const GpuCapabilityValue = ({ gpus }: { gpus: DeviceGpu[] | undefined }) => {
+  const { t } = useTranslation();
+  if (!gpus || gpus.length === 0) {
+    return t('Not reported');
+  }
+  return <>{gpus.map((gpu) => `${gpu.vendor} ${gpu.model}`).join(', ')}</>;
+};
+
 export const CapabilitiesFieldsList = ({ deviceStatus }: { deviceStatus: DeviceStatus | undefined }) => {
   const { t } = useTranslation();
 
@@ -98,9 +106,9 @@ export const CapabilitiesFieldsList = ({ deviceStatus }: { deviceStatus: DeviceS
         </DescriptionListDescription>
       </DescriptionListGroup>
       <DescriptionListGroup>
-        <DescriptionListTerm>{t('GPU present')}</DescriptionListTerm>
+        <DescriptionListTerm>{t('GPU')}</DescriptionListTerm>
         <DescriptionListDescription>
-          <CapabilityValue value={getGpuCapability(deviceStatus)} />
+          <GpuCapabilityValue gpus={deviceStatus?.systemInfo?.gpus} />
         </DescriptionListDescription>
       </DescriptionListGroup>
       <DeltaGenerationDescriptionGroups deviceStatus={deviceStatus} />

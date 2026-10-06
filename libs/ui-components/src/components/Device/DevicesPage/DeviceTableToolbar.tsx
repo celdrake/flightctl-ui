@@ -1,12 +1,8 @@
 import * as React from 'react';
 import {
   Button,
-  Grid,
-  GridItem,
   Label,
   LabelGroup,
-  SelectList,
-  SelectOption,
   Split,
   SplitItem,
   Toolbar,
@@ -14,30 +10,23 @@ import {
   ToolbarGroup,
   ToolbarItem,
 } from '@patternfly/react-core';
-import { DeviceFeatureBoolean } from '@flightctl/types/alpha';
 
 import { useTranslation } from '../../../hooks/useTranslation';
 import {
-  DEVICE_OS_MODE_FILTER_VALUES,
   DEVICE_TEXT_FILTER_KEYS,
-  type DeviceBooleanFeatureFilterValue,
-  type DeviceFeatureFilters,
-  type DeviceOsModeFilterValue,
+  type DeviceFeatureFilter,
   type DeviceTextFilterKey,
-  EMPTY_DEVICE_FEATURE_FILTERS,
-  UNKNOWN_CAPABILITY_VALUE,
-  getDeviceFeatureFilterCount,
+  getDeviceFeatureFilterLabel,
   getDeviceFilterLabel,
-  getGpuPresentFilterLabel,
-  getKvmEnabledFilterLabel,
-  getOsModeFilterLabel,
+  getEmptyDeviceFeatureFilters,
+  toggleFeatureFilterValue,
 } from '../../../utils/status/devices';
 import { labelToString } from '../../../utils/labels';
 import DeviceStatusFilter, { getStatusItem } from './DeviceFilterSelect';
 import type { FilterStatusMap, UpdateStatus } from './types';
 import type { FlightCtlLabel } from '../../../types/extraTypes';
 import DeviceTableToolbarFilters from './DeviceToolbarFilters';
-import FilterSelect, { FilterSelectGroup } from '../../form/FilterSelect';
+import DeviceFeatureFilters from './DeviceFeatureFilters';
 
 type DeviceTableToolbarProps = {
   textFilters: Partial<Record<DeviceTextFilterKey, string>>;
@@ -49,97 +38,12 @@ type DeviceTableToolbarProps = {
   setOnlyFleetless: (enabled: boolean) => void;
   activeStatuses: FilterStatusMap;
   setActiveStatuses: (statuses: FilterStatusMap) => void;
-  selectedDeviceFeatures: DeviceFeatureFilters;
-  setSelectedDeviceFeatures: (filters: DeviceFeatureFilters) => void;
+  selectedFeatures: DeviceFeatureFilter[];
+  selectedFeaturesCount: number;
+  setSelectedFeatures: (filters: DeviceFeatureFilter[]) => void;
   selectedLabels: FlightCtlLabel[];
   setSelectedLabels: (labels: FlightCtlLabel[]) => void;
   isFilterUpdating: boolean;
-};
-
-type HardwareFeatureKey = 'gpuPresent' | 'kvmEnabled';
-
-const HARDWARE_FILTER_OPTIONS: { feature: HardwareFeatureKey; value: DeviceBooleanFeatureFilterValue }[] = [
-  { feature: 'gpuPresent', value: DeviceFeatureBoolean.DeviceFeatureBooleanTrue },
-  { feature: 'kvmEnabled', value: DeviceFeatureBoolean.DeviceFeatureBooleanTrue },
-  { feature: 'gpuPresent', value: DeviceFeatureBoolean.DeviceFeatureBooleanFalse },
-  { feature: 'gpuPresent', value: UNKNOWN_CAPABILITY_VALUE },
-  { feature: 'kvmEnabled', value: DeviceFeatureBoolean.DeviceFeatureBooleanFalse },
-  { feature: 'kvmEnabled', value: UNKNOWN_CAPABILITY_VALUE },
-];
-
-const toggleListValue = <T,>(values: T[], value: T): T[] =>
-  values.includes(value) ? values.filter((item) => item !== value) : [...values, value];
-
-const DeviceCapabilityFilter = ({
-  selectedDeviceFeatures,
-  setSelectedDeviceFeatures,
-  isFilterUpdating,
-}: {
-  selectedDeviceFeatures: DeviceFeatureFilters;
-  setSelectedDeviceFeatures: (filters: DeviceFeatureFilters) => void;
-  isFilterUpdating: boolean;
-}) => {
-  const { t } = useTranslation();
-
-  const getHardwareFilterLabel = (feature: HardwareFeatureKey, value: DeviceBooleanFeatureFilterValue) =>
-    feature === 'gpuPresent' ? getGpuPresentFilterLabel(t, value) : getKvmEnabledFilterLabel(t, value);
-
-  const onToggleOsMode = (mode: DeviceOsModeFilterValue) => {
-    setSelectedDeviceFeatures({
-      ...selectedDeviceFeatures,
-      osMode: toggleListValue(selectedDeviceFeatures.osMode, mode),
-    });
-  };
-
-  const onToggleHardware = (feature: HardwareFeatureKey, value: DeviceBooleanFeatureFilterValue) => {
-    setSelectedDeviceFeatures({
-      ...selectedDeviceFeatures,
-      [feature]: toggleListValue(selectedDeviceFeatures[feature], value),
-    });
-  };
-
-  return (
-    <FilterSelect
-      selectedFilters={getDeviceFeatureFilterCount(selectedDeviceFeatures)}
-      placeholder={t('Filter by device capability')}
-      isFilterUpdating={isFilterUpdating}
-    >
-      <SelectList>
-        <Grid hasGutter>
-          <GridItem span={6}>
-            <FilterSelectGroup label={t('OS mode')}>
-              {DEVICE_OS_MODE_FILTER_VALUES.map((mode) => (
-                <SelectOption
-                  key={mode}
-                  hasCheckbox
-                  value={`osMode-${mode}`}
-                  isSelected={selectedDeviceFeatures.osMode.includes(mode)}
-                  onClick={() => onToggleOsMode(mode)}
-                >
-                  {getOsModeFilterLabel(t, mode)}
-                </SelectOption>
-              ))}
-            </FilterSelectGroup>
-          </GridItem>
-          <GridItem span={6}>
-            <FilterSelectGroup label={t('Hardware')}>
-              {HARDWARE_FILTER_OPTIONS.map(({ feature, value }) => (
-                <SelectOption
-                  key={`${feature}-${value}`}
-                  hasCheckbox
-                  value={`${feature}-${value}`}
-                  isSelected={selectedDeviceFeatures[feature].includes(value)}
-                  onClick={() => onToggleHardware(feature, value)}
-                >
-                  {getHardwareFilterLabel(feature, value)}
-                </SelectOption>
-              ))}
-            </FilterSelectGroup>
-          </GridItem>
-        </Grid>
-      </SelectList>
-    </FilterSelect>
-  );
 };
 
 const DeviceTableToolbar: React.FC<React.PropsWithChildren<DeviceTableToolbarProps>> = ({ children, ...rest }) => {
@@ -150,8 +54,9 @@ const DeviceTableToolbar: React.FC<React.PropsWithChildren<DeviceTableToolbarPro
     setTextFilter,
     activeStatuses,
     setActiveStatuses,
-    selectedDeviceFeatures,
-    setSelectedDeviceFeatures,
+    selectedFeatures,
+    selectedFeaturesCount,
+    setSelectedFeatures,
     selectedLabels,
     setSelectedLabels,
     isFilterUpdating,
@@ -193,9 +98,10 @@ const DeviceTableToolbar: React.FC<React.PropsWithChildren<DeviceTableToolbarPro
               />
             </ToolbarItem>
             <ToolbarItem>
-              <DeviceCapabilityFilter
-                selectedDeviceFeatures={selectedDeviceFeatures}
-                setSelectedDeviceFeatures={setSelectedDeviceFeatures}
+              <DeviceFeatureFilters
+                selectedFeatures={selectedFeatures}
+                selectedFeaturesCount={selectedFeaturesCount}
+                setSelectedFeatures={setSelectedFeatures}
                 isFilterUpdating={isFilterUpdating}
               />
             </ToolbarItem>
@@ -232,18 +138,19 @@ const DeviceToolbarChips = ({
   setOwnerFleets,
   onlyFleetless,
   setOnlyFleetless,
-  selectedDeviceFeatures,
-  setSelectedDeviceFeatures,
+  selectedFeatures,
+  selectedFeaturesCount,
+  setSelectedFeatures,
   selectedLabels,
   setSelectedLabels,
 }: DeviceToolbarChipsProps) => {
   const { t } = useTranslation();
   const statusKeys = Object.keys(activeStatuses).filter((k) => !!activeStatuses[k as keyof FilterStatusMap].length);
   const activeTextFilterKeys = DEVICE_TEXT_FILTER_KEYS.filter((key) => !!textFilters[key]);
-  const hardwareChips: { feature: HardwareFeatureKey; value: DeviceBooleanFeatureFilterValue }[] = [
-    ...selectedDeviceFeatures.gpuPresent.map((value) => ({ feature: 'gpuPresent' as const, value })),
-    ...selectedDeviceFeatures.kvmEnabled.map((value) => ({ feature: 'kvmEnabled' as const, value })),
-  ];
+
+  const featureChips = selectedFeatures.flatMap((feature) =>
+    feature.values.map((value) => ({ featureId: feature.fieldId, value })),
+  );
 
   const hasAnyFilter =
     !!statusKeys.length ||
@@ -251,7 +158,7 @@ const DeviceToolbarChips = ({
     onlyFleetless ||
     !!activeTextFilterKeys.length ||
     !!selectedLabels.length ||
-    getDeviceFeatureFilterCount(selectedDeviceFeatures) > 0;
+    selectedFeaturesCount > 0;
 
   return (
     <Split hasGutter>
@@ -328,49 +235,20 @@ const DeviceToolbarChips = ({
           </LabelGroup>
         </SplitItem>
       )}
-      {selectedDeviceFeatures.osMode.length > 0 && (
+      {featureChips.length > 0 && (
         <SplitItem>
           <LabelGroup
-            categoryName={t('OS mode')}
+            categoryName={t('Device requirements')}
             isClosable
-            onClick={() => setSelectedDeviceFeatures({ ...selectedDeviceFeatures, osMode: [] })}
+            onClick={() => setSelectedFeatures(getEmptyDeviceFeatureFilters())}
           >
-            {selectedDeviceFeatures.osMode.map((mode) => (
+            {featureChips.map(({ featureId, value }) => (
               <Label
                 variant="outline"
-                key={mode}
-                onClose={() =>
-                  setSelectedDeviceFeatures({
-                    ...selectedDeviceFeatures,
-                    osMode: selectedDeviceFeatures.osMode.filter((item) => item !== mode),
-                  })
-                }
+                key={`${featureId}-${value}`}
+                onClose={() => setSelectedFeatures(toggleFeatureFilterValue(selectedFeatures, featureId, value))}
               >
-                {getOsModeFilterLabel(t, mode)}
-              </Label>
-            ))}
-          </LabelGroup>
-        </SplitItem>
-      )}
-      {hardwareChips.length > 0 && (
-        <SplitItem>
-          <LabelGroup
-            categoryName={t('Hardware')}
-            isClosable
-            onClick={() => setSelectedDeviceFeatures({ ...selectedDeviceFeatures, gpuPresent: [], kvmEnabled: [] })}
-          >
-            {hardwareChips.map(({ feature, value }) => (
-              <Label
-                variant="outline"
-                key={`${feature}-${value}`}
-                onClose={() =>
-                  setSelectedDeviceFeatures({
-                    ...selectedDeviceFeatures,
-                    [feature]: selectedDeviceFeatures[feature].filter((item) => item !== value),
-                  })
-                }
-              >
-                {feature === 'gpuPresent' ? getGpuPresentFilterLabel(t, value) : getKvmEnabledFilterLabel(t, value)}
+                {getDeviceFeatureFilterLabel(t, featureId, value)}
               </Label>
             ))}
           </LabelGroup>
@@ -386,7 +264,7 @@ const DeviceToolbarChips = ({
               setOnlyFleetless(false);
               clearTextFilters();
               setSelectedLabels([]);
-              setSelectedDeviceFeatures(EMPTY_DEVICE_FEATURE_FILTERS);
+              setSelectedFeatures(getEmptyDeviceFeatureFilters());
             }}
           >
             {t('Clear all filters')}

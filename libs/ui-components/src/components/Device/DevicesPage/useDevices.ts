@@ -8,7 +8,7 @@ import {
   OsModeType,
 } from '@flightctl/types';
 import {
-  type DeviceFeatureFilters,
+  type DeviceFeatureFilter,
   type DeviceTextFilterKey,
   FilterSearchParams,
   isValidCveIdFilterValue,
@@ -30,7 +30,7 @@ type DevicesEndpointArgs = {
   ownerFleets?: string[];
   onlyFleetless?: boolean;
   activeStatuses?: FilterStatusMap;
-  selectedDeviceFeatures?: DeviceFeatureFilters;
+  selectedFeatures?: DeviceFeatureFilter[];
   onlyDecommissioned?: boolean;
   excludePackageMode?: boolean;
   labels?: FlightCtlLabel[];
@@ -52,7 +52,7 @@ const getDevicesEndpoint = ({
   textFilters,
   ownerFleets,
   activeStatuses,
-  selectedDeviceFeatures,
+  selectedFeatures,
   labels,
   onlyDecommissioned,
   onlyFleetless,
@@ -104,7 +104,7 @@ const getDevicesEndpoint = ({
   if (cveId && isValidCveIdFilterValue(cveId)) {
     params.set('cveId', cveId);
   }
-  queryUtils.setLabelParams(params, labels, queryUtils.buildDeviceFeatureLabelSelectors(selectedDeviceFeatures));
+  queryUtils.setLabelParams(params, labels, queryUtils.buildDeviceFeatureLabelSelectors(selectedFeatures));
   if (summaryOnly) {
     params.set('summaryOnly', 'true');
   }
@@ -151,7 +151,7 @@ export const useDevices = (args: {
   textFilters?: Partial<Record<DeviceTextFilterKey, string>>;
   ownerFleets?: string[];
   activeStatuses?: FilterStatusMap;
-  selectedDeviceFeatures?: DeviceFeatureFilters;
+  selectedFeatures?: DeviceFeatureFilter[];
   labels?: FlightCtlLabel[];
   onlyDecommissioned: boolean;
   nextContinue?: string;

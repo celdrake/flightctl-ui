@@ -34,10 +34,10 @@ import { EnrolledDevicesEmptyState } from './DevicesEmptyStates';
 import DeviceTableToolbar from './DeviceTableToolbar';
 import EnrolledDeviceTableRow from './EnrolledDeviceTableRow';
 import {
-  type DeviceFeatureFilters,
+  type DeviceFeatureFilter,
   type DeviceTextFilterKey,
-  EMPTY_DEVICE_FEATURE_FILTERS,
   FilterSearchParams,
+  getEmptyDeviceFeatureFilters,
 } from '../../../utils/status/devices';
 import { GlobalSystemRestoreBanners } from '../../SystemRestore/SystemRestoreBanners';
 
@@ -54,8 +54,9 @@ interface EnrolledDeviceTableProps {
   setOwnerFleets: (ownerFleets: string[]) => void;
   setOnlyFleetless: (enabled: boolean) => void;
   setActiveStatuses: (activeStatuses: FilterStatusMap) => void;
-  selectedDeviceFeatures: DeviceFeatureFilters;
-  setSelectedDeviceFeatures: (filters: DeviceFeatureFilters) => void;
+  selectedFeatures: DeviceFeatureFilter[];
+  selectedFeaturesCount: number;
+  setSelectedFeatures: (filters: DeviceFeatureFilter[]) => void;
   selectedLabels: FlightCtlLabel[];
   setSelectedLabels: (labels: FlightCtlLabel[]) => void;
   isFilterUpdating: boolean;
@@ -112,8 +113,9 @@ const EnrolledDevicesTable = ({
   activeStatuses,
   setActiveStatuses,
   setOnlyDecommissioned,
-  selectedDeviceFeatures,
-  setSelectedDeviceFeatures,
+  selectedFeatures,
+  selectedFeaturesCount,
+  setSelectedFeatures,
   selectedLabels,
   setSelectedLabels,
   hasFiltersEnabled,
@@ -155,7 +157,7 @@ const EnrolledDevicesTable = ({
       setOnlyFleetless(false);
       clearTextFilters();
       setSelectedLabels([]);
-      setSelectedDeviceFeatures(EMPTY_DEVICE_FEATURE_FILTERS);
+      setSelectedFeatures(getEmptyDeviceFeatureFilters());
     }
   };
 
@@ -173,8 +175,9 @@ const EnrolledDevicesTable = ({
         setOnlyFleetless={setOnlyFleetless}
         activeStatuses={activeStatuses}
         setActiveStatuses={setActiveStatuses}
-        selectedDeviceFeatures={selectedDeviceFeatures}
-        setSelectedDeviceFeatures={setSelectedDeviceFeatures}
+        selectedFeatures={selectedFeatures}
+        selectedFeaturesCount={selectedFeaturesCount}
+        setSelectedFeatures={setSelectedFeatures}
         selectedLabels={selectedLabels}
         setSelectedLabels={setSelectedLabels}
         isFilterUpdating={isFilterUpdating}

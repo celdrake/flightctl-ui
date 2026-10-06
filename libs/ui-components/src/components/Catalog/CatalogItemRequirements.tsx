@@ -77,7 +77,7 @@ const CatalogItemRequirements = ({ catalogItem }: { catalogItem: CatalogItem }) 
   const hasRequirements = enabledRequirements.length > 0 || disabledRequirements.length > 0;
   return (
     <Card isCompact>
-      <CardTitle>{t('Device capability requirements')}</CardTitle>
+      <CardTitle>{t('Device requirements')}</CardTitle>
       <CardBody>
         <Stack hasGutter>
           {enabledRequirements && (
@@ -103,7 +103,7 @@ const CatalogItemRequirements = ({ catalogItem }: { catalogItem: CatalogItem }) 
           {!hasRequirements && (
             <StackItem>
               <Content component={ContentVariants.small}>
-                {t('No device capability requirements were detected for this version.')}
+                {t('No device requirements were detected for this version.')}
               </Content>
             </StackItem>
           )}
