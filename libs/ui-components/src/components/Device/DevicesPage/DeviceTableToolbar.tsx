@@ -89,7 +89,7 @@ const DeviceCapabilityFilter = ({
   return (
     <FilterSelect
       selectedFilters={selectedDeviceFeatureCount}
-      placeholder={t('Filter by device capability')}
+      placeholder={t('Filter by device requirements')}
       isFilterUpdating={isFilterUpdating}
     >
       <SelectList>
@@ -297,7 +297,7 @@ const DeviceToolbarChips = ({
       {capabilityChips.length > 0 && (
         <SplitItem>
           <LabelGroup
-            categoryName={t('Device capability')}
+            categoryName={t('Device requirements')}
             isClosable
             onClick={() => setSelectedDeviceFeatures(getEmptyDeviceFeatureFilters())}
           >

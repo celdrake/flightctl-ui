@@ -85,7 +85,7 @@ const getCapabilityFeatureName = (t: TFunction, field: string) => {
     case FilterSearchParams.GpuPresent:
       return t('GPU');
     case FilterSearchParams.KvmEnabled:
-      return t('KVM virtualization');
+      return t('KVM');
     default:
       return field;
   }
@@ -95,11 +95,11 @@ export const getDeviceCapabilityFilterLabel = (t: TFunction, field: string, valu
   if (field === FilterSearchParams.OsMode) {
     switch (value) {
       case DeviceFeatureBoolean.DeviceFeatureBooleanTrue:
-        return t('Image mode required');
+        return t('Image');
       case DeviceFeatureBoolean.DeviceFeatureBooleanFalse:
-        return t('Package mode required');
+        return t('Package');
       default:
-        return t('Not defined');
+        return t('Unknown');
     }
   }
 
@@ -108,7 +108,7 @@ export const getDeviceCapabilityFilterLabel = (t: TFunction, field: string, valu
     case DeviceFeatureBoolean.DeviceFeatureBooleanTrue:
       return featureName;
     case DeviceFeatureBoolean.DeviceFeatureBooleanFalse:
-      return t('{{featureName}} not detected', { featureName });
+      return t('{{featureName}} absent', { featureName });
     default:
       return t('{{featureName}} not reported', { featureName });
   }
