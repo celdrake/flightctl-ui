@@ -58,6 +58,7 @@ import { InstallSpec } from './InstallWizard/steps/SpecificationsStep';
 import { type InstallSpecFormik } from './InstallWizard/types';
 
 import './CatalogItemDetails.css';
+import CatalogItemRequirements from './CatalogItemRequirements';
 
 type CatalogItemActions = 'deprecate' | 'restore' | 'delete';
 
@@ -347,6 +348,9 @@ const CatalogItemDetailsPanel = ({
                   <FlightCtlForm>
                     <InstallSpec catalogItem={item} hideReadmeLink />
                   </FlightCtlForm>
+                </StackItem>
+                <StackItem>
+                  <CatalogItemRequirements catalogItem={item} />
                 </StackItem>
                 {item.spec.type === CatalogItemType.CatalogItemTypeData ? (
                   <Alert
