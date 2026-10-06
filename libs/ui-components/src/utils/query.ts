@@ -1,15 +1,20 @@
 import { DeviceSummaryStatusType } from '@flightctl/types';
 
 import { type FlightCtlLabel } from '../types/extraTypes';
+import {
+  DEVICE_FEATURE_LABEL_GPU_PRESENT,
+  DEVICE_FEATURE_LABEL_KVM_ENABLED,
+  DEVICE_FEATURE_LABEL_OS_MODE,
+} from './catalogDeviceFeatures';
 import { labelToExactApiMatchString, textToPartialApiMatchString } from './labels';
 import {
+  DEVICE_BOOLEAN_FEATURE_FILTER_VALUES,
   DEVICE_OS_MODE_FILTER_VALUES,
-  type DeviceOsModeFilterValue,
+  type DeviceFeatureFilters,
+  KNOWN_BOOLEAN_FEATURE_FILTER_VALUES,
   KNOWN_OS_MODE_FILTER_VALUES,
   UNKNOWN_CAPABILITY_VALUE,
 } from './status/devices';
-
-const OS_MODE_FIELD = 'status.capabilities.osMode';
 
 const addQueryConditions = (fieldSelectors: string[], fieldSelector: string, values?: string[]) => {
   if (values?.length === 1) {
@@ -20,56 +25,82 @@ const addQueryConditions = (fieldSelectors: string[], fieldSelector: string, val
 };
 
 /**
- * Builds fieldSelector conditions for OS mode, that accepts up to 3 values: image/package/unknown(unset value).
+ * Builds a Kubernetes label selector for a feature that accepts known values plus "unknown" (label absent).
+ * Returns undefined when no values are selected, or when every possible value is selected.
  */
-const addOsModeQueryConditions = (fieldSelectors: string[], selectedOsModes?: DeviceOsModeFilterValue[]) => {
-  const uniqueSelectedOsModes = [...new Set(selectedOsModes ?? [])];
-  if (!uniqueSelectedOsModes?.length || uniqueSelectedOsModes.length === DEVICE_OS_MODE_FILTER_VALUES.length) {
-    return;
+const buildOptionalValueLabelSelector = (
+  labelKey: string,
+  selected: string[] | undefined,
+  knownValues: string[],
+  allValuesLength: number,
+): string | undefined => {
+  const uniqueSelected = [...new Set(selected ?? [])];
+  if (!uniqueSelected.length || uniqueSelected.length === allValuesLength) {
+    return undefined;
   }
 
-  const includeUnknown = uniqueSelectedOsModes.includes(UNKNOWN_CAPABILITY_VALUE);
-  const selectedKnownOsMode = uniqueSelectedOsModes.filter((mode) => mode !== UNKNOWN_CAPABILITY_VALUE);
-  const excludedOsMode =
-    selectedKnownOsMode.length === 1
-      ? KNOWN_OS_MODE_FILTER_VALUES.find((mode) => mode !== selectedKnownOsMode[0])
-      : undefined;
+  const includeUnknown = uniqueSelected.includes(UNKNOWN_CAPABILITY_VALUE);
+  const selectedKnown = uniqueSelected.filter((value) => value !== UNKNOWN_CAPABILITY_VALUE);
+  const excludedKnown =
+    selectedKnown.length === 1 ? knownValues.find((value) => value !== selectedKnown[0]) : undefined;
 
   if (includeUnknown) {
-    if (selectedKnownOsMode.length === 0) {
-      // List only devices that did not report their OS mode
-      fieldSelectors.push(`!${OS_MODE_FIELD}`);
-    } else {
-      // List only devices that don't match the excluded osMode.
-      fieldSelectors.push(`${OS_MODE_FIELD}!=${excludedOsMode}`);
+    if (selectedKnown.length === 0) {
+      return `!${labelKey}`;
     }
-    return;
+    return `${labelKey}!=${excludedKnown}`;
   }
 
-  if (selectedKnownOsMode.length === 1) {
-    // List only devices that match the selected osMode.
-    fieldSelectors.push(`${OS_MODE_FIELD}=${selectedKnownOsMode[0]}`);
-  } else {
-    // List only devices that have an OS mode (the only unselected osMode is "unknown").
-    fieldSelectors.push(`${OS_MODE_FIELD}`);
+  if (selectedKnown.length === 1) {
+    return `${labelKey}=${selectedKnown[0]}`;
   }
+
+  return labelKey;
+};
+
+const buildDeviceFeatureLabelSelectors = (filters?: DeviceFeatureFilters): string[] => {
+  if (!filters) {
+    return [];
+  }
+
+  return [
+    buildOptionalValueLabelSelector(
+      DEVICE_FEATURE_LABEL_OS_MODE,
+      filters.osMode,
+      KNOWN_OS_MODE_FILTER_VALUES,
+      DEVICE_OS_MODE_FILTER_VALUES.length,
+    ),
+    buildOptionalValueLabelSelector(
+      DEVICE_FEATURE_LABEL_GPU_PRESENT,
+      filters.gpuPresent,
+      KNOWN_BOOLEAN_FEATURE_FILTER_VALUES,
+      DEVICE_BOOLEAN_FEATURE_FILTER_VALUES.length,
+    ),
+    buildOptionalValueLabelSelector(
+      DEVICE_FEATURE_LABEL_KVM_ENABLED,
+      filters.kvmEnabled,
+      KNOWN_BOOLEAN_FEATURE_FILTER_VALUES,
+      DEVICE_BOOLEAN_FEATURE_FILTER_VALUES.length,
+    ),
+  ].filter((selector): selector is string => !!selector);
 };
 
 const addTextContainsCondition = (fieldSelectors: string[], fieldSelector: string, value: string) => {
   fieldSelectors.push(`${fieldSelector} contains ${value}`); // contains operator
 };
 
-const setLabelParams = (params: URLSearchParams, labels?: FlightCtlLabel[]) => {
+const setLabelParams = (params: URLSearchParams, labels?: FlightCtlLabel[], extraSelectors?: string[]) => {
+  const parts: string[] = [];
   if (labels?.length) {
-    const labelSelector = labels.reduce((acc, curr) => {
-      if (!acc) {
-        acc = `${curr.key}=${curr.value || ''}`;
-      } else {
-        acc += `,${curr.key}=${curr.value || ''}`;
-      }
-      return acc;
-    }, '');
-    params.append('labelSelector', labelSelector);
+    parts.push(labels.map((label) => `${label.key}=${label.value || ''}`).join(','));
+  }
+  extraSelectors?.forEach((selector) => {
+    if (selector) {
+      parts.push(selector);
+    }
+  });
+  if (parts.length) {
+    params.append('labelSelector', parts.join(','));
   }
 };
 
@@ -155,4 +186,4 @@ export const commonQueries = {
   },
 };
 
-export { addQueryConditions, addOsModeQueryConditions, addTextContainsCondition, setLabelParams };
+export { addQueryConditions, addTextContainsCondition, buildDeviceFeatureLabelSelectors, setLabelParams };

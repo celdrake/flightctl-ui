@@ -1,9 +1,14 @@
-import { DeviceFeatureBoolean, type DeviceFeatures } from '@flightctl/types/alpha';
-import { OsModeType } from '@flightctl/types';
+import type { OsModeType } from '@flightctl/types';
+import type { DeviceFeatureBoolean, DeviceFeatures } from '@flightctl/types/alpha';
 
 export const DEVICE_FEATURE_GPU_PRESENT = 'gpu.present';
 export const DEVICE_FEATURE_KVM_ENABLED = 'kvm.enabled';
 export const DEVICE_FEATURE_OS_MODE = 'os.mode';
+
+const DEVICE_FEATURE_LABEL_PREFIX = 'feature.flightctl.io/';
+export const DEVICE_FEATURE_LABEL_GPU_PRESENT = `${DEVICE_FEATURE_LABEL_PREFIX}${DEVICE_FEATURE_GPU_PRESENT}`;
+export const DEVICE_FEATURE_LABEL_KVM_ENABLED = `${DEVICE_FEATURE_LABEL_PREFIX}${DEVICE_FEATURE_KVM_ENABLED}`;
+export const DEVICE_FEATURE_LABEL_OS_MODE = `${DEVICE_FEATURE_LABEL_PREFIX}${DEVICE_FEATURE_OS_MODE}`;
 
 export type DeviceFeatureBooleanFormValue = '' | DeviceFeatureBoolean;
 export type DeviceFeatureOsModeFormValue = '' | OsModeType;
@@ -20,23 +25,6 @@ export const getEmptyDeviceFeaturesFormValues = (): DeviceFeaturesFormValues => 
   osMode: '',
 });
 
-const parseBooleanFeature = (value: unknown): DeviceFeatureBoolean | undefined => {
-  if (value === true || value === DeviceFeatureBoolean.DeviceFeatureBooleanTrue) {
-    return DeviceFeatureBoolean.DeviceFeatureBooleanTrue;
-  }
-  if (value === false || value === DeviceFeatureBoolean.DeviceFeatureBooleanFalse) {
-    return DeviceFeatureBoolean.DeviceFeatureBooleanFalse;
-  }
-  return undefined;
-};
-
-const parseOsMode = (value: unknown): OsModeType | undefined => {
-  if (value === OsModeType.OsModeImage || value === OsModeType.OsModePackage) {
-    return value;
-  }
-  return undefined;
-};
-
 export const deviceFeaturesFromApi = (features?: DeviceFeatures | null): DeviceFeaturesFormValues | null => {
   if (!features) {
     return null;
@@ -45,17 +33,17 @@ export const deviceFeaturesFromApi = (features?: DeviceFeatures | null): DeviceF
   const form = getEmptyDeviceFeaturesFormValues();
   let hasSetFeatures = false;
 
-  const gpuPresent = parseBooleanFeature(features[DEVICE_FEATURE_GPU_PRESENT]);
+  const gpuPresent = features[DEVICE_FEATURE_GPU_PRESENT] as DeviceFeatureBoolean | undefined;
   if (gpuPresent) {
     form.gpuPresent = gpuPresent;
     hasSetFeatures = true;
   }
-  const kvmEnabled = parseBooleanFeature(features[DEVICE_FEATURE_KVM_ENABLED]);
+  const kvmEnabled = features[DEVICE_FEATURE_KVM_ENABLED] as DeviceFeatureBoolean | undefined;
   if (kvmEnabled) {
     form.kvmEnabled = kvmEnabled;
     hasSetFeatures = true;
   }
-  const osMode = parseOsMode(features[DEVICE_FEATURE_OS_MODE]);
+  const osMode = features[DEVICE_FEATURE_OS_MODE] as OsModeType | undefined;
   if (osMode) {
     form.osMode = osMode;
     hasSetFeatures = true;
