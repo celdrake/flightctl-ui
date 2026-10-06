@@ -3,9 +3,11 @@ import { ApplicationsSummaryStatusType, DeviceSummaryStatusType, DeviceUpdatedSt
 
 import {
   DEVICE_TEXT_FILTER_KEYS,
-  type DeviceOsModeFilterValue,
+  type DeviceFeatureFilters,
   type DeviceTextFilterKey,
   FilterSearchParams,
+  getDeviceFeatureFilterCount,
+  isDeviceBooleanFeatureFilterValue,
   isDeviceOsModeFilterValue,
   isValidCveIdFilterValue,
 } from '../../../utils/status/devices';
@@ -112,6 +114,23 @@ export const useDeviceBackendFilters = () => {
     return (searchParams.getAll(FilterSearchParams.OsMode) || []).filter(isDeviceOsModeFilterValue);
   }, [searchParams]);
 
+  const selectedGpuPresent = React.useMemo(() => {
+    return (searchParams.getAll(FilterSearchParams.GpuPresent) || []).filter(isDeviceBooleanFeatureFilterValue);
+  }, [searchParams]);
+
+  const selectedKvmEnabled = React.useMemo(() => {
+    return (searchParams.getAll(FilterSearchParams.KvmEnabled) || []).filter(isDeviceBooleanFeatureFilterValue);
+  }, [searchParams]);
+
+  const selectedDeviceFeatures = React.useMemo(
+    (): DeviceFeatureFilters => ({
+      osMode: selectedOsModes,
+      gpuPresent: selectedGpuPresent,
+      kvmEnabled: selectedKvmEnabled,
+    }),
+    [selectedGpuPresent, selectedKvmEnabled, selectedOsModes],
+  );
+
   const selectedLabels = (searchParams.getAll(FilterSearchParams.Label) || []).map<FlightCtlLabel>((l) => {
     const labelParts = l.split('=');
     if (labelParts.length === 1) {
@@ -149,9 +168,15 @@ export const useDeviceBackendFilters = () => {
     [updateSearchParams],
   );
 
-  const setSelectedOsModes = React.useCallback(
-    (osModes: DeviceOsModeFilterValue[]) => {
-      updateSearchParams(getNewParams(paramsRef.current, { [FilterSearchParams.OsMode]: osModes }));
+  const setSelectedDeviceFeatures = React.useCallback(
+    (filters: DeviceFeatureFilters) => {
+      updateSearchParams(
+        getNewParams(paramsRef.current, {
+          [FilterSearchParams.OsMode]: filters.osMode,
+          [FilterSearchParams.GpuPresent]: filters.gpuPresent,
+          [FilterSearchParams.KvmEnabled]: filters.kvmEnabled,
+        }),
+      );
     },
     [updateSearchParams],
   );
@@ -178,7 +203,7 @@ export const useDeviceBackendFilters = () => {
     !!selectedLabels.length ||
     !!ownerFleets.length ||
     onlyFleetless ||
-    !!selectedOsModes.length ||
+    getDeviceFeatureFilterCount(selectedDeviceFeatures) > 0 ||
     Object.values(activeStatuses).some((s) => !!s.length) ||
     DEVICE_TEXT_FILTER_KEYS.some((key) => !!textFilters[key]);
 
@@ -191,8 +216,8 @@ export const useDeviceBackendFilters = () => {
     clearTextFilters,
     activeStatuses,
     setActiveStatuses,
-    selectedOsModes,
-    setSelectedOsModes,
+    selectedDeviceFeatures,
+    setSelectedDeviceFeatures,
     ownerFleets,
     setOwnerFleets,
     onlyFleetless,

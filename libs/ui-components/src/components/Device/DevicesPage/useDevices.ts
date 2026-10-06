@@ -8,7 +8,7 @@ import {
   OsModeType,
 } from '@flightctl/types';
 import {
-  type DeviceOsModeFilterValue,
+  type DeviceFeatureFilters,
   type DeviceTextFilterKey,
   FilterSearchParams,
   isValidCveIdFilterValue,
@@ -30,7 +30,7 @@ type DevicesEndpointArgs = {
   ownerFleets?: string[];
   onlyFleetless?: boolean;
   activeStatuses?: FilterStatusMap;
-  selectedOsModes?: DeviceOsModeFilterValue[];
+  selectedDeviceFeatures?: DeviceFeatureFilters;
   onlyDecommissioned?: boolean;
   excludePackageMode?: boolean;
   labels?: FlightCtlLabel[];
@@ -52,7 +52,7 @@ const getDevicesEndpoint = ({
   textFilters,
   ownerFleets,
   activeStatuses,
-  selectedOsModes,
+  selectedDeviceFeatures,
   labels,
   onlyDecommissioned,
   onlyFleetless,
@@ -71,7 +71,6 @@ const getDevicesEndpoint = ({
   queryUtils.addQueryConditions(fieldSelectors, 'status.applicationsSummary.status', filterByAppStatus);
   queryUtils.addQueryConditions(fieldSelectors, 'status.summary.status', filterByDevStatus);
   queryUtils.addQueryConditions(fieldSelectors, 'status.updated.status', filterByUpdateStatus);
-  queryUtils.addOsModeQueryConditions(fieldSelectors, selectedOsModes);
 
   if (nameOrAlias) {
     queryUtils.addTextContainsCondition(fieldSelectors, 'metadata.nameOrAlias', nameOrAlias);
@@ -105,7 +104,7 @@ const getDevicesEndpoint = ({
   if (cveId && isValidCveIdFilterValue(cveId)) {
     params.set('cveId', cveId);
   }
-  queryUtils.setLabelParams(params, labels);
+  queryUtils.setLabelParams(params, labels, queryUtils.buildDeviceFeatureLabelSelectors(selectedDeviceFeatures));
   if (summaryOnly) {
     params.set('summaryOnly', 'true');
   }
@@ -152,7 +151,7 @@ export const useDevices = (args: {
   textFilters?: Partial<Record<DeviceTextFilterKey, string>>;
   ownerFleets?: string[];
   activeStatuses?: FilterStatusMap;
-  selectedOsModes?: DeviceOsModeFilterValue[];
+  selectedDeviceFeatures?: DeviceFeatureFilters;
   labels?: FlightCtlLabel[];
   onlyDecommissioned: boolean;
   nextContinue?: string;

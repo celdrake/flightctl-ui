@@ -34,8 +34,9 @@ import { EnrolledDevicesEmptyState } from './DevicesEmptyStates';
 import DeviceTableToolbar from './DeviceTableToolbar';
 import EnrolledDeviceTableRow from './EnrolledDeviceTableRow';
 import {
-  type DeviceOsModeFilterValue,
+  type DeviceFeatureFilters,
   type DeviceTextFilterKey,
+  EMPTY_DEVICE_FEATURE_FILTERS,
   FilterSearchParams,
 } from '../../../utils/status/devices';
 import { GlobalSystemRestoreBanners } from '../../SystemRestore/SystemRestoreBanners';
@@ -53,8 +54,8 @@ interface EnrolledDeviceTableProps {
   setOwnerFleets: (ownerFleets: string[]) => void;
   setOnlyFleetless: (enabled: boolean) => void;
   setActiveStatuses: (activeStatuses: FilterStatusMap) => void;
-  selectedOsModes: DeviceOsModeFilterValue[];
-  setSelectedOsModes: (modes: DeviceOsModeFilterValue[]) => void;
+  selectedDeviceFeatures: DeviceFeatureFilters;
+  setSelectedDeviceFeatures: (filters: DeviceFeatureFilters) => void;
   selectedLabels: FlightCtlLabel[];
   setSelectedLabels: (labels: FlightCtlLabel[]) => void;
   isFilterUpdating: boolean;
@@ -111,8 +112,8 @@ const EnrolledDevicesTable = ({
   activeStatuses,
   setActiveStatuses,
   setOnlyDecommissioned,
-  selectedOsModes,
-  setSelectedOsModes,
+  selectedDeviceFeatures,
+  setSelectedDeviceFeatures,
   selectedLabels,
   setSelectedLabels,
   hasFiltersEnabled,
@@ -154,7 +155,7 @@ const EnrolledDevicesTable = ({
       setOnlyFleetless(false);
       clearTextFilters();
       setSelectedLabels([]);
-      setSelectedOsModes([]);
+      setSelectedDeviceFeatures(EMPTY_DEVICE_FEATURE_FILTERS);
     }
   };
 
@@ -172,8 +173,8 @@ const EnrolledDevicesTable = ({
         setOnlyFleetless={setOnlyFleetless}
         activeStatuses={activeStatuses}
         setActiveStatuses={setActiveStatuses}
-        selectedOsModes={selectedOsModes}
-        setSelectedOsModes={setSelectedOsModes}
+        selectedDeviceFeatures={selectedDeviceFeatures}
+        setSelectedDeviceFeatures={setSelectedDeviceFeatures}
         selectedLabels={selectedLabels}
         setSelectedLabels={setSelectedLabels}
         isFilterUpdating={isFilterUpdating}
