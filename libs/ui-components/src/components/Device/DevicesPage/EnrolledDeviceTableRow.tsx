@@ -5,7 +5,6 @@ import { ActionsColumn, type IAction, type OnSelect, Td, Tr } from '@patternfly/
 import type { Device } from '@flightctl/types';
 import DeviceFleet from '../DeviceDetails/DeviceFleet';
 import { getDecommissionDisabledReason, getEditDisabledReason, getResumeDisabledReason } from '../../../utils/devices';
-import { getDeviceCapability } from '../../../utils/capabilities';
 import { getDisabledTooltipProps } from '../../../utils/tooltip';
 import { type ListAction } from '../../ListPage/types';
 import ApplicationSummaryStatus from '../../Status/ApplicationSummaryStatus';
@@ -51,7 +50,6 @@ const EnrolledDeviceTableRow = ({
   const navigate = useNavigate();
   const deviceName = device.metadata.name as string;
   const deviceAlias = device.metadata.labels?.alias;
-  const osMode = getDeviceCapability(device.status?.capabilities, 'osMode');
   const editActionProps = getDisabledTooltipProps(getEditDisabledReason(device, t));
   const decommissionDisabledReason = getDecommissionDisabledReason(device, t);
   const resumeDisabledReason = getResumeDisabledReason(device, t);
@@ -114,7 +112,7 @@ const EnrolledDeviceTableRow = ({
             flexWrap={{ default: 'nowrap' }}
           >
             <FlexItem>
-              <OsModeIcon osMode={osMode} />
+              <OsModeIcon osMode={device.status?.systemInfo?.osMode} />
             </FlexItem>
             <FlexItem>
               <ResourceLink

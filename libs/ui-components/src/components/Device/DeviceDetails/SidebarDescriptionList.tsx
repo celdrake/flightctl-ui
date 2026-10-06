@@ -10,10 +10,11 @@ import { type DeviceStatus } from '@flightctl/types';
 
 import type { SystemInfoEntry } from '../../../hooks/useDeviceSystemInfo';
 import { useTranslation } from '../../../hooks/useTranslation';
-import { getDeviceCapability } from '../../../utils/capabilities';
+import { getGpuCapability, getKvmCapability } from '../../../utils/capabilities';
 import { OsModeLabel } from '../../common/OsModeContent';
 import LabelWithHelperText from '../../common/WithHelperText';
 import SystemInfoDescriptionGroup from './SystemInfoDescriptionGroup';
+import { DeviceFeatureBoolean } from '../../../../../types/alpha';
 
 const getEligibilityStatus = (t: TFunction, isDeltaEligible?: boolean) => {
   if (isDeltaEligible === undefined) {
@@ -66,17 +67,40 @@ export const SystemInfoFieldsList = ({ entries }: { entries: SystemInfoEntry[] }
   </SidebarDescriptionList>
 );
 
-export const CapabilitiesFieldsList = ({ deviceStatus }: { deviceStatus: DeviceStatus | undefined }) => {
+const CapabilityValue = ({ value }: { value: DeviceFeatureBoolean | undefined }) => {
   const { t } = useTranslation();
 
-  const osModeCapability = getDeviceCapability(deviceStatus?.capabilities, 'osMode');
+  switch (value) {
+    case DeviceFeatureBoolean.DeviceFeatureBooleanTrue:
+      return t('Enabled');
+    case DeviceFeatureBoolean.DeviceFeatureBooleanFalse:
+      return t('Disabled');
+    default:
+      return t('Not reported');
+  }
+};
+
+export const CapabilitiesFieldsList = ({ deviceStatus }: { deviceStatus: DeviceStatus | undefined }) => {
+  const { t } = useTranslation();
 
   return (
     <SidebarDescriptionList>
       <DescriptionListGroup>
         <DescriptionListTerm>{t('OS mode')}</DescriptionListTerm>
         <DescriptionListDescription>
-          <OsModeLabel osMode={osModeCapability} />
+          <OsModeLabel osMode={deviceStatus?.systemInfo?.osMode} />
+        </DescriptionListDescription>
+      </DescriptionListGroup>
+      <DescriptionListGroup>
+        <DescriptionListTerm>{t('KVM virtualization')}</DescriptionListTerm>
+        <DescriptionListDescription>
+          <CapabilityValue value={getKvmCapability(deviceStatus)} />
+        </DescriptionListDescription>
+      </DescriptionListGroup>
+      <DescriptionListGroup>
+        <DescriptionListTerm>{t('GPU present')}</DescriptionListTerm>
+        <DescriptionListDescription>
+          <CapabilityValue value={getGpuCapability(deviceStatus)} />
         </DescriptionListDescription>
       </DescriptionListGroup>
       <DeltaGenerationDescriptionGroups deviceStatus={deviceStatus} />
