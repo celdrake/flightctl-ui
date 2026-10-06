@@ -8,7 +8,7 @@ import {
   OsModeType,
 } from '@flightctl/types';
 import {
-  type DeviceFeatureFilters,
+  type DeviceFeatureFilter,
   type DeviceTextFilterKey,
   FilterSearchParams,
   isValidCveIdFilterValue,
@@ -30,7 +30,7 @@ type DevicesEndpointArgs = {
   ownerFleets?: string[];
   onlyFleetless?: boolean;
   activeStatuses?: FilterStatusMap;
-  selectedDeviceFeatures?: DeviceFeatureFilters;
+  selectedDeviceFeatures?: DeviceFeatureFilter[];
   onlyDecommissioned?: boolean;
   excludePackageMode?: boolean;
   labels?: FlightCtlLabel[];
@@ -151,7 +151,7 @@ export const useDevices = (args: {
   textFilters?: Partial<Record<DeviceTextFilterKey, string>>;
   ownerFleets?: string[];
   activeStatuses?: FilterStatusMap;
-  selectedDeviceFeatures?: DeviceFeatureFilters;
+  selectedDeviceFeatures?: DeviceFeatureFilter[];
   labels?: FlightCtlLabel[];
   onlyDecommissioned: boolean;
   nextContinue?: string;

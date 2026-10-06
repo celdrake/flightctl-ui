@@ -1,19 +1,16 @@
-import { DeviceSummaryStatusType } from '@flightctl/types';
+import { DeviceSummaryStatusType, OsModeType } from '@flightctl/types';
+import { DeviceFeatureBoolean } from '@flightctl/types/alpha';
 
 import { type FlightCtlLabel } from '../types/extraTypes';
-import {
-  DEVICE_FEATURE_LABEL_GPU_PRESENT,
-  DEVICE_FEATURE_LABEL_KVM_ENABLED,
-  DEVICE_FEATURE_LABEL_OS_MODE,
-} from './catalogDeviceFeatures';
 import { labelToExactApiMatchString, textToPartialApiMatchString } from './labels';
 import {
-  DEVICE_BOOLEAN_FEATURE_FILTER_VALUES,
-  DEVICE_OS_MODE_FILTER_VALUES,
-  type DeviceFeatureFilters,
-  KNOWN_BOOLEAN_FEATURE_FILTER_VALUES,
-  KNOWN_OS_MODE_FILTER_VALUES,
+  DEVICE_CAPABILITY_FILTER_VALUES,
+  type DeviceFeatureFilter,
+  FilterSearchParams,
   UNKNOWN_CAPABILITY_VALUE,
+  getDeviceCapabilityFeatures,
+  getFeatureFilterValues,
+  toDeviceFeatureLabelValues,
 } from './status/devices';
 
 const addQueryConditions = (fieldSelectors: string[], fieldSelector: string, values?: string[]) => {
@@ -24,21 +21,29 @@ const addQueryConditions = (fieldSelectors: string[], fieldSelector: string, val
   }
 };
 
+const osKnownValues = [OsModeType.OsModeImage, OsModeType.OsModePackage];
+const booleanKnownValues = [
+  DeviceFeatureBoolean.DeviceFeatureBooleanTrue,
+  DeviceFeatureBoolean.DeviceFeatureBooleanFalse,
+];
+
 /**
  * Builds a Kubernetes label selector for a feature that accepts known values plus "unknown" (label absent).
  * Returns undefined when no values are selected, or when every possible value is selected.
  */
 const buildOptionalValueLabelSelector = (
+  field: string,
   labelKey: string,
   selected: string[] | undefined,
-  knownValues: string[],
   allValuesLength: number,
 ): string | undefined => {
   const uniqueSelected = [...new Set(selected ?? [])];
+
   if (!uniqueSelected.length || uniqueSelected.length === allValuesLength) {
     return undefined;
   }
 
+  const knownValues = field === FilterSearchParams.OsMode ? osKnownValues : booleanKnownValues;
   const includeUnknown = uniqueSelected.includes(UNKNOWN_CAPABILITY_VALUE);
   const selectedKnown = uniqueSelected.filter((value) => value !== UNKNOWN_CAPABILITY_VALUE);
   const excludedKnown =
@@ -58,31 +63,21 @@ const buildOptionalValueLabelSelector = (
   return labelKey;
 };
 
-const buildDeviceFeatureLabelSelectors = (filters?: DeviceFeatureFilters): string[] => {
+const buildDeviceFeatureLabelSelectors = (filters?: DeviceFeatureFilter[]): string[] => {
   if (!filters) {
     return [];
   }
 
-  return [
-    buildOptionalValueLabelSelector(
-      DEVICE_FEATURE_LABEL_OS_MODE,
-      filters.osMode,
-      KNOWN_OS_MODE_FILTER_VALUES,
-      DEVICE_OS_MODE_FILTER_VALUES.length,
-    ),
-    buildOptionalValueLabelSelector(
-      DEVICE_FEATURE_LABEL_GPU_PRESENT,
-      filters.gpuPresent,
-      KNOWN_BOOLEAN_FEATURE_FILTER_VALUES,
-      DEVICE_BOOLEAN_FEATURE_FILTER_VALUES.length,
-    ),
-    buildOptionalValueLabelSelector(
-      DEVICE_FEATURE_LABEL_KVM_ENABLED,
-      filters.kvmEnabled,
-      KNOWN_BOOLEAN_FEATURE_FILTER_VALUES,
-      DEVICE_BOOLEAN_FEATURE_FILTER_VALUES.length,
-    ),
-  ].filter((selector): selector is string => !!selector);
+  return getDeviceCapabilityFeatures()
+    .map((feature) =>
+      buildOptionalValueLabelSelector(
+        feature.field,
+        feature.labelKey,
+        toDeviceFeatureLabelValues(feature.field, getFeatureFilterValues(filters, feature.field)),
+        DEVICE_CAPABILITY_FILTER_VALUES.length,
+      ),
+    )
+    .filter((selector): selector is string => !!selector);
 };
 
 const addTextContainsCondition = (fieldSelectors: string[], fieldSelector: string, value: string) => {

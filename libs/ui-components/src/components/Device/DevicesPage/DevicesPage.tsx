@@ -32,6 +32,7 @@ const DevicesPage = ({ canListER }: { canListER: boolean }) => {
     setOnlyFleetless,
     setActiveStatuses,
     selectedDeviceFeatures,
+    selectedDeviceFeatureCount,
     setSelectedDeviceFeatures,
     selectedLabels,
     setSelectedLabels,
@@ -106,6 +107,7 @@ const DevicesPage = ({ canListER }: { canListER: boolean }) => {
               setOnlyFleetless={setOnlyFleetless}
               setActiveStatuses={setActiveStatuses}
               selectedDeviceFeatures={selectedDeviceFeatures}
+              selectedDeviceFeatureCount={selectedDeviceFeatureCount}
               setSelectedDeviceFeatures={setSelectedDeviceFeatures}
               selectedLabels={selectedLabels}
               setSelectedLabels={setSelectedLabels}

@@ -34,10 +34,10 @@ import { EnrolledDevicesEmptyState } from './DevicesEmptyStates';
 import DeviceTableToolbar from './DeviceTableToolbar';
 import EnrolledDeviceTableRow from './EnrolledDeviceTableRow';
 import {
-  type DeviceFeatureFilters,
+  type DeviceFeatureFilter,
   type DeviceTextFilterKey,
-  EMPTY_DEVICE_FEATURE_FILTERS,
   FilterSearchParams,
+  getEmptyDeviceFeatureFilters,
 } from '../../../utils/status/devices';
 import { GlobalSystemRestoreBanners } from '../../SystemRestore/SystemRestoreBanners';
 
@@ -54,8 +54,9 @@ interface EnrolledDeviceTableProps {
   setOwnerFleets: (ownerFleets: string[]) => void;
   setOnlyFleetless: (enabled: boolean) => void;
   setActiveStatuses: (activeStatuses: FilterStatusMap) => void;
-  selectedDeviceFeatures: DeviceFeatureFilters;
-  setSelectedDeviceFeatures: (filters: DeviceFeatureFilters) => void;
+  selectedDeviceFeatures: DeviceFeatureFilter[];
+  selectedDeviceFeatureCount: number;
+  setSelectedDeviceFeatures: (filters: DeviceFeatureFilter[]) => void;
   selectedLabels: FlightCtlLabel[];
   setSelectedLabels: (labels: FlightCtlLabel[]) => void;
   isFilterUpdating: boolean;
@@ -113,6 +114,7 @@ const EnrolledDevicesTable = ({
   setActiveStatuses,
   setOnlyDecommissioned,
   selectedDeviceFeatures,
+  selectedDeviceFeatureCount,
   setSelectedDeviceFeatures,
   selectedLabels,
   setSelectedLabels,
@@ -155,7 +157,7 @@ const EnrolledDevicesTable = ({
       setOnlyFleetless(false);
       clearTextFilters();
       setSelectedLabels([]);
-      setSelectedDeviceFeatures(EMPTY_DEVICE_FEATURE_FILTERS);
+      setSelectedDeviceFeatures(getEmptyDeviceFeatureFilters());
     }
   };
 
@@ -174,6 +176,7 @@ const EnrolledDevicesTable = ({
         activeStatuses={activeStatuses}
         setActiveStatuses={setActiveStatuses}
         selectedDeviceFeatures={selectedDeviceFeatures}
+        selectedDeviceFeatureCount={selectedDeviceFeatureCount}
         setSelectedDeviceFeatures={setSelectedDeviceFeatures}
         selectedLabels={selectedLabels}
         setSelectedLabels={setSelectedLabels}

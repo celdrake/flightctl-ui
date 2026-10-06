@@ -17,6 +17,11 @@ import {
   OsModeType,
 } from '@flightctl/types';
 import { DeviceFeatureBoolean } from '@flightctl/types/alpha';
+import {
+  DEVICE_FEATURE_LABEL_GPU_PRESENT,
+  DEVICE_FEATURE_LABEL_KVM_ENABLED,
+  DEVICE_FEATURE_LABEL_OS_MODE,
+} from '../catalogDeviceFeatures';
 import { type StatusItem, type StatusLevel, getStatusLevelFromMap } from './common';
 
 export enum FilterSearchParams {
@@ -36,81 +41,136 @@ export enum FilterSearchParams {
 /** Sentinel for devices that have not reported a feature label. */
 export const UNKNOWN_CAPABILITY_VALUE = 'unknown' as const;
 
-export type DeviceOsModeFilterValue = OsModeType | typeof UNKNOWN_CAPABILITY_VALUE;
-export type DeviceBooleanFeatureFilterValue = DeviceFeatureBoolean | typeof UNKNOWN_CAPABILITY_VALUE;
-
-export type DeviceFeatureFilters = {
-  osMode: DeviceOsModeFilterValue[];
-  gpuPresent: DeviceBooleanFeatureFilterValue[];
-  kvmEnabled: DeviceBooleanFeatureFilterValue[];
+export type DeviceFeatureFilter = {
+  field: string;
+  values: string[];
 };
 
-export const DEVICE_OS_MODE_FILTER_VALUES: DeviceOsModeFilterValue[] = [
-  OsModeType.OsModeImage,
-  OsModeType.OsModePackage,
-  UNKNOWN_CAPABILITY_VALUE,
-];
+export type DeviceCapabilityFeature = {
+  field: string;
+  labelKey: string;
+};
 
-export const KNOWN_OS_MODE_FILTER_VALUES: OsModeType[] = [OsModeType.OsModeImage, OsModeType.OsModePackage];
-
-export const DEVICE_BOOLEAN_FEATURE_FILTER_VALUES: DeviceBooleanFeatureFilterValue[] = [
+export const DEVICE_CAPABILITY_FILTER_VALUES = [
   DeviceFeatureBoolean.DeviceFeatureBooleanTrue,
   DeviceFeatureBoolean.DeviceFeatureBooleanFalse,
   UNKNOWN_CAPABILITY_VALUE,
-];
+] as const;
 
-export const KNOWN_BOOLEAN_FEATURE_FILTER_VALUES: DeviceFeatureBoolean[] = [
-  DeviceFeatureBoolean.DeviceFeatureBooleanTrue,
-  DeviceFeatureBoolean.DeviceFeatureBooleanFalse,
-];
-
-export const isDeviceOsModeFilterValue = (value: string): value is DeviceOsModeFilterValue =>
-  (DEVICE_OS_MODE_FILTER_VALUES as string[]).includes(value);
-
-export const isDeviceBooleanFeatureFilterValue = (value: string): value is DeviceBooleanFeatureFilterValue =>
-  (DEVICE_BOOLEAN_FEATURE_FILTER_VALUES as string[]).includes(value);
-
-export const getOsModeFilterLabel = (t: TFunction, mode: DeviceOsModeFilterValue) => {
-  switch (mode) {
-    case OsModeType.OsModeImage:
-      return t('Image');
-    case OsModeType.OsModePackage:
-      return t('Package');
-    case UNKNOWN_CAPABILITY_VALUE:
-      return t('Unknown');
-  }
+export const DEVICE_OS_MODE_FEATURE: DeviceCapabilityFeature = {
+  field: FilterSearchParams.OsMode,
+  labelKey: DEVICE_FEATURE_LABEL_OS_MODE,
 };
 
-export const getGpuPresentFilterLabel = (t: TFunction, value: DeviceBooleanFeatureFilterValue) => {
-  switch (value) {
-    case DeviceFeatureBoolean.DeviceFeatureBooleanTrue:
+export const DEVICE_HARDWARE_FEATURES: DeviceCapabilityFeature[] = [
+  { field: FilterSearchParams.GpuPresent, labelKey: DEVICE_FEATURE_LABEL_GPU_PRESENT },
+  { field: FilterSearchParams.KvmEnabled, labelKey: DEVICE_FEATURE_LABEL_KVM_ENABLED },
+];
+
+export const getDeviceCapabilityFeatures = (): DeviceCapabilityFeature[] => [
+  DEVICE_OS_MODE_FEATURE,
+  ...DEVICE_HARDWARE_FEATURES,
+];
+
+const OS_MODE_URL_ALIASES: Record<string, string> = {
+  [OsModeType.OsModeImage]: DeviceFeatureBoolean.DeviceFeatureBooleanTrue,
+  [OsModeType.OsModePackage]: DeviceFeatureBoolean.DeviceFeatureBooleanFalse,
+};
+
+export const isDeviceCapabilityFilterValue = (value: string): boolean =>
+  (DEVICE_CAPABILITY_FILTER_VALUES as readonly string[]).includes(value);
+
+const getCapabilityFeatureName = (t: TFunction, field: string) => {
+  switch (field) {
+    case FilterSearchParams.GpuPresent:
       return t('GPU');
-    case DeviceFeatureBoolean.DeviceFeatureBooleanFalse:
-      return t('GPU not detected');
-    case UNKNOWN_CAPABILITY_VALUE:
-      return t('GPU not reported');
+    case FilterSearchParams.KvmEnabled:
+      return t('KVM virtualization');
+    default:
+      return field;
   }
 };
 
-export const getKvmEnabledFilterLabel = (t: TFunction, value: DeviceBooleanFeatureFilterValue) => {
+export const getDeviceCapabilityFilterLabel = (t: TFunction, field: string, value: string) => {
+  if (field === FilterSearchParams.OsMode) {
+    switch (value) {
+      case DeviceFeatureBoolean.DeviceFeatureBooleanTrue:
+        return t('Image mode required');
+      case DeviceFeatureBoolean.DeviceFeatureBooleanFalse:
+        return t('Package mode required');
+      default:
+        return t('Not defined');
+    }
+  }
+
+  const featureName = getCapabilityFeatureName(t, field);
   switch (value) {
     case DeviceFeatureBoolean.DeviceFeatureBooleanTrue:
-      return t('KVM virtualization');
+      return featureName;
     case DeviceFeatureBoolean.DeviceFeatureBooleanFalse:
-      return t('KVM not detected');
-    case UNKNOWN_CAPABILITY_VALUE:
-      return t('KVM not reported');
+      return t('{{featureName}} not detected', { featureName });
+    default:
+      return t('{{featureName}} not reported', { featureName });
   }
 };
 
-export const getDeviceFeatureFilterCount = (filters: DeviceFeatureFilters) =>
-  filters.osMode.length + filters.gpuPresent.length + filters.kvmEnabled.length;
-
-export const EMPTY_DEVICE_FEATURE_FILTERS: DeviceFeatureFilters = {
-  osMode: [],
-  gpuPresent: [],
-  kvmEnabled: [],
+/** Maps UI filter values (true/false/unknown) to the device label values used by the API. */
+export const toDeviceFeatureLabelValues = (field: string, values: string[]): string[] => {
+  if (field !== FilterSearchParams.OsMode) {
+    return values;
+  }
+  return values.map((value) => {
+    if (value === DeviceFeatureBoolean.DeviceFeatureBooleanTrue) {
+      return OsModeType.OsModeImage;
+    }
+    if (value === DeviceFeatureBoolean.DeviceFeatureBooleanFalse) {
+      return OsModeType.OsModePackage;
+    }
+    return value;
+  });
 };
+
+export const getEmptyDeviceFeatureFilters = (): DeviceFeatureFilter[] =>
+  getDeviceCapabilityFeatures().map(({ field }) => ({ field, values: [] }));
+
+export const getFeatureFilterValues = (filters: DeviceFeatureFilter[], field: string): string[] =>
+  filters.find((filter) => filter.field === field)?.values ?? [];
+
+export const updateFeatureFilterValues = (
+  filters: DeviceFeatureFilter[],
+  field: string,
+  values: string[],
+): DeviceFeatureFilter[] =>
+  getDeviceCapabilityFeatures().map((feature) => ({
+    field: feature.field,
+    values: feature.field === field ? values : getFeatureFilterValues(filters, feature.field),
+  }));
+
+export const toggleFeatureFilterValue = (
+  filters: DeviceFeatureFilter[],
+  field: string,
+  value: string,
+): DeviceFeatureFilter[] => {
+  const current = getFeatureFilterValues(filters, field);
+  const next = current.includes(value) ? current.filter((item) => item !== value) : [...current, value];
+  return updateFeatureFilterValues(filters, field, next);
+};
+
+const parseFeatureFilterValues = (searchParams: URLSearchParams, field: string): string[] =>
+  (searchParams.getAll(field) || [])
+    .map((value) => (field === FilterSearchParams.OsMode ? OS_MODE_URL_ALIASES[value] || value : value))
+    .filter(isDeviceCapabilityFilterValue);
+
+export const parseDeviceFeatureFilters = (searchParams: URLSearchParams): DeviceFeatureFilter[] =>
+  getDeviceCapabilityFeatures().map((feature) => ({
+    field: feature.field,
+    values: parseFeatureFilterValues(searchParams, feature.field),
+  }));
+
+export const deviceFeatureFiltersToSearchParams = (filters: DeviceFeatureFilter[]): Record<string, string[]> =>
+  Object.fromEntries(
+    getDeviceCapabilityFeatures().map((feature) => [feature.field, getFeatureFilterValues(filters, feature.field)]),
+  );
 
 // Filters that require the user to enter some free-text
 export const DEVICE_TEXT_FILTER_KEYS = [FilterSearchParams.NameOrAlias, FilterSearchParams.CveId];

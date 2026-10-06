@@ -3,13 +3,12 @@ import { ApplicationsSummaryStatusType, DeviceSummaryStatusType, DeviceUpdatedSt
 
 import {
   DEVICE_TEXT_FILTER_KEYS,
-  type DeviceFeatureFilters,
+  type DeviceFeatureFilter,
   type DeviceTextFilterKey,
   FilterSearchParams,
-  getDeviceFeatureFilterCount,
-  isDeviceBooleanFeatureFilterValue,
-  isDeviceOsModeFilterValue,
+  deviceFeatureFiltersToSearchParams,
   isValidCveIdFilterValue,
+  parseDeviceFeatureFilters,
 } from '../../../utils/status/devices';
 import { useAppContext } from '../../../hooks/useAppContext';
 import { type FilterStatusMap } from './types';
@@ -110,26 +109,8 @@ export const useDeviceBackendFilters = () => {
     return activeStatuses;
   }, [searchParams]);
 
-  const selectedOsModes = React.useMemo(() => {
-    return (searchParams.getAll(FilterSearchParams.OsMode) || []).filter(isDeviceOsModeFilterValue);
-  }, [searchParams]);
-
-  const selectedGpuPresent = React.useMemo(() => {
-    return (searchParams.getAll(FilterSearchParams.GpuPresent) || []).filter(isDeviceBooleanFeatureFilterValue);
-  }, [searchParams]);
-
-  const selectedKvmEnabled = React.useMemo(() => {
-    return (searchParams.getAll(FilterSearchParams.KvmEnabled) || []).filter(isDeviceBooleanFeatureFilterValue);
-  }, [searchParams]);
-
-  const selectedDeviceFeatures = React.useMemo(
-    (): DeviceFeatureFilters => ({
-      osMode: selectedOsModes,
-      gpuPresent: selectedGpuPresent,
-      kvmEnabled: selectedKvmEnabled,
-    }),
-    [selectedGpuPresent, selectedKvmEnabled, selectedOsModes],
-  );
+  const selectedDeviceFeatures = React.useMemo(() => parseDeviceFeatureFilters(searchParams), [searchParams]);
+  const selectedDeviceFeatureCount = selectedDeviceFeatures.reduce((count, filter) => count + filter.values.length, 0);
 
   const selectedLabels = (searchParams.getAll(FilterSearchParams.Label) || []).map<FlightCtlLabel>((l) => {
     const labelParts = l.split('=');
@@ -169,14 +150,8 @@ export const useDeviceBackendFilters = () => {
   );
 
   const setSelectedDeviceFeatures = React.useCallback(
-    (filters: DeviceFeatureFilters) => {
-      updateSearchParams(
-        getNewParams(paramsRef.current, {
-          [FilterSearchParams.OsMode]: filters.osMode,
-          [FilterSearchParams.GpuPresent]: filters.gpuPresent,
-          [FilterSearchParams.KvmEnabled]: filters.kvmEnabled,
-        }),
-      );
+    (filters: DeviceFeatureFilter[]) => {
+      updateSearchParams(getNewParams(paramsRef.current, deviceFeatureFiltersToSearchParams(filters)));
     },
     [updateSearchParams],
   );
@@ -203,7 +178,7 @@ export const useDeviceBackendFilters = () => {
     !!selectedLabels.length ||
     !!ownerFleets.length ||
     onlyFleetless ||
-    getDeviceFeatureFilterCount(selectedDeviceFeatures) > 0 ||
+    selectedDeviceFeatureCount > 0 ||
     Object.values(activeStatuses).some((s) => !!s.length) ||
     DEVICE_TEXT_FILTER_KEYS.some((key) => !!textFilters[key]);
 
@@ -217,6 +192,7 @@ export const useDeviceBackendFilters = () => {
     activeStatuses,
     setActiveStatuses,
     selectedDeviceFeatures,
+    selectedDeviceFeatureCount,
     setSelectedDeviceFeatures,
     ownerFleets,
     setOwnerFleets,
