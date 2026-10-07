@@ -1,13 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { OsModeType } from '@flightctl/types';
 import { DeviceFeatureBoolean } from '@flightctl/types/alpha';
 
 import {
-  DEVICE_FEATURE_GPU_PRESENT,
   DEVICE_FEATURE_LABEL_GPU_PRESENT,
   DEVICE_FEATURE_LABEL_KVM_ENABLED,
   DEVICE_FEATURE_LABEL_OS_MODE,
-  DEVICE_FEATURE_OS_MODE,
 } from './catalogDeviceFeatures';
 import { buildDeviceFeatureLabelSelectors, commonQueries, setLabelParams } from './query';
 import {
@@ -114,10 +111,13 @@ describe('setLabelParams', () => {
 
 describe('commonQueries.getCompatibleDeviceCount', () => {
   it('When fleet and feature requirements are set it should query by owner and labelSelector', () => {
-    const endpoint = commonQueries.getCompatibleDeviceCount('my-fleet', {
-      [DEVICE_FEATURE_GPU_PRESENT]: DeviceFeatureBoolean.DeviceFeatureBooleanTrue,
-      [DEVICE_FEATURE_OS_MODE]: OsModeType.OsModeImage,
-    });
+    const endpoint = commonQueries.getCompatibleDeviceCount(
+      'my-fleet',
+      withFeatures({
+        [FilterSearchParams.GpuPresent]: [DeviceFeatureBoolean.DeviceFeatureBooleanTrue],
+        [FilterSearchParams.OsMode]: [DeviceFeatureBoolean.DeviceFeatureBooleanTrue],
+      }),
+    );
     const params = new URLSearchParams(endpoint.split('?')[1]);
     expect(endpoint.startsWith('devices?')).toBe(true);
     expect(params.get('limit')).toBe('1');

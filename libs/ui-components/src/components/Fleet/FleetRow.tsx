@@ -88,7 +88,7 @@ const FleetRow = ({
   const fleetOsSpec = fleet.spec.template.spec.os;
 
   return (
-    <Tr style={{ border: '2px solid lime' }}>
+    <Tr>
       <Td
         select={{
           rowIndex,

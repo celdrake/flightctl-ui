@@ -5,7 +5,6 @@ import {
   FormGroup,
   Grid,
   GridItem,
-  Spinner,
   Stack,
   StackItem,
   Title,
@@ -18,18 +17,13 @@ import { Tbody, Td } from '@patternfly/react-table';
 import { type FormikErrors, useFormikContext } from 'formik';
 import ExternalLinkAltIcon from '@patternfly/react-icons/dist/js/icons/external-link-alt-icon';
 
-import type { Device, DeviceList, Fleet, ImageOrCatalogItemRefSpec } from '@flightctl/types';
-import { type CatalogItem, CatalogItemType, type DeviceFeatures } from '@flightctl/types/alpha';
+import type { Device, Fleet, ImageOrCatalogItemRefSpec } from '@flightctl/types';
+import { type CatalogItem, CatalogItemType } from '@flightctl/types/alpha';
 
 import { useAppLinks } from '../../../../hooks/useAppLinks';
-import { useFetch } from '../../../../hooks/useFetch';
 import { useTranslation } from '../../../../hooks/useTranslation';
-import { getApiListCount } from '../../../../utils/api';
 import { getFullArtifactURI } from '../../../../utils/catalog';
-import { deviceFeaturesToFilters } from '../../../../utils/catalogDeviceFeatures';
 import { getArtifactLabel } from '../../../../utils/catalogTypes';
-import { getErrorMessage } from '../../../../utils/error';
-import { commonQueries } from '../../../../utils/query';
 import { getResourceId } from '../../../../utils/resource';
 import LearnMoreLink from '../../../common/LearnMoreLink';
 import { useDevicesPaginated } from '../../../Device/DevicesPage/useDevices';
@@ -42,8 +36,9 @@ import FormSelect from '../../../form/FormSelect';
 import Table from '../../../Table/Table';
 import TablePagination from '../../../Table/TablePagination';
 import TableTextSearch from '../../../Table/TableTextSearch';
-import { type InstallAppFormik, type InstallOsFormik } from '../types';
+import type { InstallAppFormik, InstallOsFormik, InstallSpecFormik, TargetPickerFormik } from '../types';
 import { isSameCatalogRef } from '../utils';
+import InstallFeatureCompatibility from '../InstallFeatureCompatibility';
 
 export const isSelectTargetStepValid = (errors: FormikErrors<InstallAppFormik>) => {
   return !errors.device && !errors.fleet;
@@ -154,75 +149,14 @@ const getFleetTableColumns = (t: TFunction) => [
   },
 ];
 
-const FeatureCompatibility = ({
-  fleetName,
-  featureRequirements,
-}: {
-  fleetName: string;
-  featureRequirements?: DeviceFeatures;
-}) => {
-  const { t } = useTranslation();
-  const { get } = useFetch();
-  const [isLoading, setIsLoading] = React.useState(false);
-  const [compatibleCount, setCompatibleCount] = React.useState<number>();
-  const [error, setError] = React.useState<string>();
-
-  const hasRequirements = deviceFeaturesToFilters(featureRequirements).length > 0;
-
-  const checkCompatibility = React.useCallback(async () => {
-    if (!featureRequirements || !fleetName) {
-      return;
-    }
-    setIsLoading(true);
-    setError(undefined);
-    try {
-      const deviceList = await get<DeviceList>(
-        commonQueries.getCompatibleDeviceCount(fleetName, featureRequirements),
-      );
-      setCompatibleCount(getApiListCount(deviceList) || 0);
-    } catch (e) {
-      setError(getErrorMessage(e));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [featureRequirements, fleetName, get]);
-
-  if (!hasRequirements) {
-    return null;
-  }
-
-  if (isLoading) {
-    return <Spinner size="md" />;
-  }
-
-  if (error) {
-    return (
-      <Alert isInline isPlain variant="danger" title={t('Failed to check compatibility')}>
-        {error}
-      </Alert>
-    );
-  }
-
-  if (compatibleCount !== undefined) {
-    return <>{compatibleCount}</>;
-  }
-
-  return (
-    <Button variant="link" isInline onClick={() => void checkCompatibility()}>
-      {t('Check compatibility')}
-    </Button>
-  );
-};
-
 const FleetTarget = ({
   onTargetSelected,
 }: {
   onTargetSelected: (targetSpec: ImageOrCatalogItemRefSpec | undefined) => void;
 }) => {
   const { t } = useTranslation();
-  const { values, setFieldValue, setFieldTouched } = useFormikContext<InstallOsFormik>();
+  const { values, setFieldValue, setFieldTouched } = useFormikContext<InstallSpecFormik & TargetPickerFormik>();
 
-  console.log('%c values', 'color: red; font-size:18px', values);
   const [fleetNameFilter, setFleetNameFilter] = React.useState('');
   const fleetName = values.fleet?.metadata.name as string;
 
@@ -295,9 +229,10 @@ const FleetTarget = ({
                 hideActions
               >
                 <Td dataLabel={t('Compatibility')}>
-                  <FeatureCompatibility
+                  <InstallFeatureCompatibility
                     fleetName={fleet.metadata.name as string}
                     featureRequirements={values.featureRequirements}
+                    fleetDevicesCount={fleet.status?.devicesSummary?.total}
                   />
                 </Td>
               </FleetRow>

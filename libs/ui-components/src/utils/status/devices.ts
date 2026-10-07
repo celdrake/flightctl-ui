@@ -80,7 +80,7 @@ const OS_MODE_URL_ALIASES: Record<string, string> = {
 export const isDeviceFeatureFilterValue = (value: string): boolean =>
   (DEVICE_CAPABILITY_FILTER_VALUES as readonly string[]).includes(value);
 
-const getFeatureName = (t: TFunction, fieldId: DeviceFeatureId) => {
+export const getFeatureName = (t: TFunction, fieldId: DeviceFeatureId) => {
   switch (fieldId) {
     case 'gpuPresent':
       return t('GPU');

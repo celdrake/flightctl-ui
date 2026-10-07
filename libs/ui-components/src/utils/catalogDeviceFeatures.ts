@@ -1,5 +1,6 @@
 import { OsModeType } from '@flightctl/types';
 import { DeviceFeatureBoolean, type DeviceFeatures } from '@flightctl/types/alpha';
+import type { TFunction } from 'i18next';
 
 import type { DeviceFeatureFilter, DeviceFeatureId } from './status/devices';
 
@@ -90,9 +91,9 @@ const featureFilterMap: Record<string, DeviceFeatureId> = {
   [DEVICE_FEATURE_OS_MODE]: 'osMode',
 };
 
-export const deviceFeaturesToFilters = (features?: DeviceFeatures): DeviceFeatureFilter[] => {
+export const deviceFeaturesToFilters = (features?: DeviceFeatures): DeviceFeatureFilter[] | null => {
   if (!features) {
-    return [];
+    return null;
   }
 
   const activeFilters: DeviceFeatureFilter[] = [];
@@ -125,5 +126,51 @@ export const deviceFeaturesToFilters = (features?: DeviceFeatures): DeviceFeatur
       }
     }
   });
-  return activeFilters;
+  return activeFilters.length > 0 ? activeFilters : null;
+};
+
+type RequirementValue = DeviceFeatureBoolean | OsModeType;
+
+const requirementLabels = (t: TFunction) => ({
+  [DEVICE_FEATURE_GPU_PRESENT]: t('GPU'),
+  [DEVICE_FEATURE_KVM_ENABLED]: t('KVM Virtualization'),
+  [`${DEVICE_FEATURE_OS_MODE}.${OsModeType.OsModeImage}`]: t('Image mode OS'),
+  [`${DEVICE_FEATURE_OS_MODE}.${OsModeType.OsModePackage}`]: t('Package mode OS'),
+});
+
+const ENABLED_REQUIREMENT_VALUES: RequirementValue[] = [
+  DeviceFeatureBoolean.DeviceFeatureBooleanTrue,
+  OsModeType.OsModeImage,
+];
+const DISABLED_REQUIREMENT_VALUES: RequirementValue[] = [
+  DeviceFeatureBoolean.DeviceFeatureBooleanFalse,
+  OsModeType.OsModePackage,
+];
+
+const getRequirementText = (
+  requirements: [string, RequirementValue][],
+  acceptedValues: RequirementValue[],
+  labels: Record<string, string>,
+) =>
+  requirements
+    .filter(([, value]) => acceptedValues.some((accepted) => accepted === value))
+    .map(([key, value]) => {
+      if (value === OsModeType.OsModeImage || value === OsModeType.OsModePackage) {
+        return labels[`${DEVICE_FEATURE_OS_MODE}.${value}`] || value;
+      }
+      return labels[key] || key;
+    })
+    .join(', ');
+
+/** Human-readable present/absent requirement summaries for a catalog version's deviceFeatures. */
+export const getDeviceFeatureRequirementsText = (
+  features: DeviceFeatures | undefined,
+  t: TFunction,
+): { enabledRequirements: string; disabledRequirements: string } => {
+  const allRequirements = Object.entries(features || {}) as [string, RequirementValue][];
+  const labels = requirementLabels(t);
+  return {
+    enabledRequirements: getRequirementText(allRequirements, ENABLED_REQUIREMENT_VALUES, labels),
+    disabledRequirements: getRequirementText(allRequirements, DISABLED_REQUIREMENT_VALUES, labels),
+  };
 };

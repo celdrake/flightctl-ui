@@ -20,7 +20,7 @@ import { useAppContext } from '../../../hooks/useAppContext';
 import { useNavigate } from '../../../hooks/useNavigate';
 import { isWizardStepDisabled } from '../../../utils/wizards';
 import { appendJSONPatch } from '../../../utils/patches/patch';
-import { getVersionFeatureRequirements } from './utils';
+import { getVersionFeatureRequirements } from '../../CatalogComposition/catalogCompositionUtils';
 
 const getOrderedStepIds = (target: InstallOsFormik['target']) =>
   target === 'new-device'

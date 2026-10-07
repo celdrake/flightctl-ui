@@ -1,8 +1,7 @@
 import { DeviceSummaryStatusType, OsModeType } from '@flightctl/types';
-import { DeviceFeatureBoolean, type DeviceFeatures } from '@flightctl/types/alpha';
+import { DeviceFeatureBoolean } from '@flightctl/types/alpha';
 
 import { type FlightCtlLabel } from '../types/extraTypes';
-import { deviceFeaturesToFilters } from './catalogDeviceFeatures';
 import { labelToExactApiMatchString, textToPartialApiMatchString } from './labels';
 import {
   DEVICE_CAPABILITY_FILTER_VALUES,
@@ -190,16 +189,15 @@ export const commonQueries = {
     });
     return `labelsyncprovenance?${searchParams.toString()}`;
   },
-  getCompatibleDeviceCount: (fleetName: string, featureRequirements: DeviceFeatures) => {
+  getFleetWithDevicesSummary: (fleetName: string) => `fleets/${fleetName}?addDevicesSummary=true`,
+  getCompatibleDeviceCount: (fleetName: string, featureRequirements: DeviceFeatureFilter[]) => {
     const searchParams = new URLSearchParams({
       limit: '1',
     });
     searchParams.set('fieldSelector', `metadata.owner=Fleet/${fleetName}`);
-    setLabelParams(
-      searchParams,
-      undefined,
-      buildDeviceFeatureLabelSelectors(deviceFeaturesToFilters(featureRequirements)),
-    );
+    if (featureRequirements.length) {
+      setLabelParams(searchParams, undefined, buildDeviceFeatureLabelSelectors(featureRequirements));
+    }
     return `devices?${searchParams.toString()}`;
   },
 };

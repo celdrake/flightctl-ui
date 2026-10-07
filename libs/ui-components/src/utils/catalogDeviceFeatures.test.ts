@@ -103,14 +103,14 @@ describe('catalogDeviceFeatures', () => {
 
   it.each([
     {
-      name: 'When deviceFeatures is absent it should return no filters',
+      name: 'When deviceFeatures is absent it should return null',
       features: undefined,
-      expected: [],
+      expected: null,
     },
     {
-      name: 'When deviceFeatures is empty it should return no filters',
+      name: 'When deviceFeatures is empty it should return null',
       features: {},
-      expected: [],
+      expected: null,
     },
     {
       name: 'When known features are set it should return sparse filters with os.mode as boolean',
