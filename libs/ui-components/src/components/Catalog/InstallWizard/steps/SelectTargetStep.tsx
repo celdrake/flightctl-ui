@@ -12,12 +12,13 @@ import {
   ToolbarContent,
   ToolbarItem,
 } from '@patternfly/react-core';
-import { Tbody } from '@patternfly/react-table';
+import type { TFunction } from 'react-i18next';
+import { Tbody, Td } from '@patternfly/react-table';
 import { type FormikErrors, useFormikContext } from 'formik';
 import ExternalLinkAltIcon from '@patternfly/react-icons/dist/js/icons/external-link-alt-icon';
 
 import type { Device, Fleet, ImageOrCatalogItemRefSpec } from '@flightctl/types';
-import { type CatalogItem, CatalogItemType } from '@flightctl/types/alpha';
+import { type CatalogItem, CatalogItemType, DeviceFeatures } from '@flightctl/types/alpha';
 
 import { useTranslation } from '../../../../hooks/useTranslation';
 import Table from '../../../Table/Table';
@@ -25,7 +26,6 @@ import TablePagination from '../../../Table/TablePagination';
 import TableTextSearch from '../../../Table/TableTextSearch';
 import { getResourceId } from '../../../../utils/resource';
 import { useFleets } from '../../../Fleet/useFleets';
-import { getFleetTableColumns } from '../../../Fleet/FleetsPage';
 import FleetRow from '../../../Fleet/FleetRow';
 import { useDevicesPaginated } from '../../../Device/DevicesPage/useDevices';
 import { getDeviceTableColumns } from '../../../Device/DevicesPage/EnrolledDevicesTable';
@@ -130,6 +130,42 @@ const DeviceTarget = ({
   );
 };
 
+const getFleetTableColumns = (t: TFunction) => [
+  {
+    name: t('Name'),
+  },
+  {
+    name: t('Compatibility'),
+  },
+  {
+    name: t('System image'),
+  },
+  {
+    name: t('Up-to-date/devices'),
+  },
+  {
+    name: t('Status'),
+  },
+];
+
+const FeatureCompatibility = ({
+  fleetName,
+  featureRequirements,
+}: {
+  fleet: Fleet;
+  featureRequirements?: DeviceFeatures;
+}) => {
+  const [checkCompatibility, setCheckCompatibility] = React.useState(false);
+  return (
+    <>
+      <Button variant="link" onClick={() => setCheckCompatibility(true)}>
+        Check compatibility
+      </Button>
+      {checkCompatibility && <div>hello</div>}
+    </>
+  );
+};
+
 const FleetTarget = ({
   onTargetSelected,
 }: {
@@ -137,7 +173,10 @@ const FleetTarget = ({
 }) => {
   const { t } = useTranslation();
   const { values, setFieldValue, setFieldTouched } = useFormikContext<InstallOsFormik>();
+
+  console.log('%c values', 'color: red; font-size:18px', values);
   const [fleetNameFilter, setFleetNameFilter] = React.useState('');
+  const fleetName = values.fleet?.metadata.name || '';
 
   const {
     fleets,
@@ -161,10 +200,7 @@ const FleetTarget = ({
 
   const fleetColumns = React.useMemo(() => getFleetTableColumns(t), [t]);
 
-  const isFleetSelected = React.useCallback(
-    (fleet: Fleet) => values.fleet?.metadata.name === fleet.metadata.name,
-    [values.fleet?.metadata.name],
-  );
+  const isFleetSelected = React.useCallback((fleet: Fleet) => fleetName === fleet.metadata.name, [fleetName]);
 
   return (
     <Stack hasGutter>
@@ -209,7 +245,11 @@ const FleetTarget = ({
                 }}
                 singleSelect
                 hideActions
-              />
+              >
+                <Td dataLabel={t('Compatibility')}>
+                  <FeatureCompatibility fleetName={fleetName} featureRequirements={values.featureRequirements} />
+                </Td>
+              </FleetRow>
             ))}
           </Tbody>
         </Table>

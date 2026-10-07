@@ -47,7 +47,7 @@ const useFleetActions = (fleetName: string, isManaged: boolean, canEdit: boolean
   return actions;
 };
 
-const FleetRow: React.FC<FleetRowProps> = ({
+const FleetRow = ({
   fleet,
   rowIndex,
   onRowSelect,
@@ -55,10 +55,11 @@ const FleetRow: React.FC<FleetRowProps> = ({
   onDeleteClick,
   canDelete = false,
   canEdit = false,
+  children,
   singleSelect,
   hideActions,
   isSelectDisabled,
-}) => {
+}: React.PropsWithChildren<FleetRowProps>) => {
   const { t } = useTranslation();
   const fleetName = fleet.metadata.name || '';
 
@@ -87,7 +88,7 @@ const FleetRow: React.FC<FleetRowProps> = ({
   const fleetOsSpec = fleet.spec.template.spec.os;
 
   return (
-    <Tr>
+    <Tr style={{ border: '2px solid lime' }}>
       <Td
         select={{
           rowIndex,
@@ -102,6 +103,7 @@ const FleetRow: React.FC<FleetRowProps> = ({
           <ResourceLink id={fleetName} routeLink={ROUTE.FLEET_DETAILS} data-testid={`fleet-name-link-${fleetName}`} />
         </FleetOwnerLinkIcon>
       </Td>
+      {children}
       <Td dataLabel={t('System image')}>
         <SystemImageDisplay catalogItemRef={fleetOsSpec?.catalogItemRef} imageUri={fleetOsSpec?.image} />
       </Td>

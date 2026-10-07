@@ -7,6 +7,7 @@ import type { CatalogItem, CatalogItemVersion } from '@flightctl/types/alpha';
 import { useTranslation } from '../../../hooks/useTranslation';
 import type { InstallSpecFormik } from '../InstallWizard/types';
 import FlightCtlWizardFooter from '../../common/FlightCtlWizardFooter';
+import { getVersionFeatureRequirements } from '../../CatalogComposition/catalogCompositionUtils';
 import { type CatalogEditWizardMode, getSortedUpdates } from '../../../utils/catalog';
 import UpdateStep, { isUpdateStepValid } from './steps/UpdateStep';
 import { getErrorMessage } from '../../../utils/error';
@@ -130,13 +131,16 @@ const EditOsWizard: React.FC<EditOsWizardProps> = ({
   });
 
   const latestVersion = getSortedUpdates(catalogItem, currentChannel, currentVersion.version)[0]?.version;
+  const initialVersion = isEdit ? latestVersion || currentVersion.version : version;
+  const initialChannel = isEdit ? currentChannel : channel;
 
   return (
     <Formik<InstallSpecFormik>
       validationSchema={validationSchema}
       initialValues={{
-        version: isEdit ? latestVersion || currentVersion.version : version,
-        channel: isEdit ? currentChannel : channel,
+        version: initialVersion,
+        channel: initialChannel,
+        featureRequirements: getVersionFeatureRequirements(catalogItem, initialVersion),
       }}
       validateOnMount
       onSubmit={async (values) => {

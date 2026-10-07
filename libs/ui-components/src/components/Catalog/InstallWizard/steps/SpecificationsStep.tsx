@@ -39,6 +39,7 @@ import { RESOURCE, VERB } from '../../../../types/rbac';
 import { useFleets } from '../../../Fleet/useFleets';
 import { useDevicesPaginated } from '../../../Device/DevicesPage/useDevices';
 import { applyInitialConfig, getInitialAppConfig } from '../utils';
+import { getVersionFeatureRequirements } from '../../../CatalogComposition/catalogCompositionUtils';
 import { type InstallAppFormik, type InstallSpecFormik, type TargetPickerFormik } from '../types';
 import WithTooltip from '../../../common/WithTooltip';
 import { getFullContainerURI } from '../../../../utils/catalog';
@@ -59,6 +60,7 @@ export const VersionDropdown = ({ catalogItem, versions, existingApp }: VersionD
       onChange={(val) => {
         const appConfig = getInitialAppConfig(catalogItem, val, existingApp);
         applyInitialConfig(setFieldValue, appConfig);
+        void setFieldValue('featureRequirements', getVersionFeatureRequirements(catalogItem, val));
       }}
       items={versions.reduce((acc, v) => {
         return {
@@ -137,6 +139,7 @@ export const InstallSpec = ({
                   setFieldValue('version', newVersion, true);
                   const appConfig = getInitialAppConfig(catalogItem, newVersion);
                   applyInitialConfig(setFieldValue, appConfig);
+                  void setFieldValue('featureRequirements', getVersionFeatureRequirements(catalogItem, newVersion));
                 }
               }}
             />

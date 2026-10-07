@@ -90,7 +90,7 @@ const FleetEmptyState = () => {
   );
 };
 
-export const getFleetTableColumns = (t: TFunction) => [
+const getFleetTableColumns = (t: TFunction) => [
   {
     name: t('Name'),
   },

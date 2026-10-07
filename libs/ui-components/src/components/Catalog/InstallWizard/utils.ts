@@ -4,12 +4,17 @@ import merge from 'lodash/merge';
 import type { FormikHelpers } from 'formik';
 
 import type { ApplicationProviderSpec, CatalogItemRefSpec } from '@flightctl/types';
-import type { CatalogItem } from '@flightctl/types/alpha';
+import type { CatalogItem, DeviceFeatures } from '@flightctl/types/alpha';
 import type { DynamicFormConfigFormik } from './types';
 import { convertObjToYAMLString } from '../../common/CodeEditor/YamlEditor';
 import { enrichConfigSchemaForVolumeImages } from '../../DynamicForm/VolumeImageField';
 
 const appSpecFilteredKeys = ['name', 'appType', 'catalogItemRef'];
+
+export const getVersionFeatureRequirements = (
+  catalogItem: CatalogItem,
+  version: string | undefined,
+): DeviceFeatures | undefined => catalogItem.spec.versions.find((v) => v.version === version)?.deviceFeatures;
 
 export const isSameCatalogRef = (
   catalogRef: CatalogItemRefSpec | undefined,

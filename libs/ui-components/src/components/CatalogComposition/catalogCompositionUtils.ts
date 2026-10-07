@@ -4,7 +4,7 @@ import { load } from 'js-yaml';
 import validator from '@rjsf/validator-ajv8';
 import type { RJSFSchema, RJSFValidationError } from '@rjsf/utils';
 import type { ApplicationProviderSpec, CatalogItemRefSpec } from '@flightctl/types';
-import { type CatalogItem, CatalogItemCategory, type CatalogItemVersion } from '@flightctl/types/alpha';
+import { type CatalogItem, CatalogItemCategory, type CatalogItemVersion, DeviceFeatures } from '@flightctl/types/alpha';
 import type { TFunction } from 'i18next';
 
 import type { ApplicationEntry, CatalogAppForm } from '../../types/deviceSpec';
@@ -37,6 +37,11 @@ export const getAppNameValidationSchema = (t: TFunction) =>
   Yup.object().shape({
     appName: validApplicationAndVolumeName(t).required(t('Application name is required')),
   });
+
+export const getVersionFeatureRequirements = (
+  catalogItem: CatalogItem,
+  version: string | undefined,
+): DeviceFeatures | undefined => catalogItem.spec.versions.find((v) => v.version === version)?.deviceFeatures;
 
 /** Shared Formik/Yup validation for catalog advanced config (form view or YAML editor). */
 export const validateCatalogAdvancedConfig = (
