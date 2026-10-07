@@ -18,7 +18,7 @@ import { type FormikErrors, useFormikContext } from 'formik';
 import ExternalLinkAltIcon from '@patternfly/react-icons/dist/js/icons/external-link-alt-icon';
 
 import type { Device, Fleet, ImageOrCatalogItemRefSpec } from '@flightctl/types';
-import { type CatalogItem, CatalogItemType } from '@flightctl/types/alpha';
+import { type CatalogItem } from '@flightctl/types/alpha';
 
 import { useAppLinks } from '../../../../hooks/useAppLinks';
 import { useTranslation } from '../../../../hooks/useTranslation';
@@ -27,32 +27,65 @@ import { getArtifactLabel } from '../../../../utils/catalogTypes';
 import { getResourceId } from '../../../../utils/resource';
 import LearnMoreLink from '../../../common/LearnMoreLink';
 import { useDevicesPaginated } from '../../../Device/DevicesPage/useDevices';
-import { getDeviceTableColumns } from '../../../Device/DevicesPage/EnrolledDevicesTable';
 import EnrolledDeviceTableRow from '../../../Device/DevicesPage/EnrolledDeviceTableRow';
 import FleetRow from '../../../Fleet/FleetRow';
 import { useFleets } from '../../../Fleet/useFleets';
 import FlightCtlForm from '../../../form/FlightCtlForm';
 import FormSelect from '../../../form/FormSelect';
+import {
+  getApplicationStatusHelperText,
+  getDeviceStatusHelperText,
+  getUpdateStatusHelperText,
+} from '../../../Status/utils';
 import Table from '../../../Table/Table';
 import TablePagination from '../../../Table/TablePagination';
 import TableTextSearch from '../../../Table/TableTextSearch';
+import DeviceFeatureCompatibility from '../DeviceFeatureCompatibility';
 import type { InstallAppFormik, InstallOsFormik, InstallSpecFormik, TargetPickerFormik } from '../types';
 import { isSameCatalogRef } from '../utils';
-import InstallFeatureCompatibility from '../InstallFeatureCompatibility';
 
 export const isSelectTargetStepValid = (errors: FormikErrors<InstallAppFormik>) => {
   return !errors.device && !errors.fleet;
 };
 
+const getDeviceTableColumns = (t: TFunction) => [
+  {
+    id: 'alias',
+    name: t('Alias'),
+  },
+  {
+    id: 'name',
+    name: t('Name'),
+  },
+  {
+    id: 'compatibility',
+    name: t('Compatibility'),
+    helperText: t("Shows whether this device meets the catalog item's requirements."),
+  },
+  {
+    id: 'appStatus',
+    name: t('Application status'),
+    helperText: getApplicationStatusHelperText(t),
+  },
+  {
+    id: 'deviceStatus',
+    name: t('Device status'),
+    helperText: getDeviceStatusHelperText(t),
+  },
+  {
+    id: 'updateStatus',
+    name: t('Update status'),
+    helperText: getUpdateStatusHelperText(t),
+  },
+];
+
 const DeviceTarget = ({
-  isOsItem,
   onTargetSelected,
 }: {
-  isOsItem: boolean;
   onTargetSelected: (targetSpec: ImageOrCatalogItemRefSpec | undefined) => void;
 }) => {
   const { t } = useTranslation();
-  const { values, setFieldValue, setFieldTouched } = useFormikContext<InstallOsFormik>();
+  const { values, setFieldValue, setFieldTouched } = useFormikContext<InstallSpecFormik & TargetPickerFormik>();
   const [deviceNameFilter, setDeviceNameFilter] = React.useState('');
 
   const {
@@ -60,7 +93,7 @@ const DeviceTarget = ({
     isLoading: devicesLoading,
     isUpdating: devicesUpdating,
     pagination: devicePagination,
-  } = useDevicesPaginated({ deviceNameFilter, excludePackageMode: isOsItem });
+  } = useDevicesPaginated({ deviceNameFilter });
 
   const handleDeviceSelect = React.useCallback(
     async (device: Device) => {
@@ -71,13 +104,16 @@ const DeviceTarget = ({
     [setFieldValue, setFieldTouched],
   );
 
-  const deviceColumns = React.useMemo(() => getDeviceTableColumns(t).filter(({ id }) => id !== 'fleet'), [t]);
+  const deviceColumns = React.useMemo(() => {
+    return getDeviceTableColumns(t);
+  }, [t]);
 
   const isDeviceSelected = React.useCallback(
     (device: Device) => values.device?.metadata.name === device.metadata.name,
     [values.device?.metadata.name],
   );
 
+  // CELIA-WIP: SHOW REQUIREMENT ALERT
   return (
     <Stack hasGutter>
       <StackItem>
@@ -122,7 +158,11 @@ const DeviceTarget = ({
                 singleSelect
                 hideActions
                 deviceColumns={deviceColumns}
-              />
+              >
+                <Td dataLabel={t('Compatibility')}>
+                  <DeviceFeatureCompatibility device={device} featureRequirements={values.featureRequirements} />
+                </Td>
+              </EnrolledDeviceTableRow>
             ))}
           </Tbody>
         </Table>
@@ -134,9 +174,6 @@ const DeviceTarget = ({
 const getFleetTableColumns = (t: TFunction) => [
   {
     name: t('Name'),
-  },
-  {
-    name: t('Compatibility'),
   },
   {
     name: t('System image'),
@@ -227,15 +264,7 @@ const FleetTarget = ({
                 }}
                 singleSelect
                 hideActions
-              >
-                <Td dataLabel={t('Compatibility')}>
-                  <InstallFeatureCompatibility
-                    fleetName={fleet.metadata.name as string}
-                    featureRequirements={values.featureRequirements}
-                    fleetDevicesCount={fleet.status?.devicesSummary?.total}
-                  />
-                </Td>
-              </FleetRow>
+              />
             ))}
           </Tbody>
         </Table>
@@ -353,12 +382,7 @@ const SelectTargetStep = ({ catalogItem }: SelectTargetStepProps) => {
 
   switch (values.target) {
     case 'device':
-      return (
-        <DeviceTarget
-          isOsItem={catalogItem.spec.type === CatalogItemType.CatalogItemTypeOS}
-          onTargetSelected={onTargetSelected}
-        />
-      );
+      return <DeviceTarget onTargetSelected={onTargetSelected} />;
     case 'fleet':
       return <FleetTarget onTargetSelected={onTargetSelected} />;
     default:

@@ -10,7 +10,7 @@ import type { DeviceGpu, DeviceStatus } from '@flightctl/types';
 
 import type { SystemInfoEntry } from '../../../hooks/useDeviceSystemInfo';
 import { useTranslation } from '../../../hooks/useTranslation';
-import { getKvmCapability } from '../../../utils/capabilities';
+import { getKvmFeature } from '../../../utils/capabilities';
 import { OsModeLabel } from '../../common/OsModeContent';
 import LabelWithHelperText from '../../common/WithHelperText';
 import SystemInfoDescriptionGroup from './SystemInfoDescriptionGroup';
@@ -102,7 +102,7 @@ export const CapabilitiesFieldsList = ({ deviceStatus }: { deviceStatus: DeviceS
       <DescriptionListGroup>
         <DescriptionListTerm>{t('KVM virtualization')}</DescriptionListTerm>
         <DescriptionListDescription>
-          <CapabilityValue value={getKvmCapability(deviceStatus)} />
+          <CapabilityValue value={getKvmFeature(deviceStatus)} />
         </DescriptionListDescription>
       </DescriptionListGroup>
       <DescriptionListGroup>

@@ -1,12 +1,6 @@
 import { useDebounce } from 'use-debounce';
 
-import {
-  type Device,
-  DeviceLifecycleStatusType,
-  type DeviceList,
-  type DevicesSummary,
-  OsModeType,
-} from '@flightctl/types';
+import { type Device, DeviceLifecycleStatusType, type DeviceList, type DevicesSummary } from '@flightctl/types';
 import {
   type DeviceFeatureFilter,
   type DeviceTextFilterKey,
@@ -32,7 +26,6 @@ type DevicesEndpointArgs = {
   activeStatuses?: FilterStatusMap;
   selectedFeatures?: DeviceFeatureFilter[];
   onlyDecommissioned?: boolean;
-  excludePackageMode?: boolean;
   labels?: FlightCtlLabel[];
   summaryOnly?: boolean;
   nextContinue?: string;
@@ -56,7 +49,6 @@ const getDevicesEndpoint = ({
   labels,
   onlyDecommissioned,
   onlyFleetless,
-  excludePackageMode,
   nextContinue,
   summaryOnly,
 }: DevicesEndpointArgs) => {
@@ -90,11 +82,6 @@ const getDevicesEndpoint = ({
     queryUtils.addQueryConditions(fieldSelectors, 'status.lifecycle.status', decommissionedStatuses);
   } else {
     queryUtils.addQueryConditions(fieldSelectors, 'status.lifecycle.status', enrolledStatuses);
-  }
-
-  if (excludePackageMode) {
-    // Only exclude devices known to be in package mode. Keep devices that did not report package mode yet.
-    fieldSelectors.push(`status.systemInfo.osMode!=${OsModeType.OsModePackage}`);
   }
 
   const params = new URLSearchParams();
@@ -194,15 +181,15 @@ export type DevicesPaginatedResult = {
  */
 export const useDevicesPaginated = ({
   deviceNameFilter,
-  excludePackageMode,
+  selectedFeatures,
 }: {
   deviceNameFilter?: string;
-  excludePackageMode?: boolean;
+  selectedFeatures?: DeviceFeatureFilter[];
 } = {}): DevicesPaginatedResult => {
   const pagination = useTablePagination<DeviceList>();
 
   useResetPaginationOnFilterChange(
-    `${deviceNameFilter || ''}|${excludePackageMode ?? false}`,
+    `${deviceNameFilter || ''}|${JSON.stringify(selectedFeatures || [])}`,
     pagination.setCurrentPage,
   );
 
@@ -216,7 +203,7 @@ export const useDevicesPaginated = ({
     textFilters,
     onlyDecommissioned: false,
     onlyFleetless: true,
-    excludePackageMode,
+    selectedFeatures,
     nextContinue: pagination.nextContinue,
   });
 

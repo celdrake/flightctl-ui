@@ -36,13 +36,14 @@ import RadioField from '../../../form/RadioField';
 import FormSelect from '../../../form/FormSelect';
 import { type PermissionCheck, usePermissionsContext } from '../../../common/PermissionsContext';
 import { RESOURCE, VERB } from '../../../../types/rbac';
-import { useFleets } from '../../../Fleet/useFleets';
-import { useDevicesPaginated } from '../../../Device/DevicesPage/useDevices';
-import { applyInitialConfig, getInitialAppConfig } from '../utils';
-import { getVersionFeatureRequirements } from '../../../CatalogComposition/catalogCompositionUtils';
-import { type InstallAppFormik, type InstallSpecFormik, type TargetPickerFormik } from '../types';
-import WithTooltip from '../../../common/WithTooltip';
 import { getFullContainerURI } from '../../../../utils/catalog';
+import { OS_EXCLUDE_PACKAGE_MODE_FILTERS } from '../../../../utils/catalogDeviceFeatures';
+import { getVersionFeatureRequirements } from '../../../CatalogComposition/catalogCompositionUtils';
+import WithTooltip from '../../../common/WithTooltip';
+import { useDevicesPaginated } from '../../../Device/DevicesPage/useDevices';
+import { useFleets } from '../../../Fleet/useFleets';
+import { applyInitialConfig, getInitialAppConfig } from '../utils';
+import { type InstallAppFormik, type InstallSpecFormik, type TargetPickerFormik } from '../types';
 
 type VersionDropdownProps = {
   catalogItem: CatalogItem;
@@ -251,9 +252,7 @@ const SpecificationsStep = ({ catalogItem, showNewDevice }: SpecificationsStepPr
   const newDeviceRadioRef = React.useRef<HTMLSpanElement>(null);
 
   const { isLoading: fleetsLoading, pagination: fleetPagination } = useFleets({ onlyUnmanaged: true });
-  const { devices, isLoading: devicesLoading } = useDevicesPaginated({
-    excludePackageMode: catalogItem.spec.type === CatalogItemType.CatalogItemTypeOS,
-  });
+  const { devices, isLoading: devicesLoading } = useDevicesPaginated({});
 
   const eligibleFleetsCount = fleetPagination.itemCount;
 

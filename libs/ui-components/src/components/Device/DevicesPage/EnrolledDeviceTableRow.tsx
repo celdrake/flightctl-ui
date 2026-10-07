@@ -45,7 +45,8 @@ const EnrolledDeviceTableRow = ({
   singleSelect,
   hideActions,
   deviceColumns,
-}: EnrolledDeviceTableRowProps) => {
+  children,
+}: React.PropsWithChildren<EnrolledDeviceTableRowProps>) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const deviceName = device.metadata.name as string;
@@ -130,6 +131,7 @@ const EnrolledDeviceTableRow = ({
           <ResourceLink id={deviceName} data-testid={`device-internal-name-link-${rowIndex}`} />
         </Td>
       )}
+      {children}
       {columnIds.includes('fleet') && (
         <Td dataLabel={t('Fleet')}>
           <DeviceFleet device={device} />

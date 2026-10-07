@@ -129,6 +129,29 @@ export const deviceFeaturesToFilters = (features?: DeviceFeatures): DeviceFeatur
   return activeFilters.length > 0 ? activeFilters : null;
 };
 
+/**
+ * Exclude devices known to be in package mode; keep devices that have not reported OS mode yet.
+ */
+export const OS_EXCLUDE_PACKAGE_MODE_FILTERS: DeviceFeatureFilter[] = [
+  {
+    fieldId: 'osMode',
+    values: [DeviceFeatureBoolean.DeviceFeatureBooleanTrue, 'unknown'],
+  },
+];
+
+/** Merge feature filters by fieldId; later lists override earlier ones for the same field. */
+export const mergeDeviceFeatureFilters = (
+  ...filterLists: (DeviceFeatureFilter[] | undefined)[]
+): DeviceFeatureFilter[] => {
+  const byField = new Map<DeviceFeatureId, DeviceFeatureFilter>();
+  filterLists.forEach((filters) => {
+    filters?.forEach((filter) => {
+      byField.set(filter.fieldId, filter);
+    });
+  });
+  return Array.from(byField.values());
+};
+
 type RequirementValue = DeviceFeatureBoolean | OsModeType;
 
 const requirementLabels = (t: TFunction) => ({

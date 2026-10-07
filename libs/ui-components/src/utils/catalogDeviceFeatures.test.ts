@@ -10,7 +10,10 @@ import {
   deviceFeaturesToApi,
   deviceFeaturesToFilters,
   getEmptyDeviceFeaturesFormValues,
+  mergeDeviceFeatureFilters,
+  OS_EXCLUDE_PACKAGE_MODE_FILTERS,
 } from './catalogDeviceFeatures';
+import { UNKNOWN_CAPABILITY_VALUE } from './status/devices';
 
 describe('catalogDeviceFeatures', () => {
   it.each([
@@ -134,5 +137,26 @@ describe('catalogDeviceFeatures', () => {
     },
   ])('$name', ({ features, expected }) => {
     expect(deviceFeaturesToFilters(features)).toEqual(expected);
+  });
+
+  it('When merging OS exclude with requirements it should let requirements override osMode', () => {
+    expect(
+      mergeDeviceFeatureFilters(OS_EXCLUDE_PACKAGE_MODE_FILTERS, [
+        { fieldId: 'osMode', values: [DeviceFeatureBoolean.DeviceFeatureBooleanTrue] },
+        { fieldId: 'gpuPresent', values: [DeviceFeatureBoolean.DeviceFeatureBooleanTrue] },
+      ]),
+    ).toEqual([
+      { fieldId: 'osMode', values: [DeviceFeatureBoolean.DeviceFeatureBooleanTrue] },
+      { fieldId: 'gpuPresent', values: [DeviceFeatureBoolean.DeviceFeatureBooleanTrue] },
+    ]);
+  });
+
+  it('When OS exclude package filters are used they should keep image and unknown', () => {
+    expect(OS_EXCLUDE_PACKAGE_MODE_FILTERS).toEqual([
+      {
+        fieldId: 'osMode',
+        values: [DeviceFeatureBoolean.DeviceFeatureBooleanTrue, UNKNOWN_CAPABILITY_VALUE],
+      },
+    ]);
   });
 });

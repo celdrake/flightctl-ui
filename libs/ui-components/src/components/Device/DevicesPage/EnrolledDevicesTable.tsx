@@ -60,7 +60,7 @@ interface EnrolledDeviceTableProps {
   // getSortParams: (columnIndex: number) => ThProps['sort'];
 }
 
-export const getDeviceTableColumns = (t: TFunction) => [
+const getDeviceTableColumns = (t: TFunction) => [
   {
     id: 'alias',
     name: t('Alias'),
