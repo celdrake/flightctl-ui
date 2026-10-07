@@ -1,12 +1,8 @@
 import * as React from 'react';
 import {
   Button,
-  Grid,
-  GridItem,
   Label,
   LabelGroup,
-  SelectList,
-  SelectOption,
   Split,
   SplitItem,
   Toolbar,
@@ -17,18 +13,12 @@ import {
 
 import { useTranslation } from '../../../hooks/useTranslation';
 import {
-  DEVICE_CAPABILITY_FILTER_VALUES,
-  DEVICE_HARDWARE_FEATURES,
-  DEVICE_OS_MODE_FEATURE,
   DEVICE_TEXT_FILTER_KEYS,
-  type DeviceCapabilityFeature,
   type DeviceFeatureFilter,
   type DeviceTextFilterKey,
-  getDeviceCapabilityFeatures,
-  getDeviceCapabilityFilterLabel,
+  getDeviceFeatureFilterLabel,
   getDeviceFilterLabel,
   getEmptyDeviceFeatureFilters,
-  getFeatureFilterValues,
   toggleFeatureFilterValue,
 } from '../../../utils/status/devices';
 import { labelToString } from '../../../utils/labels';
@@ -36,7 +26,7 @@ import DeviceStatusFilter, { getStatusItem } from './DeviceFilterSelect';
 import type { FilterStatusMap, UpdateStatus } from './types';
 import type { FlightCtlLabel } from '../../../types/extraTypes';
 import DeviceTableToolbarFilters from './DeviceToolbarFilters';
-import FilterSelect, { FilterSelectGroup } from '../../form/FilterSelect';
+import DeviceFeatureFilters from './DeviceFeatureFilters';
 
 type DeviceTableToolbarProps = {
   textFilters: Partial<Record<DeviceTextFilterKey, string>>;
@@ -48,62 +38,12 @@ type DeviceTableToolbarProps = {
   setOnlyFleetless: (enabled: boolean) => void;
   activeStatuses: FilterStatusMap;
   setActiveStatuses: (statuses: FilterStatusMap) => void;
-  selectedDeviceFeatures: DeviceFeatureFilter[];
-  selectedDeviceFeatureCount: number;
-  setSelectedDeviceFeatures: (filters: DeviceFeatureFilter[]) => void;
+  selectedFeatures: DeviceFeatureFilter[];
+  selectedFeaturesCount: number;
+  setSelectedFeatures: (filters: DeviceFeatureFilter[]) => void;
   selectedLabels: FlightCtlLabel[];
   setSelectedLabels: (labels: FlightCtlLabel[]) => void;
   isFilterUpdating: boolean;
-};
-
-const DeviceCapabilityFilter = ({
-  selectedDeviceFeatures,
-  selectedDeviceFeatureCount,
-  setSelectedDeviceFeatures,
-  isFilterUpdating,
-}: {
-  selectedDeviceFeatures: DeviceFeatureFilter[];
-  selectedDeviceFeatureCount: number;
-  setSelectedDeviceFeatures: (filters: DeviceFeatureFilter[]) => void;
-  isFilterUpdating: boolean;
-}) => {
-  const { t } = useTranslation();
-
-  const renderOptions = (features: DeviceCapabilityFeature[]) =>
-    features.flatMap((feature) =>
-      DEVICE_CAPABILITY_FILTER_VALUES.map((value) => (
-        <SelectOption
-          key={`${feature.field}-${value}`}
-          hasCheckbox
-          value={`${feature.field}-${value}`}
-          isSelected={getFeatureFilterValues(selectedDeviceFeatures, feature.field).includes(value)}
-          onClick={() =>
-            setSelectedDeviceFeatures(toggleFeatureFilterValue(selectedDeviceFeatures, feature.field, value))
-          }
-        >
-          {getDeviceCapabilityFilterLabel(t, feature.field, value)}
-        </SelectOption>
-      )),
-    );
-
-  return (
-    <FilterSelect
-      selectedFilters={selectedDeviceFeatureCount}
-      placeholder={t('Filter by device requirements')}
-      isFilterUpdating={isFilterUpdating}
-    >
-      <SelectList>
-        <Grid hasGutter>
-          <GridItem span={6}>
-            <FilterSelectGroup label={t('OS mode')}>{renderOptions([DEVICE_OS_MODE_FEATURE])}</FilterSelectGroup>
-          </GridItem>
-          <GridItem span={6}>
-            <FilterSelectGroup label={t('Hardware')}>{renderOptions(DEVICE_HARDWARE_FEATURES)}</FilterSelectGroup>
-          </GridItem>
-        </Grid>
-      </SelectList>
-    </FilterSelect>
-  );
 };
 
 const DeviceTableToolbar: React.FC<React.PropsWithChildren<DeviceTableToolbarProps>> = ({ children, ...rest }) => {
@@ -114,9 +54,9 @@ const DeviceTableToolbar: React.FC<React.PropsWithChildren<DeviceTableToolbarPro
     setTextFilter,
     activeStatuses,
     setActiveStatuses,
-    selectedDeviceFeatures,
-    selectedDeviceFeatureCount,
-    setSelectedDeviceFeatures,
+    selectedFeatures,
+    selectedFeaturesCount,
+    setSelectedFeatures,
     selectedLabels,
     setSelectedLabels,
     isFilterUpdating,
@@ -158,10 +98,10 @@ const DeviceTableToolbar: React.FC<React.PropsWithChildren<DeviceTableToolbarPro
               />
             </ToolbarItem>
             <ToolbarItem>
-              <DeviceCapabilityFilter
-                selectedDeviceFeatures={selectedDeviceFeatures}
-                selectedDeviceFeatureCount={selectedDeviceFeatureCount}
-                setSelectedDeviceFeatures={setSelectedDeviceFeatures}
+              <DeviceFeatureFilters
+                selectedFeatures={selectedFeatures}
+                selectedFeaturesCount={selectedFeaturesCount}
+                setSelectedFeatures={setSelectedFeatures}
                 isFilterUpdating={isFilterUpdating}
               />
             </ToolbarItem>
@@ -198,17 +138,18 @@ const DeviceToolbarChips = ({
   setOwnerFleets,
   onlyFleetless,
   setOnlyFleetless,
-  selectedDeviceFeatures,
-  selectedDeviceFeatureCount,
-  setSelectedDeviceFeatures,
+  selectedFeatures,
+  selectedFeaturesCount,
+  setSelectedFeatures,
   selectedLabels,
   setSelectedLabels,
 }: DeviceToolbarChipsProps) => {
   const { t } = useTranslation();
   const statusKeys = Object.keys(activeStatuses).filter((k) => !!activeStatuses[k as keyof FilterStatusMap].length);
   const activeTextFilterKeys = DEVICE_TEXT_FILTER_KEYS.filter((key) => !!textFilters[key]);
-  const capabilityChips = getDeviceCapabilityFeatures().flatMap((feature) =>
-    getFeatureFilterValues(selectedDeviceFeatures, feature.field).map((value) => ({ feature, value })),
+
+  const featureChips = selectedFeatures.flatMap((feature) =>
+    feature.values.map((value) => ({ featureId: feature.fieldId, value })),
   );
 
   const hasAnyFilter =
@@ -217,7 +158,7 @@ const DeviceToolbarChips = ({
     onlyFleetless ||
     !!activeTextFilterKeys.length ||
     !!selectedLabels.length ||
-    selectedDeviceFeatureCount > 0;
+    selectedFeaturesCount > 0;
 
   return (
     <Split hasGutter>
@@ -294,22 +235,20 @@ const DeviceToolbarChips = ({
           </LabelGroup>
         </SplitItem>
       )}
-      {capabilityChips.length > 0 && (
+      {featureChips.length > 0 && (
         <SplitItem>
           <LabelGroup
             categoryName={t('Device requirements')}
             isClosable
-            onClick={() => setSelectedDeviceFeatures(getEmptyDeviceFeatureFilters())}
+            onClick={() => setSelectedFeatures(getEmptyDeviceFeatureFilters())}
           >
-            {capabilityChips.map(({ feature, value }) => (
+            {featureChips.map(({ featureId, value }) => (
               <Label
                 variant="outline"
-                key={`${feature.field}-${value}`}
-                onClose={() =>
-                  setSelectedDeviceFeatures(toggleFeatureFilterValue(selectedDeviceFeatures, feature.field, value))
-                }
+                key={`${featureId}-${value}`}
+                onClose={() => setSelectedFeatures(toggleFeatureFilterValue(selectedFeatures, featureId, value))}
               >
-                {getDeviceCapabilityFilterLabel(t, feature.field, value)}
+                {getDeviceFeatureFilterLabel(t, featureId, value)}
               </Label>
             ))}
           </LabelGroup>
@@ -325,7 +264,7 @@ const DeviceToolbarChips = ({
               setOnlyFleetless(false);
               clearTextFilters();
               setSelectedLabels([]);
-              setSelectedDeviceFeatures(getEmptyDeviceFeatureFilters());
+              setSelectedFeatures(getEmptyDeviceFeatureFilters());
             }}
           >
             {t('Clear all filters')}

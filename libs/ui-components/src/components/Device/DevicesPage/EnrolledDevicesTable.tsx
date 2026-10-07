@@ -54,9 +54,9 @@ interface EnrolledDeviceTableProps {
   setOwnerFleets: (ownerFleets: string[]) => void;
   setOnlyFleetless: (enabled: boolean) => void;
   setActiveStatuses: (activeStatuses: FilterStatusMap) => void;
-  selectedDeviceFeatures: DeviceFeatureFilter[];
-  selectedDeviceFeatureCount: number;
-  setSelectedDeviceFeatures: (filters: DeviceFeatureFilter[]) => void;
+  selectedFeatures: DeviceFeatureFilter[];
+  selectedFeaturesCount: number;
+  setSelectedFeatures: (filters: DeviceFeatureFilter[]) => void;
   selectedLabels: FlightCtlLabel[];
   setSelectedLabels: (labels: FlightCtlLabel[]) => void;
   isFilterUpdating: boolean;
@@ -113,9 +113,9 @@ const EnrolledDevicesTable = ({
   activeStatuses,
   setActiveStatuses,
   setOnlyDecommissioned,
-  selectedDeviceFeatures,
-  selectedDeviceFeatureCount,
-  setSelectedDeviceFeatures,
+  selectedFeatures,
+  selectedFeaturesCount,
+  setSelectedFeatures,
   selectedLabels,
   setSelectedLabels,
   hasFiltersEnabled,
@@ -157,7 +157,7 @@ const EnrolledDevicesTable = ({
       setOnlyFleetless(false);
       clearTextFilters();
       setSelectedLabels([]);
-      setSelectedDeviceFeatures(getEmptyDeviceFeatureFilters());
+      setSelectedFeatures(getEmptyDeviceFeatureFilters());
     }
   };
 
@@ -175,9 +175,9 @@ const EnrolledDevicesTable = ({
         setOnlyFleetless={setOnlyFleetless}
         activeStatuses={activeStatuses}
         setActiveStatuses={setActiveStatuses}
-        selectedDeviceFeatures={selectedDeviceFeatures}
-        selectedDeviceFeatureCount={selectedDeviceFeatureCount}
-        setSelectedDeviceFeatures={setSelectedDeviceFeatures}
+        selectedFeatures={selectedFeatures}
+        selectedFeaturesCount={selectedFeaturesCount}
+        setSelectedFeatures={setSelectedFeatures}
         selectedLabels={selectedLabels}
         setSelectedLabels={setSelectedLabels}
         isFilterUpdating={isFilterUpdating}

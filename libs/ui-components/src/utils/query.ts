@@ -8,7 +8,7 @@ import {
   type DeviceFeatureFilter,
   FilterSearchParams,
   UNKNOWN_CAPABILITY_VALUE,
-  getDeviceCapabilityFeatures,
+  getDeviceFeatures,
   getFeatureFilterValues,
   toDeviceFeatureLabelValues,
 } from './status/devices';
@@ -68,12 +68,12 @@ const buildDeviceFeatureLabelSelectors = (filters?: DeviceFeatureFilter[]): stri
     return [];
   }
 
-  return getDeviceCapabilityFeatures()
+  return getDeviceFeatures()
     .map((feature) =>
       buildOptionalValueLabelSelector(
-        feature.field,
+        feature.fieldId,
         feature.labelKey,
-        toDeviceFeatureLabelValues(feature.field, getFeatureFilterValues(filters, feature.field)),
+        toDeviceFeatureLabelValues(feature.fieldId, getFeatureFilterValues(filters, feature.fieldId)),
         DEVICE_CAPABILITY_FILTER_VALUES.length,
       ),
     )

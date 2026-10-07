@@ -109,8 +109,8 @@ export const useDeviceBackendFilters = () => {
     return activeStatuses;
   }, [searchParams]);
 
-  const selectedDeviceFeatures = React.useMemo(() => parseDeviceFeatureFilters(searchParams), [searchParams]);
-  const selectedDeviceFeatureCount = selectedDeviceFeatures.reduce((count, filter) => count + filter.values.length, 0);
+  const selectedFeatures = React.useMemo(() => parseDeviceFeatureFilters(searchParams), [searchParams]);
+  const selectedFeaturesCount = selectedFeatures.reduce((count, filter) => count + filter.values.length, 0);
 
   const selectedLabels = (searchParams.getAll(FilterSearchParams.Label) || []).map<FlightCtlLabel>((l) => {
     const labelParts = l.split('=');
@@ -149,7 +149,7 @@ export const useDeviceBackendFilters = () => {
     [updateSearchParams],
   );
 
-  const setSelectedDeviceFeatures = React.useCallback(
+  const setSelectedFeatures = React.useCallback(
     (filters: DeviceFeatureFilter[]) => {
       updateSearchParams(getNewParams(paramsRef.current, deviceFeatureFiltersToSearchParams(filters)));
     },
@@ -178,7 +178,7 @@ export const useDeviceBackendFilters = () => {
     !!selectedLabels.length ||
     !!ownerFleets.length ||
     onlyFleetless ||
-    selectedDeviceFeatureCount > 0 ||
+    selectedFeaturesCount > 0 ||
     Object.values(activeStatuses).some((s) => !!s.length) ||
     DEVICE_TEXT_FILTER_KEYS.some((key) => !!textFilters[key]);
 
@@ -191,9 +191,9 @@ export const useDeviceBackendFilters = () => {
     clearTextFilters,
     activeStatuses,
     setActiveStatuses,
-    selectedDeviceFeatures,
-    selectedDeviceFeatureCount,
-    setSelectedDeviceFeatures,
+    selectedFeatures,
+    selectedFeaturesCount,
+    setSelectedFeatures,
     ownerFleets,
     setOwnerFleets,
     onlyFleetless,

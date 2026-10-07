@@ -6,11 +6,11 @@ import {
   DescriptionListGroup,
   DescriptionListTerm,
 } from '@patternfly/react-core';
-import { DeviceGpu, type DeviceStatus } from '@flightctl/types';
+import type { DeviceGpu, DeviceStatus } from '@flightctl/types';
 
 import type { SystemInfoEntry } from '../../../hooks/useDeviceSystemInfo';
 import { useTranslation } from '../../../hooks/useTranslation';
-import { getGpuCapability, getKvmCapability } from '../../../utils/capabilities';
+import { getKvmCapability } from '../../../utils/capabilities';
 import { OsModeLabel } from '../../common/OsModeContent';
 import LabelWithHelperText from '../../common/WithHelperText';
 import SystemInfoDescriptionGroup from './SystemInfoDescriptionGroup';
