@@ -18,7 +18,6 @@ import {
   type DeviceTextFilterKey,
   getDeviceFeatureFilterLabel,
   getDeviceFilterLabel,
-  getEmptyDeviceFeatureFilters,
   toggleFeatureFilterValue,
 } from '../../../utils/status/devices';
 import { labelToString } from '../../../utils/labels';
@@ -237,11 +236,7 @@ const DeviceToolbarChips = ({
       )}
       {featureChips.length > 0 && (
         <SplitItem>
-          <LabelGroup
-            categoryName={t('Device requirements')}
-            isClosable
-            onClick={() => setSelectedFeatures(getEmptyDeviceFeatureFilters())}
-          >
+          <LabelGroup categoryName={t('Device requirements')} isClosable onClick={() => setSelectedFeatures([])}>
             {featureChips.map(({ featureId, value }) => (
               <Label
                 variant="outline"
@@ -264,7 +259,7 @@ const DeviceToolbarChips = ({
               setOnlyFleetless(false);
               clearTextFilters();
               setSelectedLabels([]);
-              setSelectedFeatures(getEmptyDeviceFeatureFilters());
+              setSelectedFeatures([]);
             }}
           >
             {t('Clear all filters')}

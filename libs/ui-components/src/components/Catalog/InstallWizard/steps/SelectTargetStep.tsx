@@ -152,7 +152,7 @@ const FeatureCompatibility = ({
   fleetName,
   featureRequirements,
 }: {
-  fleet: Fleet;
+  fleetName: string;
   featureRequirements?: DeviceFeatures;
 }) => {
   const [checkCompatibility, setCheckCompatibility] = React.useState(false);
@@ -176,7 +176,7 @@ const FleetTarget = ({
 
   console.log('%c values', 'color: red; font-size:18px', values);
   const [fleetNameFilter, setFleetNameFilter] = React.useState('');
-  const fleetName = values.fleet?.metadata.name || '';
+  const fleetName = values.fleet?.metadata.name as string;
 
   const {
     fleets,

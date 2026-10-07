@@ -23,8 +23,8 @@ import type { InstallSpecFormik } from './InstallWizard/types';
 const requirementLabels = (t: TFunction) => ({
   'gpu.present': t('GPU'),
   'kvm.enabled': t('KVM Virtualization'),
-  'os.mode.image': t('Operating system: image mode'),
-  'os.mode.package': t('Operating system: package mode'),
+  'os.mode.image': t('Image mode OS'),
+  'os.mode.package': t('Package mode OS'),
 });
 
 type RequirementValue = DeviceFeatureBoolean | OsModeType;

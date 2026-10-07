@@ -70,7 +70,7 @@ export const DEVICE_HARDWARE_FEATURES: DeviceFeature[] = [
   { fieldId: FilterSearchParams.KvmEnabled, labelKey: DEVICE_FEATURE_LABEL_KVM_ENABLED },
 ];
 
-export const getDeviceFeatures = (): DeviceFeature[] => [DEVICE_OS_MODE_FEATURE, ...DEVICE_HARDWARE_FEATURES];
+export const allDeviceFeatures = [DEVICE_OS_MODE_FEATURE, ...DEVICE_HARDWARE_FEATURES];
 
 const OS_MODE_URL_ALIASES: Record<string, string> = {
   [OsModeType.OsModeImage]: DeviceFeatureBoolean.DeviceFeatureBooleanTrue,
@@ -130,9 +130,6 @@ export const toDeviceFeatureLabelValues = (fieldId: DeviceFeatureId, values: str
   });
 };
 
-export const getEmptyDeviceFeatureFilters = (): DeviceFeatureFilter[] =>
-  getDeviceFeatures().map(({ fieldId }) => ({ fieldId, values: [] }));
-
 export const getFeatureFilterValues = (filters: DeviceFeatureFilter[], field: string): string[] =>
   filters.find((filter) => filter.fieldId === field)?.values ?? [];
 
@@ -140,11 +137,16 @@ export const updateFeatureFilterValues = (
   filters: DeviceFeatureFilter[],
   field: string,
   values: string[],
-): DeviceFeatureFilter[] =>
-  getDeviceFeatures().map((feature) => ({
-    fieldId: feature.fieldId,
-    values: feature.fieldId === field ? values : getFeatureFilterValues(filters, feature.fieldId),
-  }));
+): DeviceFeatureFilter[] => {
+  if (values.length === 0) {
+    return filters.filter((filter) => filter.fieldId !== field);
+  }
+  const existingIndex = filters.findIndex((filter) => filter.fieldId === field);
+  if (existingIndex === -1) {
+    return [...filters, { fieldId: field as DeviceFeatureId, values }];
+  }
+  return filters.map((filter) => (filter.fieldId === field ? { fieldId: filter.fieldId, values } : filter));
+};
 
 export const toggleFeatureFilterValue = (
   filters: DeviceFeatureFilter[],
@@ -162,14 +164,17 @@ const parseFeatureFilterValues = (searchParams: URLSearchParams, fieldId: Device
     .filter(isDeviceFeatureFilterValue);
 
 export const parseDeviceFeatureFilters = (searchParams: URLSearchParams): DeviceFeatureFilter[] =>
-  getDeviceFeatures().map((feature) => ({
-    fieldId: feature.fieldId,
-    values: parseFeatureFilterValues(searchParams, feature.fieldId),
-  }));
+  allDeviceFeatures
+    .map((feature) => ({
+      fieldId: feature.fieldId,
+      values: parseFeatureFilterValues(searchParams, feature.fieldId),
+    }))
+    .filter((filter) => filter.values.length > 0);
 
+/** Always includes every feature key so cleared filters are removed from the URL. */
 export const deviceFeatureFiltersToSearchParams = (filters: DeviceFeatureFilter[]): Record<string, string[]> =>
   Object.fromEntries(
-    getDeviceFeatures().map((feature) => [feature.fieldId, getFeatureFilterValues(filters, feature.fieldId)]),
+    allDeviceFeatures.map((feature) => [feature.fieldId, getFeatureFilterValues(filters, feature.fieldId)]),
   );
 
 // Filters that require the user to enter some free-text
