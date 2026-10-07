@@ -8,6 +8,7 @@ import {
   DEVICE_FEATURE_OS_MODE,
   deviceFeaturesFromApi,
   deviceFeaturesToApi,
+  deviceFeaturesToFilters,
   getEmptyDeviceFeaturesFormValues,
 } from './catalogDeviceFeatures';
 
@@ -98,5 +99,40 @@ describe('catalogDeviceFeatures', () => {
     expect(deviceFeaturesToApi(deviceFeaturesFromApi(original))).toEqual({
       [DEVICE_FEATURE_KVM_ENABLED]: DeviceFeatureBoolean.DeviceFeatureBooleanFalse,
     });
+  });
+
+  it.each([
+    {
+      name: 'When deviceFeatures is absent it should return no filters',
+      features: undefined,
+      expected: [],
+    },
+    {
+      name: 'When deviceFeatures is empty it should return no filters',
+      features: {},
+      expected: [],
+    },
+    {
+      name: 'When known features are set it should return sparse filters with os.mode as boolean',
+      features: {
+        [DEVICE_FEATURE_GPU_PRESENT]: DeviceFeatureBoolean.DeviceFeatureBooleanTrue,
+        [DEVICE_FEATURE_KVM_ENABLED]: DeviceFeatureBoolean.DeviceFeatureBooleanFalse,
+        [DEVICE_FEATURE_OS_MODE]: OsModeType.OsModeImage,
+      },
+      expected: [
+        { fieldId: 'gpuPresent', values: [DeviceFeatureBoolean.DeviceFeatureBooleanTrue] },
+        { fieldId: 'kvmEnabled', values: [DeviceFeatureBoolean.DeviceFeatureBooleanFalse] },
+        { fieldId: 'osMode', values: [DeviceFeatureBoolean.DeviceFeatureBooleanTrue] },
+      ],
+    },
+    {
+      name: 'When os.mode is package it should map to filter false',
+      features: {
+        [DEVICE_FEATURE_OS_MODE]: OsModeType.OsModePackage,
+      },
+      expected: [{ fieldId: 'osMode', values: [DeviceFeatureBoolean.DeviceFeatureBooleanFalse] }],
+    },
+  ])('$name', ({ features, expected }) => {
+    expect(deviceFeaturesToFilters(features)).toEqual(expected);
   });
 });

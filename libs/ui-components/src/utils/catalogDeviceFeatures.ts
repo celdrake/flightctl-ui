@@ -1,5 +1,7 @@
-import type { OsModeType } from '@flightctl/types';
-import type { DeviceFeatureBoolean, DeviceFeatures } from '@flightctl/types/alpha';
+import { OsModeType } from '@flightctl/types';
+import { DeviceFeatureBoolean, type DeviceFeatures } from '@flightctl/types/alpha';
+
+import type { DeviceFeatureFilter, DeviceFeatureId } from './status/devices';
 
 export const DEVICE_FEATURE_GPU_PRESENT = 'gpu.present';
 export const DEVICE_FEATURE_KVM_ENABLED = 'kvm.enabled';
@@ -25,6 +27,19 @@ export const getEmptyDeviceFeaturesFormValues = (): DeviceFeaturesFormValues => 
   osMode: '',
 });
 
+const getFeatureBoolean = (value: unknown): DeviceFeatureBoolean | undefined => {
+  if (
+    value === DeviceFeatureBoolean.DeviceFeatureBooleanTrue ||
+    value === DeviceFeatureBoolean.DeviceFeatureBooleanFalse
+  ) {
+    return value;
+  }
+  if (typeof value === 'boolean') {
+    return value ? DeviceFeatureBoolean.DeviceFeatureBooleanTrue : DeviceFeatureBoolean.DeviceFeatureBooleanFalse;
+  }
+  return undefined;
+};
+
 export const deviceFeaturesFromApi = (features?: DeviceFeatures | null): DeviceFeaturesFormValues | null => {
   if (!features) {
     return null;
@@ -33,12 +48,12 @@ export const deviceFeaturesFromApi = (features?: DeviceFeatures | null): DeviceF
   const form = getEmptyDeviceFeaturesFormValues();
   let hasSetFeatures = false;
 
-  const gpuPresent = features[DEVICE_FEATURE_GPU_PRESENT] as DeviceFeatureBoolean | undefined;
+  const gpuPresent = getFeatureBoolean(features[DEVICE_FEATURE_GPU_PRESENT]);
   if (gpuPresent) {
     form.gpuPresent = gpuPresent;
     hasSetFeatures = true;
   }
-  const kvmEnabled = features[DEVICE_FEATURE_KVM_ENABLED] as DeviceFeatureBoolean | undefined;
+  const kvmEnabled = getFeatureBoolean(features[DEVICE_FEATURE_KVM_ENABLED]);
   if (kvmEnabled) {
     form.kvmEnabled = kvmEnabled;
     hasSetFeatures = true;
@@ -67,4 +82,48 @@ export const deviceFeaturesToApi = (form: DeviceFeaturesFormValues | null): Devi
     result[DEVICE_FEATURE_OS_MODE] = form.osMode;
   }
   return Object.keys(result).length > 0 ? result : undefined;
+};
+
+const featureFilterMap: Record<string, DeviceFeatureId> = {
+  [DEVICE_FEATURE_GPU_PRESENT]: 'gpuPresent',
+  [DEVICE_FEATURE_KVM_ENABLED]: 'kvmEnabled',
+  [DEVICE_FEATURE_OS_MODE]: 'osMode',
+};
+
+export const deviceFeaturesToFilters = (features?: DeviceFeatures): DeviceFeatureFilter[] => {
+  if (!features) {
+    return [];
+  }
+
+  const activeFilters: DeviceFeatureFilter[] = [];
+
+  Object.entries(features).forEach(([featureId, val]) => {
+    const filterId = featureFilterMap[featureId];
+    if (!filterId || !val) {
+      return;
+    }
+
+    let filterObj = activeFilters.find((filter) => filter.fieldId === filterId);
+    if (!filterObj) {
+      filterObj = { fieldId: filterId, values: [] };
+    }
+
+    let boolValue: DeviceFeatureBoolean | undefined;
+    if (featureId === DEVICE_FEATURE_OS_MODE) {
+      if (val === OsModeType.OsModeImage) {
+        boolValue = DeviceFeatureBoolean.DeviceFeatureBooleanTrue;
+      } else if (val === OsModeType.OsModePackage) {
+        boolValue = DeviceFeatureBoolean.DeviceFeatureBooleanFalse;
+      }
+    } else {
+      boolValue = getFeatureBoolean(val);
+    }
+    if (boolValue) {
+      filterObj.values.push(boolValue);
+      if (filterObj.values.length === 1) {
+        activeFilters.push(filterObj);
+      }
+    }
+  });
+  return activeFilters;
 };

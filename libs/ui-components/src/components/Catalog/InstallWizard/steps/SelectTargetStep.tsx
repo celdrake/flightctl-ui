@@ -5,6 +5,7 @@ import {
   FormGroup,
   Grid,
   GridItem,
+  Spinner,
   Stack,
   StackItem,
   Title,
@@ -17,26 +18,31 @@ import { Tbody, Td } from '@patternfly/react-table';
 import { type FormikErrors, useFormikContext } from 'formik';
 import ExternalLinkAltIcon from '@patternfly/react-icons/dist/js/icons/external-link-alt-icon';
 
-import type { Device, Fleet, ImageOrCatalogItemRefSpec } from '@flightctl/types';
-import { type CatalogItem, CatalogItemType, DeviceFeatures } from '@flightctl/types/alpha';
+import type { Device, DeviceList, Fleet, ImageOrCatalogItemRefSpec } from '@flightctl/types';
+import { type CatalogItem, CatalogItemType, type DeviceFeatures } from '@flightctl/types/alpha';
 
+import { useAppLinks } from '../../../../hooks/useAppLinks';
+import { useFetch } from '../../../../hooks/useFetch';
 import { useTranslation } from '../../../../hooks/useTranslation';
-import Table from '../../../Table/Table';
-import TablePagination from '../../../Table/TablePagination';
-import TableTextSearch from '../../../Table/TableTextSearch';
+import { getApiListCount } from '../../../../utils/api';
+import { getFullArtifactURI } from '../../../../utils/catalog';
+import { deviceFeaturesToFilters } from '../../../../utils/catalogDeviceFeatures';
+import { getArtifactLabel } from '../../../../utils/catalogTypes';
+import { getErrorMessage } from '../../../../utils/error';
+import { commonQueries } from '../../../../utils/query';
 import { getResourceId } from '../../../../utils/resource';
-import { useFleets } from '../../../Fleet/useFleets';
-import FleetRow from '../../../Fleet/FleetRow';
+import LearnMoreLink from '../../../common/LearnMoreLink';
 import { useDevicesPaginated } from '../../../Device/DevicesPage/useDevices';
 import { getDeviceTableColumns } from '../../../Device/DevicesPage/EnrolledDevicesTable';
 import EnrolledDeviceTableRow from '../../../Device/DevicesPage/EnrolledDeviceTableRow';
+import FleetRow from '../../../Fleet/FleetRow';
+import { useFleets } from '../../../Fleet/useFleets';
 import FlightCtlForm from '../../../form/FlightCtlForm';
-import { type InstallAppFormik, type InstallOsFormik } from '../types';
 import FormSelect from '../../../form/FormSelect';
-import { getArtifactLabel } from '../../../../utils/catalogTypes';
-import { getFullArtifactURI } from '../../../../utils/catalog';
-import LearnMoreLink from '../../../common/LearnMoreLink';
-import { useAppLinks } from '../../../../hooks/useAppLinks';
+import Table from '../../../Table/Table';
+import TablePagination from '../../../Table/TablePagination';
+import TableTextSearch from '../../../Table/TableTextSearch';
+import { type InstallAppFormik, type InstallOsFormik } from '../types';
 import { isSameCatalogRef } from '../utils';
 
 export const isSelectTargetStepValid = (errors: FormikErrors<InstallAppFormik>) => {
@@ -155,14 +161,56 @@ const FeatureCompatibility = ({
   fleetName: string;
   featureRequirements?: DeviceFeatures;
 }) => {
-  const [checkCompatibility, setCheckCompatibility] = React.useState(false);
+  const { t } = useTranslation();
+  const { get } = useFetch();
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [compatibleCount, setCompatibleCount] = React.useState<number>();
+  const [error, setError] = React.useState<string>();
+
+  const hasRequirements = deviceFeaturesToFilters(featureRequirements).length > 0;
+
+  const checkCompatibility = React.useCallback(async () => {
+    if (!featureRequirements || !fleetName) {
+      return;
+    }
+    setIsLoading(true);
+    setError(undefined);
+    try {
+      const deviceList = await get<DeviceList>(
+        commonQueries.getCompatibleDeviceCount(fleetName, featureRequirements),
+      );
+      setCompatibleCount(getApiListCount(deviceList) || 0);
+    } catch (e) {
+      setError(getErrorMessage(e));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [featureRequirements, fleetName, get]);
+
+  if (!hasRequirements) {
+    return null;
+  }
+
+  if (isLoading) {
+    return <Spinner size="md" />;
+  }
+
+  if (error) {
+    return (
+      <Alert isInline isPlain variant="danger" title={t('Failed to check compatibility')}>
+        {error}
+      </Alert>
+    );
+  }
+
+  if (compatibleCount !== undefined) {
+    return <>{compatibleCount}</>;
+  }
+
   return (
-    <>
-      <Button variant="link" onClick={() => setCheckCompatibility(true)}>
-        Check compatibility
-      </Button>
-      {checkCompatibility && <div>hello</div>}
-    </>
+    <Button variant="link" isInline onClick={() => void checkCompatibility()}>
+      {t('Check compatibility')}
+    </Button>
   );
 };
 
@@ -247,7 +295,10 @@ const FleetTarget = ({
                 hideActions
               >
                 <Td dataLabel={t('Compatibility')}>
-                  <FeatureCompatibility fleetName={fleetName} featureRequirements={values.featureRequirements} />
+                  <FeatureCompatibility
+                    fleetName={fleet.metadata.name as string}
+                    featureRequirements={values.featureRequirements}
+                  />
                 </Td>
               </FleetRow>
             ))}

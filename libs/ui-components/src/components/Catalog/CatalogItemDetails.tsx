@@ -38,7 +38,10 @@ import { OsModeType } from '@flightctl/types';
 import { useTranslation } from '../../hooks/useTranslation';
 import { useFetch } from '../../hooks/useFetch';
 import { useFetchPeriodically } from '../../hooks/useFetchPeriodically';
-import { getDefaultChannelAndVersion } from '../CatalogComposition/catalogCompositionUtils';
+import {
+  getDefaultChannelAndVersion,
+  getVersionFeatureRequirements,
+} from '../CatalogComposition/catalogCompositionUtils';
 import { ROUTE, useNavigate } from '../../hooks/useNavigate';
 import { useItemIsInUse } from './useCatalogItems';
 import FlightCtlForm from '../form/FlightCtlForm';
@@ -56,10 +59,9 @@ import FlightCtlPageDrawer from '../common/FlightCtlPageDrawer';
 import CatalogItemIcon from './CatalogItemIcon';
 import { InstallSpec } from './InstallWizard/steps/SpecificationsStep';
 import { type InstallSpecFormik } from './InstallWizard/types';
-import { getVersionFeatureRequirements } from './InstallWizard/utils';
+import CatalogItemRequirements from './CatalogItemRequirements';
 
 import './CatalogItemDetails.css';
-import CatalogItemRequirements from './CatalogItemRequirements';
 
 type CatalogItemActions = 'deprecate' | 'restore' | 'delete';
 
@@ -521,10 +523,6 @@ export const CatalogItemDetailsContent = ({ item }: CatalogItemDetailsContentPro
 };
 
 const CatalogItemDetails = ({ item, onInstall, ...rest }: CatalogItemDetailsProps) => {
-  // reinitialize when item changes
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  // reinitialize when item changes
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const initialValues = React.useMemo(() => {
     const { channel, version } = getDefaultChannelAndVersion(item);
     return {
@@ -532,6 +530,8 @@ const CatalogItemDetails = ({ item, onInstall, ...rest }: CatalogItemDetailsProp
       version,
       featureRequirements: getVersionFeatureRequirements(item, version),
     };
+    // reinitialize when item changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item.metadata.name]);
 
   return (

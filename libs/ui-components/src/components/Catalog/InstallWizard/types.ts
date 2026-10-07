@@ -9,7 +9,7 @@ export const reviewStepId = 'review';
 export type InstallSpecFormik = {
   version: string;
   channel: string;
-  featureRequirements: DeviceFeatures | undefined;
+  featureRequirements?: DeviceFeatures;
 };
 
 export type TargetPickerFormik = {

@@ -3,9 +3,15 @@ import semver from 'semver';
 import { load } from 'js-yaml';
 import validator from '@rjsf/validator-ajv8';
 import type { RJSFSchema, RJSFValidationError } from '@rjsf/utils';
-import type { ApplicationProviderSpec, CatalogItemRefSpec } from '@flightctl/types';
-import { type CatalogItem, CatalogItemCategory, type CatalogItemVersion, DeviceFeatures } from '@flightctl/types/alpha';
 import type { TFunction } from 'i18next';
+
+import type { ApplicationProviderSpec, CatalogItemRefSpec } from '@flightctl/types';
+import {
+  type CatalogItem,
+  CatalogItemCategory,
+  type CatalogItemVersion,
+  type DeviceFeatures,
+} from '@flightctl/types/alpha';
 
 import type { ApplicationEntry, CatalogAppForm } from '../../types/deviceSpec';
 import { buildCatalogApplicationSpec, buildCatalogItemRef } from '../../utils/catalog';
