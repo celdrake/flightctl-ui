@@ -19,7 +19,10 @@ import UpdateStep, { isUpdateStepValid } from './steps/UpdateStep';
 import ReviewStep from './steps/ReviewStep';
 import LeaveFormConfirmation from '../../common/LeaveFormConfirmation';
 import { validApplicationAndVolumeName } from '../../form/validations';
-import { isAdvancedConfigRequired } from '../../CatalogComposition/catalogCompositionUtils';
+import {
+  getVersionFeatureRequirements,
+  isAdvancedConfigRequired,
+} from '../../CatalogComposition/catalogCompositionUtils';
 
 const versionStepId = 'version-step';
 const configStepId = 'config-step';
@@ -204,6 +207,7 @@ const EditAppWizard = ({
       initialValues={{
         version: appVersion,
         channel: appSpec ? currentChannel : channel,
+        featureRequirements: getVersionFeatureRequirements(catalogItem, appVersion),
         wantAdvancedConfig: mode === 'edit',
         ...appConfig,
       }}

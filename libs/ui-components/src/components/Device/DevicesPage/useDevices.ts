@@ -94,7 +94,7 @@ const getDevicesEndpoint = ({
 
   if (excludePackageMode) {
     // Only exclude devices known to be in package mode. Keep devices that did not report package mode yet.
-    fieldSelectors.push(`status.capabilities.osMode!=${OsModeType.OsModePackage}`);
+    fieldSelectors.push(`status.systemInfo.osMode!=${OsModeType.OsModePackage}`);
   }
 
   const params = new URLSearchParams();

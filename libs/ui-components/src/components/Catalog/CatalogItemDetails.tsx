@@ -56,6 +56,7 @@ import FlightCtlPageDrawer from '../common/FlightCtlPageDrawer';
 import CatalogItemIcon from './CatalogItemIcon';
 import { InstallSpec } from './InstallWizard/steps/SpecificationsStep';
 import { type InstallSpecFormik } from './InstallWizard/types';
+import { getVersionFeatureRequirements } from './InstallWizard/utils';
 
 import './CatalogItemDetails.css';
 import CatalogItemRequirements from './CatalogItemRequirements';
@@ -522,7 +523,16 @@ export const CatalogItemDetailsContent = ({ item }: CatalogItemDetailsContentPro
 const CatalogItemDetails = ({ item, onInstall, ...rest }: CatalogItemDetailsProps) => {
   // reinitialize when item changes
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const initialValues = React.useMemo(() => getDefaultChannelAndVersion(item), [item.metadata.name]);
+  // reinitialize when item changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const initialValues = React.useMemo(() => {
+    const { channel, version } = getDefaultChannelAndVersion(item);
+    return {
+      channel,
+      version,
+      featureRequirements: getVersionFeatureRequirements(item, version),
+    };
+  }, [item.metadata.name]);
 
   return (
     <Formik<InstallSpecFormik>

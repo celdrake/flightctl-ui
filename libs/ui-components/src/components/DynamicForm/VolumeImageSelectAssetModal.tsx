@@ -41,7 +41,10 @@ import { CatalogItemDetailsContent, CatalogItemDetailsHeader } from '../Catalog/
 import type { InstallSpecFormik } from '../Catalog/InstallWizard/types';
 import FlightCtlForm from '../form/FlightCtlForm';
 import { InstallSpec } from '../Catalog/InstallWizard/steps/SpecificationsStep';
-import { getDefaultChannelAndVersion } from '../CatalogComposition/catalogCompositionUtils';
+import {
+  getDefaultChannelAndVersion,
+  getVersionFeatureRequirements,
+} from '../CatalogComposition/catalogCompositionUtils';
 
 const assetItemTypeFilter = [CatalogItemType.CatalogItemTypeData];
 
@@ -58,7 +61,14 @@ const DataAssetItemDetails = ({
 }) => {
   const { t } = useTranslation();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const initialValues = React.useMemo(() => getDefaultChannelAndVersion(item), []);
+  const initialValues = React.useMemo(() => {
+    const { channel, version } = getDefaultChannelAndVersion(item);
+    return {
+      channel,
+      version,
+      featureRequirements: getVersionFeatureRequirements(item, version),
+    };
+  }, []);
 
   const onSubmit = (values: InstallSpecFormik) => {
     const selectedVersion = item.spec.versions.find((v) => v.version === values.version);
