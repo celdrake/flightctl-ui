@@ -8,8 +8,7 @@ import {
   type DeviceFeatureFilter,
   FilterSearchParams,
   UNKNOWN_CAPABILITY_VALUE,
-  getDeviceFeatures,
-  getFeatureFilterValues,
+  allDeviceFeatures,
   toDeviceFeatureLabelValues,
 } from './status/devices';
 
@@ -64,19 +63,23 @@ const buildOptionalValueLabelSelector = (
 };
 
 const buildDeviceFeatureLabelSelectors = (filters?: DeviceFeatureFilter[]): string[] => {
-  if (!filters) {
+  if (!filters?.length) {
     return [];
   }
 
-  return getDeviceFeatures()
-    .map((feature) =>
-      buildOptionalValueLabelSelector(
+  return filters
+    .map((filter) => {
+      const feature = allDeviceFeatures.find((feature) => feature.fieldId === filter.fieldId);
+      if (!feature) {
+        return undefined;
+      }
+      return buildOptionalValueLabelSelector(
         feature.fieldId,
         feature.labelKey,
-        toDeviceFeatureLabelValues(feature.fieldId, getFeatureFilterValues(filters, feature.fieldId)),
+        toDeviceFeatureLabelValues(feature.fieldId, filter.values),
         DEVICE_CAPABILITY_FILTER_VALUES.length,
-      ),
-    )
+      );
+    })
     .filter((selector): selector is string => !!selector);
 };
 

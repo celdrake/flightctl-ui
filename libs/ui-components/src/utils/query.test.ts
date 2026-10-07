@@ -11,21 +11,20 @@ import {
   type DeviceFeatureFilter,
   FilterSearchParams,
   UNKNOWN_CAPABILITY_VALUE,
-  getEmptyDeviceFeatureFilters,
   updateFeatureFilterValues,
 } from './status/devices';
 
 const withFeatures = (selected: Record<string, string[]>): DeviceFeatureFilter[] =>
   Object.entries(selected).reduce(
     (filters, [field, values]) => updateFeatureFilterValues(filters, field, values),
-    getEmptyDeviceFeatureFilters(),
+    [] as DeviceFeatureFilter[],
   );
 
 describe('buildDeviceFeatureLabelSelectors', () => {
   it.each([
     {
       name: 'When no features are selected it should return no selectors',
-      filters: getEmptyDeviceFeatureFilters(),
+      filters: [],
       expected: [],
     },
     {

@@ -33,12 +33,7 @@ import AddDeviceModal from '../AddDeviceModal/AddDeviceModal';
 import { EnrolledDevicesEmptyState } from './DevicesEmptyStates';
 import DeviceTableToolbar from './DeviceTableToolbar';
 import EnrolledDeviceTableRow from './EnrolledDeviceTableRow';
-import {
-  type DeviceFeatureFilter,
-  type DeviceTextFilterKey,
-  FilterSearchParams,
-  getEmptyDeviceFeatureFilters,
-} from '../../../utils/status/devices';
+import { type DeviceFeatureFilter, type DeviceTextFilterKey, FilterSearchParams } from '../../../utils/status/devices';
 import { GlobalSystemRestoreBanners } from '../../SystemRestore/SystemRestoreBanners';
 
 interface EnrolledDeviceTableProps {
@@ -157,7 +152,7 @@ const EnrolledDevicesTable = ({
       setOnlyFleetless(false);
       clearTextFilters();
       setSelectedLabels([]);
-      setSelectedFeatures(getEmptyDeviceFeatureFilters());
+      setSelectedFeatures([]);
     }
   };
 
