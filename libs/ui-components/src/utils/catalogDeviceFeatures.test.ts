@@ -5,6 +5,7 @@ import { OsModeType } from '@flightctl/types';
 import {
   DEVICE_FEATURE_GPU_PRESENT,
   DEVICE_FEATURE_KVM_ENABLED,
+  DEVICE_FEATURE_LABEL_KVM_ENABLED,
   DEVICE_FEATURE_OS_MODE,
   OS_EXCLUDE_PACKAGE_MODE_FILTERS,
   deviceFeaturesFromApi,
@@ -14,7 +15,12 @@ import {
   mergeDeviceFeatureFilters,
   mergeDeviceFeatures,
 } from './catalogDeviceFeatures';
-import { UNKNOWN_CAPABILITY_VALUE } from './status/devices';
+import {
+  buildDeviceFeatureLabelSelectors,
+  buildIncompatibleFleetDevicesQueries,
+  invertDeviceFeatureRequirementFilter,
+} from './query';
+import { FilterSearchParams, UNKNOWN_CAPABILITY_VALUE } from './status/devices';
 
 describe('catalogDeviceFeatures', () => {
   it.each([
@@ -199,5 +205,63 @@ describe('catalogDeviceFeatures', () => {
         { [DEVICE_FEATURE_GPU_PRESENT]: DeviceFeatureBoolean.DeviceFeatureBooleanFalse },
       ),
     ).toThrow();
+  });
+
+  it('When inverting a present requirement it should select false and unknown', () => {
+    const inverted = invertDeviceFeatureRequirementFilter({
+      fieldId: 'kvmEnabled',
+      values: [DeviceFeatureBoolean.DeviceFeatureBooleanTrue],
+    });
+    expect(inverted).toEqual({
+      fieldId: 'kvmEnabled',
+      values: [DeviceFeatureBoolean.DeviceFeatureBooleanFalse, UNKNOWN_CAPABILITY_VALUE],
+    });
+    // Compiles to label!=true (matches reported false and absent), not !label.
+    expect(buildDeviceFeatureLabelSelectors(inverted ? [inverted] : [])).toEqual([
+      `${DEVICE_FEATURE_LABEL_KVM_ENABLED}!=true`,
+    ]);
+  });
+
+  it('When a single KVM requirement is set it should return one incompatible fleet query', () => {
+    const links = buildIncompatibleFleetDevicesQueries('fdas', {
+      [DEVICE_FEATURE_KVM_ENABLED]: DeviceFeatureBoolean.DeviceFeatureBooleanTrue,
+    });
+    expect(links).toHaveLength(1);
+    expect(links[0].fieldId).toBe('kvmEnabled');
+    expect(links[0].incompatibleFilters).toEqual({
+      fieldId: 'kvmEnabled',
+      values: [DeviceFeatureBoolean.DeviceFeatureBooleanFalse, UNKNOWN_CAPABILITY_VALUE],
+    });
+    const params = new URLSearchParams(links[0].incompatibleQuery);
+    expect(params.getAll(FilterSearchParams.Fleet)).toEqual(['fdas']);
+    expect(params.getAll(FilterSearchParams.KvmEnabled).sort()).toEqual(
+      [DeviceFeatureBoolean.DeviceFeatureBooleanFalse, UNKNOWN_CAPABILITY_VALUE].sort(),
+    );
+  });
+
+  it('When multiple requirements are set it should return one incompatible query per feature', () => {
+    const links = buildIncompatibleFleetDevicesQueries('fdas', {
+      [DEVICE_FEATURE_GPU_PRESENT]: DeviceFeatureBoolean.DeviceFeatureBooleanTrue,
+      [DEVICE_FEATURE_KVM_ENABLED]: DeviceFeatureBoolean.DeviceFeatureBooleanTrue,
+    });
+    expect(links.map((link) => link.fieldId).sort()).toEqual(['gpuPresent', 'kvmEnabled']);
+
+    const gpuLink = links.find((link) => link.fieldId === 'gpuPresent');
+    const gpuParams = new URLSearchParams(gpuLink?.incompatibleQuery);
+    expect(gpuParams.getAll(FilterSearchParams.Fleet)).toEqual(['fdas']);
+    expect(gpuParams.getAll(FilterSearchParams.GpuPresent).sort()).toEqual(
+      [DeviceFeatureBoolean.DeviceFeatureBooleanFalse, UNKNOWN_CAPABILITY_VALUE].sort(),
+    );
+    expect(gpuParams.getAll(FilterSearchParams.KvmEnabled)).toEqual([]);
+    expect(gpuLink?.incompatibleFilters.fieldId).toBe('gpuPresent');
+
+    const kvmLink = links.find((link) => link.fieldId === 'kvmEnabled');
+    const kvmParams = new URLSearchParams(kvmLink?.incompatibleQuery);
+    expect(kvmParams.getAll(FilterSearchParams.Fleet)).toEqual(['fdas']);
+    expect(kvmParams.getAll(FilterSearchParams.KvmEnabled).sort()).toEqual(
+      [DeviceFeatureBoolean.DeviceFeatureBooleanFalse, UNKNOWN_CAPABILITY_VALUE].sort(),
+    );
+    expect(kvmParams.getAll(FilterSearchParams.GpuPresent)).toEqual([]);
+    expect(kvmLink?.incompatibleFilters.fieldId).toBe('kvmEnabled');
   });
 });

@@ -394,8 +394,6 @@ const SelectTargetStep = ({ catalogItem }: SelectTargetStepProps) => {
     [catalogItem, values.version, values.channel, setFieldValue],
   );
 
-  console.log('%c featureRequirements', 'color: lime; font-size:18px', values.featureRequirements);
-
   return (
     <Stack hasGutter>
       <StackItem>

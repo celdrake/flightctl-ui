@@ -109,9 +109,9 @@ describe('setLabelParams', () => {
   });
 });
 
-describe('commonQueries.getCompatibleDeviceCount', () => {
+describe('commonQueries.getFullyCompatibleDeviceCount', () => {
   it('When fleet and feature requirements are set it should query by owner and labelSelector', () => {
-    const endpoint = commonQueries.getCompatibleDeviceCount(
+    const endpoint = commonQueries.getFullyCompatibleDeviceCount(
       'my-fleet',
       withFeatures({
         [FilterSearchParams.GpuPresent]: [DeviceFeatureBoolean.DeviceFeatureBooleanTrue],

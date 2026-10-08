@@ -139,6 +139,8 @@ export const OS_EXCLUDE_PACKAGE_MODE_FILTERS: DeviceFeatureFilter[] = [
   },
 ];
 
+type RequirementValue = DeviceFeatureBoolean | OsModeType;
+
 /** Merge feature filters by fieldId; later lists override earlier ones for the same field. */
 export const mergeDeviceFeatureFilters = (
   ...filterLists: (DeviceFeatureFilter[] | undefined)[]
@@ -169,14 +171,12 @@ export const mergeDeviceFeatures = (
       if (key in merged && merged[key] !== value) {
         throw new Error(`Contradictory device feature requirements for "${key}"`);
       }
-      merged[key] = value;
+      merged[key] = value as RequirementValue;
       hasAny = true;
     });
   });
   return hasAny ? merged : undefined;
 };
-
-type RequirementValue = DeviceFeatureBoolean | OsModeType;
 
 const requirementLabels = (t: TFunction) => ({
   [DEVICE_FEATURE_GPU_PRESENT]: t('GPU'),

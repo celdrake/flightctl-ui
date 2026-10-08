@@ -1,15 +1,18 @@
 import * as React from 'react';
-import { Alert } from '@patternfly/react-core';
+import { Alert, AlertActionLink } from '@patternfly/react-core';
 
 import type { Device, DeviceList } from '@flightctl/types';
 import { DeviceFeatureBoolean, type DeviceFeatures } from '@flightctl/types/alpha';
 
+import { useAppContext } from '../../hooks/useAppContext';
 import { useFetch } from '../../hooks/useFetch';
+import { ROUTE } from '../../hooks/useNavigate';
 import { useTranslation } from '../../hooks/useTranslation';
 import { getApiListCount } from '../../utils/api';
+import { deviceMeetsFeatureRequirements } from '../../utils/capabilities';
 import { deviceFeaturesToFilters } from '../../utils/catalogDeviceFeatures';
 import { commonQueries } from '../../utils/query';
-import { deviceMeetsFeatureRequirements } from '../../utils/capabilities';
+import IncompatibleFleetDevicesActionLinks from './IncompatibleFleetDevicesActionLinks';
 
 // For individual devices, the device's compatibility with a catalogItem can be:
 // - The device meets all the feature requirements --> compatible
@@ -23,6 +26,9 @@ export const DeviceCatalogItemCompatibilityAlert = ({
   featureRequirements?: DeviceFeatures;
 }) => {
   const { t } = useTranslation();
+  const {
+    router: { appRoutes },
+  } = useAppContext();
   const featureFilters = deviceFeaturesToFilters(featureRequirements);
   if (!featureFilters?.length || !device.status) {
     return null;
@@ -33,9 +39,20 @@ export const DeviceCatalogItemCompatibilityAlert = ({
     return null;
   }
 
+  const reviewDeviceLink = (
+    <AlertActionLink component="a" href={`${appRoutes[ROUTE.DEVICE_DETAILS]}/${device.metadata.name || ''}`}>
+      {t('Review device')}
+    </AlertActionLink>
+  );
+
   if (compatibility === DeviceFeatureBoolean.DeviceFeatureBooleanFalse) {
     return (
-      <Alert isInline variant="danger" title={t('Review compatibility before deploying')}>
+      <Alert
+        isInline
+        variant="danger"
+        title={t('Review compatibility before deploying')}
+        actionLinks={reviewDeviceLink}
+      >
         {t(
           'This device may not meet the requirements for this catalog item. You can continue, but the device may not be able to run the catalog item.',
         )}
@@ -44,7 +61,7 @@ export const DeviceCatalogItemCompatibilityAlert = ({
   }
 
   return (
-    <Alert isInline variant="info" title={t('Compatibility could not be determined')}>
+    <Alert isInline variant="info" title={t('Compatibility could not be determined')} actionLinks={reviewDeviceLink}>
       {t(
         'This device has not reported all required features. You can continue, but compatibility with this catalog item is unknown.',
       )}
@@ -128,7 +145,14 @@ export const FleetCatalogItemCompatibilityAlert = ({
         );
 
   return (
-    <Alert isInline variant="warning" title={title}>
+    <Alert
+      isInline
+      variant="warning"
+      title={title}
+      actionLinks={
+        <IncompatibleFleetDevicesActionLinks fleetName={fleetName} featureRequirements={featureRequirements} />
+      }
+    >
       {body}
     </Alert>
   );

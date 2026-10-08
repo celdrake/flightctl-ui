@@ -1,16 +1,26 @@
 import { DeviceSummaryStatusType, OsModeType } from '@flightctl/types';
-import { DeviceFeatureBoolean } from '@flightctl/types/alpha';
+import { DeviceFeatureBoolean, type DeviceFeatures } from '@flightctl/types/alpha';
 
 import { type FlightCtlLabel } from '../types/extraTypes';
+import { deviceFeaturesToFilters } from './catalogDeviceFeatures';
 import { labelToExactApiMatchString, textToPartialApiMatchString } from './labels';
 import {
   DEVICE_CAPABILITY_FILTER_VALUES,
   type DeviceFeatureFilter,
+  type DeviceFeatureId,
   FilterSearchParams,
   UNKNOWN_CAPABILITY_VALUE,
   allDeviceFeatures,
+  deviceFeatureFiltersToSearchParams,
   toDeviceFeatureLabelValues,
 } from './status/devices';
+
+export type IncompatibleFleetDevicesLink = {
+  fieldId: DeviceFeatureId;
+  /** Filters to use to query devices that don't meet a feature requirement. Matches API `label!=true` . */
+  incompatibleFilters: DeviceFeatureFilter;
+  incompatibleQuery: string;
+};
 
 const addQueryConditions = (fieldSelectors: string[], fieldSelector: string, values?: string[]) => {
   if (values?.length === 1) {
@@ -200,6 +210,70 @@ export const commonQueries = {
     }
     return `devices?${searchParams.toString()}`;
   },
+};
+
+/**
+ * Invert a single required feature value to the complementary UI filter
+ * (opposite boolean + unknown). The devices page compiles that to
+ * `label!=requiredValue`, which matches both reported "false" and absent labels.
+ * Do not use `!label`: feature labels are always present when reported as false.
+ */
+export const invertDeviceFeatureRequirementFilter = (filter: DeviceFeatureFilter): DeviceFeatureFilter | undefined => {
+  if (filter.values.length !== 1) {
+    return undefined;
+  }
+  const required = filter.values[0];
+  if (
+    required !== DeviceFeatureBoolean.DeviceFeatureBooleanTrue &&
+    required !== DeviceFeatureBoolean.DeviceFeatureBooleanFalse
+  ) {
+    return undefined;
+  }
+  const opposite =
+    required === DeviceFeatureBoolean.DeviceFeatureBooleanTrue
+      ? DeviceFeatureBoolean.DeviceFeatureBooleanFalse
+      : DeviceFeatureBoolean.DeviceFeatureBooleanTrue;
+  return {
+    fieldId: filter.fieldId,
+    values: [opposite, UNKNOWN_CAPABILITY_VALUE],
+  };
+};
+
+/**
+ * One devices-page link per feature requirement, using only the incompatible filter
+ * (`label!=requiredValue`) for both existence checks and navigation.
+ */
+export const buildIncompatibleFleetDevicesQueries = (
+  fleetName: string,
+  featureRequirements?: DeviceFeatures,
+): IncompatibleFleetDevicesLink[] => {
+  const requirementFilters = deviceFeaturesToFilters(featureRequirements) || [];
+
+  return requirementFilters.flatMap((filter) => {
+    const incompatibleFilters = invertDeviceFeatureRequirementFilter(filter);
+    if (!incompatibleFilters) {
+      return [];
+    }
+
+    const params = new URLSearchParams();
+    params.append(FilterSearchParams.Fleet, fleetName);
+    const featureParams = deviceFeatureFiltersToSearchParams([incompatibleFilters]);
+    Object.entries(featureParams).forEach(([key, values]) => {
+      values.forEach((value) => {
+        if (value) {
+          params.append(key, value);
+        }
+      });
+    });
+
+    return [
+      {
+        fieldId: filter.fieldId,
+        incompatibleFilters,
+        incompatibleQuery: params.toString(),
+      },
+    ];
+  });
 };
 
 export { addQueryConditions, addTextContainsCondition, buildDeviceFeatureLabelSelectors, setLabelParams };
