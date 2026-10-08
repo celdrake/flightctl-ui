@@ -106,11 +106,11 @@ export const getDeviceFeatureFilterLabel = (t: TFunction, fieldId: DeviceFeature
   const featureName = getFeatureName(t, fieldId);
   switch (value) {
     case DeviceFeatureBoolean.DeviceFeatureBooleanTrue:
-      return featureName;
+      return t('{{featureName}}: Present', { featureName });
     case DeviceFeatureBoolean.DeviceFeatureBooleanFalse:
-      return t('{{featureName}} absent', { featureName });
+      return t('{{featureName}}: Not present', { featureName });
     default:
-      return t('{{featureName}} not reported', { featureName });
+      return t('{{featureName}}: Unknown', { featureName });
   }
 };
 

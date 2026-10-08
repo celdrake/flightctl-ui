@@ -152,6 +152,30 @@ export const mergeDeviceFeatureFilters = (
   return Array.from(byField.values());
 };
 
+/** Union deviceFeatures from multiple catalog versions; throws when the same key has conflicting values. */
+export const mergeDeviceFeatures = (
+  ...featuresList: Array<DeviceFeatures | undefined | null>
+): DeviceFeatures | undefined => {
+  const merged: DeviceFeatures = {};
+  let hasAny = false;
+  featuresList.forEach((features) => {
+    if (!features) {
+      return;
+    }
+    Object.entries(features).forEach(([key, value]) => {
+      if (value === undefined || value === null || value === '') {
+        return;
+      }
+      if (key in merged && merged[key] !== value) {
+        throw new Error(`Contradictory device feature requirements for "${key}"`);
+      }
+      merged[key] = value;
+      hasAny = true;
+    });
+  });
+  return hasAny ? merged : undefined;
+};
+
 type RequirementValue = DeviceFeatureBoolean | OsModeType;
 
 const requirementLabels = (t: TFunction) => ({
@@ -189,11 +213,12 @@ const getRequirementText = (
 export const getDeviceFeatureRequirementsText = (
   features: DeviceFeatures | undefined,
   t: TFunction,
-): { enabledRequirements: string; disabledRequirements: string } => {
+): { enabledFeatures: string; disabledFeatures: string; hasRequirements: boolean } => {
   const allRequirements = Object.entries(features || {}) as [string, RequirementValue][];
   const labels = requirementLabels(t);
   return {
-    enabledRequirements: getRequirementText(allRequirements, ENABLED_REQUIREMENT_VALUES, labels),
-    disabledRequirements: getRequirementText(allRequirements, DISABLED_REQUIREMENT_VALUES, labels),
+    enabledFeatures: getRequirementText(allRequirements, ENABLED_REQUIREMENT_VALUES, labels),
+    disabledFeatures: getRequirementText(allRequirements, DISABLED_REQUIREMENT_VALUES, labels),
+    hasRequirements: allRequirements.length > 0,
   };
 };

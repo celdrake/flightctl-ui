@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Button, Flex, FlexItem, Label, LabelProps, Popover } from '@patternfly/react-core';
+import { Button, Flex, FlexItem, Label, type LabelProps, Popover } from '@patternfly/react-core';
 import OutlinedQuestionCircleIcon from '@patternfly/react-icons/dist/js/icons/outlined-question-circle-icon';
 
 import type { Device } from '@flightctl/types';
@@ -20,11 +20,11 @@ const DeviceFeatureCompatibilityContent = ({ compatibility }: { compatibility: D
     label = t('Compatible');
     msg = t('This device meets the requirements for this catalog item.');
   } else if (compatibility === DeviceFeatureBoolean.DeviceFeatureBooleanFalse) {
-    status = 'warning';
+    status = 'danger';
     label = t('Incompatible');
     msg = t('This device does not meet the requirements for this catalog item');
   } else {
-    status = undefined;
+    status = 'warning';
     label = t('Unknown');
     msg = t("This feature's information is not reported for this device.");
   }

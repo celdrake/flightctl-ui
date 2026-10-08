@@ -37,7 +37,6 @@ import FormSelect from '../../../form/FormSelect';
 import { type PermissionCheck, usePermissionsContext } from '../../../common/PermissionsContext';
 import { RESOURCE, VERB } from '../../../../types/rbac';
 import { getFullContainerURI } from '../../../../utils/catalog';
-import { OS_EXCLUDE_PACKAGE_MODE_FILTERS } from '../../../../utils/catalogDeviceFeatures';
 import { getVersionFeatureRequirements } from '../../../CatalogComposition/catalogCompositionUtils';
 import WithTooltip from '../../../common/WithTooltip';
 import { useDevicesPaginated } from '../../../Device/DevicesPage/useDevices';

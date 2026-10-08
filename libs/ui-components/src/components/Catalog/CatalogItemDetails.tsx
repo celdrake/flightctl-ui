@@ -3,6 +3,9 @@ import { Trans } from 'react-i18next';
 import {
   Alert,
   Button,
+  Card,
+  CardBody,
+  CardTitle,
   Content,
   ContentVariants,
   DescriptionList,
@@ -27,14 +30,7 @@ import ReactMarkdown from 'react-markdown';
 import { Formik, useFormikContext } from 'formik';
 import { ActionsColumn, type IAction } from '@patternfly/react-table';
 
-import {
-  type Catalog,
-  type CatalogItem,
-  CatalogItemType,
-  DeviceFeatureBoolean,
-  type DeviceFeatures,
-} from '@flightctl/types/alpha';
-import { OsModeType } from '@flightctl/types';
+import { type Catalog, type CatalogItem, CatalogItemType } from '@flightctl/types/alpha';
 import { useTranslation } from '../../hooks/useTranslation';
 import { useFetch } from '../../hooks/useFetch';
 import { useFetchPeriodically } from '../../hooks/useFetchPeriodically';
@@ -47,11 +43,6 @@ import { useItemIsInUse } from './useCatalogItems';
 import FlightCtlForm from '../form/FlightCtlForm';
 import { DeprecateModal, RestoreModal } from './DeprecateModal';
 import { getFullContainerURI } from '../../utils/catalog';
-import {
-  type DeviceFeatureBooleanFormValue,
-  type DeviceFeatureOsModeFormValue,
-  deviceFeaturesFromApi,
-} from '../../utils/catalogDeviceFeatures';
 import DeleteModal from '../modals/DeleteModal/DeleteModal';
 import WithTooltip from '../common/WithTooltip';
 import { buildAllDropdownActions } from '../common/ActionsDropdownList';
@@ -59,7 +50,7 @@ import FlightCtlPageDrawer from '../common/FlightCtlPageDrawer';
 import CatalogItemIcon from './CatalogItemIcon';
 import { InstallSpec } from './InstallWizard/steps/SpecificationsStep';
 import { type InstallSpecFormik } from './InstallWizard/types';
-import CatalogItemRequirements from './CatalogItemRequirements';
+import CatalogFeatureRequirements from './CatalogFeatureRequirements';
 
 import './CatalogItemDetails.css';
 
@@ -274,7 +265,9 @@ const CatalogItemDetailsPanel = ({
 }: CatalogItemDetailsPanelProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-
+  const {
+    values: { version },
+  } = useFormikContext<InstallSpecFormik>();
   const [itemModalOpen, setItemModalOpen] = React.useState<CatalogItemActions | undefined>(undefined);
   const isInUse = useItemIsInUse(item);
 
@@ -331,6 +324,7 @@ const CatalogItemDetailsPanel = ({
   }
 
   const catalogItemActions = buildAllDropdownActions(regularActions, dangerActions);
+  const deviceFeatures = getVersionFeatureRequirements(item, version);
 
   return (
     <>
@@ -353,7 +347,12 @@ const CatalogItemDetailsPanel = ({
                   </FlightCtlForm>
                 </StackItem>
                 <StackItem>
-                  <CatalogItemRequirements catalogItem={item} />
+                  <Card isCompact>
+                    <CardTitle>{t('Device requirements')}</CardTitle>
+                    <CardBody>
+                      <CatalogFeatureRequirements deviceFeatures={deviceFeatures} />
+                    </CardBody>
+                  </Card>
                 </StackItem>
                 {item.spec.type === CatalogItemType.CatalogItemTypeData ? (
                   <Alert
@@ -397,64 +396,6 @@ type CatalogItemDetailsContentProps = {
   item: CatalogItem;
 };
 
-const CatalogItemDeviceRequirement = ({
-  label,
-  requirement,
-}: {
-  label: string;
-  requirement: DeviceFeatureBooleanFormValue;
-}) => {
-  const { t } = useTranslation();
-  return (
-    <div>
-      {label}
-      {requirement === DeviceFeatureBoolean.DeviceFeatureBooleanTrue ? t('required') : t('must not be present')}
-    </div>
-  );
-};
-
-const CatalogItemDeviceRequirementOsMode = ({
-  label,
-  requirement,
-}: {
-  label: string;
-  requirement: DeviceFeatureOsModeFormValue;
-}) => {
-  const { t } = useTranslation();
-  return (
-    <div>
-      {label}: {requirement === OsModeType.OsModeImage ? t('Image') : t('Package')}
-    </div>
-  );
-};
-
-const CatalogItemDeviceRequirements = ({ deviceFeatures }: { deviceFeatures?: DeviceFeatures }) => {
-  const { t } = useTranslation();
-
-  const definedRequirements = deviceFeaturesFromApi(deviceFeatures);
-  if (!definedRequirements) {
-    return null;
-  }
-
-  return (
-    <DescriptionListGroup>
-      <DescriptionListTerm>{t('Device requirements')}</DescriptionListTerm>
-      <DescriptionListDescription className="fctl-catalog-item-details">
-        {definedRequirements.gpuPresent && (
-          <CatalogItemDeviceRequirement label={t('GPU acceleration')} requirement={definedRequirements.gpuPresent} />
-        )}
-
-        {definedRequirements.kvmEnabled && (
-          <CatalogItemDeviceRequirement label={t('KVM virtualization')} requirement={definedRequirements.kvmEnabled} />
-        )}
-        {definedRequirements.osMode && (
-          <CatalogItemDeviceRequirementOsMode label={t('OS mode')} requirement={definedRequirements.osMode} />
-        )}
-      </DescriptionListDescription>
-    </DescriptionListGroup>
-  );
-};
-
 export const CatalogItemDetailsContent = ({ item }: CatalogItemDetailsContentProps) => {
   const { t } = useTranslation();
 
@@ -468,6 +409,8 @@ export const CatalogItemDetailsContent = ({ item }: CatalogItemDetailsContentPro
 
   const selectedVersion = item.spec.versions.find((v) => v.version === version);
   const readme = selectedVersion?.readme;
+  const deviceFeatures = selectedVersion?.deviceFeatures;
+  const hasDeviceFeatures = !!deviceFeatures && Object.keys(deviceFeatures).length > 0;
 
   return (
     <Grid hasGutter>
@@ -503,7 +446,14 @@ export const CatalogItemDetailsContent = ({ item }: CatalogItemDetailsContentPro
               <CatalogItemPanelLink link={item.spec.homepage} />
             </DescriptionListDescription>
           </DescriptionListGroup>
-          <CatalogItemDeviceRequirements deviceFeatures={selectedVersion?.deviceFeatures} />
+          {hasDeviceFeatures && (
+            <DescriptionListGroup>
+              <DescriptionListTerm>{t('Device requirements')}</DescriptionListTerm>
+              <DescriptionListDescription className="fctl-catalog-item-details">
+                <CatalogFeatureRequirements deviceFeatures={deviceFeatures} />
+              </DescriptionListDescription>
+            </DescriptionListGroup>
+          )}
         </DescriptionList>
       </GridItem>
       <GridItem span={9}>

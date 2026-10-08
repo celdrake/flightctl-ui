@@ -43,10 +43,13 @@ import TableTextSearch from '../../../Table/TableTextSearch';
 import DeviceFeatureCompatibility from '../DeviceFeatureCompatibility';
 import type { InstallAppFormik, InstallOsFormik, InstallSpecFormik, TargetPickerFormik } from '../types';
 import { isSameCatalogRef } from '../utils';
+import CatalogFeatureRequirements from '../../CatalogFeatureRequirements';
 
 export const isSelectTargetStepValid = (errors: FormikErrors<InstallAppFormik>) => {
   return !errors.device && !errors.fleet;
 };
+
+type TargetSelectedFn = (targetSpec: ImageOrCatalogItemRefSpec | undefined) => void;
 
 const getDeviceTableColumns = (t: TFunction) => [
   {
@@ -79,11 +82,7 @@ const getDeviceTableColumns = (t: TFunction) => [
   },
 ];
 
-const DeviceTarget = ({
-  onTargetSelected,
-}: {
-  onTargetSelected: (targetSpec: ImageOrCatalogItemRefSpec | undefined) => void;
-}) => {
+const DeviceTarget = ({ onTargetSelected }: { onTargetSelected: TargetSelectedFn }) => {
   const { t } = useTranslation();
   const { values, setFieldValue, setFieldTouched } = useFormikContext<InstallSpecFormik & TargetPickerFormik>();
   const [deviceNameFilter, setDeviceNameFilter] = React.useState('');
@@ -113,7 +112,6 @@ const DeviceTarget = ({
     [values.device?.metadata.name],
   );
 
-  // CELIA-WIP: SHOW REQUIREMENT ALERT
   return (
     <Stack hasGutter>
       <StackItem>
@@ -186,11 +184,7 @@ const getFleetTableColumns = (t: TFunction) => [
   },
 ];
 
-const FleetTarget = ({
-  onTargetSelected,
-}: {
-  onTargetSelected: (targetSpec: ImageOrCatalogItemRefSpec | undefined) => void;
-}) => {
+const FleetTarget = ({ onTargetSelected }: { onTargetSelected: TargetSelectedFn }) => {
   const { t } = useTranslation();
   const { values, setFieldValue, setFieldTouched } = useFormikContext<InstallSpecFormik & TargetPickerFormik>();
 
@@ -367,7 +361,27 @@ type SelectTargetStepProps = {
   catalogItem: CatalogItem;
 };
 
+const SelectTargetStepContent = ({
+  catalogItem,
+  target,
+  onTargetSelected,
+}: {
+  catalogItem: CatalogItem;
+  target: TargetPickerFormik['target'];
+  onTargetSelected: TargetSelectedFn;
+}) => {
+  switch (target) {
+    case 'device':
+      return <DeviceTarget onTargetSelected={onTargetSelected} />;
+    case 'fleet':
+      return <FleetTarget onTargetSelected={onTargetSelected} />;
+    default:
+      return <NewDeviceTarget catalogItem={catalogItem} />;
+  }
+};
+
 const SelectTargetStep = ({ catalogItem }: SelectTargetStepProps) => {
+  const { t } = useTranslation();
   const { values, setFieldValue } = useFormikContext<InstallOsFormik>();
 
   const onTargetSelected = React.useCallback(
@@ -380,14 +394,20 @@ const SelectTargetStep = ({ catalogItem }: SelectTargetStepProps) => {
     [catalogItem, values.version, values.channel, setFieldValue],
   );
 
-  switch (values.target) {
-    case 'device':
-      return <DeviceTarget onTargetSelected={onTargetSelected} />;
-    case 'fleet':
-      return <FleetTarget onTargetSelected={onTargetSelected} />;
-    default:
-      return <NewDeviceTarget catalogItem={catalogItem} />;
-  }
+  console.log('%c featureRequirements', 'color: lime; font-size:18px', values.featureRequirements);
+
+  return (
+    <Stack hasGutter>
+      <StackItem>
+        <Alert variant="info" title={t('Device requirements')}>
+          <CatalogFeatureRequirements deviceFeatures={values.featureRequirements} />
+        </Alert>
+      </StackItem>
+      <StackItem>
+        <SelectTargetStepContent catalogItem={catalogItem} target={values.target} onTargetSelected={onTargetSelected} />
+      </StackItem>
+    </Stack>
+  );
 };
 
 export default SelectTargetStep;

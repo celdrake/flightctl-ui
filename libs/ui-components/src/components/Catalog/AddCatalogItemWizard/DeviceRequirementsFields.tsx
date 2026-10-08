@@ -40,7 +40,7 @@ const FeatureSelect = ({ featureKey, label, value, isDisabled, onUpdate }: Featu
   const [isOpen, setIsOpen] = React.useState(false);
 
   const trueLabel = featureKey === 'osMode' ? t('Image mode is required') : t('Feature must be present');
-  const falseLabel = featureKey === 'osMode' ? t('Package mode is required') : t('Feature must be absent');
+  const falseLabel = featureKey === 'osMode' ? t('Package mode is required') : t('Feature must not be present');
 
   return (
     <FormGroup label={label} className="pf-v6-u-mb-sm">

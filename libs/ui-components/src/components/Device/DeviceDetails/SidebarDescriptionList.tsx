@@ -76,14 +76,14 @@ const CapabilityValue = ({ value }: { value: DeviceFeatureBoolean | undefined })
     case DeviceFeatureBoolean.DeviceFeatureBooleanFalse:
       return t('Disabled');
     default:
-      return t('Not reported');
+      return t('Unknown');
   }
 };
 
 const GpuCapabilityValue = ({ gpus }: { gpus: DeviceGpu[] | undefined }) => {
   const { t } = useTranslation();
   if (!gpus || gpus.length === 0) {
-    return t('Not reported');
+    return t('Unknown');
   }
   return <>{gpus.map((gpu) => `${gpu.vendor} ${gpu.model}`).join(', ')}</>;
 };

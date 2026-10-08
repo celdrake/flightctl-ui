@@ -6,12 +6,13 @@ import {
   DEVICE_FEATURE_GPU_PRESENT,
   DEVICE_FEATURE_KVM_ENABLED,
   DEVICE_FEATURE_OS_MODE,
+  OS_EXCLUDE_PACKAGE_MODE_FILTERS,
   deviceFeaturesFromApi,
   deviceFeaturesToApi,
   deviceFeaturesToFilters,
   getEmptyDeviceFeaturesFormValues,
   mergeDeviceFeatureFilters,
-  OS_EXCLUDE_PACKAGE_MODE_FILTERS,
+  mergeDeviceFeatures,
 } from './catalogDeviceFeatures';
 import { UNKNOWN_CAPABILITY_VALUE } from './status/devices';
 
@@ -158,5 +159,45 @@ describe('catalogDeviceFeatures', () => {
         values: [DeviceFeatureBoolean.DeviceFeatureBooleanTrue, UNKNOWN_CAPABILITY_VALUE],
       },
     ]);
+  });
+
+  it.each([
+    {
+      name: 'When all inputs are empty it should return undefined',
+      featuresList: [undefined, null, {}],
+      expected: undefined,
+    },
+    {
+      name: 'When features come from multiple catalog items it should union keys',
+      featuresList: [
+        { [DEVICE_FEATURE_GPU_PRESENT]: DeviceFeatureBoolean.DeviceFeatureBooleanTrue },
+        { [DEVICE_FEATURE_KVM_ENABLED]: DeviceFeatureBoolean.DeviceFeatureBooleanTrue },
+      ],
+      expected: {
+        [DEVICE_FEATURE_GPU_PRESENT]: DeviceFeatureBoolean.DeviceFeatureBooleanTrue,
+        [DEVICE_FEATURE_KVM_ENABLED]: DeviceFeatureBoolean.DeviceFeatureBooleanTrue,
+      },
+    },
+    {
+      name: 'When the same key appears with the same value it should keep that value',
+      featuresList: [
+        { [DEVICE_FEATURE_GPU_PRESENT]: DeviceFeatureBoolean.DeviceFeatureBooleanTrue },
+        { [DEVICE_FEATURE_GPU_PRESENT]: DeviceFeatureBoolean.DeviceFeatureBooleanTrue },
+      ],
+      expected: {
+        [DEVICE_FEATURE_GPU_PRESENT]: DeviceFeatureBoolean.DeviceFeatureBooleanTrue,
+      },
+    },
+  ])('$name', ({ featuresList, expected }) => {
+    expect(mergeDeviceFeatures(...featuresList)).toEqual(expected);
+  });
+
+  it('When the same key appears with different values it should throw', () => {
+    expect(() =>
+      mergeDeviceFeatures(
+        { [DEVICE_FEATURE_GPU_PRESENT]: DeviceFeatureBoolean.DeviceFeatureBooleanTrue },
+        { [DEVICE_FEATURE_GPU_PRESENT]: DeviceFeatureBoolean.DeviceFeatureBooleanFalse },
+      ),
+    ).toThrow();
   });
 });

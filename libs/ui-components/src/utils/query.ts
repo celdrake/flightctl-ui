@@ -190,7 +190,7 @@ export const commonQueries = {
     return `labelsyncprovenance?${searchParams.toString()}`;
   },
   getFleetWithDevicesSummary: (fleetName: string) => `fleets/${fleetName}?addDevicesSummary=true`,
-  getCompatibleDeviceCount: (fleetName: string, featureRequirements: DeviceFeatureFilter[]) => {
+  getFullyCompatibleDeviceCount: (fleetName: string, featureRequirements: DeviceFeatureFilter[]) => {
     const searchParams = new URLSearchParams({
       limit: '1',
     });

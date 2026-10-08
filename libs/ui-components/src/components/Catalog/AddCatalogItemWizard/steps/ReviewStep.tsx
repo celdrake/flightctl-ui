@@ -13,66 +13,15 @@ import {
 } from '@patternfly/react-core';
 import { useFormikContext } from 'formik';
 
-import { DeviceFeatureBoolean } from '@flightctl/types/alpha';
-import { OsModeType } from '@flightctl/types';
 import type { AddCatalogItemFormValues } from '../types';
 import { useTranslation } from '../../../../hooks/useTranslation';
 import { getErrorMessage } from '../../../../utils/error';
 import { appTypeIds } from '../../useCatalogItems';
 import { getArtifactLabel } from '../../../../utils/catalogTypes';
-import type { DeviceFeatureBooleanFormValue, DeviceFeaturesFormValues } from '../../../../utils/catalogDeviceFeatures';
+import { deviceFeaturesToApi } from '../../../../utils/catalogDeviceFeatures';
+import CatalogFeatureRequirements from '../../CatalogFeatureRequirements';
 
 export const reviewStepId = 'review';
-
-const addEnabledOrDisabledFeature = (
-  enabledFeatures: string[],
-  disabledFeatures: string[],
-  feature: DeviceFeatureBooleanFormValue,
-  label: string,
-) => {
-  if (feature === DeviceFeatureBoolean.DeviceFeatureBooleanTrue) {
-    enabledFeatures.push(label);
-  } else if (feature === DeviceFeatureBoolean.DeviceFeatureBooleanFalse) {
-    disabledFeatures.push(label);
-  }
-};
-
-// CELIA-WIP IMPLEMENT FOR REAL
-const CatalogItemVersionFeatures = ({ deviceFeatures }: { deviceFeatures: DeviceFeaturesFormValues | null }) => {
-  const { t } = useTranslation();
-  if (!deviceFeatures) {
-    return t('No device features defined');
-  }
-
-  const enabledFeatures: string[] = [];
-  const disabledFeatures: string[] = [];
-  addEnabledOrDisabledFeature(enabledFeatures, disabledFeatures, deviceFeatures.gpuPresent, t('GPU'));
-  addEnabledOrDisabledFeature(enabledFeatures, disabledFeatures, deviceFeatures.kvmEnabled, t('KVM'));
-  if (deviceFeatures.osMode === OsModeType.OsModeImage) {
-    enabledFeatures.push(t('Image mode OS'));
-  } else if (deviceFeatures.osMode === OsModeType.OsModePackage) {
-    enabledFeatures.push(t('Package mode OS'));
-  }
-
-  return (
-    <Stack>
-      {disabledFeatures.length > 0 && (
-        <StackItem>
-          <span>
-            {t('Features that must be absent:')} {disabledFeatures.join(', ')}
-          </span>
-        </StackItem>
-      )}
-      {enabledFeatures.length > 0 && (
-        <StackItem>
-          <span>
-            {t('Features that must be present:')} {enabledFeatures.join(', ')}
-          </span>
-        </StackItem>
-      )}
-    </Stack>
-  );
-};
 
 const ReviewStep = ({ error, isEdit, isReadOnly }: { error: unknown; isEdit?: boolean; isReadOnly?: boolean }) => {
   const { t } = useTranslation();
@@ -173,7 +122,7 @@ const ReviewStep = ({ error, isEdit, isReadOnly }: { error: unknown; isEdit?: bo
             <DescriptionListGroup key={v.version}>
               <DescriptionListTerm>{t('Version {{version}}', { version: v.version })}</DescriptionListTerm>
               <DescriptionListDescription>
-                <CatalogItemVersionFeatures deviceFeatures={v.deviceFeatures} />
+                <CatalogFeatureRequirements deviceFeatures={deviceFeaturesToApi(v.deviceFeatures)} />
               </DescriptionListDescription>
             </DescriptionListGroup>
           ))}
