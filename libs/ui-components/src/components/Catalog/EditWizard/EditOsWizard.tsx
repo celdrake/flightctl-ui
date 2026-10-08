@@ -3,6 +3,7 @@ import { Wizard, WizardStep, type WizardStepType } from '@patternfly/react-core'
 import { Formik, type FormikErrors, useFormikContext } from 'formik';
 import * as Yup from 'yup';
 
+import type { Device, Fleet } from '@flightctl/types';
 import type { CatalogItem, CatalogItemVersion } from '@flightctl/types/alpha';
 import { useTranslation } from '../../../hooks/useTranslation';
 import type { InstallSpecFormik } from '../InstallWizard/types';
@@ -14,6 +15,7 @@ import { getErrorMessage } from '../../../utils/error';
 import ReviewStep from './steps/ReviewStep';
 import LeaveFormConfirmation from '../../common/LeaveFormConfirmation';
 import { isWizardStepDisabled } from '../../../utils/wizards';
+import EditWizardCompatibilityBanners from './EditWizardCompatibilityBanners';
 
 const versionStepId = 'version-step';
 const reviewStepId = 'review-step';
@@ -43,6 +45,8 @@ type WizardContentProps = {
   error: string | undefined;
   setError: (err: string | undefined) => void;
   isEdit: boolean;
+  targetDevice?: Device;
+  targetFleet?: Fleet;
 };
 
 const WizardContent: React.FC<WizardContentProps> = ({
@@ -52,6 +56,8 @@ const WizardContent: React.FC<WizardContentProps> = ({
   error,
   setError,
   isEdit,
+  targetDevice,
+  targetFleet,
 }) => {
   const { t } = useTranslation();
   const [currentStep, setCurrentStep] = React.useState<WizardStepType>();
@@ -62,6 +68,7 @@ const WizardContent: React.FC<WizardContentProps> = ({
 
   return (
     <>
+      <EditWizardCompatibilityBanners targetDevice={targetDevice} targetFleet={targetFleet} />
       <LeaveFormConfirmation />
       <Wizard
         footer={
@@ -111,6 +118,8 @@ type EditOsWizardProps = {
   isEdit: boolean;
   version: string;
   channel: string;
+  targetDevice?: Device;
+  targetFleet?: Fleet;
 };
 
 const EditOsWizard: React.FC<EditOsWizardProps> = ({
@@ -122,6 +131,8 @@ const EditOsWizard: React.FC<EditOsWizardProps> = ({
   isEdit,
   version,
   channel,
+  targetDevice,
+  targetFleet,
 }) => {
   const [error, setError] = React.useState<string>();
   const { t } = useTranslation();
@@ -163,6 +174,8 @@ const EditOsWizard: React.FC<EditOsWizardProps> = ({
         error={error}
         setError={setError}
         isEdit={isEdit}
+        targetDevice={targetDevice}
+        targetFleet={targetFleet}
       />
     </Formik>
   );
