@@ -38,6 +38,10 @@ export type DeviceSystemInfo = {
    * Whether this device can consume OCI deltas. True when the oci-delta binary is present. False when it is not. Omitted when an older agent does not report the field.
    */
   deltaEligible?: boolean;
+  /**
+   * Whether this device can consume schedules containing one-time maintenance windows. Omitted when the agent does not report the capability.
+   */
+  oneTimeWindowsEligible?: boolean;
   customInfo?: CustomDeviceInfo;
   /**
    * List of GPU devices discovered on the device.

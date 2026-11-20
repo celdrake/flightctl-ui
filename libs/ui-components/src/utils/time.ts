@@ -1,5 +1,6 @@
 import { type TFunction } from 'i18next';
-import { type Duration, type UpdateSchedule } from '@flightctl/types';
+import { type Duration, type OneTimeWindow, type UpdateSchedule } from '@flightctl/types';
+import { type OneTimeWindowForm, type UpdatePolicyForm } from '../types/deviceSpec';
 
 export const formatTimePart = (val: number | string) => val.toString().padStart(2, '0');
 
@@ -74,6 +75,42 @@ export const getEndTime = (startTime: string, duration?: Duration) => {
   return `${formatTimePart(newHours)}:${formatTimePart(newMinutes)}`;
 };
 
+/** Minutes between two HH:mm values, crossing midnight when the end is earlier than the start. */
+const minutesBetween = (startsAt: string, endsAt: string): number => {
+  const [startHour, startMinute] = (startsAt || defaultStartTime).split(':').map(Number);
+  const [endHour, endMinute] = (endsAt || defaultEndTime).split(':').map(Number);
+  const minutes = endHour * 60 + endMinute - (startHour * 60 + startMinute);
+  return minutes > 0 ? minutes : minutes + 24 * 60;
+};
+
+/** API duration for a time range. The API accepts one unit, so 1h30m is sent as 90m. */
+export const getStartGraceDuration = (startsAt: string, endsAt: string): string => {
+  const minutes = minutesBetween(startsAt, endsAt);
+  return minutes % 60 === 0 ? `${minutes / 60}h` : `${minutes}m`;
+};
+
+/** True when cron can be represented as the UI's Daily/Weekly controls. */
+export const isUiSupportedCron = (cronExp?: string): boolean => {
+  if (!cronExp) {
+    return true;
+  }
+  const tokens = cronExp.split(' ').filter(Boolean);
+  if (tokens.length !== 5) {
+    return false;
+  }
+  const [minutes, hours, days, months, weekDays] = tokens;
+  if (!/^\d{1,2}$/.test(minutes) || Number(minutes) > 59) {
+    return false;
+  }
+  if (!/^\d{1,2}$/.test(hours) || Number(hours) > 23) {
+    return false;
+  }
+  if (days !== '*' || months !== '*') {
+    return false;
+  }
+  return weekDays === '*' || /^([0-6])(,[0-6])*$/.test(weekDays);
+};
+
 // Cron expression example: "0 4 * * 2,5"
 export const getTime = (cronExp?: string) => {
   const tokens = (cronExp || '').split(' ').filter(Boolean);
@@ -123,6 +160,28 @@ export const getUpdateCronExpression = (startTime: string, scheduleMode: UpdateS
   return `${minutes} ${hours} * * ${weekDayVals.join(',')}`;
 };
 
+/** A recurring schedule exists when the loaded policy has a cron (`at`) on either schedule. */
+export const hasRecurringSchedule = (updatePolicy: Pick<UpdatePolicyForm, 'downloadCron' | 'installCron'>) =>
+  Boolean(updatePolicy.downloadCron || updatePolicy.installCron);
+
+/** Cron for a newly added recurring schedule: daily at the default start time. */
+export const getDefaultUpdateCron = () =>
+  getUpdateCronExpression(defaultStartTime, UpdateScheduleMode.Daily, [true, true, true, true, true, true, true]);
+
+const oneTimeWindowsEqual = (a?: OneTimeWindow[], b?: OneTimeWindow[]) => {
+  const left = a || [];
+  const right = b || [];
+  return (
+    left.length === right.length &&
+    left.every(
+      (window, index) =>
+        window.date === right[index].date &&
+        window.at === right[index].at &&
+        window.startGraceDuration === right[index].startGraceDuration,
+    )
+  );
+};
+
 export const schedulesAreEqual = (a: UpdateSchedule | undefined, b: UpdateSchedule | undefined) => {
   if (!a && !b) {
     return true;
@@ -136,7 +195,131 @@ export const schedulesAreEqual = (a: UpdateSchedule | undefined, b: UpdateSchedu
   if ((a.timeZone || localDeviceTimezone) !== (b.timeZone || localDeviceTimezone)) {
     return false;
   }
-  return (a.startGraceDuration || '0s') === (b.startGraceDuration || '0s');
+  if ((a.startGraceDuration || '0s') !== (b.startGraceDuration || '0s')) {
+    return false;
+  }
+  return oneTimeWindowsEqual(a.oneTimeWindows, b.oneTimeWindows);
+};
+
+const timeToMinutes = (hhmm: string): number => {
+  const [hours, minutes] = (hhmm || '00:00').split(':').map(Number);
+  return (hours || 0) * 60 + (minutes || 0);
+};
+
+/** True when two [start,end] ranges overlap; supports overnight (end < start). */
+export const timeRangesOverlap = (aStart: string, aEnd: string, bStart: string, bEnd: string): boolean => {
+  const expand = (start: string, end: string): Array<[number, number]> => {
+    const startMinutes = timeToMinutes(start);
+    const endMinutes = timeToMinutes(end);
+    return endMinutes > startMinutes
+      ? [[startMinutes, endMinutes]]
+      : [
+          [startMinutes, 24 * 60],
+          [0, endMinutes],
+        ];
+  };
+
+  const aRanges = expand(aStart, aEnd);
+  const bRanges = expand(bStart, bEnd);
+  return aRanges.some(([aFrom, aTo]) => bRanges.some(([bFrom, bTo]) => aFrom < bTo && bFrom < aTo));
+};
+
+export type StandingScheduleFields = {
+  startsAt?: string;
+  endsAt?: string;
+  scheduleMode: UpdateScheduleMode;
+  weekDays: boolean[];
+  timeZone?: string;
+};
+
+export type OneTimeOverlapKind = 'none' | 'clock_overlap' | 'likely_covered' | 'timezone_uncertain';
+
+const normalizeTimeZone = (timeZone?: string) => timeZone || localDeviceTimezone;
+
+const timeRangeContained = (aStart: string, aEnd: string, bStart: string, bEnd: string): boolean => {
+  const aFrom = timeToMinutes(aStart);
+  const aTo = timeToMinutes(aEnd);
+  const bFrom = timeToMinutes(bStart);
+  const bTo = timeToMinutes(bEnd);
+  // Containment is only reliable for same-day standing windows.
+  if (bTo <= bFrom || aTo <= aFrom) {
+    return false;
+  }
+  return aFrom >= bFrom && aTo <= bTo;
+};
+
+/** Non-blocking overlap assessment between one-time and recurring windows. */
+export const assessOneTimeStandingOverlap = (
+  date: string,
+  startsAt: string,
+  endsAt: string,
+  oneTimeTimeZone: string | undefined,
+  standing: StandingScheduleFields,
+): { kind: OneTimeOverlapKind } => {
+  if (!date || !startsAt || !endsAt || !standing.startsAt || !standing.endsAt) {
+    return { kind: 'none' };
+  }
+  const parts = date.split('-').map(Number);
+  if (parts.length !== 3 || parts.some((part) => Number.isNaN(part))) {
+    return { kind: 'none' };
+  }
+  const weekday = new Date(parts[0], parts[1] - 1, parts[2]).getDay();
+  const appliesThatDay = standing.scheduleMode === UpdateScheduleMode.Daily || Boolean(standing.weekDays[weekday]);
+  if (!appliesThatDay) {
+    return { kind: 'none' };
+  }
+  if (normalizeTimeZone(oneTimeTimeZone) !== normalizeTimeZone(standing.timeZone)) {
+    return { kind: 'timezone_uncertain' };
+  }
+  if (!timeRangesOverlap(startsAt, endsAt, standing.startsAt, standing.endsAt)) {
+    return { kind: 'none' };
+  }
+  return {
+    kind: timeRangeContained(startsAt, endsAt, standing.startsAt, standing.endsAt) ? 'likely_covered' : 'clock_overlap',
+  };
+};
+
+export const createEmptyOneTimeWindow = (): OneTimeWindowForm => ({
+  id: `otw-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  date: '',
+  startsAt: defaultStartTime,
+  endsAt: defaultEndTime,
+});
+
+/**
+ * Groups windows sharing a date into one entry, unless more than two share it.
+ * Undated windows (just added) share the empty date until one is picked.
+ */
+export const groupOneTimeWindowEntries = <T extends { window: Pick<OneTimeWindowForm, 'date'> }>(
+  entries: T[],
+): T[][] => {
+  const groups: T[][] = [];
+  const groupsByDate = new Map<string, T[]>();
+  entries.forEach((entry) => {
+    const dateGroup = groupsByDate.get(entry.window.date);
+    if (dateGroup) {
+      dateGroup.push(entry);
+    } else {
+      const group = [entry];
+      groups.push(group);
+      groupsByDate.set(entry.window.date, group);
+    }
+  });
+  return groups.flatMap((group) => (group.length > 2 ? group.map((entry) => [entry]) : [group]));
+};
+
+/** A window is expired once its local end time has passed. Windows are never auto-removed. */
+export const isOneTimeWindowExpired = (date: string, endsAt: string): boolean => {
+  if (!date) {
+    return false;
+  }
+  const endMinutes = timeToMinutes(endsAt || defaultEndTime);
+  const parts = date.split('-').map(Number);
+  if (parts.length !== 3) {
+    return false;
+  }
+  const end = new Date(parts[0], parts[1] - 1, parts[2], Math.floor(endMinutes / 60), endMinutes % 60);
+  return end.getTime() < Date.now();
 };
 
 export type UpdateScheduleDisplayFields = {

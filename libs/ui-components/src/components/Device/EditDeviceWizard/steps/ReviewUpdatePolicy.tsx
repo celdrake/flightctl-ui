@@ -11,13 +11,16 @@ import {
 import type {
   DeltaGenerationForm,
   DisruptionBudgetForm,
+  OneTimeWindowForm,
   RolloutPolicyForm,
   UpdatePolicyForm,
 } from '../../../../types/deviceSpec';
 
 import { useTranslation } from '../../../../hooks/useTranslation';
+import { getCalendarDateDisplay } from '../../../../utils/dates';
 import LabelsView from '../../../common/LabelsView';
 import { getDownloadPolicyText, getInstallPolicyText } from '../../../Fleet/CreateFleet/fleetSpecUtils';
+import { hasRecurringSchedule, localDeviceTimezone } from '../../../../utils/time';
 
 export const ReviewRolloutPolicy = ({ rolloutPolicy }: { rolloutPolicy: RolloutPolicyForm }) => {
   const { t } = useTranslation();
@@ -70,14 +73,45 @@ export const ReviewDisruptionBudget = ({ disruptionBudget }: { disruptionBudget:
 
 export const ReviewUpdatePolicy = ({ updatePolicy }: { updatePolicy: UpdatePolicyForm }) => {
   const { t } = useTranslation();
+  const downloadWindows = updatePolicy.downloadOneTimeWindows || [];
+  const installWindows = updatePolicy.installOneTimeWindows || [];
+  const installTimeZone = updatePolicy.downloadAndInstallDiffer
+    ? updatePolicy.installTimeZone
+    : updatePolicy.downloadTimeZone;
+
+  const describeWindows = (windows: OneTimeWindowForm[], timeZone: string) => {
+    const timeZoneLabel = timeZone === localDeviceTimezone ? t('device local') : timeZone;
+    const windowsText = windows
+      .map((window) => `${getCalendarDateDisplay(window.date)} ${window.startsAt}–${window.endsAt}`)
+      .join('; ');
+    return `${windowsText} (${timeZoneLabel})`;
+  };
+
   return (
     <Stack hasGutter>
-      <StackItem>
-        {t('Download window')}: {getDownloadPolicyText(updatePolicy, t)}
-      </StackItem>
-      {updatePolicy.downloadAndInstallDiffer && (
+      {updatePolicy.downloadCron ? (
         <StackItem>
-          {t('Install window')}: {getInstallPolicyText(updatePolicy, t)}
+          {t('Download window')}: {getDownloadPolicyText(updatePolicy, t)}
+        </StackItem>
+      ) : null}
+      {updatePolicy.downloadAndInstallDiffer || updatePolicy.installCron ? (
+        <StackItem>
+          {t('Update window')}: {getInstallPolicyText(updatePolicy, t)}
+        </StackItem>
+      ) : null}
+      {!hasRecurringSchedule(updatePolicy) && (
+        <StackItem>
+          {t('Recurring schedule')}: {t('None')}
+        </StackItem>
+      )}
+      {downloadWindows.length > 0 && (
+        <StackItem>
+          {t('One-time download windows')}: {describeWindows(downloadWindows, updatePolicy.downloadTimeZone)}
+        </StackItem>
+      )}
+      {installWindows.length > 0 && (
+        <StackItem>
+          {t('One-time update windows')}: {describeWindows(installWindows, installTimeZone)}
         </StackItem>
       )}
     </Stack>

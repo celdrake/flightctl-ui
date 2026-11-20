@@ -4,6 +4,7 @@ import type {
   Percentage,
   RolloutPolicy,
   RolloutPolicyDeltaGeneration,
+  UpdateSchedule,
 } from '@flightctl/types';
 import { type TFunction } from 'i18next';
 
@@ -12,13 +13,13 @@ import {
   BatchLimitType,
   type DeltaGenerationForm,
   type FleetFormValues,
+  type OneTimeWindowForm,
   type RolloutPolicyForm,
   UpdateMode,
   type UpdatePolicyForm,
 } from './../../../types/deviceSpec';
 import { fromAPILabel } from '../../../utils/labels';
 import * as timeUtils from '../../../utils/time';
-import { schedulesAreEqual } from '../../../utils/time';
 
 export const DEFAULT_BACKEND_UPDATE_TIMEOUT_MINUTES = 1140; // 24h, expressed in minutes
 const DEFAULT_BACKEND_SUCCESS_THRESHOLD_PERCENTAGE = '90%';
@@ -67,23 +68,49 @@ export const getDisruptionBudgetValues = (fleetSpec?: FleetSpec) => {
   };
 };
 
+const toOneTimeWindowForms = (windows: UpdateSchedule['oneTimeWindows'] = []): OneTimeWindowForm[] =>
+  windows.map((window, index) => ({
+    id: `otw-${window.date}-${window.at}-${index}`,
+    date: window.date,
+    startsAt: window.at,
+    endsAt: timeUtils.getEndTime(window.at, window.startGraceDuration),
+  }));
+
 export const getUpdatePolicyValues = (updateSpec?: DeviceUpdatePolicySpec): UpdatePolicyForm => {
-  const isEqual = schedulesAreEqual(updateSpec?.updateSchedule, updateSpec?.downloadSchedule);
+  const downloadSchedule = updateSpec?.downloadSchedule;
+  const installSchedule = updateSpec?.updateSchedule;
 
-  const downloadStartsAt = timeUtils.getTime(updateSpec?.downloadSchedule?.at);
-  const installStartsAt = timeUtils.getTime(updateSpec?.updateSchedule?.at);
+  const downloadCron = downloadSchedule?.at;
+  const installCron = installSchedule?.at;
 
-  const downloadWeekDays = timeUtils.getWeekDays(updateSpec?.downloadSchedule?.at);
-  const installWeekDays = timeUtils.getWeekDays(updateSpec?.updateSchedule?.at);
+  const downloadStartsAt = timeUtils.getTime(downloadCron);
+  const installStartsAt = timeUtils.getTime(installCron);
 
-  const downloadStartGraceDuration = updateSpec?.downloadSchedule?.startGraceDuration;
-  const installStartGraceDuration = isEqual
-    ? downloadStartGraceDuration
-    : updateSpec?.updateSchedule?.startGraceDuration;
+  const downloadWeekDays = timeUtils.getWeekDays(downloadCron);
+  const installWeekDays = timeUtils.getWeekDays(installCron);
+
+  const downloadStartGraceDuration = downloadSchedule?.startGraceDuration;
+  const installStartGraceDuration = installCron ? installSchedule?.startGraceDuration : downloadStartGraceDuration;
+
+  const hasRecurring = Boolean(downloadCron || installCron);
+  const downloadTimeZone = downloadSchedule?.timeZone || timeUtils.localDeviceTimezone;
+  const installTimeZone = installSchedule
+    ? installSchedule.timeZone || timeUtils.localDeviceTimezone
+    : downloadTimeZone;
+
+  const downloadOneTimeWindows = toOneTimeWindowForms(downloadSchedule?.oneTimeWindows);
+  const installOneTimeWindows = toOneTimeWindowForms(installSchedule?.oneTimeWindows);
+
+  // The checkbox is about the recurring schedules; one-time windows are independent lists.
+  const downloadAndInstallDiffer =
+    Boolean(installCron) &&
+    (installCron !== downloadCron ||
+      (installStartGraceDuration || '0s') !== (downloadStartGraceDuration || '0s') ||
+      installTimeZone !== downloadTimeZone);
 
   return {
-    isCustomized: Boolean(updateSpec?.downloadSchedule?.at || updateSpec?.updateSchedule?.at),
-    downloadAndInstallDiffer: !isEqual,
+    isCustomized: hasRecurring || downloadOneTimeWindows.length > 0 || installOneTimeWindows.length > 0,
+    downloadAndInstallDiffer,
     downloadStartsAt,
     downloadEndsAt: timeUtils.getEndTime(downloadStartsAt, downloadStartGraceDuration),
     downloadStartGraceDuration,
@@ -91,7 +118,7 @@ export const getUpdatePolicyValues = (updateSpec?: DeviceUpdatePolicySpec): Upda
     downloadScheduleMode: downloadWeekDays.allSelected
       ? timeUtils.UpdateScheduleMode.Daily
       : timeUtils.UpdateScheduleMode.Weekly,
-    downloadTimeZone: updateSpec?.downloadSchedule?.timeZone || timeUtils.localDeviceTimezone,
+    downloadTimeZone,
     installStartsAt,
     installEndsAt: timeUtils.getEndTime(installStartsAt, installStartGraceDuration),
     installStartGraceDuration,
@@ -99,11 +126,18 @@ export const getUpdatePolicyValues = (updateSpec?: DeviceUpdatePolicySpec): Upda
     installScheduleMode: installWeekDays.allSelected
       ? timeUtils.UpdateScheduleMode.Daily
       : timeUtils.UpdateScheduleMode.Weekly,
-    installTimeZone: updateSpec?.updateSchedule?.timeZone || timeUtils.localDeviceTimezone,
+    installTimeZone,
+    downloadCron,
+    installCron,
+    downloadOneTimeWindows,
+    installOneTimeWindows,
   };
 };
 
 export const getDownloadPolicyText = (updatePolicy: UpdatePolicyForm, t: TFunction): string => {
+  if (updatePolicy.downloadCron && !timeUtils.isUiSupportedCron(updatePolicy.downloadCron)) {
+    return t('Custom cron: {{ cron }}', { cron: updatePolicy.downloadCron });
+  }
   return timeUtils.getScheduleUpdateText(
     {
       startsAt: updatePolicy.downloadStartsAt,
@@ -118,6 +152,9 @@ export const getDownloadPolicyText = (updatePolicy: UpdatePolicyForm, t: TFuncti
 };
 
 export const getInstallPolicyText = (updatePolicy: UpdatePolicyForm, t: TFunction): string => {
+  if (updatePolicy.installCron && !timeUtils.isUiSupportedCron(updatePolicy.installCron)) {
+    return t('Custom cron: {{ cron }}', { cron: updatePolicy.installCron });
+  }
   return timeUtils.getScheduleUpdateText(
     {
       startsAt: updatePolicy.installStartsAt,

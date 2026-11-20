@@ -21,6 +21,7 @@ export enum ConditionType {
   FleetRolloutInProgress = 'RolloutInProgress',
   DeviceUpdating = 'Updating',
   DeviceSpecValid = 'SpecValid',
+  DeviceOneTimeWindowsCompatible = 'OneTimeWindowsCompatible',
   DeviceMultipleOwners = 'MultipleOwners',
   DeviceLabelsSynced = 'LabelsSynced',
   DeviceDecommissioning = 'DeviceDecommissioning',

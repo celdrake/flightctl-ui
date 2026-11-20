@@ -341,6 +341,14 @@ export type DisruptionBudgetForm = DisruptionBudget & {
   isCustomized: boolean;
 };
 
+/** One-time maintenance window edited in the UI. Start/end are mapped to at/startGraceDuration. */
+export type OneTimeWindowForm = {
+  id: string;
+  date: string;
+  startsAt: string;
+  endsAt: string;
+};
+
 export type UpdatePolicyForm = {
   isCustomized: boolean;
   downloadAndInstallDiffer: boolean;
@@ -356,4 +364,9 @@ export type UpdatePolicyForm = {
   installScheduleMode: UpdateScheduleMode;
   installWeekDays: boolean[];
   installTimeZone: string;
+  /** Raw recurring cron (`at`). Its presence means a recurring schedule exists; unsupported expressions are not rewritten. */
+  downloadCron?: string;
+  installCron?: string;
+  downloadOneTimeWindows: OneTimeWindowForm[];
+  installOneTimeWindows: OneTimeWindowForm[];
 };
